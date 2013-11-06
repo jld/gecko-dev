@@ -124,9 +124,14 @@ void main(void) {
       elemTestFunc = ok;
       checkGLTestFunc = ok;
     }
-    if (DriverInfo.getDriver() == DriverInfo.DRIVER.ANDROID_X86_EMULATOR)
-    {
-      // ...but the Android 4.2 x86 emulator environment is different
+    if (DriverInfo.getDriver() == DriverInfo.DRIVER.ANDROID_X86_EMULATOR ||
+        DriverInfo.getOS() == DriverInfo.OS.B2G) {
+      // ...but the Android 4.2 x86 emulator environment is different.
+      //
+      // Also, bug 936312: The B2G ICS emulator, on at least some underlying
+      // hardware, seems to report success but not actually draw anything.
+      // On other hardware (e.g., TBPL) it doesn't support WebGL at all, in
+      // which case this is never reached.
       elemTestFunc = todo;
       checkGLTestFunc = ok;
     }
