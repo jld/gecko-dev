@@ -61,34 +61,55 @@ struct sock_fprog seccomp_prog = {
  * @see InstallSyscallReporter() function.
  */
 #ifdef MOZ_CONTENT_SANDBOX_REPORTER
+static struct sigaction sSandboxNextHandler;
+
+extern "C" {
+  // To avoid including <sys/syscall.h>, so that we're using only the
+  // syscall numbers from our tree.  GNU has this in unistd.h, but
+  // Android seems to do otherwise.
+  int syscall(int, ...);
+}
+
 static void
 Reporter(int nr, siginfo_t *info, void *void_context)
 {
   ucontext_t *ctx = static_cast<ucontext_t*>(void_context);
-  unsigned long syscall, args[6];
+  MOZ_ASSERT(nr == SIGSYS);
 
-  if (nr != SIGSYS) {
-    return;
+  if (info->si_code == SYS_SECCOMP && ctx != nullptr) {
+    unsigned long syscall_nr, args[6];
+
+    syscall_nr = SECCOMP_SYSCALL(ctx);
+    args[0] = SECCOMP_PARM1(ctx);
+    args[1] = SECCOMP_PARM2(ctx);
+    args[2] = SECCOMP_PARM3(ctx);
+    args[3] = SECCOMP_PARM4(ctx);
+    args[4] = SECCOMP_PARM5(ctx);
+    args[5] = SECCOMP_PARM6(ctx);
+
+    LOG_ERROR("seccomp sandbox violation: pid %u, syscall %lu, args %lu %lu %lu"
+              " %lu %lu %lu.  Killing process.", getpid(), syscall,
+              args[0], args[1], args[2], args[3], args[4], args[5]);
   }
-  if (info->si_code != SYS_SECCOMP) {
-    return;
+
+  // Try to invoke the next handler.  (This is typically the crash reporter.)
+  // FIXME: should we also reset the signal mask based on sa_mask and sa_flags?
+  //   What do we want to happen if the next handler isn't SA_NODEFER and
+  //   invokes a forbidden syscall?
+  if (sSandboxNextHandler.sa_flags & SA_SIGINFO) {
+    // Can sa_sigaction be one of the SIG_* constants?
+    sSandboxNextHandler.sa_sigaction(nr, info, void_context);
+  } else {
+    if (sSandboxNextHandler.sa_handler != SIG_DFL &&
+        sSandboxNextHandler.sa_handler != SIG_IGN) {
+      sSandboxNextHandler.sa_handler(nr);
+    }
   }
-  if (!ctx) {
-    return;
-  }
 
-  syscall = SECCOMP_SYSCALL(ctx);
-  args[0] = SECCOMP_PARM1(ctx);
-  args[1] = SECCOMP_PARM2(ctx);
-  args[2] = SECCOMP_PARM3(ctx);
-  args[3] = SECCOMP_PARM4(ctx);
-  args[4] = SECCOMP_PARM5(ctx);
-  args[5] = SECCOMP_PARM6(ctx);
-
-  LOG_ERROR("seccomp sandbox violation: pid %u, syscall %lu, args %lu %lu %lu"
-            " %lu %lu %lu.  Killing process.", getpid(), syscall,
-            args[0], args[1], args[2], args[3], args[4], args[5]);
-
+  // Try to reraise, so the parent sees that this process crashed.
+  // (If tgkill is forbidden, then that works too.)
+  signal(SIGSYS, SIG_DFL);
+  syscall(__NR_tgkill, getpid(), syscall(__NR_gettid), nr);
   _exit(127);
 }
 
@@ -111,12 +132,15 @@ InstallSyscallReporter(void)
 {
   struct sigaction act;
   sigset_t mask;
-  memset(&act, 0, sizeof(act));
-  sigemptyset(&mask);
-  sigaddset(&mask, SIGSYS);
+
+  if (sigaction(SIGSYS, nullptr, &act) < 0) {
+    return -1;
+  }
+  sSandboxNextHandler = act;
 
   act.sa_sigaction = &Reporter;
-  act.sa_flags = SA_SIGINFO | SA_NODEFER;
+  act.sa_flags |= SA_SIGINFO | SA_NODEFER;
+  act.sa_flags &= ~SA_RESETHAND;
   if (sigaction(SIGSYS, &act, nullptr) < 0) {
     return -1;
   }
