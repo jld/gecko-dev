@@ -113,7 +113,7 @@ namespace {
 // all these signals must be Core (see man 7 signal) because we rethrow the
 // signal after handling it and expect that it'll be fatal.
 const int kExceptionSignals[] = {
-  SIGSEGV, SIGABRT, SIGFPE, SIGILL, SIGBUS
+  SIGSEGV, SIGABRT, SIGFPE, SIGILL, SIGBUS, SIGSYS
 };
 const int kNumHandledSignals =
     sizeof(kExceptionSignals) / sizeof(kExceptionSignals[0]);
@@ -305,6 +305,11 @@ void ExceptionHandler::SignalHandler(int sig, siginfo_t* info, void* uc) {
   struct sigaction cur_handler;
   if (sigaction(sig, NULL, &cur_handler) == 0 &&
       (cur_handler.sa_flags & SA_SIGINFO) == 0) {
+    // Doesn't work for SIGSYS; see note below about where it returns to.
+    if (sig == SIGSYS) {
+      _exit(1);
+    }
+
     // Reset signal handler with the right flags.
     sigemptyset(&cur_handler.sa_mask);
     sigaddset(&cur_handler.sa_mask, sig);
@@ -339,10 +344,13 @@ void ExceptionHandler::SignalHandler(int sig, siginfo_t* info, void* uc) {
 
   pthread_mutex_unlock(&handler_stack_mutex_);
 
-  if (info->si_code <= 0) {
-    // This signal was sent by another process.  (Positive values of
-    // si_code are reserved for kernel-originated signals.)  In order
-    // to retrigger it, we have to queue a new signal.
+  if (info->si_code <= 0 || sig == SIGSYS) {
+    // Returning from this signal won't work; either it was sent by
+    // another process (positive values of si_code are reserved for
+    // kernel-originated signals) or else it's SIGSYS (which returns
+    // to the point where the syscall would have returned to, instead
+    // of the offending instruction itself).  In order to retrigger
+    // it, we have to queue a new signal.
     if (tgkill(getpid(), syscall(__NR_gettid), sig) < 0) {
       // If we failed to kill ourselves (e.g. because a sandbox disallows us
       // to do so), we instead resort to terminating our process. This will
