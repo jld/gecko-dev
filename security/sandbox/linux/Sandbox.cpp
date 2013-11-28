@@ -19,6 +19,10 @@
 #endif
 #include "seccomp_filter.h"
 
+#include "nsIException.h"
+#include "nsIXPConnect.h"
+#include "nsServiceManagerUtils.h"
+
 #include "linux_seccomp.h"
 #ifdef MOZ_LOGGING
 #define FORCE_PR_LOG 1
@@ -52,6 +56,44 @@ struct sock_fprog seccomp_prog = {
 };
 
 /**
+ * Log JS stack info in the same place as the sandbox violation
+ * message.  Useful in case the responsible code is JS and all we have
+ * are logs and a minidump with the C++ stacks (e.g., on TBPL).
+ */
+static void
+SandboxLogJSStack(void)
+{
+  using namespace js;
+
+  nsresult rv;
+  nsCOMPtr<nsIXPConnect> xpc(do_GetService(nsIXPConnect::GetCID(), &rv));
+  NS_ENSURE_SUCCESS_VOID(rv);
+  NS_ENSURE_TRUE_VOID(xpc);
+  nsCOMPtr<nsIStackFrame> frame;
+  rv = xpc->GetCurrentJSStack(getter_AddRefs(frame));
+  NS_ENSURE_SUCCESS_VOID(rv);
+  for (int i = 0; frame; ++i) {
+    char *fileName, *funName;
+    int32_t lineNumber;
+
+    rv = frame->GetFilename(&fileName);
+    NS_ENSURE_SUCCESS_VOID(rv);
+    rv = frame->GetLineNumber(&lineNumber);
+    NS_ENSURE_SUCCESS_VOID(rv);
+    rv = frame->GetName(&funName);
+    NS_ENSURE_SUCCESS_VOID(rv);
+
+    LOG_ERROR("JS frame %d: %s %s line %d", i,
+              funName ? funName : "(anonymous)",
+              fileName ? fileName : "(no file)",
+              lineNumber);
+
+    rv = frame->GetCaller(getter_AddRefs(frame));
+    NS_ENSURE_SUCCESS_VOID(rv);
+  }
+}
+
+/**
  * This is the SIGSYS handler function. It is used to report to the user
  * which system call has been denied by Seccomp.
  * This function also makes the process exit as denying the system call
@@ -83,6 +125,7 @@ Reporter(int nr, siginfo_t *info, void *void_context)
     arg1 = SECCOMP_PARM1(ctx);
 
     LOG_ERROR("PID %u is missing syscall %u, arg1 %u\n", getpid(), syscall_nr, arg1);
+    SandboxLogJSStack();
   }
 
   // Try to invoke the next handler.  (This is typically the crash reporter.)
