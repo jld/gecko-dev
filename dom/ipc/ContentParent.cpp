@@ -1987,7 +1987,16 @@ ContentParent::Observe(nsISupports* aSubject,
             return NS_ERROR_NOT_AVAILABLE;
     }
     else if (!strcmp(aTopic, "child-memory-reporter-request")) {
-        unused << SendPMemoryReportRequestConstructor((uint32_t)(uintptr_t)aData);
+        unsigned generation;
+        int minimize;
+        nsDependentString msg(aData);
+
+        if (sscanf(NS_ConvertUTF16toUTF8(Substring(msg, 0, 11)).get(),
+                   "%x %d", &generation, &minimize) != 2) {
+            return NS_ERROR_INVALID_ARG;
+        }
+        unused << SendPMemoryReportRequestConstructor(
+          generation, minimize, nsString(Substring(msg, 11)));
     }
     else if (!strcmp(aTopic, "child-gc-request")){
         unused << SendGarbageCollect();
@@ -2436,7 +2445,9 @@ ContentParent::RecvPIndexedDBConstructor(PIndexedDBParent* aActor)
 }
 
 PMemoryReportRequestParent*
-ContentParent::AllocPMemoryReportRequestParent(const uint32_t& generation)
+ContentParent::AllocPMemoryReportRequestParent(const uint32_t& generation,
+                                               const bool &minimizeMemoryUsage,
+                                               const nsString &aDMDDumpIdent)
 {
   MemoryReportRequestParent* parent = new MemoryReportRequestParent();
   return parent;

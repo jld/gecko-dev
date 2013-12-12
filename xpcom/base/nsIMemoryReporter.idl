@@ -179,7 +179,7 @@ interface nsIFinishReportingCallback : nsISupports
   void callback(in nsISupports data);
 };
 
-[scriptable, builtinclass, uuid(e4e4ca56-13e0-46f1-b3c5-62d2c09fc98e)]
+[scriptable, builtinclass, uuid(cee6a13b-5958-4893-81bf-7ab87111f0c2)]
 interface nsIMemoryReporterManager : nsISupports
 {
   /*
@@ -242,6 +242,14 @@ interface nsIMemoryReporterManager : nsISupports
                   in nsISupports handleReportData,
                   in nsIFinishReportingCallback finishReporting,
                   in nsISupports finishReportingData);
+  [noscript] void
+    getReportsExtended(in nsIMemoryReporterCallback handleReport,
+                       in nsISupports handleReportData,
+                       in nsIFinishReportingCallback finishReporting,
+                       in nsISupports finishReportingData,
+                       in boolean dumpChildProcesses,
+                       in boolean minimizeMemoryUsage,
+                       in AString DMDDumpIdent);
 
   /*
    * Get memory reports in the current process only.  |handleReport| is called
@@ -249,6 +257,10 @@ interface nsIMemoryReporterManager : nsISupports
    */
   void getReportsForThisProcess(in nsIMemoryReporterCallback handleReport,
                                 in nsISupports handleReportData);
+  [noscript] void
+    getReportsForThisProcessExtended(in nsIMemoryReporterCallback handleReport,
+                                     in nsISupports handleReportData,
+                                     in AString DMDDumpIdent);
 
   /*
    * The memory reporter manager, for the most part, treats reporters

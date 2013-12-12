@@ -824,25 +824,39 @@ DumpFooter(nsIGZFileWriter* aWriter)
   return NS_OK;
 }
 
-static nsresult
-DumpProcessMemoryReportsToGZFileWriter(nsGZFileWriter* aWriter)
+class TempDirMemoryFinishCallback MOZ_FINAL : public nsIFinishReportingCallback
 {
-  nsresult rv = DumpHeader(aWriter);
-  NS_ENSURE_SUCCESS(rv, rv);
+public:
+  NS_DECL_ISUPPORTS
 
-  // Process reporters.
-  nsCOMPtr<nsIMemoryReporterManager> mgr =
-    do_GetService("@mozilla.org/memory-reporter-manager;1");
-  nsRefPtr<DumpReportCallback> dumpReport = new DumpReportCallback(aWriter);
-  mgr->GetReportsForThisProcess(dumpReport, nullptr);
+  TempDirMemoryFinishCallback(nsGZFileWriter *aWriter,
+                              nsIFile *aTmpFile,
+                              const nsCString &aFilename,
+                              const nsString &aIdentifier)
+    : mrWriter(aWriter)
+    , mrTmpFile(aTmpFile)
+    , mrFilename(aFilename)
+    , mIdentifier(aIdentifier)
+  {}
 
-  return DumpFooter(aWriter);
-}
+  NS_IMETHOD Callback(nsISupports *aData);
 
-nsresult
-DumpProcessMemoryInfoToTempDir(const nsAString& aIdentifier)
+private:
+  nsRefPtr<nsGZFileWriter> mrWriter;
+  nsCOMPtr<nsIFile> mrTmpFile;
+  nsCString mrFilename;
+  nsString mIdentifier;
+};
+
+NS_IMPL_ISUPPORTS1(TempDirMemoryFinishCallback, nsIFinishReportingCallback)
+
+NS_IMETHODIMP
+nsMemoryInfoDumper::DumpMemoryInfoToTempDir(const nsAString& aIdentifier,
+                                            bool aMinimizeMemoryUsage,
+                                            bool aDumpChildProcesses)
 {
-  MOZ_ASSERT(!aIdentifier.IsEmpty());
+  nsString identifier(aIdentifier);
+  EnsureNonEmptyIdentifier(identifier);
 
 #ifdef MOZ_DMD
   // Clear DMD's reportedness state before running the memory reporters, to
@@ -864,7 +878,12 @@ DumpProcessMemoryInfoToTempDir(const nsAString& aIdentifier)
   // Note that |mrFilename| is missing the "incomplete-" prefix; we'll tack
   // that on in a moment.
   nsCString mrFilename;
-  MakeFilename("memory-report", aIdentifier, "json.gz", mrFilename);
+  if (aDumpChildProcesses) {
+    // We'll use GetReports to merge in the children.
+    MakeFilename("unified-memory-report", identifier, "json.gz", mrFilename);
+  } else {
+    MakeFilename("memory-report", identifier, "json.gz", mrFilename);
+  }
 
   nsCOMPtr<nsIFile> mrTmpFile;
   nsresult rv;
@@ -880,9 +899,30 @@ DumpProcessMemoryInfoToTempDir(const nsAString& aIdentifier)
     return rv;
 
   // Dump the memory reports to the file.
-  DumpProcessMemoryReportsToGZFileWriter(mrWriter);
+  rv = DumpHeader(mrWriter);
+  if (NS_WARN_IF(NS_FAILED(rv)))
+    return rv;
+
+  // Process reporters.
+  nsCOMPtr<nsIMemoryReporterManager> mgr =
+    do_GetService("@mozilla.org/memory-reporter-manager;1");
+  nsRefPtr<DumpReportCallback> dumpReport = new DumpReportCallback(mrWriter);
+  nsRefPtr<nsIFinishReportingCallback> finishReport =
+    new TempDirMemoryFinishCallback(mrWriter, mrTmpFile, mrFilename, identifier);
+  rv = mgr->GetReportsExtended(dumpReport, nullptr,
+                               finishReport, nullptr,
+                               aDumpChildProcesses,
+                               aMinimizeMemoryUsage,
+                               identifier);
+  return rv;
+}
 
 #ifdef MOZ_DMD
+nsresult
+nsMemoryInfoDumper::DumpDMD(const nsAString &aIdentifier)
+{
+  nsresult rv;
+
   // Create a filename like dmd-<identifier>-<pid>.txt.gz, which will be used
   // if DMD is enabled.
   nsCString dmdFilename;
@@ -910,9 +950,19 @@ DumpProcessMemoryInfoToTempDir(const nsAString& aIdentifier)
   dmd::Dump(w);
 
   rv = dmdWriter->Finish();
+  NS_WARN_IF(NS_FAILED(rv));
+  return rv;
+}
+#endif  // MOZ_DMD
+
+NS_IMETHODIMP
+TempDirMemoryFinishCallback::Callback(nsISupports *aData)
+{
+  nsresult rv;
+
+  rv = DumpFooter(mrWriter);
   if (NS_WARN_IF(NS_FAILED(rv)))
     return rv;
-#endif  // MOZ_DMD
 
   // The call to Finish() deallocates the memory allocated by mrWriter's first
   // DUMP() call (within DumpProcessMemoryReportsToGZFileWriter()).  Because
@@ -970,45 +1020,6 @@ DumpProcessMemoryInfoToTempDir(const nsAString& aIdentifier)
     "nsIMemoryInfoDumper dumped reports to ");
   msg.Append(path);
   return cs->LogStringMessage(msg.get());
-}
-
-NS_IMETHODIMP
-nsMemoryInfoDumper::DumpMemoryInfoToTempDir(const nsAString& aIdentifier,
-                                            bool aMinimizeMemoryUsage,
-                                            bool aDumpChildProcesses)
-{
-  nsString identifier(aIdentifier);
-  EnsureNonEmptyIdentifier(identifier);
-
-  // Kick off memory report dumps in our child processes, if applicable.  We
-  // do this before doing our own report because writing a report may be I/O
-  // bound, in which case we want to busy the CPU with other reports while we
-  // work on our own.
-  if (aDumpChildProcesses) {
-    nsTArray<ContentParent*> children;
-    ContentParent::GetAll(children);
-    for (uint32_t i = 0; i < children.Length(); i++) {
-      unused << children[i]->SendDumpMemoryInfoToTempDir(
-          identifier, aMinimizeMemoryUsage, aDumpChildProcesses);
-    }
-  }
-
-  if (aMinimizeMemoryUsage) {
-    // Minimize memory usage, then run DumpMemoryInfoToTempDir again.
-    nsRefPtr<DumpMemoryInfoToTempDirRunnable> callback =
-      new DumpMemoryInfoToTempDirRunnable(identifier,
-                                          /* minimizeMemoryUsage = */ false,
-                                          /* dumpChildProcesses = */ false);
-    nsCOMPtr<nsIMemoryReporterManager> mgr =
-      do_GetService("@mozilla.org/memory-reporter-manager;1");
-    if (NS_WARN_IF(!mgr))
-      return NS_ERROR_FAILURE;
-    nsCOMPtr<nsICancelableRunnable> runnable;
-    mgr->MinimizeMemoryUsage(callback, getter_AddRefs(runnable));
-    return NS_OK;
-  }
-
-  return DumpProcessMemoryInfoToTempDir(identifier);
 }
 
 // This dumps the JSON footer and closes the file, and then calls the given

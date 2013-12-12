@@ -111,14 +111,17 @@ public:
     virtual bool DeallocPIndexedDBChild(PIndexedDBChild* aActor);
 
     virtual PMemoryReportRequestChild*
-    AllocPMemoryReportRequestChild(const uint32_t& generation);
-
+    AllocPMemoryReportRequestChild(const uint32_t& generation,
+                                   const bool &minimizeMemoryUsage,
+                                   const nsString &aDMDDumpIdent);
     virtual bool
     DeallocPMemoryReportRequestChild(PMemoryReportRequestChild* actor);
 
     virtual bool
     RecvPMemoryReportRequestConstructor(PMemoryReportRequestChild* child,
-                                        const uint32_t& generation);
+                                        const uint32_t& generation,
+                                        const bool &minimizeMemoryUsage,
+                                        const nsString &aDMDDumpIdent);
 
     virtual PCycleCollectWithLogsChild*
     AllocPCycleCollectWithLogsChild(const nsString &aIdentifier,

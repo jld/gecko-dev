@@ -349,7 +349,7 @@ private:
 
     virtual bool DeallocPIndexedDBParent(PIndexedDBParent* aActor);
 
-    virtual PMemoryReportRequestParent* AllocPMemoryReportRequestParent(const uint32_t& generation);
+    virtual PMemoryReportRequestParent* AllocPMemoryReportRequestParent(const uint32_t& generation, const bool &minimizeMemoryUsage, const nsString &aDMDDumpIdent);
     virtual bool DeallocPMemoryReportRequestParent(PMemoryReportRequestParent* actor);
 
     virtual PCycleCollectWithLogsParent*
