@@ -49,6 +49,9 @@ interface nsICycleCollectorListener : nsISupports
 
     // This string will appear somewhere in the log's filename.
     attribute AString filenameIdentifier;
+    // This number (default: current process ID) will also appear
+    // in the filename.
+    [noscript] attribute unsigned long processIdentifier;
 
     void begin();
     void noteRefCountedObject (in unsigned long long aAddress,

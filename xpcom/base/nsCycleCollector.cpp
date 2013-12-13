@@ -1312,6 +1312,7 @@ public:
       mStream(nullptr), mWantAllTraces(false),
       mDisableLog(false), mWantAfterProcessing(false)
     {
+        mProcessID = base::GetCurrentProcId();
     }
     ~nsCycleCollectorLogger()
     {
@@ -1374,6 +1375,18 @@ public:
     NS_IMETHOD SetFilenameIdentifier(const nsAString& aIdentifier)
     {
         mFilenameIdentifier = aIdentifier;
+        return NS_OK;
+    }
+
+    NS_IMETHOD GetProcessIdentifier(uint32_t *aPID)
+    {
+        *aPID = mProcessID;
+        return NS_OK;
+    }
+
+    NS_IMETHOD SetProcessIdentifier(uint32_t aPID)
+    {
+        mProcessID = aPID;
         return NS_OK;
     }
 
@@ -1645,9 +1658,9 @@ private:
     already_AddRefed<nsIFile>
     CreateTempFile(const char* aPrefix)
     {
-        nsPrintfCString filename("%s.%d%s%s.log",
+        nsPrintfCString filename("%s.%u%s%s.log",
             aPrefix,
-            base::GetCurrentProcId(),
+            mProcessID,
             mFilenameIdentifier.IsEmpty() ? "" : ".",
             NS_ConvertUTF16toUTF8(mFilenameIdentifier).get());
 
@@ -1682,6 +1695,7 @@ private:
     bool mWantAllTraces;
     bool mDisableLog;
     bool mWantAfterProcessing;
+    uint32_t mProcessID;
     nsString mFilenameIdentifier;
     nsCString mCurrentAddress;
     mozilla::LinkedList<CCGraphDescriber> mDescribers;
