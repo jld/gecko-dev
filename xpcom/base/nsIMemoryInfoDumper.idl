@@ -11,7 +11,7 @@ interface nsIFinishDumpingCallback : nsISupports
   void callback(in nsISupports data);
 };
 
-[scriptable, builtinclass, uuid(fd5de30a-e3d6-4965-8244-86709e1ed23b)]
+[scriptable, builtinclass, uuid(c4a894fd-c38a-4bde-bd3b-527b9d908591)]
 interface nsIMemoryInfoDumper : nsISupports
 {
   /**
@@ -131,8 +131,8 @@ interface nsIMemoryInfoDumper : nsISupports
    * $MOZ_CC_LOG_DIRECTORY, if that environment variable is specified).
    *
    * @param aIdentifier If aIdentifier is non-empty, this string will appear in
-   *   the filenames of the logs we create (both for this process and, if
-   *   aDumpChildProcesses is true, for our child processes).
+   *   the filenames of the logs we create (both for this process and for our
+   *   child processes).
    *
    *   If aIdentifier is empty, the implementation may set it to an
    *   arbitrary value; for example, it may set aIdentifier to the number
@@ -148,12 +148,7 @@ interface nsIMemoryInfoDumper : nsISupports
    *   example, a non-traces-log will skip references held by an active
    *   document; if your object is being held alive by such a document, you
    *   probably want to see those references.
-   *
-   * @param aDumpChildProcesses indicates whether we should call
-   *   DumpGCAndCCLogsToFile in our child processes.  If so, the child processes
-   *   will dump their children, and so on.
    */
   void dumpGCAndCCLogsToFile(in AString aIdentifier,
-                             in bool aDumpAllTraces,
-                             in bool aDumpChildProcesses);
+                             in bool aDumpAllTraces);
 };

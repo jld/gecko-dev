@@ -85,11 +85,9 @@ class GCAndCCLogDumpRunnable : public nsRunnable
 {
 public:
   GCAndCCLogDumpRunnable(const nsAString& aIdentifier,
-                         bool aDumpAllTraces,
-                         bool aDumpChildProcesses)
+                         bool aDumpAllTraces)
     : mIdentifier(aIdentifier)
     , mDumpAllTraces(aDumpAllTraces)
-    , mDumpChildProcesses(aDumpChildProcesses)
   {}
 
   NS_IMETHOD Run()
@@ -97,15 +95,13 @@ public:
     nsCOMPtr<nsIMemoryInfoDumper> dumper =
       do_GetService("@mozilla.org/memory-info-dumper;1");
 
-    dumper->DumpGCAndCCLogsToFile(
-      mIdentifier, mDumpAllTraces, mDumpChildProcesses);
+    dumper->DumpGCAndCCLogsToFile(mIdentifier, mDumpAllTraces);
     return NS_OK;
   }
 
 private:
   const nsString mIdentifier;
   const bool mDumpAllTraces;
-  const bool mDumpChildProcesses;
 };
 
 } // anonymous namespace
@@ -365,8 +361,7 @@ public:
       nsRefPtr<GCAndCCLogDumpRunnable> runnable =
         new GCAndCCLogDumpRunnable(
             /* identifier = */ EmptyString(),
-            /* allTraces = */ true,
-            /* dumpChildProcesses = */ true);
+            /* allTraces = */ true);
       NS_DispatchToMainThread(runnable);
     }
     else {
@@ -527,8 +522,7 @@ public:
       nsRefPtr<GCAndCCLogDumpRunnable> runnable =
         new GCAndCCLogDumpRunnable(
             /* identifier = */ EmptyString(),
-            doAllTracesGCCCDump,
-            /* dumpChildProcesses = */ true);
+            doAllTracesGCCCDump);
       NS_DispatchToMainThread(runnable);
     } else {
       LOG("Got unexpected value from fifo; ignoring it.");
@@ -575,19 +569,16 @@ EnsureNonEmptyIdentifier(nsAString& aIdentifier)
 NS_IMETHODIMP
 nsMemoryInfoDumper::DumpGCAndCCLogsToFile(
   const nsAString& aIdentifier,
-  bool aDumpAllTraces,
-  bool aDumpChildProcesses)
+  bool aDumpAllTraces)
 {
   nsString identifier(aIdentifier);
   EnsureNonEmptyIdentifier(identifier);
 
-  if (aDumpChildProcesses) {
-    nsTArray<ContentParent*> children;
-    ContentParent::GetAll(children);
-    for (uint32_t i = 0; i < children.Length(); i++) {
-      unused << children[i]->SendDumpGCAndCCLogsToFile(
-        identifier, aDumpAllTraces, aDumpChildProcesses);
-    }
+  nsTArray<ContentParent*> children;
+  ContentParent::GetAll(children);
+  for (uint32_t i = 0; i < children.Length(); i++) {
+    unused << children[i]->SendPCycleCollectWithLogsConstructor(
+      identifier, aDumpAllTraces);
   }
 
   nsCOMPtr<nsICycleCollectorListener> logger =

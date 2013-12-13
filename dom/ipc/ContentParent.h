@@ -357,6 +357,12 @@ private:
     AllocPMemoryReportRequestParent(const uint32_t& generation) MOZ_OVERRIDE;
     virtual bool DeallocPMemoryReportRequestParent(PMemoryReportRequestParent* actor) MOZ_OVERRIDE;
 
+    virtual PCycleCollectWithLogsParent*
+    AllocPCycleCollectWithLogsParent(const nsString &aIdentifier,
+                                     const bool &aDumpAllTraces) MOZ_OVERRIDE;
+    virtual bool
+    DeallocPCycleCollectWithLogsParent(PCycleCollectWithLogsParent* actor) MOZ_OVERRIDE;
+
     virtual PTestShellParent* AllocPTestShellParent() MOZ_OVERRIDE;
     virtual bool DeallocPTestShellParent(PTestShellParent* shell) MOZ_OVERRIDE;
 

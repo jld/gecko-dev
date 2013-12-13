@@ -120,6 +120,18 @@ public:
     RecvPMemoryReportRequestConstructor(PMemoryReportRequestChild* child,
                                         const uint32_t& generation) MOZ_OVERRIDE;
 
+    virtual PCycleCollectWithLogsChild*
+    AllocPCycleCollectWithLogsChild(const nsString &aIdentifier,
+                                    const bool &adumpAllTraces) MOZ_OVERRIDE;
+
+    virtual bool
+    DeallocPCycleCollectWithLogsChild(PCycleCollectWithLogsChild* actor) MOZ_OVERRIDE;
+
+    virtual bool
+    RecvPCycleCollectWithLogsConstructor(PCycleCollectWithLogsChild* aChild,
+                                         const nsString &aIdentifier,
+                                         const bool &adumpAllTraces) MOZ_OVERRIDE;
+
     virtual bool
     RecvAudioChannelNotify() MOZ_OVERRIDE;
 
@@ -127,10 +139,6 @@ public:
     RecvDumpMemoryInfoToTempDir(const nsString& aIdentifier,
                                 const bool& aMinimizeMemoryUsage,
                                 const bool& aDumpChildProcesses) MOZ_OVERRIDE;
-    virtual bool
-    RecvDumpGCAndCCLogsToFile(const nsString& aIdentifier,
-                              const bool& aDumpAllTraces,
-                              const bool& aDumpChildProcesses) MOZ_OVERRIDE;
 
     virtual PTestShellChild* AllocPTestShellChild() MOZ_OVERRIDE;
     virtual bool DeallocPTestShellChild(PTestShellChild*) MOZ_OVERRIDE;

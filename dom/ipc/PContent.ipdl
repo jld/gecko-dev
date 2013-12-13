@@ -10,6 +10,7 @@ include protocol PBluetooth;
 include protocol PBrowser;
 include protocol PCompositor;
 include protocol PCrashReporter;
+include protocol PCycleCollectWithLogs;
 include protocol PExternalHelperApp;
 include protocol PDeviceStorageRequest;
 include protocol PFMRadio;
@@ -198,6 +199,7 @@ intr protocol PContent
     manages PBluetooth;
     manages PBrowser;
     manages PCrashReporter;
+    manages PCycleCollectWithLogs;
     manages PDeviceStorageRequest;
     manages PExternalHelperApp;
     manages PFMRadio;
@@ -269,14 +271,13 @@ child:
                                   bool minimizeMemoryUsage,
                                   bool dumpChildProcesses);
     /**
-     * Dump this process's GC and CC logs.
+     * Dump this process's GC and CC logs, by sending heap
+     * observations back to the parent.
      *
      * For documentation on the args, see
      * MemoryInfoDumper::dumpGCAndCCLogsToFile.
      */
-    async DumpGCAndCCLogsToFile(nsString identifier,
-                                bool dumpAllTraces,
-                                bool dumpChildProcesses);
+    async PCycleCollectWithLogs(nsString identifier, bool dumpAllTraces);
 
     PTestShell();
 
