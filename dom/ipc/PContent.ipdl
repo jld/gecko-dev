@@ -10,6 +10,7 @@ include protocol PBluetooth;
 include protocol PBrowser;
 include protocol PCompositor;
 include protocol PCrashReporter;
+include protocol PCycleCollectWithLogs;
 include protocol PExternalHelperApp;
 include protocol PDeviceStorageRequest;
 include protocol PFMRadio;
@@ -190,6 +191,7 @@ intr protocol PContent
     manages PBluetooth;
     manages PBrowser;
     manages PCrashReporter;
+    manages PCycleCollectWithLogs;
     manages PDeviceStorageRequest;
     manages PExternalHelperApp;
     manages PFMRadio;
@@ -269,6 +271,8 @@ child:
     async DumpGCAndCCLogsToFile(nsString identifier,
                                 bool dumpAllTraces,
                                 bool dumpChildProcesses);
+    // Similar, but with file I/O in the parent process.
+    async PCycleCollectWithLogs(nsString identifier, bool dumpAllTraces);
 
     PTestShell();
 

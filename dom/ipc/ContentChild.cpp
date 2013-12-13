@@ -36,6 +36,7 @@
 #include "mozilla/unused.h"
 
 #include "nsIConsoleListener.h"
+#include "nsICycleCollectorListener.h"
 #include "nsIInterfaceRequestorUtils.h"
 #include "nsIMemoryReporter.h"
 #include "nsIMemoryInfoDumper.h"
@@ -67,6 +68,7 @@
 
 #include "nsIGeolocationProvider.h"
 #include "mozilla/dom/PMemoryReportRequestChild.h"
+#include "mozilla/dom/PCycleCollectWithLogsChild.h"
 
 #ifdef MOZ_PERMISSIONS
 #include "nsIScriptSecurityManager.h"
@@ -173,6 +175,176 @@ MemoryReportRequestChild::MemoryReportRequestChild()
 MemoryReportRequestChild::~MemoryReportRequestChild()
 {
     MOZ_COUNT_DTOR(MemoryReportRequestChild);
+}
+
+// IPC sender for remote GC/CC logging.
+class CycleCollectWithLogsChild : public PCycleCollectWithLogsChild,
+                                  public nsICycleCollectorListener
+{
+public:
+    NS_DECL_ISUPPORTS
+
+    CycleCollectWithLogsChild(const nsString &aIdentifier,
+                              bool aDumpAllTraces);
+    virtual ~CycleCollectWithLogsChild();
+
+    NS_IMETHOD AllTraces(nsICycleCollectorListener** aListener)
+    {
+        return NS_ERROR_UNEXPECTED;
+    }
+
+    NS_IMETHOD GetWantAllTraces(bool *aAllTraces)
+    {
+        *aAllTraces = mDumpAllTraces;
+        return NS_OK;
+    }
+
+    NS_IMETHOD GetDisableLog(bool *aDisableLog)
+    {
+        *aDisableLog = false;
+        return NS_OK;
+    }
+
+    NS_IMETHOD SetDisableLog(bool aDisableLog)
+    {
+        return NS_ERROR_UNEXPECTED;
+    }
+
+    NS_IMETHOD GetWantAfterProcessing(bool *aWantAfterProcessing)
+    {
+        *aWantAfterProcessing = false;
+        return NS_OK;
+    }
+
+    NS_IMETHOD SetWantAfterProcessing(bool aWantAfterProcessing)
+    {
+        return NS_ERROR_UNEXPECTED;
+    }
+
+    NS_IMETHOD GetFilenameIdentifier(nsAString& aIdentifier)
+    {
+        aIdentifier = mIdentifier;
+        return NS_OK;
+    }
+
+    NS_IMETHOD SetFilenameIdentifier(const nsAString& aIdentifier)
+    {
+        return NS_ERROR_UNEXPECTED;
+    }
+
+    NS_IMETHOD GetProcessIdentifier(uint32_t *aPID)
+    {
+        return NS_ERROR_UNEXPECTED;
+    }
+
+    NS_IMETHOD SetProcessIdentifier(uint32_t aPID)
+    {
+        return NS_ERROR_UNEXPECTED;
+    }
+
+    NS_IMETHOD Begin()
+    {
+        return SendBegin()
+            ? NS_OK : NS_ERROR_FAILURE;
+    }
+
+    NS_IMETHOD NoteRefCountedObject(uint64_t aAddress,
+                                    uint32_t aRefCount,
+                                    const char *aObjectDescription)
+    {
+        nsDependentCString objectDescription(aObjectDescription);
+
+        return SendNoteRefCountedObject(aAddress,
+                                        aRefCount,
+                                        objectDescription)
+            ? NS_OK : NS_ERROR_FAILURE;
+    }
+
+    NS_IMETHOD NoteGCedObject(uint64_t aAddress,
+                              bool aMarked,
+                              const char *aObjectDescription,
+                              uint64_t aCompartmentAddress)
+    {
+        nsDependentCString objectDescription(aObjectDescription);
+
+        return SendNoteGCedObject(aAddress,
+                                  aMarked,
+                                  objectDescription,
+                                  aCompartmentAddress)
+            ? NS_OK : NS_ERROR_FAILURE;
+    }
+
+    NS_IMETHOD NoteEdge(uint64_t aToAddress,
+                        const char *aEdgeName)
+    {
+        nsDependentCString edgeName(aEdgeName);
+
+        return SendNoteEdge(aToAddress,
+                            edgeName)
+            ? NS_OK : NS_ERROR_FAILURE;
+    }
+
+    NS_IMETHOD NoteWeakMapEntry(uint64_t aMap,
+                                uint64_t aKey,
+                                uint64_t aKeyDelegate,
+                                uint64_t aValue)
+    {
+        return SendNoteWeakMapEntry(aMap,
+                                    aKey,
+                                    aKeyDelegate,
+                                    aValue)
+            ? NS_OK : NS_ERROR_FAILURE;
+    }
+
+    NS_IMETHOD BeginResults()
+    {
+        return SendBeginResults()
+            ? NS_OK : NS_ERROR_FAILURE;
+    }
+
+    NS_IMETHOD DescribeRoot(uint64_t aAddress,
+                            uint32_t aKnownEdges)
+    {
+        return SendDescribeRoot(aAddress,
+                                aKnownEdges)
+            ? NS_OK : NS_ERROR_FAILURE;
+    }
+
+    NS_IMETHOD DescribeGarbage(uint64_t aAddress)
+    {
+        return SendDescribeGarbage(aAddress)
+            ? NS_OK : NS_ERROR_FAILURE;
+    }
+
+    NS_IMETHOD End()
+    {
+        return Send__delete__(this)
+            ? NS_OK : NS_ERROR_FAILURE;
+    }
+
+    NS_IMETHOD ProcessNext(nsICycleCollectorHandler* aHandler,
+                           bool* aCanContinue)
+    {
+        return NS_ERROR_UNEXPECTED;
+    }
+
+private:
+    nsString mIdentifier;
+    bool mDumpAllTraces;
+};
+
+NS_IMPL_ISUPPORTS1(CycleCollectWithLogsChild, nsICycleCollectorListener);
+
+CycleCollectWithLogsChild::CycleCollectWithLogsChild(const nsString &aIdentifier,
+                                                     bool aDumpAllTraces)
+    : mIdentifier(aIdentifier), mDumpAllTraces(aDumpAllTraces)
+{
+    MOZ_COUNT_CTOR(CycleCollectWithLogsChild);
+}
+
+CycleCollectWithLogsChild::~CycleCollectWithLogsChild()
+{
+    MOZ_COUNT_DTOR(CycleCollectWithLogsChild);
 }
 
 class AlertObserver
@@ -443,6 +615,16 @@ ContentChild::AllocPMemoryReportRequestChild(const uint32_t& generation)
     return new MemoryReportRequestChild();
 }
 
+PCycleCollectWithLogsChild*
+ContentChild::AllocPCycleCollectWithLogsChild(const nsString &aIdentifier,
+                                              const bool &aDumpAllTraces)
+{
+    CycleCollectWithLogsChild *actor =
+        new CycleCollectWithLogsChild(aIdentifier, aDumpAllTraces);
+    actor->AddRef();
+    return actor;
+}
+
 // This is just a wrapper for InfallibleTArray<MemoryReport> that implements
 // nsISupports, so it can be passed to nsIMemoryReporter::CollectReports.
 class MemoryReportsWrapper MOZ_FINAL : public nsISupports {
@@ -509,6 +691,15 @@ ContentChild::RecvPMemoryReportRequestConstructor(
 }
 
 bool
+ContentChild::RecvPCycleCollectWithLogsConstructor(PCycleCollectWithLogsChild* aChild,
+                                                   const nsString &aIdentifier,
+                                                   const bool &adumpAllTraces)
+{
+    nsJSContext::CycleCollectNow(static_cast<CycleCollectWithLogsChild*>(aChild));
+    return true;
+}
+
+bool
 ContentChild::RecvAudioChannelNotify()
 {
     nsRefPtr<AudioChannelService> service =
@@ -523,6 +714,13 @@ bool
 ContentChild::DeallocPMemoryReportRequestChild(PMemoryReportRequestChild* actor)
 {
     delete actor;
+    return true;
+}
+
+bool
+ContentChild::DeallocPCycleCollectWithLogsChild(PCycleCollectWithLogsChild* actor)
+{
+    static_cast<CycleCollectWithLogsChild*>(actor)->Release();
     return true;
 }
 

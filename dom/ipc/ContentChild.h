@@ -120,6 +120,18 @@ public:
     RecvPMemoryReportRequestConstructor(PMemoryReportRequestChild* child,
                                         const uint32_t& generation);
 
+    virtual PCycleCollectWithLogsChild*
+    AllocPCycleCollectWithLogsChild(const nsString &aIdentifier,
+                                    const bool &adumpAllTraces);
+
+    virtual bool
+    DeallocPCycleCollectWithLogsChild(PCycleCollectWithLogsChild* actor);
+
+    virtual bool
+    RecvPCycleCollectWithLogsConstructor(PCycleCollectWithLogsChild* aChild,
+                                         const nsString &aIdentifier,
+                                         const bool &adumpAllTraces);
+
     virtual bool
     RecvAudioChannelNotify();
 

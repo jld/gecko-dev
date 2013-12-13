@@ -70,6 +70,7 @@ IPDL_SOURCES += [
     'PContentDialog.ipdl',
     'PContentPermissionRequest.ipdl',
     'PCrashReporter.ipdl',
+    'PCycleCollectWithLogs.ipdl',
     'PDocumentRenderer.ipdl',
     'PMemoryReportRequest.ipdl',
     'PTabContext.ipdlh',

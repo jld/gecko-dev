@@ -352,6 +352,12 @@ private:
     virtual PMemoryReportRequestParent* AllocPMemoryReportRequestParent(const uint32_t& generation);
     virtual bool DeallocPMemoryReportRequestParent(PMemoryReportRequestParent* actor);
 
+    virtual PCycleCollectWithLogsParent*
+    AllocPCycleCollectWithLogsParent(const nsString &aIdentifier,
+                                     const bool &aDumpAllTraces);
+    virtual bool
+    DeallocPCycleCollectWithLogsParent(PCycleCollectWithLogsParent* actor);
+
     virtual PTestShellParent* AllocPTestShellParent();
     virtual bool DeallocPTestShellParent(PTestShellParent* shell);
 

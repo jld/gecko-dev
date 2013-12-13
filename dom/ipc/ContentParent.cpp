@@ -30,6 +30,7 @@
 #include "mozilla/dom/Element.h"
 #include "mozilla/dom/ExternalHelperAppParent.h"
 #include "mozilla/dom/PMemoryReportRequestParent.h"
+#include "mozilla/dom/PCycleCollectWithLogsParent.h"
 #include "mozilla/dom/power/PowerManagerService.h"
 #include "mozilla/dom/DOMStorageIPC.h"
 #include "mozilla/dom/bluetooth/PBluetoothParent.h"
@@ -63,6 +64,7 @@
 #include "nsIAlertsService.h"
 #include "nsIAppsService.h"
 #include "nsIClipboard.h"
+#include "nsICycleCollectorListener.h"
 #include "nsIDOMGeoGeolocation.h"
 #include "mozilla/dom/WakeLock.h"
 #include "nsIDOMWindow.h"
@@ -193,6 +195,113 @@ MemoryReportRequestParent::Recv__delete__(const uint32_t& generation, const Infa
 MemoryReportRequestParent::~MemoryReportRequestParent()
 {
     MOZ_COUNT_DTOR(MemoryReportRequestParent);
+}
+
+// IPC receiver for remote GC/CC logging.
+class CycleCollectWithLogsParent : public PCycleCollectWithLogsParent
+{
+public:
+    CycleCollectWithLogsParent(ContentParent *aProcess,
+                               const nsString &aIdentifier,
+                               bool aDumpAllTraces);
+    virtual ~CycleCollectWithLogsParent();
+
+    virtual bool RecvBegin()
+    {
+        nsresult rv = mLogger->Begin();
+        return !NS_WARN_IF(NS_FAILED(rv));
+    }
+
+    virtual bool RecvNoteRefCountedObject(const uint64_t& aAddress,
+                                          const uint32_t& aRefCount,
+                                          const nsCString& aObjectDescription)
+    {
+        nsresult rv = mLogger->NoteRefCountedObject(aAddress,
+                                                    aRefCount,
+                                                    aObjectDescription.get());
+        return !NS_WARN_IF(NS_FAILED(rv));
+    }
+
+    virtual bool RecvNoteGCedObject(const uint64_t& aAddress,
+                                    const bool& aMarked,
+                                    const nsCString& aObjectDescription,
+                                    const uint64_t& aCompartmentAddress)
+    {
+        nsresult rv = mLogger->NoteGCedObject(aAddress,
+                                              aMarked,
+                                              aObjectDescription.get(),
+                                              aCompartmentAddress);
+        return !NS_WARN_IF(NS_FAILED(rv));
+    }
+
+    virtual bool RecvNoteEdge(const uint64_t& aToAddress,
+                              const nsCString& aEdgeName)
+    {
+        nsresult rv = mLogger->NoteEdge(aToAddress,
+                                        aEdgeName.get());
+        return !NS_WARN_IF(NS_FAILED(rv));
+    }
+
+    virtual bool RecvNoteWeakMapEntry(const uint64_t& aMap,
+                                      const uint64_t& aKey,
+                                      const uint64_t& aKeyDelegate,
+                                      const uint64_t& aValue)
+    {
+        nsresult rv = mLogger->NoteWeakMapEntry(aMap,
+                                                aKey,
+                                                aKeyDelegate,
+                                                aValue);
+        return !NS_WARN_IF(NS_FAILED(rv));
+    }
+
+    virtual bool RecvBeginResults()
+    {
+        nsresult rv = mLogger->BeginResults();
+        return !NS_WARN_IF(NS_FAILED(rv));
+    }
+
+    virtual bool RecvDescribeRoot(const uint64_t& aAddress,
+                                  const uint32_t& aKnownEdges)
+    {
+        nsresult rv = mLogger->DescribeRoot(aAddress,
+                                            aKnownEdges);
+        return !NS_WARN_IF(NS_FAILED(rv));
+    }
+
+    virtual bool RecvDescribeGarbage(const uint64_t& aAddress)
+    {
+        nsresult rv = mLogger->DescribeGarbage(aAddress);
+        return !NS_WARN_IF(NS_FAILED(rv));
+    }
+
+    virtual bool Recv__delete__()
+    {
+        nsresult rv = mLogger->End();
+        return !NS_WARN_IF(NS_FAILED(rv));
+    }
+
+private:
+    nsCOMPtr<nsICycleCollectorListener> mLogger;
+};
+
+CycleCollectWithLogsParent::CycleCollectWithLogsParent(ContentParent *aProcess,
+                                                       const nsString &aIdentifier,
+                                                       bool aDumpAllTraces)
+{
+    MOZ_COUNT_CTOR(CycleCollectWithLogsParent);
+    mLogger = do_CreateInstance("@mozilla.org/cycle-collector-logger;1");
+    mLogger->SetFilenameIdentifier(aIdentifier);
+    mLogger->SetProcessIdentifier(aProcess->Pid());
+    if (aDumpAllTraces) {
+        nsCOMPtr<nsICycleCollectorListener> allTracesLogger;
+        mLogger->AllTraces(getter_AddRefs(allTracesLogger));
+        mLogger = allTracesLogger;
+    }
+}
+
+CycleCollectWithLogsParent::~CycleCollectWithLogsParent()
+{
+    MOZ_COUNT_DTOR(CycleCollectWithLogsParent);
 }
 
 // A memory reporter for ContentParent objects themselves.
@@ -2338,6 +2447,20 @@ ContentParent::DeallocPMemoryReportRequestParent(PMemoryReportRequestParent* act
 {
   delete actor;
   return true;
+}
+
+PCycleCollectWithLogsParent*
+ContentParent::AllocPCycleCollectWithLogsParent(const nsString &aIdentifier,
+                                                const bool &aDumpAllTraces)
+{
+    return new CycleCollectWithLogsParent(this, aIdentifier, aDumpAllTraces);
+}
+
+bool
+ContentParent::DeallocPCycleCollectWithLogsParent(PCycleCollectWithLogsParent* actor)
+{
+    delete actor;
+    return true;
 }
 
 PTestShellParent*
