@@ -585,8 +585,8 @@ nsMemoryInfoDumper::DumpGCAndCCLogsToFile(
     nsTArray<ContentParent*> children;
     ContentParent::GetAll(children);
     for (uint32_t i = 0; i < children.Length(); i++) {
-      unused << children[i]->SendDumpGCAndCCLogsToFile(
-        identifier, aDumpAllTraces, aDumpChildProcesses);
+      unused << children[i]->SendPCycleCollectWithLogsConstructor(
+        identifier, aDumpAllTraces);
     }
   }
 

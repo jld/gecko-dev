@@ -318,7 +318,7 @@ public:
 
     NS_IMETHOD End()
     {
-        return End()
+        return Send__delete__(this)
             ? NS_OK : NS_ERROR_FAILURE;
     }
 
@@ -619,7 +619,10 @@ PCycleCollectWithLogsChild*
 ContentChild::AllocPCycleCollectWithLogsChild(const nsString &aIdentifier,
                                               const bool &aDumpAllTraces)
 {
-    return new CycleCollectWithLogsChild(aIdentifier, aDumpAllTraces);
+    CycleCollectWithLogsChild *actor =
+        new CycleCollectWithLogsChild(aIdentifier, aDumpAllTraces);
+    actor->AddRef();
+    return actor;
 }
 
 // This is just a wrapper for InfallibleTArray<MemoryReport> that implements
@@ -717,7 +720,7 @@ ContentChild::DeallocPMemoryReportRequestChild(PMemoryReportRequestChild* actor)
 bool
 ContentChild::DeallocPCycleCollectWithLogsChild(PCycleCollectWithLogsChild* actor)
 {
-    delete actor;
+    static_cast<CycleCollectWithLogsChild*>(actor)->Release();
     return true;
 }
 
