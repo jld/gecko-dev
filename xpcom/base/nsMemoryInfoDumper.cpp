@@ -12,6 +12,7 @@
 #include "mozilla/unused.h"
 #include "mozilla/dom/ContentParent.h"
 #include "mozilla/dom/ContentChild.h"
+#include "mozilla/dom/PRemoteDMDParent.h"
 #include "nsIConsoleService.h"
 #include "nsICycleCollectorListener.h"
 #include "nsIMemoryReporter.h"
@@ -697,12 +698,13 @@ NS_IMPL_ISUPPORTS1(DumpReportCallback, nsIHandleReportCallback)
 
 static void
 MakeFilename(const char *aPrefix, const nsAString &aIdentifier,
-             const char *aSuffix, nsACString &aResult)
+             const char *aSuffix, nsACString &aResult,
+             uint32_t pid = getpid())
 {
-  aResult = nsPrintfCString("%s-%s-%d.%s",
+  aResult = nsPrintfCString("%s-%s-%u.%s",
                             aPrefix,
                             NS_ConvertUTF16toUTF8(aIdentifier).get(),
-                            getpid(), aSuffix);
+                            pid, aSuffix);
 }
 
 /* static */ nsresult
@@ -790,6 +792,42 @@ DMDWrite(void* aState, const char* aFmt, va_list ap)
   vsnprintf(state->mBuf, state->kBufSize, aFmt, ap);
   unused << state->mGZWriter->Write(state->mBuf);
 }
+
+class RemoteDMDParent : public PRemoteDMDParent
+{
+public:
+  RemoteDMDParent(nsGZFileWriter *aGZWriter, nsIFinishReportingCallback *aCallback);
+  virtual ~RemoteDMDParent();
+
+  virtual bool RecvWrite(const nsCString &aData)
+  {
+    nsresult rv = mGZWriter->Write(aData.get());
+    return !NS_WARN_IF(NS_FAILED(rv));
+  }
+
+  virtual bool Recv__delete()
+  {
+    nsresult rv = mGZWriter->Finish();
+    return !NS_WARN_IF(NS_FAILED(rv));
+  }
+
+private:
+  nsRefPtr<nsGZFileWriter> mGZWriter;
+  nsCOMPtr<nsIFinishReportingCallback> mCallback;
+};
+
+RemoteDMDParent::RemoteDMDParent(nsGZFileWriter *aGZWriter,
+                                 nsIFinishReportingCallback *aCallback)
+  : mGZWriter(aGZWriter), mCallback(aCallback)
+{
+  MOZ_COUNT_CTOR(RemoteDMDParent);
+}
+
+RemoteDMDParent::~RemoteDMDParent()
+{
+  mCallback->Callback(nullptr);
+  MOZ_COUNT_DTOR(RemoteDMDParent);
+}
 #endif
 
 static nsresult
@@ -831,8 +869,15 @@ public:
 
   TempDirMemoryFinishCallback(nsGZFileWriter *aWriter,
                               nsIFile *aTmpFile,
-                              nsCString &aFilename)
-    : mrWriter(aWriter), mrTmpFile(aTmpFile), mrFilename(aFilename)
+                              const nsACString &aFilename,
+                              const nsAString &aIdentifier)
+    : mrWriter(aWriter)
+    , mrTmpFile(aTmpFile)
+    , mrFilename(aFilename)
+    , mIdentifier(aIdentifier)
+#ifdef MOZ_DMD
+    , mWaitingForRemoteDMD(false)
+#endif
   {}
 
   NS_IMETHOD Callback(nsISupports *aData);
@@ -841,6 +886,11 @@ private:
   nsRefPtr<nsGZFileWriter> mrWriter;
   nsCOMPtr<nsIFile> mrTmpFile;
   nsCString mrFilename;
+  nsString mIdentifier;
+#ifdef MOZ_DMD
+  bool mWaitingForRemoteDMD;
+  unsigned mChildrenInDMD;
+#endif
 };
 
 NS_IMPL_ISUPPORTS1(TempDirMemoryFinishCallback, nsIFinishReportingCallback)
@@ -928,7 +978,7 @@ nsMemoryInfoDumper::DumpMemoryInfoToTempDir(const nsAString& aIdentifier,
     do_GetService("@mozilla.org/memory-reporter-manager;1");
   nsRefPtr<DumpReportCallback> dumpReport = new DumpReportCallback(mrWriter);
   nsRefPtr<nsIFinishReportingCallback> finishReport =
-    new TempDirMemoryFinishCallback(mrWriter, mrTmpFile, mrFilename);
+    new TempDirMemoryFinishCallback(mrWriter, mrTmpFile, mrFilename, identifier);
   if (aDumpChildProcesses) {
     rv = mgr->GetReports(dumpReport, nullptr, finishReport, nullptr);
   } else {
@@ -944,48 +994,90 @@ TempDirMemoryFinishCallback::Callback(nsISupports *aData)
 {
   nsresult rv;
 
+#ifdef MOZ_DMD
+  if (mWaitingForRemoteDMD) {
+    goto waitingForRemoteDMD;
+  }
+
+  {
+    // Create a filename like dmd-<identifier>-<pid>.txt.gz, which will be used
+    // if DMD is enabled.
+    nsCString dmdFilename;
+    MakeFilename("dmd", mIdentifier, "txt.gz", dmdFilename);
+
+    // Open a new DMD file named |dmdFilename| in NS_OS_TEMP_DIR for writing,
+    // and dump DMD output to it.  This must occur after the memory reporters
+    // have been run (above), but before the memory-reports file has been
+    // renamed (so scripts can detect the DMD file, if present).
+
+    nsCOMPtr<nsIFile> dmdFile;
+    rv = nsMemoryInfoDumper::OpenTempFile(dmdFilename, getter_AddRefs(dmdFile));
+    if (NS_WARN_IF(NS_FAILED(rv)))
+      return rv;
+
+    nsRefPtr<nsGZFileWriter> dmdWriter = new nsGZFileWriter();
+    rv = dmdWriter->Init(dmdFile);
+    if (NS_WARN_IF(NS_FAILED(rv)))
+      return rv;
+
+    // Dump DMD output to the file.
+
+    DMDWriteState state(dmdWriter);
+    dmd::Writer w(DMDWrite, &state);
+    dmd::Dump(w);
+
+    rv = dmdWriter->Finish();
+    if (NS_WARN_IF(NS_FAILED(rv)))
+      return rv;
+  }
+
+  if (aDumpChildProcesses) {
+    {
+      nsTArray<ContentParent*> children;
+      ContentParent::GetAll(children);
+      mChildrenInDMD = children.Length();
+      mWaitingForRemoteDMD = true;
+      for (uint32_t i = 0; i < children.Length(); i++) {
+        ContentParent *child = children[i];
+
+        nsCString rdmdFilename;
+        MakeFilename("dmd", mIdentifier, "txt.gz", rdmdFilename, child->Pid());
+
+        nsCOMPtr<nsIFile> rdmdFile;
+        rv = nsMemoryInfoDumper::OpenTempFile(rdmdFilename, getter_AddRefs(rdmdFile));
+        if (NS_WARN_IF(NS_FAILED(rv)))
+          return rv;
+
+        nsRefPtr<nsGZFileWriter> rdmdWriter = new nsGZFileWriter();
+        rv = rdmdWriter->Init(rdmdWriter);
+        if (NS_WARN_IF(NS_FAILED(rv)))
+          return rv;
+
+        child->SendPRemoteDMDConstructor(new RemoteDMDParent(rdmdWriter, this));
+      }
+      if (mChildrenInDMD > 0) {
+        return NS_OK;
+      }
+    }
+    if (false) {
+    waitingForRemoteDMD:
+      if (--mChildrenInDMD > 0) {
+        return NS_OK;
+      }
+    }
+  }
+#endif  // MOZ_DMD
+
   rv = DumpFooter(mrWriter);
   if (NS_WARN_IF(NS_FAILED(rv)))
     return rv;
-
-#ifdef MOZ_DMD
-  // Create a filename like dmd-<identifier>-<pid>.txt.gz, which will be used
-  // if DMD is enabled.
-  nsCString dmdFilename;
-  MakeFilename("dmd", mIdentifier, "txt.gz", dmdFilename);
-
-  // Open a new DMD file named |dmdFilename| in NS_OS_TEMP_DIR for writing,
-  // and dump DMD output to it.  This must occur after the memory reporters
-  // have been run (above), but before the memory-reports file has been
-  // renamed (so scripts can detect the DMD file, if present).
-
-  nsCOMPtr<nsIFile> dmdFile;
-  rv = nsMemoryInfoDumper::OpenTempFile(dmdFilename, getter_AddRefs(dmdFile));
-  if (NS_WARN_IF(NS_FAILED(rv)))
-    return rv;
-
-  nsRefPtr<nsGZFileWriter> dmdWriter = new nsGZFileWriter();
-  rv = dmdWriter->Init(dmdFile);
-  if (NS_WARN_IF(NS_FAILED(rv)))
-    return rv;
-
-  // Dump DMD output to the file.
-
-  DMDWriteState state(dmdWriter);
-  dmd::Writer w(DMDWrite, &state);
-  dmd::Dump(w);
-
-  rv = dmdWriter->Finish();
-  if (NS_WARN_IF(NS_FAILED(rv)))
-    return rv;
-#endif  // MOZ_DMD
 
   // The call to Finish() deallocates the memory allocated by mrWriter's first
   // DUMP() call (within DumpProcessMemoryReportsToGZFileWriter()).  Because
   // that memory was live while the memory reporters ran and thus measured by
   // them -- by "heap-allocated" if nothing else -- we want DMD to see it as
   // well.  So we deliberately don't call Finish() until after DMD finishes.
-  rv = mrWriter->Finish();
+        rv = mrWriter->Finish();
   if (NS_WARN_IF(NS_FAILED(rv)))
     return rv;
 

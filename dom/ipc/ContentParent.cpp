@@ -31,6 +31,7 @@
 #include "mozilla/dom/ExternalHelperAppParent.h"
 #include "mozilla/dom/PMemoryReportRequestParent.h"
 #include "mozilla/dom/PCycleCollectWithLogsParent.h"
+#include "mozilla/dom/PRemoteDMDParent.h"
 #include "mozilla/dom/power/PowerManagerService.h"
 #include "mozilla/dom/DOMStorageIPC.h"
 #include "mozilla/dom/bluetooth/PBluetoothParent.h"
@@ -2426,6 +2427,21 @@ ContentParent::AllocPCycleCollectWithLogsParent(const nsString &aIdentifier,
 
 bool
 ContentParent::DeallocPCycleCollectWithLogsParent(PCycleCollectWithLogsParent* actor)
+{
+    delete actor;
+    return true;
+}
+
+PRemoteDMDParent*
+ContentParent::AllocPRemoteDMDParent()
+{
+    // Do not use.  This class is subclassed and allocated elsewhere.
+    MOZ_CRASH();
+    return nullptr;
+}
+
+bool
+ContentParent::DeallocPRemoteDMDParent(PRemoteDMDParent* actor)
 {
     delete actor;
     return true;

@@ -69,6 +69,7 @@
 #include "nsIGeolocationProvider.h"
 #include "mozilla/dom/PMemoryReportRequestChild.h"
 #include "mozilla/dom/PCycleCollectWithLogsChild.h"
+#include "mozilla/dom/PRemoteDMDChild.h"
 
 #ifdef MOZ_PERMISSIONS
 #include "nsIScriptSecurityManager.h"
@@ -345,6 +346,33 @@ CycleCollectWithLogsChild::CycleCollectWithLogsChild(const nsString &aIdentifier
 CycleCollectWithLogsChild::~CycleCollectWithLogsChild()
 {
     MOZ_COUNT_DTOR(CycleCollectWithLogsChild);
+}
+
+// DMD to a remote log file
+class RemoteDMDChild : public PRemoteDMDChild
+{
+public:
+    RemoteDMDChild();
+    virtual ~RemoteDMDChild();
+    static void DMDWrite(void *aData, const char *aFmt, va_list aArgs)
+    {
+        RemoteDMDChild *actor = (RemoteDMDChild*)aData;
+        vsnprintf(actor->mBuf, kBufSize, aFmt, aArgs);
+        unused << actor->Write(nsDependentCString(actor->mBuf));
+    }
+private:
+    static const size_t kBufSize = 4096;
+    char mBuf[kBufSize];
+};
+
+RemoteDMDChild::RemoteDMDChild()
+{
+    MOZ_COUNT_CTOR(RemoteDMDChild);
+}
+
+RemoteDMDChild::~RemoteDMDChild()
+{
+    MOZ_COUNT_DTOR(RemoteDMDChild);
 }
 
 class AlertObserver
@@ -625,6 +653,12 @@ ContentChild::AllocPCycleCollectWithLogsChild(const nsString &aIdentifier,
     return actor;
 }
 
+PRemoteDMDChild*
+ContentChild::AllocPRemoteDMDChild()
+{
+    return new RemoteDMDChild();
+}
+
 // This is just a wrapper for InfallibleTArray<MemoryReport> that implements
 // nsISupports, so it can be passed to nsIMemoryReporter::CollectReports.
 class MemoryReportsWrapper MOZ_FINAL : public nsISupports {
@@ -679,6 +713,12 @@ ContentChild::RecvPMemoryReportRequestConstructor(
     GetProcessName(process);
     AppendProcessId(process);
 
+#ifdef MOZ_DMD
+    // Clear DMD's reportedness state before running the memory reporters, to
+    // avoid spurious twice-reported warnings.
+    dmd::ClearReports();
+#endif
+
     // Run the reporters.  The callback will turn each measurement into a
     // MemoryReport.
     nsRefPtr<MemoryReportsWrapper> wrappedReports =
@@ -696,6 +736,18 @@ ContentChild::RecvPCycleCollectWithLogsConstructor(PCycleCollectWithLogsChild* a
                                                    const bool &adumpAllTraces)
 {
     nsJSContext::CycleCollectNow(static_cast<CycleCollectWithLogsChild*>(aChild));
+    return true;
+}
+
+bool
+ContentChild::RecvPRemoteDMDConstructor(PRemoteDMDChild* aChild)
+{
+#ifdef MOZ_DMD
+    RemoteDMDChild *child = static_cast<RemoteDMDChild*>(aChild);
+
+    dmd::Writer w(RemoteDMDChild::DMDWrite, child);
+    dmd::Dump(w);
+#endif
     return true;
 }
 
@@ -721,6 +773,13 @@ bool
 ContentChild::DeallocPCycleCollectWithLogsChild(PCycleCollectWithLogsChild* actor)
 {
     static_cast<CycleCollectWithLogsChild*>(actor)->Release();
+    return true;
+}
+
+bool
+ContentChild::DeallocPRemoteDMDChild(PRemoteDMDChild* actor)
+{
+    delete actor;
     return true;
 }
 

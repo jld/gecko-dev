@@ -73,6 +73,7 @@ IPDL_SOURCES += [
     'PCycleCollectWithLogs.ipdl',
     'PDocumentRenderer.ipdl',
     'PMemoryReportRequest.ipdl',
+    'PRemoteDMD.ipdl',
     'PTabContext.ipdlh',
 ]
 

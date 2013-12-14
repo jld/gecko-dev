@@ -353,6 +353,9 @@ private:
     virtual bool
     DeallocPCycleCollectWithLogsParent(PCycleCollectWithLogsParent* actor);
 
+    virtual PRemoteDMDParent* AllocPRemoteDMDParent(void);
+    virtual bool DeallocPRemoteDMDParent(PRemoteDMDParent* actor);
+
     virtual PTestShellParent* AllocPTestShellParent();
     virtual bool DeallocPTestShellParent(PTestShellParent* shell);
 

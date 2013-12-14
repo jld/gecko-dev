@@ -132,6 +132,16 @@ public:
                                          const nsString &aIdentifier,
                                          const bool &adumpAllTraces);
 
+    virtual PRemoteDMDChild*
+    AllocPRemoteDMDChild();
+
+
+    virtual bool
+    DeallocPRemoteDMDChild(PRemoteDMDChild* actor);
+
+    virtual bool
+    RecvPRemoteDMDConstructor(PRemoteDMDChild* aChild);
+
     virtual bool
     RecvAudioChannelNotify();
 
