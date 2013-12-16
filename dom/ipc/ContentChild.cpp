@@ -357,8 +357,9 @@ public:
     static void DMDWrite(void *aData, const char *aFmt, va_list aArgs)
     {
         RemoteDMDChild *actor = (RemoteDMDChild*)aData;
-        vsnprintf(actor->mBuf, kBufSize, aFmt, aArgs);
-        unused << actor->Write(nsDependentCString(actor->mBuf));
+        ::vsnprintf(actor->mBuf, kBufSize, aFmt, aArgs);
+        bool wrote = actor->SendWrite(nsDependentCString(actor->mBuf));
+        NS_WARN_IF(!wrote);
     }
 private:
     static const size_t kBufSize = 4096;
@@ -748,6 +749,7 @@ ContentChild::RecvPRemoteDMDConstructor(PRemoteDMDChild* aChild)
     dmd::Writer w(RemoteDMDChild::DMDWrite, child);
     dmd::Dump(w);
 #endif
+    aChild->Send__delete__(aChild);
     return true;
 }
 

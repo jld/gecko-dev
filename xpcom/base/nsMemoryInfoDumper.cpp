@@ -789,7 +789,7 @@ static void
 DMDWrite(void* aState, const char* aFmt, va_list ap)
 {
   DMDWriteState *state = (DMDWriteState*)aState;
-  vsnprintf(state->mBuf, state->kBufSize, aFmt, ap);
+  ::vsnprintf(state->mBuf, state->kBufSize, aFmt, ap);
   unused << state->mGZWriter->Write(state->mBuf);
 }
 
@@ -870,11 +870,13 @@ public:
   TempDirMemoryFinishCallback(nsGZFileWriter *aWriter,
                               nsIFile *aTmpFile,
                               const nsACString &aFilename,
-                              const nsAString &aIdentifier)
+                              const nsAString &aIdentifier,
+                              bool aDumpChildProcesses)
     : mrWriter(aWriter)
     , mrTmpFile(aTmpFile)
     , mrFilename(aFilename)
     , mIdentifier(aIdentifier)
+    , mDumpChildProcesses(aDumpChildProcesses)
 #ifdef MOZ_DMD
     , mWaitingForRemoteDMD(false)
 #endif
@@ -887,6 +889,7 @@ private:
   nsCOMPtr<nsIFile> mrTmpFile;
   nsCString mrFilename;
   nsString mIdentifier;
+  bool mDumpChildProcesses;
 #ifdef MOZ_DMD
   bool mWaitingForRemoteDMD;
   unsigned mChildrenInDMD;
@@ -978,7 +981,8 @@ nsMemoryInfoDumper::DumpMemoryInfoToTempDir(const nsAString& aIdentifier,
     do_GetService("@mozilla.org/memory-reporter-manager;1");
   nsRefPtr<DumpReportCallback> dumpReport = new DumpReportCallback(mrWriter);
   nsRefPtr<nsIFinishReportingCallback> finishReport =
-    new TempDirMemoryFinishCallback(mrWriter, mrTmpFile, mrFilename, identifier);
+    new TempDirMemoryFinishCallback(mrWriter, mrTmpFile, mrFilename, identifier,
+                                    aDumpChildProcesses);
   if (aDumpChildProcesses) {
     rv = mgr->GetReports(dumpReport, nullptr, finishReport, nullptr);
   } else {
@@ -1031,7 +1035,8 @@ TempDirMemoryFinishCallback::Callback(nsISupports *aData)
       return rv;
   }
 
-  if (aDumpChildProcesses) {
+  if (mDumpChildProcesses) {
+    // This block is to destroy the array of children before the yield point.
     {
       nsTArray<ContentParent*> children;
       ContentParent::GetAll(children);
@@ -1049,21 +1054,22 @@ TempDirMemoryFinishCallback::Callback(nsISupports *aData)
           return rv;
 
         nsRefPtr<nsGZFileWriter> rdmdWriter = new nsGZFileWriter();
-        rv = rdmdWriter->Init(rdmdWriter);
+        rv = rdmdWriter->Init(rdmdFile);
         if (NS_WARN_IF(NS_FAILED(rv)))
           return rv;
 
-        child->SendPRemoteDMDConstructor(new RemoteDMDParent(rdmdWriter, this));
-      }
-      if (mChildrenInDMD > 0) {
-        return NS_OK;
+        bool constructed = 
+          child->SendPRemoteDMDConstructor(new RemoteDMDParent(rdmdWriter, this));
+        if (NS_WARN_IF(!constructed)) {
+          --mChildrenInDMD;
+        }
       }
     }
-    if (false) {
+    // Yield until all the children are done.
+    while (mChildrenInDMD > 0) {
+      return NS_OK;
     waitingForRemoteDMD:
-      if (--mChildrenInDMD > 0) {
-        return NS_OK;
-      }
+      --mChildrenInDMD;
     }
   }
 #endif  // MOZ_DMD
