@@ -203,6 +203,13 @@ InstallSyscallReporter(void)
 static int
 InstallSyscallFilter(void)
 {
+#ifdef MOZ_DMD
+  char* e = getenv("DMD");
+  if (e && strcmp(e, "") != 0 && strcmp(e, "0") != 0) {
+    LOG_ERROR("SANDBOX DISABLED FOR DMD!  See bug 956961.");
+    return 0;
+  }
+#endif
   if (prctl(PR_SET_NO_NEW_PRIVS, 1, 0, 0, 0)) {
     return 1;
   }
