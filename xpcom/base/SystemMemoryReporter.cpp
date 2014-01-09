@@ -22,6 +22,7 @@
 #include <sys/stat.h>
 #include <sys/types.h>
 #include <unistd.h>
+#include <errno.h>
 
 // This file implements a Linux-specific, system-wide memory reporter.  It
 // gathers all the useful memory measurements obtainable from the OS in a
@@ -153,7 +154,10 @@ public:
     REPORT(NS_LITERAL_CSTRING("mem/free"), memFree, NS_LITERAL_CSTRING(
 "Memory which is free and not being used for any purpose."));
 
-    return NS_OK;
+    // Report reserved memory not included in memTotal
+    rv = CollectPmemReports(aHandleReport, aData);
+
+    return rv;
   }
 
 private:
@@ -498,6 +502,88 @@ private:
       *aPss = 0;
     }
 
+    return NS_OK;
+  }
+
+  nsresult CollectPmemReports(nsIHandleReportCallback* aHandleReport,
+                              nsISupports* aData)
+  {
+    DIR* d = opendir("/sys/kernel/pmem_regions");
+    if (!d) {
+      if (NS_WARN_IF(errno != ENOENT)) {
+        return NS_ERROR_FAILURE;
+      }
+      // If ENOENT, system doesn't use pmem.
+      return NS_OK;
+    }
+
+    struct dirent* ent;
+    while ((ent = readdir(d))) {
+      const char* name = ent->d_name;
+      uint64_t size;
+      int scanned;
+
+      if (name[0] == '.') {
+        continue;
+      }
+      // Read total size
+      nsPrintfCString sizePath("/sys/kernel/pmem_regions/%s/size", name);
+      FILE* sizeFile = fopen(sizePath.get(), "r");
+      if (NS_WARN_IF(!sizeFile)) {
+        continue;
+      }
+      scanned = fscanf(sizeFile, "%"SCNu64, &size);
+      if (NS_WARN_IF(scanned != 1)) {
+        continue;
+      }
+      fclose(sizeFile);
+
+      // Read mapped regions
+      uint64_t freeSize = size;
+      nsPrintfCString regionsPath("/sys/kernel/pmem_regions/%s/mapped_regions",
+                                  name);
+      FILE* regionsFile = fopen(regionsPath.get(), "r");
+      if (regionsFile) {
+        static const size_t bufLen = 4096;
+        char buf[bufLen];
+        while (fgets(buf, bufLen, regionsFile)) {
+          int pid;
+          const char *nextParen;
+
+          scanned = sscanf(buf, "pid %d", &pid);
+          if (NS_WARN_IF(scanned != 1)) {
+            continue;
+          }
+          nextParen = strchr(buf, '(');
+          while (nextParen != nullptr) {
+            uint64_t mapStart, mapLen;
+
+            scanned = sscanf(nextParen + 1, "%"SCNx64",%"SCNx64,
+                             &mapStart, &mapLen);
+            if (NS_WARN_IF(scanned != 2)) {
+              break;
+            }
+
+            nsPrintfCString path("mem/pmem/used(pid=%d)/%s/0x%"PRIx64,
+                                 pid, name, mapStart);
+            nsPrintfCString desc("Physical memory reserved for the \"%s\" pool "
+                                 "and allocated to a buffer.", name);
+            REPORT(path, mapLen, desc);
+            freeSize -= mapLen;
+
+            nextParen = strchr(nextParen + 1, '(');
+          }
+        }
+        fclose(regionsFile);
+      }
+
+      nsPrintfCString path("mem/pmem/free/%s", name);
+      nsPrintfCString desc("Physical memory reserved for the \"%s\" pool and "
+                           "unavailable to the rest of the system, but not "
+                           "currently allocated.", name);
+      REPORT(path, freeSize, desc);
+    }
+    closedir(d);
     return NS_OK;
   }
 
