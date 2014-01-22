@@ -130,7 +130,7 @@ Reporter(int nr, siginfo_t *info, void *void_context)
     args[5] = SECCOMP_PARM6(ctx);
 
     LOG_ERROR("seccomp sandbox violation: pid %u, syscall %lu, args %lu %lu %lu"
-              " %lu %lu %lu.  Killing process.", getpid(), syscall,
+              " %lu %lu %lu.  Killing process.", getpid(), syscall_nr,
               args[0], args[1], args[2], args[3], args[4], args[5]);
     SandboxLogJSStack();
   }
