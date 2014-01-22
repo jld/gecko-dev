@@ -22,6 +22,7 @@
 #include "nsIException.h"
 #include "nsIXPConnect.h"
 #include "nsServiceManagerUtils.h"
+#include "nsString.h"
 
 #include "linux_seccomp.h"
 #ifdef MOZ_LOGGING
@@ -73,19 +74,19 @@ SandboxLogJSStack(void)
   rv = xpc->GetCurrentJSStack(getter_AddRefs(frame));
   NS_ENSURE_SUCCESS_VOID(rv);
   for (int i = 0; frame; ++i) {
-    char *fileName, *funName;
+    nsAutoCString fileName, funName;
     int32_t lineNumber;
 
-    rv = frame->GetFilename(&fileName);
+    rv = frame->GetFilename(fileName);
     NS_ENSURE_SUCCESS_VOID(rv);
     rv = frame->GetLineNumber(&lineNumber);
     NS_ENSURE_SUCCESS_VOID(rv);
-    rv = frame->GetName(&funName);
+    rv = frame->GetName(funName);
     NS_ENSURE_SUCCESS_VOID(rv);
 
     LOG_ERROR("JS frame %d: %s %s line %d", i,
-              funName ? funName : "(anonymous)",
-              fileName ? fileName : "(no file)",
+              funName.IsVoid() ? "(anonymous)" : funName.get(),
+              fileName.IsVoid() ? "(no file)" : fileName.get(),
               lineNumber);
 
     rv = frame->GetCaller(getter_AddRefs(frame));
