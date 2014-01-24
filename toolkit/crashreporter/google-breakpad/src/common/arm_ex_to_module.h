@@ -108,7 +108,7 @@ class ARMExToModule {
   ARMExToModule(Module* module)
       : module_(module) { }
   ~ARMExToModule() { }
-  void AddStackFrame(uintptr_t addr, size_t size);
+  bool AddStackFrame(uintptr_t addr, size_t size);
   int ImproveStackFrame(const struct extab_data* edata);
   void DeleteStackFrame();
   void SubmitStackFrame();
