@@ -162,13 +162,27 @@ int ARMExToModule::TranslateCmd(const struct extab_data* edata,
   return ret;
 }
 
-void ARMExToModule::AddStackFrame(uintptr_t addr, size_t size) {
+bool ARMExToModule::AddStackFrame(uintptr_t addr, size_t size) {
+  // Check whether this range is already handled.
+  uintptr_t covered = addr;
+  while (covered < addr + size) {
+    const Module::StackFrameEntry *old_entry =
+      module_->FindStackFrameEntryByAddress(covered);
+    if (!old_entry) {
+      break;
+    }
+    covered = old_entry->address + old_entry->size;
+  }
+  if (covered >= addr + size) {
+    return false;
+  }
   stack_frame_entry_ = new Module::StackFrameEntry;
   stack_frame_entry_->address = addr;
   stack_frame_entry_->size = size;
   Module::Expr sp_expr = Module::Expr(ustr__sp(), 0, false); // "sp"
   stack_frame_entry_->initial_rules[ustr__ZDcfa()] = sp_expr; // ".cfa"
   vsp_ = sp_expr;
+  return true;
 }
 
 int ARMExToModule::ImproveStackFrame(const struct extab_data* edata) {
