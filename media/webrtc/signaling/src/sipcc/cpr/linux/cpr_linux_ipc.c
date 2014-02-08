@@ -2,118 +2,32 @@
  * License, v. 2.0. If a copy of the MPL was not distributed with this
  * file, You can obtain one at http://mozilla.org/MPL/2.0/. */
 
-/**
- *  @brief CPR layer for interprocess communication
- *
- * The name of this file may be overly broad, rather this file deals
- * with IPC via message queues.  A user may create, destroy and
- * associate a thread with a message queue.  Once established, messages
- * can be delivered and retrieved.
- *
- * The send/get APIs attempt to reliably deliver messages even when
- * under stress.  Two mechanisms have been added to deal with a full
- * message queue.  First, the message queue size may be extended to
- * allow more messages to be handled than supported by an OS.
- * Second, if the queue is indeed full a sleep-and-retry
- * method is used to force a context-switch to allow for other threads
- * to run in hope of clearing some messages off of the queue.  The
- * latter method is always-on by default.  The former method must be
- * enabled by extending the message queue by some size greater than
- * zero (0).
- *
- * @defgroup IPC The Inter Process Communication module
- * @ingroup CPR
- * @brief The module related to IPC abstraction for the pSIPCC
- * @addtogroup MsgQIPCAPIs The Message Queue IPC APIs
- * @ingroup IPC
- * @brief APIs expected by pSIPCC for using message queues
- *
- * @{
- *
- *
- */
 #include "cpr.h"
 #include "cpr_stdlib.h"
 #include <cpr_stdio.h>
 #include <errno.h>
-#if defined(WEBRTC_GONK)
-#include <sys/syscall.h>
-#include <unistd.h>
-#include <linux/msg.h>
-#include <linux/ipc.h>
-#else
-#include <sys/msg.h>
-#include <sys/ipc.h>
-#endif
-#include "plat_api.h"
-#include "CSFLog.h"
+#include <sys/time.h>
+#include <time.h>
+#include <plat_api.h>
+#include "cpr_string.h"
 
-static const char *logTag = "cpr_linux_ipc";
-
+/*
+ * If building with debug test interface,
+ * allow access to internal CPR functions
+ */
 #define STATIC static
 
-#if defined(WEBRTC_GONK)
-
-#if defined(__i386__)
-# include <asm-generic/ipc.h>
-#endif /* __i386__ */
-
-int msgsnd(int msqid, const void *msgp, size_t msgsz, int msgflg)
-{
-#if defined(__i386__)
-  return syscall(__NR_ipc, MSGSND, msqid, msgsz, msgflg, msgp);
-#else
-  return syscall(__NR_msgsnd, msqid, msgp, msgsz, msgflg);
-#endif
-}
-
-ssize_t msgrcv(int msqid, void *msgp, size_t msgsz, long msgtyp, int msgflg)
-{
-#if defined(__i386__)
-  struct ipc_kludge tmp = {
-    .msgp = msgp,
-    .msgtyp = msgtyp
-  };
-
-  return syscall(__NR_ipc, MSGRCV, msqid, msgsz, msgflg, &tmp);
-#else
-  return syscall(__NR_msgrcv, msqid, msgp, msgsz, msgtyp, msgflg);
-#endif
-}
-
-int msgctl(int msqid, int cmd, struct msqid_ds *buf)
-{
-#if defined(__i386__)
-  /* Android defines |struct ipc_perm| as old ABI. */
-  return syscall(__NR_ipc, MSGCTL, msqid, cmd | IPC_64, 0, buf);
-#else
-  return syscall(__NR_msgctl, msqid, cmd, buf);
-#endif
-}
-
-int msgget(key_t key, int msgflg)
-{
-#if defined(__i386__)
-  return syscall(__NR_ipc, MSGGET, key, msgflg, 0, NULL);
-#else
-  return syscall(__NR_msgget, key, msgflg);
-#endif
-}
-#endif
-
-/* @def The Message Queue depth */
-#define OS_MSGTQL 31
+#define OS_MSGTQL 31 /* need to check number for MV linux and put here */
 
 /*
  * Internal CPR API
  */
 extern pthread_t cprGetThreadId(cprThread_t thread);
 
-/**
- * @struct cpr_msgq_node_s
+/*
  * Extended internal message queue node
  *
- * A double-linked list holding the necessary message information
+ * A double-linked list holding the nessasary message information
  */
 typedef struct cpr_msgq_node_s
 {
@@ -123,8 +37,7 @@ typedef struct cpr_msgq_node_s
     void *pUserData;
 } cpr_msgq_node_t;
 
-/**
- * @struct cpr_msg_queue_s
+/*
  * Msg queue information needed to hide OS differences in implementation.
  * To use msg queues, the application code may pass in a name to the
  * create function for msg queues. CPR does not use this field, it is
@@ -152,12 +65,12 @@ typedef struct cpr_msg_queue_s
     uint16_t extendedQDepth;
     uint16_t maxExtendedQDepth;
     pthread_mutex_t mutex;       /* lock for managing extended queue     */
+	pthread_cond_t cond;		 /* signal for queue/dequeue */
     cpr_msgq_node_t *head;       /* extended queue head (newest element) */
     cpr_msgq_node_t *tail;       /* extended queue tail (oldest element) */
 } cpr_msg_queue_t;
 
-/**
- * @enum cpr_msgq_post_result_e
+/*
  * A enumeration used to report the result of posting a message to
  * a message queue
  */
@@ -240,10 +153,7 @@ static cpr_msgq_post_result_e
 cprPostMessage(cpr_msg_queue_t *msgq, void *msg, void **ppUserData);
 static void
 cprPegSendMessageStats(cpr_msg_queue_t *msgq, uint16_t numAttempts);
-static cpr_msgq_post_result_e
-cprPostExtendedQMsg(cpr_msg_queue_t *msgq, void *msg, void **ppUserData);
-static void
-cprMoveMsgToQueue(cpr_msg_queue_t *msgq);
+
 
 /*
  * Functions
@@ -252,23 +162,11 @@ cprMoveMsgToQueue(cpr_msg_queue_t *msgq);
 /**
  * Creates a message queue
  *
- * @brief The cprCreateMessageQueue function is called to allow the OS to
- * perform whatever work is needed to create a message queue.
-
- * If the name is present, CPR should assign this name to the message queue to assist in
- * debugging. The message queue depth is the second input parameter and is for
- * setting the desired queue depth. This parameter may not be supported by all OS.
- * Its primary intention is to set queue depth beyond the default queue depth
- * limitation.
- * On any OS where there is no limit on the message queue depth or
- * its queue depth is sufficiently large then this parameter is ignored on that
- * OS.
- *
- * @param[in] name  - name of the message queue (optional)
- * @param[in] depth - the message queue depth, optional field which should
+ * @param name  - name of the message queue
+ * @param depth - the message queue depth, optional field which will
  *                default if set to zero(0)
  *
- * @return Msg queue handle or NULL if init failed, errno should be provided
+ * @return Msg queue handle or NULL if init failed, errno provided
  *
  * @note the actual message queue depth will be bounded by the
  *       standard system message queue depth and CPR_MAX_MSG_Q_DEPTH.
@@ -278,64 +176,24 @@ cprMoveMsgToQueue(cpr_msg_queue_t *msgq);
 cprMsgQueue_t
 cprCreateMessageQueue (const char *name, uint16_t depth)
 {
+    static const char fname[] = "cprCreateMessageQueue";
     cpr_msg_queue_t *msgq;
-    struct msqid_ds buf;
+    static int key_id = 100; /* arbitrary starting number */
+    pthread_cond_t _cond = PTHREAD_COND_INITIALIZER;
+    pthread_mutex_t _lock = PTHREAD_MUTEX_INITIALIZER;
 
-    msgq =(cpr_msg_queue_t *)cpr_calloc(1, sizeof(cpr_msg_queue_t));
+    msgq = cpr_calloc(1, sizeof(cpr_msg_queue_t));
     if (msgq == NULL) {
-        CPR_ERROR("%s: Malloc failed: %s\n", __FUNCTION__,
+        printf("%s: Malloc failed: %s\n", fname,
                   name ? name : unnamed_string);
         errno = ENOMEM;
         return NULL;
     }
 
     msgq->name = name ? name : unnamed_string;
-
-    /*
-     * Set creation flag so that OS will create the message queue
-     */
-    msgq->queueId = msgget(IPC_PRIVATE, (IPC_EXCL | IPC_CREAT | 0666));
-
-    if (msgq->queueId == -1) {
-        CPR_ERROR("%s: Creation failed: %s: %d\n", __FUNCTION__, name, errno);
-        if (errno == EEXIST) {
-
-        }
-
-        cpr_free(msgq);
-        return NULL;
-    }
-    CSFLogDebug(logTag, "create message q with id=%x\n", msgq->queueId);
-
-    /* flush the q before ?? */
-
-    /*
-     * Create mutex for extended (overflow) queue
-     */
-    if (pthread_mutex_init(&msgq->mutex, NULL) != 0) {
-        CPR_ERROR("%s: Failed to create msg queue (%s) mutex: %d\n",
-                  __FUNCTION__, name, errno);
-        (void) msgctl(msgq->queueId, IPC_RMID, &buf);
-        cpr_free(msgq);
-        return NULL;
-    }
-
-    /*
-     * Set the extended message queue depth (within bounds)
-     */
-    if (depth > CPR_MAX_MSG_Q_DEPTH) {
-        CPR_INFO("%s: Depth too large (%d) reset to %d\n", __FUNCTION__, depth,
-                 CPR_MAX_MSG_Q_DEPTH);
-        depth = CPR_MAX_MSG_Q_DEPTH;
-    }
-
-    if (depth < OS_MSGTQL) {
-        if (depth) {
-            CPR_INFO("%s: Depth too small (%d) reset to %d\n", __FUNCTION__, depth, OS_MSGTQL);
-        }
-        depth = OS_MSGTQL;
-    }
-    msgq->maxExtendedQDepth = depth - OS_MSGTQL;
+    msgq->queueId = key_id++;
+    msgq->cond = _cond;
+    msgq->mutex = _lock;
 
     /*
      * Add message queue to list for statistics reporting
@@ -350,18 +208,11 @@ cprCreateMessageQueue (const char *name, uint16_t depth)
 
 
 /**
-  * cprDestroyMessageQueue
- * @brief Removes all messages from the queue and then destroy the message queue
+ * Removes all messages from the queue and then destroy the message queue
  *
- * The cprDestroyMessageQueue function is called to destroy a message queue. The
- * function drains any messages from the queue and the frees the
- * message queue. Any messages on the queue are to be deleted, and not sent to the intended
- * recipient. It is the application's responsibility to ensure that no threads are
- * blocked on a message queue when it is destroyed.
+ * @param msgQueue - message queue to destroy
  *
- * @param[in] msgQueue - message queue to destroy
- *
- * @return CPR_SUCCESS or CPR_FAILURE, errno should be provided in this case
+ * @return CPR_SUCCESS or CPR_FAILURE, errno provided
  */
 cprRC_t
 cprDestroyMessageQueue (cprMsgQueue_t msgQueue)
@@ -369,9 +220,6 @@ cprDestroyMessageQueue (cprMsgQueue_t msgQueue)
     static const char fname[] = "cprDestroyMessageQueue";
     cpr_msg_queue_t *msgq;
     void *msg;
-    struct msqid_ds buf;
-    CSFLogDebug(logTag, "Destroy message Q called..\n");
-
 
     msgq = (cpr_msg_queue_t *) msgQueue;
     if (msgq == NULL) {
@@ -404,13 +252,6 @@ cprDestroyMessageQueue (cprMsgQueue_t msgQueue)
     }
     pthread_mutex_unlock(&msgQueueListMutex);
 
-    /* Remove message queue */
-    if (msgctl(msgq->queueId, IPC_RMID, &buf) == -1) {
-        CPR_ERROR("%s: Destruction failed: %s: %d\n", fname,
-                  msgq->name, errno);
-        return CPR_FAILURE;
-    }
-
     /* Remove message queue mutex */
     if (pthread_mutex_destroy(&msgq->mutex) != 0) {
         CPR_ERROR("%s: Failed to destroy msg queue (%s) mutex: %d\n",
@@ -423,12 +264,10 @@ cprDestroyMessageQueue (cprMsgQueue_t msgQueue)
 
 
 /**
-  * cprSetMessageQueueThread
- * @brief Associate a thread with the message queue
+ * Associate a thread with the message queue
  *
- * This method is used by pSIPCC to associate a thread and a message queue.
- * @param[in] msgQueue  - msg queue to set
- * @param[in] thread    - CPR thread to associate with queue
+ * @param msgQueue  - msg queue to set
+ * @param thread    - CPR thread to associate with queue
  *
  * @return CPR_SUCCESS or CPR_FAILURE
  *
@@ -456,19 +295,14 @@ cprSetMessageQueueThread (cprMsgQueue_t msgQueue, cprThread_t thread)
     return CPR_SUCCESS;
 }
 
+
 /**
-  * cprGetMessage
- * @brief Retrieve a message from a particular message queue
+ * Retrieve a message from a particular message queue
  *
- * The cprGetMessage function retrieves the first message from the message queue
- * specified and returns a void pointer to that message.
- *
- * @param[in]  msgQueue    - msg queue from which to retrieve the message. This
- * is the handle returned from cprCreateMessageQueue.
+ * @param[in]  msgQueue    - msg queue from which to retrieve the message
  * @param[in]  waitForever - boolean to either wait forever (TRUE) or not
  *                           wait at all (FALSE) if the msg queue is empty.
- * @param[out] ppUserData  - pointer to a pointer to user defined data. This
- * will be NULL if no user data was present.
+ * @param[out] ppUserData  - pointer to a pointer to user defined data
  *
  * @return Retrieved message buffer or NULL if failure occurred or
  *         the waitForever flag was set to false and no messages were
@@ -480,11 +314,13 @@ void *
 cprGetMessage (cprMsgQueue_t msgQueue, boolean waitForever, void **ppUserData)
 {
     static const char fname[] = "cprGetMessage";
-    struct msgbuffer rcvBuffer = { 0 };
-    struct msgbuffer *rcvMsg = &rcvBuffer;
-    void *buffer;
-    int msgrcvflags;
+
+    void *buffer = 0;
     cpr_msg_queue_t *msgq;
+    cpr_msgq_node_t *node;
+    struct timespec timeout;
+    struct timeval tv;
+    struct timezone tz;
 
     /* Initialize ppUserData */
     if (ppUserData) {
@@ -501,63 +337,65 @@ cprGetMessage (cprMsgQueue_t msgQueue, boolean waitForever, void **ppUserData)
 
     /*
      * If waitForever is set, block on the message queue
-     * until a message is received.
+     * until a message is received, else return after
+     * 25msec of waiting
      */
-    if (waitForever) {
-        msgrcvflags = 0;
-    } else {
-        msgrcvflags = IPC_NOWAIT;
-    }
+	pthread_mutex_lock(&msgq->mutex);
 
-    if (msgrcv(msgq->queueId, rcvMsg,
-        sizeof(struct msgbuffer) - offsetof(struct msgbuffer, msgPtr),
-        0, msgrcvflags) == -1) {
-    	if (!waitForever && errno == ENOMSG) {
-    		CPR_INFO("%s: no message on queue %s (non-blocking receive "
-                         " operation), returning\n", fname, msgq->name);
-    	} else {
-    		CPR_ERROR("%s: msgrcv for queue %s failed: %d\n",
-                              fname, msgq->name, errno);
-        }
-        return NULL;
-    }
-    CPR_INFO("%s: msgrcv success for queue %s \n",fname, msgq->name);
+	if (!waitForever)
+	{
+		// We'll wait till 25uSec from now
+		gettimeofday(&tv, &tz);
+		timeout.tv_nsec = (tv.tv_usec * 1000) + 25000;
+		timeout.tv_sec = tv.tv_sec;
 
-    (void) pthread_mutex_lock(&msgq->mutex);
-    /* Update statistics */
-    msgq->currentCount--;
-    (void) pthread_mutex_unlock(&msgq->mutex);
+		pthread_cond_timedwait(&msgq->cond, &msgq->mutex, &timeout);
+	}
+	else
+	{
+		while(msgq->tail==NULL)
+		{
+			pthread_cond_wait(&msgq->cond, &msgq->mutex);
+		}
+	}
 
-    /*
-     * Pull out the data
-     */
-    if (ppUserData) {
-        *ppUserData = rcvMsg->usrPtr;
-    }
-    buffer = rcvMsg->msgPtr;
+	// If there is a message on the queue, de-queue it
+	if (msgq->tail)
+	{
+		node = msgq->tail;
+		msgq->tail = node->prev;
+		if (msgq->tail) {
+			msgq->tail->next = NULL;
+		}
+		if (msgq->head == node) {
+			msgq->head = NULL;
+		}
+		msgq->currentCount--;
+		/*
+		 * Pull out the data
+		 */
+		if (ppUserData) {
+			*ppUserData = node->pUserData;
+		}
+		buffer = node->msg;
 
-    /*
-     * If there are messages on the extended queue, attempt to
-     * push a message back onto the real system queue
-     */
-    if (msgq->extendedQDepth) {
-        cprMoveMsgToQueue(msgq);
-    }
+	}
+
+	pthread_mutex_unlock(&msgq->mutex);
 
     return buffer;
 }
 
 
 /**
-  * cprSendMessage
- * @brief Place a message on a particular queue.  Note that caller may
+ * Place a message on a particular queue.  Note that caller may
  * block (see comments below)
  *
- * @param[in] msgQueue   - msg queue on which to place the message
- * @param[in] msg        - pointer to the msg to place on the queue
- * @param[in] ppUserData - pointer to a pointer to user defined data
+ * @param msgQueue   - msg queue on which to place the message
+ * @param msg        - pointer to the msg to place on the queue
+ * @param ppUserData - pointer to a pointer to user defined data
  *
- * @return CPR_SUCCESS or CPR_FAILURE, errno should be provided
+ * @return CPR_SUCCESS or CPR_FAILURE, errno provided
  *
  * @note 1. Messages queues are set to be non-blocking, those cases
  *       where the system call fails with a would-block error code
@@ -604,101 +442,30 @@ cprSendMessage (cprMsgQueue_t msgQueue, void *msg, void **ppUserData)
      * Attempt to send message
      */
     do {
-        (void) pthread_mutex_lock(&msgq->mutex);
 
-        /*
-         * If in a queue overflow condition, post message to the
-         * extended queue; otherwise, post to normal message queue
-         */
-        if (msgq->extendedQDepth) {
-            /*
-             * Check if extended queue is full, if not then
-             * attempt to add the message.
-             */
-            if (msgq->extendedQDepth < msgq->maxExtendedQDepth) {
-                rc = cprPostExtendedQMsg(msgq, msg, ppUserData);
-                // do under lock to avoid races
-                if (rc == CPR_MSGQ_POST_SUCCESS) {
-                    cprPegSendMessageStats(msgq, numAttempts);
-                } else {
-                    msgq->sendErrors++;
-                }
-                (void) pthread_mutex_unlock(&msgq->mutex);
+		/*
+		 * Post the message to the Queue
+		 */
+		rc = cprPostMessage(msgq, msg, ppUserData);
 
-                if (rc == CPR_MSGQ_POST_SUCCESS) {
-                    return CPR_SUCCESS;
-                }
-                else
-                {
-                    CPR_ERROR(error_str, fname, msgq->name, "no memory");
-                    return CPR_FAILURE;
-                }
-            }
+		if (rc == CPR_MSGQ_POST_SUCCESS) {
+			cprPegSendMessageStats(msgq, numAttempts);
+			return CPR_SUCCESS;
+		} else if (rc == CPR_MSGQ_POST_FAILED) {
+			CPR_ERROR("%s: Msg not sent to %s queue: %d\n",
+					  fname, msgq->name, errno);
+			msgq->sendErrors++;
+			/*
+			 * If posting to calling thread's own queue,
+			 * then peg the self queue error.
+			 */
+			if (pthread_self() == msgq->thread) {
+				msgq->selfQErrors++;
+			}
 
-            /*
-             * Even the extended message queue is full, so
-             * release the message queue mutex and use the
-             * re-try procedure.
-             */
-            (void) pthread_mutex_unlock(&msgq->mutex);
+			return CPR_FAILURE;
+		}
 
-            /*
-             * If attempting to post to the calling thread's
-             * own message queue, the re-try procedure will
-             * not work.  No options left...fail with an error.
-             */
-            if (pthread_self() == msgq->thread) {
-                msgq->selfQErrors++;
-                msgq->sendErrors++;
-                CPR_ERROR(error_str, fname, msgq->name, "FULL");
-                return CPR_FAILURE;
-            }
-        } else {
-            /*
-             * Normal posting of message
-             */
-            rc = cprPostMessage(msgq, msg, ppUserData);
-
-            /*
-             * Before releasing the mutex, check if the
-             * return code is 'pending' which means the
-             * system message queue is full
-             */
-            if (rc == CPR_MSGQ_POST_PENDING) {
-                /*
-                 * If the message queue has enabled the extended queue
-                 * support, then attempt to add to the extended queue.
-                 */
-                if (msgq->maxExtendedQDepth) {
-                    rc = cprPostExtendedQMsg(msgq, msg, ppUserData);
-                }
-            }
-
-            (void) pthread_mutex_unlock(&msgq->mutex);
-
-            if (rc == CPR_MSGQ_POST_SUCCESS) {
-                cprPegSendMessageStats(msgq, numAttempts);
-                return CPR_SUCCESS;
-            } else if (rc == CPR_MSGQ_POST_FAILED) {
-                CPR_ERROR("%s: Msg not sent to %s queue: %d\n",
-                          fname, msgq->name, errno);
-                msgq->sendErrors++;
-                /*
-                 * If posting to calling thread's own queue,
-                 * then peg the self queue error.
-                 */
-                if (pthread_self() == msgq->thread) {
-                    msgq->selfQErrors++;
-                }
-
-                return CPR_FAILURE;
-            }
-            /*
-             * Else pending due to a full message queue
-             * and the extended queue has not been enabled,
-             * so just use the re-try attempts.
-             */
-        }
 
         /*
          * Did not succeed in sending the message, so continue
@@ -726,23 +493,14 @@ cprSendMessage (cprMsgQueue_t msgQueue, void *msg, void **ppUserData)
 }
 
 /**
- * @}
- * @addtogroup MsgQIPCHelper Internal Helper functions for MsgQ
- * @ingroup IPC
- * @brief Helper functions used by CPR to implement the Message Queue IPC APIs
- * @{
- */
-
-/**
- * cprPegSendMessageStats
- * @brief Peg the statistics for successfully posting a message
+ * Peg the statistics for successfully posting a message
  *
- * @param[in] msgq        - message queue
- * @param[in] numAttempts - number of attempts to post message to message queue
+ * @param msgq        - message queue
+ * @param numAttempts - number of attempts to post message to message queue
  *
  * @return none
  *
- * @pre (msgq != NULL)
+ * @pre (msgq not_eq NULL)
  */
 static void
 cprPegSendMessageStats (cpr_msg_queue_t *msgq, uint16_t numAttempts)
@@ -758,189 +516,67 @@ cprPegSendMessageStats (cpr_msg_queue_t *msgq, uint16_t numAttempts)
 }
 
 /**
- * cprPostMessage
- * @brief Post message to system message queue
+ * Post message to system message queue
  *
- * @param[in] msgq       - message queue
- * @param[in] msg        - message to post
- * @param[in] ppUserData - ptr to ptr to option user data
+ * @param msgq       - message queue
+ * @param msg        - message to post
+ * @param ppUserData - ptr to ptr to option user data
  *
  * @return the post result which is CPR_MSGQ_POST_SUCCESS,
  *         CPR_MSGQ_POST_FAILURE or CPR_MSGQ_POST_PENDING
  *
- * @pre (msgq != NULL)
- * @pre (msg != NULL)
+ * @pre (msgq not_eq NULL)
+ * @pre (msg not_eq NULL)
  */
 static cpr_msgq_post_result_e
 cprPostMessage (cpr_msg_queue_t *msgq, void *msg, void **ppUserData)
 {
-    struct msgbuffer mbuf;
+	cpr_msgq_node_t *node;
 
-    /*
-     * Put msg user wants to send into a CNU msg buffer
-     * Copy the address of the msg buffer into the mtext
-     * portion of the message.
-     */
-    mbuf.mtype = CPR_IPC_MSG;
-    mbuf.msgPtr = msg;
+	/*
+	 * Allocate new message queue node
+	 */
+	node = cpr_malloc(sizeof(*node));
+	if (!node) {
+		errno = ENOMEM;
+		return CPR_MSGQ_POST_FAILED;
+	}
 
-    if (ppUserData != NULL) {
-        mbuf.usrPtr = *ppUserData;
-    } else {
-        mbuf.usrPtr = NULL;
-    }
+	pthread_mutex_lock(&msgq->mutex);
 
-    /*
-     * Send message buffer
-     */
-    if (msgsnd(msgq->queueId, &mbuf,
-    		 sizeof(struct msgbuffer) - offsetof(struct msgbuffer, msgPtr),
-               IPC_NOWAIT) != -1) {
-        msgq->currentCount++;
-        return CPR_MSGQ_POST_SUCCESS;
-    }
+	/*
+	 * Fill in data
+	 */
+	node->msg = msg;
+	if (ppUserData != NULL) {
+		node->pUserData = *ppUserData;
+	} else {
+		node->pUserData = NULL;
+	}
 
-    /*
-     * If msgsnd system call would block, handle separately;
-     * otherwise a real system error.
-     */
-    if (errno == EAGAIN) {
-        return CPR_MSGQ_POST_PENDING;
-    }
+	/*
+	 * Push onto list
+	 */
+	node->prev = NULL;
+	node->next = msgq->head;
+	msgq->head = node;
 
-    return CPR_MSGQ_POST_FAILED;
+	if (node->next) {
+		node->next->prev = node;
+	}
+
+	if (msgq->tail == NULL) {
+		msgq->tail = node;
+	}
+	msgq->currentCount++;
+
+	pthread_cond_signal(&msgq->cond);
+	pthread_mutex_unlock(&msgq->mutex);
+
+	return CPR_MSGQ_POST_SUCCESS;
+
 }
 
-/**
- * cprPostExtendedQMsg
- * @brief Post message to internal extended message queue
- *
- * @param[in] msgq       - message queue
- * @param[in] msg        - message to post
- * @param[in] ppUserData - ptr to ptr to option user data
- *
- * @return the post result which is CPR_MSGQ_POST_SUCCESS or
- *         CPR_MSGQ_POST_FAILURE if no memory available
- *
- * @pre (msgq != NULL)
- * @pre (msg != NULL)
- * @pre (msgq->mutex has been locked)
- * @pre (msgq->extendedQDepth < msgq->maxExtendedQDepth)
- *
- * @todo Could use cpr_chunk_malloc to pre-allocate all of the nodes
- *       but that does have the consequence of allocating memory that
- *       may not be necessary
- */
-static cpr_msgq_post_result_e
-cprPostExtendedQMsg (cpr_msg_queue_t *msgq, void *msg, void **ppUserData)
-{
-    cpr_msgq_node_t *node;
-
-    /*
-     * Allocate new message queue node
-     */
-    node = cpr_malloc(sizeof(*node));
-    if (!node) {
-        errno = ENOMEM;
-        return CPR_MSGQ_POST_FAILED;
-    }
-
-    /*
-     * Fill in data
-     */
-    node->msg = msg;
-    if (ppUserData != NULL) {
-        node->pUserData = *ppUserData;
-    } else {
-        node->pUserData = NULL;
-    }
-
-    /*
-     * Push onto list
-     */
-    node->prev = NULL;
-    node->next = msgq->head;
-    msgq->head = node;
-
-    if (node->next) {
-        node->next->prev = node;
-    }
-
-    if (msgq->tail == NULL) {
-        msgq->tail = node;
-    }
-    msgq->extendedQDepth++;
-    msgq->currentCount++;
-
-    return CPR_MSGQ_POST_SUCCESS;
-}
-
-
-/**
- * cprMoveMsgToQueue
- * @brief Move message from extended internal queue to system message queue
- *
- * @param[in] msgq - the message queue
- *
- * @return none
- *
- * @pre (msgq != NULL)
- * @pre (msgq->extendedQDepth > 0)
- */
-static void
-cprMoveMsgToQueue (cpr_msg_queue_t *msgq)
-{
-    static const char *fname = "cprMoveMsgToQueue";
-    cpr_msgq_post_result_e rc;
-    cpr_msgq_node_t *node;
-
-    (void) pthread_mutex_lock(&msgq->mutex);
-
-    if (!msgq->tail) {
-        /* the linked list is bad...ignore it */
-        CPR_ERROR("%s: MsgQ (%s) list is corrupt", fname, msgq->name);
-        (void) pthread_mutex_unlock(&msgq->mutex);
-        return;
-    }
-
-    node = msgq->tail;
-
-    rc = cprPostMessage(msgq, node->msg, &node->pUserData);
-    if (rc == CPR_MSGQ_POST_SUCCESS) {
-        /*
-         * Remove node from extended list
-         */
-        msgq->tail = node->prev;
-        if (msgq->tail) {
-            msgq->tail->next = NULL;
-        }
-        if (msgq->head == node) {
-            msgq->head = NULL;
-        }
-        msgq->extendedQDepth--;
-        /*
-         * Fix increase in the current count which was incremented
-         * in cprPostMessage but not really an addition.
-         */
-        msgq->currentCount--;
-    }
-
-    (void) pthread_mutex_unlock(&msgq->mutex);
-
-    if (rc == CPR_MSGQ_POST_SUCCESS) {
-        cpr_free(node);
-    } else {
-        CPR_ERROR("%s: Failed to repost msg on %s queue: %d\n",
-                  fname, msgq->name, errno);
-    }
-}
-
-/**
-  * @}
-  *
-  * @addtogroup MsgQIPCAPIs The Message Queue IPC APIs
-  * @{
-  */
 
 /**
  * cprGetDepth
@@ -954,7 +590,7 @@ cprMoveMsgToQueue (cpr_msg_queue_t *msgq)
  *
  * @return depth of msgQueue
  *
- * @pre (msgQueue != NULL)
+ * @pre (msgQueue not_eq NULL)
  */
 uint16_t cprGetDepth (cprMsgQueue_t msgQueue)
 {
