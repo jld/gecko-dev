@@ -83,7 +83,8 @@
   ALLOW_SYSCALL(lstat64), \
   ALLOW_SYSCALL(socketpair), \
   ALLOW_SYSCALL(sendmsg), \
-  ALLOW_SYSCALL(sigprocmask),
+  ALLOW_SYSCALL(sigprocmask), \
+  FAIL_SYSCALL(socket, EACCES), /* Workaround for bug 969715 */
 #elif defined(__i386__)
 #define SECCOMP_WHITELIST_ARCH_TOREMOVE \
   ALLOW_SYSCALL(fstat64), \
@@ -93,7 +94,8 @@
 #else
 #define SECCOMP_WHITELIST_ARCH_TOREMOVE \
   ALLOW_SYSCALL(socketpair), \
-  ALLOW_SYSCALL(sendmsg),
+  ALLOW_SYSCALL(sendmsg), \
+  FAIL_SYSCALL(socket, EACCES), /* Workaround for bug 969715 */
 #endif
 
 /* Architecture-specific syscalls for desktop linux */

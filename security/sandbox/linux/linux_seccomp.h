@@ -245,6 +245,10 @@ struct arch_sigsys {
         BPF_JUMP(BPF_JMP+BPF_JEQ+BPF_K, __NR_##name, 0, 1), \
         BPF_STMT(BPF_RET+BPF_K, SECCOMP_RET_KILL)
 
+#define FAIL_SYSCALL(name, err) \
+        BPF_JUMP(BPF_JMP+BPF_JEQ+BPF_K, __NR_##name, 0, 1), \
+        BPF_STMT(BPF_RET+BPF_K, SECCOMP_RET_ERRNO + err)
+
 #define KILL_PROCESS \
         BPF_STMT(BPF_RET+BPF_K, SECCOMP_RET_KILL)
 
