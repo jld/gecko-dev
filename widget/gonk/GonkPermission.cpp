@@ -21,6 +21,14 @@
 #include <private/android_filesystem_config.h>
 #include "GonkPermission.h"
 
+#include "mozilla/dom/ContentParent.h"
+#include "mozilla/dom/TabParent.h"
+#include "nsIAppsService.h"
+#include "mozIApplication.h"
+#include "nsThreadUtils.h"
+
+#include <semaphore.h>
+
 #undef LOG
 #include <android/log.h>
 #define ALOGE(args...)  __android_log_print(ANDROID_LOG_ERROR, "gonkperm" , ## args)
@@ -28,31 +36,64 @@
 using namespace android;
 using namespace mozilla;
 
+// Checking permissions needs to happen on the main thread, but the
+// binder callback is called on a special binder thread, so we use
+// this runnable for that.  It responds with a POSIX semaphore.
+class GonkPermissionChecker : public nsRunnable {
+  int32_t mPid;
+  bool mDone;
+  bool mCanUseCamera;
+  sem_t mWakeup;
+
+  void RunIfNeeded(void) {
+    if (!mDone) {
+      mDone = true;
+      mCanUseCamera = false;
+      NS_DispatchToMainThread(this);
+      while (sem_wait(&mWakeup) != 0 && errno == EINTR)
+        /* nothing */;
+    }
+  }
+public:
+  explicit GonkPermissionChecker(int32_t pid)
+    : mPid(pid)
+    , mDone(false)
+  {
+    sem_init(&mWakeup, 0, 0);
+  }
+
+  bool CanUseCamera() {
+    RunIfNeeded();
+    return mCanUseCamera;
+  }
+
+  NS_IMETHOD Run();
+};
+
 bool
 GonkPermissionService::checkPermission(const String16& permission, int32_t pid,
                                      int32_t uid)
 {
-  if (0 == uid)
+  if (0 == uid) {
     return true;
+  }
 
   String8 perm8(permission);
 
-
   // Some ril implementations need android.permission.MODIFY_AUDIO_SETTINGS
   if (uid == AID_RADIO &&
-      perm8 == "android.permission.MODIFY_AUDIO_SETTINGS")
+      perm8 == "android.permission.MODIFY_AUDIO_SETTINGS") {
     return true;
+  }
 
-  // Camera/audio record permissions are only for apps with the
-  // "camera" permission.  These apps are also the only apps granted
-  // the AID_SDCARD_RW supplemental group (bug 785592)
-
+  // No other permissions apply to non-app processes.
   if (uid < AID_APP) {
     ALOGE("%s for pid=%d,uid=%d denied: not an app",
       String8(permission).string(), pid, uid);
     return false;
   }
 
+  // Only these permissions can be granted to apps through this service.
   if (perm8 != "android.permission.CAMERA" &&
     perm8 != "android.permission.RECORD_AUDIO") {
     ALOGE("%s for pid=%d,uid=%d denied: unsupported permission",
@@ -69,40 +110,68 @@ GonkPermissionService::checkPermission(const String16& permission, int32_t pid,
     return true;
   }
 
-  char filename[32];
-  snprintf(filename, sizeof(filename), "/proc/%d/status", pid);
-  FILE *f = fopen(filename, "r");
-  if (!f) {
-    ALOGE("%s for pid=%d,uid=%d denied: unable to open %s",
-      String8(permission).string(), pid, uid, filename);
-    return false;
+  // Camera/audio record permissions are allowed for apps with the
+  // "camera" permission.
+  nsCOMPtr<GonkPermissionChecker> checker = new GonkPermissionChecker(pid);
+  bool canUseCamera = checker->CanUseCamera();
+  if (!canUseCamera) {
+    ALOGE("%s for pid=%d,uid=%d denied: \"camera\" not granted in app manifest",
+      String8(permission).string(), pid, uid);
   }
+  return canUseCamera;
+}
 
-  char line[80];
-  while (fgets(line, sizeof(line), f)) {
-    char *save;
-    char *name = strtok_r(line, "\t", &save);
-    if (!name)
-      continue;
+NS_IMETHODIMP
+GonkPermissionChecker::Run()
+{
+  MOZ_ASSERT(NS_IsMainThread());
 
-    if (strcmp(name, "Groups:"))
-      continue;
-    char *group;
-    while ((group = strtok_r(NULL, " \n", &save))) {
-      #define _STR(x) #x
-      #define STR(x) _STR(x)
-      if (!strcmp(group, STR(AID_SDCARD_RW))) {
-        fclose(f);
-        return true;
+  {
+    // Find our ContentParent.
+    dom::ContentParent *contentParent = nullptr;
+    {
+      nsTArray<dom::ContentParent*> parents;
+      dom::ContentParent::GetAll(parents);
+      for (uint32_t i = 0; i < parents.Length(); ++i) {
+	if (parents[i]->Pid() == mPid) {
+	  contentParent = parents[i];
+	  break;
+	}
       }
     }
-    break;
-  }
-  fclose(f);
+    if (contentParent == nullptr) {
+      ALOGE("pid=%d denied: can't find ContentParent", mPid);
+      goto done;
+    }
 
-  ALOGE("%s for pid=%d,uid=%d denied: missing group",
-    String8(permission).string(), pid, uid);
-  return false;
+    // Now iterate its apps...
+    nsCOMPtr<nsIAppsService> appsService =
+      do_GetService(APPS_SERVICE_CONTRACTID);
+    if (appsService == nullptr) {
+      ALOGE("pid=%d denied: no appsService", mPid);
+      goto done;
+    }
+    nsCOMPtr<mozIApplication> mozApp;
+    for (uint32_t i = 0; i < contentParent->ManagedPBrowserParent().Length(); i++) {
+      nsRefPtr<dom::TabParent> tabParent =
+	static_cast<dom::TabParent*>(contentParent->ManagedPBrowserParent()[i]);
+      uint32_t appId = tabParent->OwnOrContainingAppId();
+      nsresult rv = appsService->GetAppByLocalId(appId, getter_AddRefs(mozApp));
+      if (NS_FAILED(rv) || mozApp == nullptr) {
+	continue;
+      }
+
+      // ...and check if any of them has camera access.
+      bool appCanUseCamera;
+      rv = mozApp->HasPermission("camera", &appCanUseCamera);
+      if (NS_SUCCEEDED(rv)) {
+	mCanUseCamera = mCanUseCamera || appCanUseCamera;
+      }
+    }
+  }
+done:
+  sem_post(&mWakeup);
+  return NS_OK;
 }
 
 static GonkPermissionService* gGonkPermissionService = NULL;
