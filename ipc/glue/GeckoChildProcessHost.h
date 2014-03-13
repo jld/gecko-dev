@@ -123,6 +123,10 @@ public:
    */
   void Join();
 
+  // Hack for bug 943174:
+  // Skip the EnsureProcessTerminated call in the destructor.
+  void SetAlreadyDead();
+
   void SetSandboxEnabled(bool aSandboxEnabled) {
     mSandboxEnabled = aSandboxEnabled;
   }
