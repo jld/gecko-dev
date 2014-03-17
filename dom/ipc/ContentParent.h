@@ -111,6 +111,7 @@ public:
 
     static void GetAll(nsTArray<ContentParent*>& aArray);
     static void GetAllEvenIfDead(nsTArray<ContentParent*>& aArray);
+    static NS_EXPORT ContentParent* GetForPid(int32_t aPid);
 
     NS_DECL_THREADSAFE_ISUPPORTS
     NS_DECL_NSIOBSERVER

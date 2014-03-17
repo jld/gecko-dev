@@ -3369,6 +3369,21 @@ ContentParent::RecvBackUpXResources(const FileDescriptor& aXSocketFd)
     return true;
 }
 
+/* static */ ContentParent*
+ContentParent::GetForPid(int32_t aPid)
+{
+    nsAutoTArray<ContentParent*, 8> cps;
+    ContentParent::GetAll(cps);
+    for (uint32_t i = 0; i < cps.Length(); ++i) {
+        ContentParent *cp = cps[i];
+
+        if (cp->Pid() == aPid) {
+            return cp;
+        }
+    }
+    return nullptr;
+}
+
 } // namespace dom
 } // namespace mozilla
 
