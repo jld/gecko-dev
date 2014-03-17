@@ -15,9 +15,21 @@
 
 namespace mozilla {
 
+#define SYSCALL_EXISTS(name) defined(__NR_##name)
+
 static struct sock_filter seccomp_filter[] = {
   VALIDATE_ARCHITECTURE,
   EXAMINE_SYSCALL,
+
+  // Some architectures went through a transition from 32-bit to
+  // 64-bit off_t and had to version all the syscalls that referenced
+  // it; others (newer and/or 64-bit ones) didn't.  Adjust the
+  // conditional as needed.
+#if SYSCALL_EXISTS(stat64)
+#define ALLOW_SYSCALL_LARGEFILE(plain, versioned) ALLOW_SYSCALL(versioned)
+#else
+#define ALLOW_SYSCALL_LARGEFILE(plain, versioned) ALLOW_SYSCALL(plain)
+#endif
 
   /* Most used system calls should be at the top of the whitelist
    * for performance reasons. The whitelist BPF filter exits after
@@ -37,18 +49,18 @@ static struct sock_filter seccomp_filter[] = {
    */
 
   ALLOW_SYSCALL(futex),
+#if defined(__arm__) || defined(__i386__)
+  ALLOW_SYSCALL(recvmsg),
+  ALLOW_SYSCALL(sendmsg),
+#endif
 
-  /* Architecture-specific frequently used syscalls */
-#if defined(__arm__)
-  ALLOW_SYSCALL(recvmsg),
-  ALLOW_SYSCALL(sendmsg),
+  // mmap2 is a little different from most off_t users, because it's
+  // passed in a register (so it's a problem for even a "new" 32-bit
+  // arch) -- and the workaround, mmap2, passes a page offset instead.
+#if SYSCALL_EXISTS(mmap2)
   ALLOW_SYSCALL(mmap2),
-#elif defined(__i386__)
-  ALLOW_SYSCALL(ipc),
-  ALLOW_SYSCALL(mmap2),
-#elif defined(__x86_64__)
-  ALLOW_SYSCALL(recvmsg),
-  ALLOW_SYSCALL(sendmsg),
+#else
+  ALLOW_SYSCALL(mmap),
 #endif
 
   /* B2G specific high-frequency syscalls */
@@ -59,6 +71,10 @@ static struct sock_filter seccomp_filter[] = {
 #endif
   ALLOW_SYSCALL(read),
   ALLOW_SYSCALL(write),
+  // 32-bit lseek is used, at least on Android, to implement ANSI fseek.
+#if SYSCALL_EXISTS(_llseek)
+  ALLOW_SYSCALL(_llseek),
+#endif
   ALLOW_SYSCALL(lseek),
 
   /* ioctl() is for GL. Remove when GL proxy is implemented.
@@ -72,56 +88,51 @@ static struct sock_filter seccomp_filter[] = {
   ALLOW_SYSCALL(clone),
   ALLOW_SYSCALL(brk),
 
-  /* B2G specific medium-frequency syscalls */
-#ifdef MOZ_WIDGET_GONK
   ALLOW_SYSCALL(getpid),
-  ALLOW_SYSCALL(rt_sigreturn),
-#endif
-  ALLOW_SYSCALL(poll),
   ALLOW_SYSCALL(gettid),
   ALLOW_SYSCALL(getrusage),
   ALLOW_SYSCALL(madvise),
   ALLOW_SYSCALL(dup),
   ALLOW_SYSCALL(nanosleep),
-
-  /* Architecture-specific infrequently used syscalls */
-#if defined(__arm__)
+  ALLOW_SYSCALL(poll),
+  // select()'s arguments used to be passed by pointer as a struct.
+#if SYSCALL_EXISTS(_newselect)
   ALLOW_SYSCALL(_newselect),
-  ALLOW_SYSCALL(_llseek),
-  ALLOW_SYSCALL(getuid32),
-  ALLOW_SYSCALL(geteuid32),
-  ALLOW_SYSCALL(sigreturn),
-  ALLOW_SYSCALL(fcntl64),
-#elif defined(__i386__)
-  ALLOW_SYSCALL(_newselect),
-  ALLOW_SYSCALL(_llseek),
-  ALLOW_SYSCALL(getuid32),
-  ALLOW_SYSCALL(geteuid32),
-  ALLOW_SYSCALL(sigreturn),
-  ALLOW_SYSCALL(fcntl64),
 #else
   ALLOW_SYSCALL(select),
 #endif
+  // Some archs used to have 16-bit uid/gid instead of 32-bit.
+#if SYSCALL_EXISTS(getuid32)
+  ALLOW_SYSCALL(getuid32),
+  ALLOW_SYSCALL(geteuid32),
+#else
+  ALLOW_SYSCALL(getuid),
+  ALLOW_SYSCALL(geteuid),
+#endif
+  // FIXME: do we ever need classic sigreturn?
+#if SYSCALL_EXISTS(sigreturn)
+  ALLOW_SYSCALL(sigreturn),
+#endif
+  ALLOW_SYSCALL(rt_sigreturn),
+  ALLOW_SYSCALL_LARGEFILE(fcntl, fcntl64),
 
   /* Must remove all of the following in the future, when no longer used */
   /* open() is for some legacy APIs such as font loading. */
   /* See bug 906996 for removing unlink(). */
-#if defined(__arm__)
-  ALLOW_SYSCALL(fstat64),
-  ALLOW_SYSCALL(stat64),
-  ALLOW_SYSCALL(lstat64),
-  ALLOW_SYSCALL(socketpair),
-  ALLOW_SYSCALL(sigprocmask),
-  DENY_SYSCALL(socket, EACCES),
-#elif defined(__i386__)
-  ALLOW_SYSCALL(fstat64),
-  ALLOW_SYSCALL(stat64),
-  ALLOW_SYSCALL(lstat64),
-  ALLOW_SYSCALL(sigprocmask),
-#else
+  ALLOW_SYSCALL_LARGEFILE(fstat, fstat64),
+  ALLOW_SYSCALL_LARGEFILE(stat, stat64),
+  ALLOW_SYSCALL_LARGEFILE(lstat, lstat64),
+  // FIXME: socket calls.
+#if defined(__arm__) || defined(__i386__)
   ALLOW_SYSCALL(socketpair),
   DENY_SYSCALL(socket, EACCES),
 #endif
+  // FIXME: Should sigprocmask really be in the "remove-me" section?
+  // FIXME: Again, do we need both syscalls where both are available?
+#if SYSCALL_EXISTS(sigprocmask)
+  ALLOW_SYSCALL(sigprocmask),
+#endif
+  ALLOW_SYSCALL(rt_sigprocmask),
   ALLOW_SYSCALL(open),
   ALLOW_SYSCALL(readlink), /* Workaround for bug 964455 */
   ALLOW_SYSCALL(prctl),
@@ -145,7 +156,7 @@ static struct sock_filter seccomp_filter[] = {
 #ifdef MOZ_WIDGET_GONK
   ALLOW_SYSCALL(sendto),
   ALLOW_SYSCALL(recvfrom),
-  ALLOW_SYSCALL(getdents64),
+  ALLOW_SYSCALL_LARGEFILE(getdents, getdents64),
   ALLOW_SYSCALL(epoll_ctl),
   ALLOW_SYSCALL(sched_yield),
   ALLOW_SYSCALL(sched_getscheduler),
@@ -154,20 +165,15 @@ static struct sock_filter seccomp_filter[] = {
 
   /* Always last and always OK calls */
   /* Architecture-specific very infrequently used syscalls */
-#if defined(__arm__)
+#if SYSCALL_EXISTS(sigaction)
   ALLOW_SYSCALL(sigaction),
+#endif
   ALLOW_SYSCALL(rt_sigaction),
   ALLOW_ARM_SYSCALL(breakpoint),
   ALLOW_ARM_SYSCALL(cacheflush),
   ALLOW_ARM_SYSCALL(usr26),
   ALLOW_ARM_SYSCALL(usr32),
   ALLOW_ARM_SYSCALL(set_tls),
-#elif defined(__i386__)
-  ALLOW_SYSCALL(sigaction),
-  ALLOW_SYSCALL(rt_sigaction),
-#elif defined(__x86_64__)
-  ALLOW_SYSCALL(rt_sigaction),
-#endif
 
   /* restart_syscall is called internally, generally when debugging */
   ALLOW_SYSCALL(restart_syscall),
@@ -184,8 +190,6 @@ static struct sock_filter seccomp_filter[] = {
   ALLOW_SYSCALL(fstat),
   ALLOW_SYSCALL(readlink),
   ALLOW_SYSCALL(getsockname),
-  /* duplicate rt_sigaction in SECCOMP_WHITELIST_PROFILING */
-  ALLOW_SYSCALL(rt_sigaction),
   ALLOW_SYSCALL(getuid),
   ALLOW_SYSCALL(geteuid),
   ALLOW_SYSCALL(mkdir),
