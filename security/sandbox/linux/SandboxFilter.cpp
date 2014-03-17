@@ -143,10 +143,8 @@ static struct sock_filter seccomp_filter[] = {
 
   /* B2G specific low-frequency syscalls */
 #ifdef MOZ_WIDGET_GONK
-#if !defined(__i386__)
   ALLOW_SYSCALL(sendto),
   ALLOW_SYSCALL(recvfrom),
-#endif
   ALLOW_SYSCALL(getdents64),
   ALLOW_SYSCALL(epoll_ctl),
   ALLOW_SYSCALL(sched_yield),
