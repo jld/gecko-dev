@@ -31,6 +31,16 @@ static struct sock_filter seccomp_filter[] = {
 #define ALLOW_SYSCALL_LARGEFILE(plain, versioned) ALLOW_SYSCALL(plain)
 #endif
 
+  // Part of bug 920372: i386 multiplexes all socket-related calls
+  // through "socketcall".
+#if SYSCALL_EXISTS(socketcall)
+#define ALLOW_SOCKETCALL(name)
+#define DENY_SOCKETCALL(name, err)
+#else
+#define ALLOW_SOCKETCALL(name) ALLOW_SYSCALL(name)
+#define DENY_SOCKETCALL(name, err) DENY_SYSCALL(name, err)
+#endif
+
   /* Most used system calls should be at the top of the whitelist
    * for performance reasons. The whitelist BPF filter exits after
    * processing any ALLOW_SYSCALL macro.
@@ -49,10 +59,12 @@ static struct sock_filter seccomp_filter[] = {
    */
 
   ALLOW_SYSCALL(futex),
-#if defined(__arm__) || defined(__i386__)
-  ALLOW_SYSCALL(recvmsg),
-  ALLOW_SYSCALL(sendmsg),
+  // FIXME, bug 920372; see above.
+#if SYSCALL_EXISTS(socketcall)
+  ALLOW_SYSCALL(socketcall)
 #endif
+  ALLOW_SOCKETCALL(recvmsg),
+  ALLOW_SOCKETCALL(sendmsg),
 
   // mmap2 is a little different from most off_t users, because it's
   // passed in a register (so it's a problem for even a "new" 32-bit
@@ -123,10 +135,8 @@ static struct sock_filter seccomp_filter[] = {
   ALLOW_SYSCALL_LARGEFILE(stat, stat64),
   ALLOW_SYSCALL_LARGEFILE(lstat, lstat64),
   // FIXME: socket calls.
-#if defined(__arm__) || defined(__i386__)
-  ALLOW_SYSCALL(socketpair),
-  DENY_SYSCALL(socket, EACCES),
-#endif
+  ALLOW_SOCKETCALL(socketpair),
+  DENY_SOCKETCALL(socket, EACCES),
   // FIXME: Should sigprocmask really be in the "remove-me" section?
   // FIXME: Again, do we need both syscalls where both are available?
 #if SYSCALL_EXISTS(sigprocmask)
@@ -154,8 +164,8 @@ static struct sock_filter seccomp_filter[] = {
 
   /* B2G specific low-frequency syscalls */
 #ifdef MOZ_WIDGET_GONK
-  ALLOW_SYSCALL(sendto),
-  ALLOW_SYSCALL(recvfrom),
+  ALLOW_SOCKETCALL(sendto),
+  ALLOW_SOCKETCALL(recvfrom),
   ALLOW_SYSCALL_LARGEFILE(getdents, getdents64),
   ALLOW_SYSCALL(epoll_ctl),
   ALLOW_SYSCALL(sched_yield),
