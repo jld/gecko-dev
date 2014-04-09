@@ -906,7 +906,7 @@ FinalizeCount(JSContext *cx, unsigned argc, jsval *vp)
 }
 
 static bool
-DumpHeapComplete(JSContext *cx, unsigned argc, jsval *vp)
+DumpHeapToFile(JSContext *cx, unsigned argc, jsval *vp)
 {
     CallArgs args = CallArgsFromVp(argc, vp);
 
@@ -948,11 +948,11 @@ DumpHeapComplete(JSContext *cx, unsigned argc, jsval *vp)
     }
 
     if (i != args.length()) {
-        JS_ReportError(cx, "bad arguments passed to dumpHeapComplete");
+        JS_ReportError(cx, "bad arguments passed to dumpHeapToFile");
         return false;
     }
 
-    js::DumpHeapComplete(JS_GetRuntime(cx), dumpFile ? dumpFile : stdout, nurseryBehaviour);
+    js::DumpHeapToFile(JS_GetRuntime(cx), dumpFile ? dumpFile : stdout, nurseryBehaviour);
 
     if (dumpFile)
         fclose(dumpFile);
@@ -1634,8 +1634,8 @@ static const JSFunctionSpecWithHelp TestingFunctions[] = {
 "isProxy(obj)",
 "  If true, obj is a proxy of some sort"),
 
-    JS_FN_HELP("dumpHeapComplete", DumpHeapComplete, 1, 0,
-"dumpHeapComplete(['collectNurseryBeforeDump'], [filename])",
+    JS_FN_HELP("dumpHeapToFile", DumpHeapToFile, 1, 0,
+"dumpHeapToFile(['collectNurseryBeforeDump'], [filename])",
 "  Dump reachable and unreachable objects to the named file, or to stdout.  If\n"
 "  'collectNurseryBeforeDump' is specified, a minor GC is performed first,\n"
 "  otherwise objects in the nursery are ignored."),
