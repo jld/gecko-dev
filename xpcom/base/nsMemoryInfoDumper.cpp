@@ -11,6 +11,7 @@
 #include "mozilla/dom/ContentParent.h"
 #include "mozilla/dom/ContentChild.h"
 #include "nsIConsoleService.h"
+#include "nsCycleCollector.h"
 #include "nsICycleCollectorListener.h"
 #include "nsIMemoryReporter.h"
 #include "nsDirectoryServiceDefs.h"
@@ -240,8 +241,14 @@ nsMemoryInfoDumper::DumpGCAndCCLogsToFile(const nsAString& aIdentifier,
     nsTArray<ContentParent*> children;
     ContentParent::GetAll(children);
     for (uint32_t i = 0; i < children.Length(); i++) {
-      unused << children[i]->SendDumpGCAndCCLogsToFile(
-        identifier, aDumpAllTraces, aDumpChildProcesses);
+      ContentParent* cp = children[i];
+      nsCOMPtr<nsICycleCollectorLogSink> logSink =
+        nsCycleCollector_getLogSink();
+
+      logSink->SetFilenameIdentifier(identifier);
+      logSink->SetProcessIdentifier(cp->Pid());
+
+      unused << cp->CycleCollectWithLogs(logSink, aDumpAllTraces);
     }
   }
 
@@ -263,6 +270,26 @@ nsMemoryInfoDumper::DumpGCAndCCLogsToFile(const nsAString& aIdentifier,
 
   logSink->GetGcLogPath(aGCLogPath);
   logSink->GetCcLogPath(aCCLogPath);
+
+  return NS_OK;
+}
+
+NS_IMETHODIMP
+nsMemoryInfoDumper::DumpGCAndCCLogsToSink(bool aDumpAllTraces,
+                                          nsICycleCollectorLogSink* aSink)
+{
+  nsCOMPtr<nsICycleCollectorListener> logger =
+    do_CreateInstance("@mozilla.org/cycle-collector-logger;1");
+
+  if (aDumpAllTraces) {
+    nsCOMPtr<nsICycleCollectorListener> allTracesLogger;
+    logger->AllTraces(getter_AddRefs(allTracesLogger));
+    logger = allTracesLogger;
+  }
+
+  logger->SetLogSink(aSink);
+
+  nsJSContext::CycleCollectNow(logger);
 
   return NS_OK;
 }

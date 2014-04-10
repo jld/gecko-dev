@@ -35,6 +35,7 @@
 #include "mozilla/dom/Element.h"
 #include "mozilla/dom/ExternalHelperAppParent.h"
 #include "mozilla/dom/PFileDescriptorSetParent.h"
+#include "mozilla/dom/PCycleCollectWithLogsParent.h"
 #include "mozilla/dom/PMemoryReportRequestParent.h"
 #include "mozilla/dom/power/PowerManagerService.h"
 #include "mozilla/dom/DOMStorageIPC.h"
@@ -74,6 +75,7 @@
 #include "nsIAlertsService.h"
 #include "nsIAppsService.h"
 #include "nsIClipboard.h"
+#include "nsICycleCollectorListener.h"
 #include "nsIDOMGeoGeolocation.h"
 #include "mozilla/dom/WakeLock.h"
 #include "nsIDOMWindow.h"
@@ -336,6 +338,45 @@ MemoryReportRequestParent::~MemoryReportRequestParent()
 {
     MOZ_COUNT_DTOR(MemoryReportRequestParent);
 }
+
+// IPC receiver for remote GC/CC logging.
+class CycleCollectWithLogsParent : public PCycleCollectWithLogsParent
+{
+public:
+    CycleCollectWithLogsParent(nsICycleCollectorLogSink *aSink)
+        : mSink(aSink)
+    {
+        MOZ_COUNT_CTOR(CycleCollectWithLogsParent);
+        unused << aSink->Begin();
+    }
+
+    virtual ~CycleCollectWithLogsParent()
+    {
+        MOZ_COUNT_DTOR(CycleCollectWithLogsParent);
+    }
+
+    virtual bool RecvWriteGCLog(const nsCString& aText)
+    {
+        unused << mSink->WriteGCLog(aText);
+        return true;
+    }
+
+    virtual bool RecvWriteCCLog(const nsCString& aText)
+    {
+        unused << mSink->WriteCCLog(aText);
+        return true;
+    }
+
+    virtual bool Recv__delete__()
+    {
+        unused << mSink->End();
+        return true;
+    }
+
+    // Ignoring ActorDestroy, as all messages are child->parent.
+private:
+    nsCOMPtr<nsICycleCollectorLogSink> mSink;
+};
 
 // A memory reporter for ContentParent objects themselves.
 class ContentParentsMemoryReporter MOZ_FINAL : public nsIMemoryReporter
@@ -2600,6 +2641,28 @@ ContentParent::DeallocPMemoryReportRequestParent(PMemoryReportRequestParent* act
 {
   delete actor;
   return true;
+}
+
+PCycleCollectWithLogsParent*
+ContentParent::AllocPCycleCollectWithLogsParent(const bool &aDumpAllTraces)
+{
+    MOZ_CRASH();
+    return nullptr;
+}
+
+bool
+ContentParent::DeallocPCycleCollectWithLogsParent(PCycleCollectWithLogsParent* aActor)
+{
+    delete aActor;
+    return true;
+}
+
+bool
+ContentParent::CycleCollectWithLogs(nsICycleCollectorLogSink* aSink,
+                                    bool aDumpAllTraces)
+{
+    CycleCollectWithLogsParent *actor = new CycleCollectWithLogsParent(aSink);
+    return SendPCycleCollectWithLogsConstructor(actor, aDumpAllTraces);
 }
 
 PTestShellParent*

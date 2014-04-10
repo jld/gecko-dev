@@ -3915,6 +3915,12 @@ nsCycleCollector_doDeferredDeletion()
     return data->mCollector->FreeSnowWhite(false);
 }
 
+nsICycleCollectorLogSink*
+nsCycleCollector_getLogSink()
+{
+    return new nsCycleCollectorLogSinkToFile;
+}
+
 void
 nsCycleCollector_collect(nsICycleCollectorListener *aManualListener)
 {

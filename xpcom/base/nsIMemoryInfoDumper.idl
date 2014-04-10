@@ -4,6 +4,7 @@
  * file, You can obtain one at http://mozilla.org/MPL/2.0/. */
 
 #include "nsISupports.idl"
+#include "nsICycleCollectorListener.idl"
 
 [scriptable, function, uuid(2dea18fc-fbfa-4bf7-ad45-0efaf5495f5e)]
 interface nsIFinishDumpingCallback : nsISupports
@@ -11,7 +12,7 @@ interface nsIFinishDumpingCallback : nsISupports
   void callback(in nsISupports data);
 };
 
-[scriptable, builtinclass, uuid(815bf31b-f5bd-425d-85c3-4657a7a91dad)]
+[scriptable, builtinclass, uuid(4718fa31-391b-46b3-b1b7-ae56b720bad5)]
 interface nsIMemoryInfoDumper : nsISupports
 {
   /**
@@ -155,4 +156,11 @@ interface nsIMemoryInfoDumper : nsISupports
                              in bool aDumpChildProcesses,
                              out AString aGCLogPath,
                              out AString aCCLogPath);
+
+  /**
+   * Like |dumpGCAndCCLogsToFile|, but sends the logs to the given log
+   * sink object instead of accessing the filesystem directly.
+   */
+  void dumpGCAndCCLogsToSink(in bool aDumpAllTraces,
+                             in nsICycleCollectorLogSink aSink);
 };

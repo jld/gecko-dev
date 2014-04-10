@@ -10,6 +10,7 @@ include protocol PBlob;
 include protocol PBluetooth;
 include protocol PBrowser;
 include protocol PCompositor;
+include protocol PCycleCollectWithLogs;
 include protocol PCrashReporter;
 include protocol PExternalHelperApp;
 include protocol PDeviceStorageRequest;
@@ -256,6 +257,7 @@ intr protocol PContent
     manages PBluetooth;
     manages PBrowser;
     manages PCrashReporter;
+    manages PCycleCollectWithLogs;
     manages PDeviceStorageRequest;
     manages PFileSystemRequest;
     manages PExternalHelperApp;
@@ -327,9 +329,7 @@ child:
      * For documentation on the args, see dumpGCAndCCLogsToFile in
      * nsIMemoryInfoDumper.idl
      */
-    async DumpGCAndCCLogsToFile(nsString identifier,
-                                bool dumpAllTraces,
-                                bool dumpChildProcesses);
+    PCycleCollectWithLogs(bool dumpAllTraces);
 
     PTestShell();
 

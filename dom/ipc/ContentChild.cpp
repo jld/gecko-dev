@@ -45,6 +45,7 @@
 #include "mozilla/unused.h"
 
 #include "nsIConsoleListener.h"
+#include "nsICycleCollectorListener.h"
 #include "nsIIPCBackgroundChildCreateCallback.h"
 #include "nsIInterfaceRequestorUtils.h"
 #include "nsIMemoryReporter.h"
@@ -78,6 +79,7 @@
 
 #include "nsIGeolocationProvider.h"
 #include "mozilla/dom/PMemoryReportRequestChild.h"
+#include "mozilla/dom/PCycleCollectWithLogsChild.h"
 
 #ifdef MOZ_PERMISSIONS
 #include "nsIScriptSecurityManager.h"
@@ -202,6 +204,120 @@ MemoryReportRequestChild::~MemoryReportRequestChild()
 {
     MOZ_COUNT_DTOR(MemoryReportRequestChild);
 }
+
+// IPC sender for remote GC/CC logging.
+class CycleCollectWithLogsChild : public PCycleCollectWithLogsChild,
+                                  public nsICycleCollectorLogSink
+{
+public:
+    NS_DECL_ISUPPORTS
+
+    CycleCollectWithLogsChild()
+        : mDestroyed(false)
+    {
+        MOZ_COUNT_CTOR(CycleCollectWithLogsChild);
+    }
+
+    virtual ~CycleCollectWithLogsChild()
+    {
+        MOZ_COUNT_DTOR(CycleCollectWithLogsChild);
+    }
+
+    virtual void ActorDestroy(ActorDestroyReason why)
+    {
+        mDestroyed = true;
+    }
+
+    NS_IMETHOD Begin()
+    {
+        return NS_OK;
+    }
+
+    NS_IMETHOD WriteGCLog(const nsACString& aText)
+    {
+        bool success = true;
+
+        if (mDestroyed) {
+            return NS_ERROR_FAILURE;
+        }
+        mGCBuffer += aText;
+        if (mGCBuffer.Length() >= kBufferSize) {
+            success = SendWriteGCLog(mGCBuffer);
+            mGCBuffer.Truncate();
+        }
+        return success ? NS_OK : NS_ERROR_FAILURE;
+    }
+
+    NS_IMETHOD WriteCCLog(const nsACString& aText)
+    {
+        bool success = true;
+
+        if (mDestroyed) {
+            return NS_ERROR_FAILURE;
+        }
+        mCCBuffer += aText;
+        if (mCCBuffer.Length() >= kBufferSize) {
+            success = SendWriteCCLog(mCCBuffer);
+            mCCBuffer.Truncate();
+        }
+        return success ? NS_OK : NS_ERROR_FAILURE;
+    }
+
+    NS_IMETHOD End()
+    {
+        if (mDestroyed) {
+            return NS_ERROR_FAILURE;
+        }
+        if (!mGCBuffer.IsEmpty()) {
+            SendWriteGCLog(mGCBuffer);
+        }
+        if (!mCCBuffer.IsEmpty()) {
+            SendWriteCCLog(mCCBuffer);
+        }
+        Send__delete__(this);
+        return NS_OK;
+    }
+
+    NS_IMETHOD GetFilenameIdentifier(nsAString& aIdentifier)
+    {
+        return NS_ERROR_UNEXPECTED;
+    }
+
+    NS_IMETHOD SetFilenameIdentifier(const nsAString& aIdentifier)
+    {
+        return NS_ERROR_UNEXPECTED;
+    }
+
+    NS_IMETHOD GetProcessIdentifier(int32_t *aIdentifier)
+    {
+        return NS_ERROR_UNEXPECTED;
+    }
+
+    NS_IMETHOD SetProcessIdentifier(int32_t aIdentifier)
+    {
+        return NS_ERROR_UNEXPECTED;
+    }
+
+    NS_IMETHOD GetGcLogPath(nsAString &aPath)
+    {
+        return NS_ERROR_UNEXPECTED;
+    }
+
+    NS_IMETHOD GetCcLogPath(nsAString &aPath)
+    {
+        return NS_ERROR_UNEXPECTED;
+    }
+
+private:
+    bool mDestroyed;
+    // Sending every write as a separate IPC message is prohibitively slow,
+    // so they're buffered.
+    nsCString mGCBuffer;
+    nsCString mCCBuffer;
+    static const size_t kBufferSize = 4096;
+};
+
+NS_IMPL_ISUPPORTS1(CycleCollectWithLogsChild, nsICycleCollectorLogSink);
 
 class AlertObserver
 {
@@ -669,16 +785,28 @@ ContentChild::DeallocPMemoryReportRequestChild(PMemoryReportRequestChild* actor)
     return true;
 }
 
+PCycleCollectWithLogsChild*
+ContentChild::AllocPCycleCollectWithLogsChild(const bool& aDumpAllTraces)
+{
+    CycleCollectWithLogsChild* actor = new CycleCollectWithLogsChild;
+    actor->AddRef();
+    return actor;
+}
+
 bool
-ContentChild::RecvDumpGCAndCCLogsToFile(const nsString& aIdentifier,
-                                        const bool& aDumpAllTraces,
-                                        const bool& aDumpChildProcesses)
+ContentChild::DeallocPCycleCollectWithLogsChild(PCycleCollectWithLogsChild* aActor)
+{
+    static_cast<CycleCollectWithLogsChild*>(aActor)->Release();
+    return true;
+}
+
+bool
+ContentChild::RecvPCycleCollectWithLogsConstructor(PCycleCollectWithLogsChild* aActor,
+                                                   const bool& aDumpAllTraces)
 {
     nsCOMPtr<nsIMemoryInfoDumper> dumper = do_GetService("@mozilla.org/memory-info-dumper;1");
 
-    nsString gcLogPath, ccLogPath;
-    dumper->DumpGCAndCCLogsToFile(aIdentifier, aDumpAllTraces,
-                                  aDumpChildProcesses, gcLogPath, ccLogPath);
+    dumper->DumpGCAndCCLogsToSink(aDumpAllTraces, static_cast<CycleCollectWithLogsChild*>(aActor));
     return true;
 }
 

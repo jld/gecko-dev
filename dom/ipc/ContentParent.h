@@ -28,6 +28,7 @@
 
 class mozIApplication;
 class nsConsoleService;
+class nsICycleCollectorLogSink;
 class nsIDOMBlob;
 class nsIMemoryReporter;
 class ParentIdleListener;
@@ -223,6 +224,9 @@ public:
                                            const nsString& aPageURL,
                                            const bool& aIsAudio,
                                            const bool& aIsVideo) MOZ_OVERRIDE;
+
+    bool CycleCollectWithLogs(nsICycleCollectorLogSink* aSink,
+                              bool aDumpAllTraces);
 protected:
     void OnChannelConnected(int32_t pid) MOZ_OVERRIDE;
     virtual void ActorDestroy(ActorDestroyReason why) MOZ_OVERRIDE;
@@ -369,6 +373,11 @@ private:
                                     const bool &minimizeMemoryUsage,
                                     const nsString &aDMDDumpIdent) MOZ_OVERRIDE;
     virtual bool DeallocPMemoryReportRequestParent(PMemoryReportRequestParent* actor) MOZ_OVERRIDE;
+
+    virtual PCycleCollectWithLogsParent*
+    AllocPCycleCollectWithLogsParent(const bool &aDumpAllTraces) MOZ_OVERRIDE;
+    virtual bool
+    DeallocPCycleCollectWithLogsParent(PCycleCollectWithLogsParent* aActor) MOZ_OVERRIDE;
 
     virtual PTestShellParent* AllocPTestShellParent() MOZ_OVERRIDE;
     virtual bool DeallocPTestShellParent(PTestShellParent* shell) MOZ_OVERRIDE;

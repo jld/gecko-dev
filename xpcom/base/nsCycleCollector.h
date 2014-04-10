@@ -7,6 +7,7 @@
 #define nsCycleCollector_h__
 
 class nsICycleCollectorListener;
+class nsICycleCollectorLogSink;
 class nsISupports;
 
 #include "nsError.h"
@@ -39,6 +40,8 @@ void nsCycleCollector_prepareForGarbageCollection();
 
 void nsCycleCollector_dispatchDeferredDeletion(bool aContinuation = false);
 bool nsCycleCollector_doDeferredDeletion();
+
+nsICycleCollectorLogSink* nsCycleCollector_getLogSink();
 
 void nsCycleCollector_collect(nsICycleCollectorListener *aManualListener);
 
