@@ -207,6 +207,8 @@ public:
   void DeferredFinalize(nsISupports* aSupports);
 
   void DumpJSHeap(FILE* aFile);
+  typedef void (*DumpJSHeapCallback)(void* ctx, const char* fmt, va_list ap);
+  void DumpJSHeap(DumpJSHeapCallback callback, void* ctx);
 
   virtual void PrepareForForgetSkippable() = 0;
   virtual void BeginCycleCollectionCallback() = 0;

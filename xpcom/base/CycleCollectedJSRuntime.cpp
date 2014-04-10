@@ -987,9 +987,14 @@ CycleCollectedJSRuntime::DeferredFinalize(nsISupports* aSupports)
 void
 CycleCollectedJSRuntime::DumpJSHeap(FILE* file)
 {
-  js::DumpHeapComplete(Runtime(), file, js::CollectNurseryBeforeDump);
+  js::DumpHeapToFile(Runtime(), file, js::CollectNurseryBeforeDump);
 }
 
+void
+CycleCollectedJSRuntime::DumpJSHeap(DumpJSHeapCallback callback, void* ctx)
+{
+  js::DumpHeapWithCallback(Runtime(), callback, ctx, js::CollectNurseryBeforeDump);
+}
 
 bool
 ReleaseSliceNow(uint32_t aSlice, void* aData)

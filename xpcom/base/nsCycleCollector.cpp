@@ -1375,22 +1375,233 @@ struct CCGraphDescriber : public LinkedListElement<CCGraphDescriber>
   Type mType;
 };
 
+class nsCycleCollectorLogSinkToFile MOZ_FINAL :
+    public nsICycleCollectorLogSink
+{
+ public:
+    NS_DECL_ISUPPORTS
+
+    nsCycleCollectorLogSinkToFile() :
+        mGCLog("gc-edges"), mCCLog("cc-edges"),
+        mProcessIdentifier(base::GetCurrentProcId())
+    {
+    }
+
+    NS_IMETHOD GetFilenameIdentifier(nsAString& aIdentifier)
+    {
+        aIdentifier = mFilenameIdentifier;
+        return NS_OK;
+    }
+
+    NS_IMETHOD SetFilenameIdentifier(const nsAString& aIdentifier)
+    {
+        mFilenameIdentifier = aIdentifier;
+        return NS_OK;
+    }
+
+    NS_IMETHOD GetProcessIdentifier(int32_t* aIdentifier)
+    {
+        *aIdentifier = mProcessIdentifier;
+        return NS_OK;
+    }
+
+    NS_IMETHOD SetProcessIdentifier(int32_t aIdentifier)
+    {
+        mProcessIdentifier = aIdentifier;
+        return NS_OK;
+    }
+
+    NS_IMETHOD GetGcLogPath(nsAString& aPath)
+    {
+        aPath = mGCLog.mPath;
+        return NS_OK;
+    }
+
+    NS_IMETHOD GetCcLogPath(nsAString& aPath)
+    {
+        aPath = mCCLog.mPath;
+        return NS_OK;
+    }
+
+    NS_IMETHOD Begin()
+    {
+        OpenLog(mGCLog);
+        OpenLog(mCCLog);
+        return NS_OK;
+    }
+
+    NS_IMETHOD WriteGCLog(const nsACString& aText)
+    {
+        return WriteLog(mGCLog.mStream, aText);
+    }
+
+    NS_IMETHOD WriteCCLog(const nsACString& aText)
+    {
+        return WriteLog(mCCLog.mStream, aText);
+    }
+
+    NS_IMETHOD End()
+    {
+        CloseLog(mGCLog);
+        CloseLog(mCCLog);
+        return NS_OK;
+    }
+
+    ~nsCycleCollectorLogSinkToFile() {
+        if (mGCLog.mStream) {
+            MozillaUnRegisterDebugFILE(mGCLog.mStream);
+            fclose(mGCLog.mStream);
+        }
+        if (mCCLog.mStream) {
+            MozillaUnRegisterDebugFILE(mCCLog.mStream);
+            fclose(mCCLog.mStream);
+        }
+    }
+
+ private:
+    int32_t mProcessIdentifier;
+    nsString mFilenameIdentifier;
+    struct FileInfo {
+        const char* const mPrefix;
+        nsCOMPtr<nsIFile> mFile;
+        FILE* mStream;
+        nsString mPath;
+
+        FileInfo(const char* aPrefix) : mPrefix(aPrefix), mStream(nullptr) { }
+    };
+    FileInfo mGCLog;
+    FileInfo mCCLog;
+
+    nsresult WriteLog(FILE* aStream, const nsACString& aText)
+    {
+        const char* data;
+        uint32_t len = aText.GetData(&data);
+        size_t wrote = fwrite(data, len, 1, aStream);
+        return wrote == 1 ? NS_OK : NS_ERROR_FAILURE;
+    }
+
+    /**
+     * Create a new file named something like aPrefix.$PID.$IDENTIFIER.log in
+     * $MOZ_CC_LOG_DIRECTORY or in the system's temp directory.  No existing
+     * file will be overwritten; if aPrefix.$PID.$IDENTIFIER.log exists, we'll
+     * try a file named something like aPrefix.$PID.$IDENTIFIER-1.log, and so
+     * on.
+     */
+    already_AddRefed<nsIFile>
+    CreateTempFile(const char* aPrefix)
+    {
+        nsPrintfCString filename("%s.%d%s%s.log",
+            aPrefix,
+            mProcessIdentifier,
+            mFilenameIdentifier.IsEmpty() ? "" : ".",
+            NS_ConvertUTF16toUTF8(mFilenameIdentifier).get());
+
+        // Get the log directory either from $MOZ_CC_LOG_DIRECTORY or from
+        // the fallback directories in OpenTempFile.  We don't use an nsCOMPtr
+        // here because OpenTempFile uses an in/out param and getter_AddRefs
+        // wouldn't work.
+        nsIFile* logFile = nullptr;
+        if (char* env = PR_GetEnv("MOZ_CC_LOG_DIRECTORY")) {
+            NS_NewNativeLocalFile(nsCString(env), /* followLinks = */ true,
+                                  &logFile);
+        }
+
+        // In Android case, this function will open a file named aFilename under
+        // specific folder (/data/local/tmp/memory-reports). Otherwise, it will
+        // open a file named aFilename under "NS_OS_TEMP_DIR".
+        nsresult rv = nsDumpUtils::OpenTempFile(
+                                     filename,
+                                     &logFile,
+                                     NS_LITERAL_CSTRING("memory-reports"));
+        if (NS_FAILED(rv)) {
+          NS_IF_RELEASE(logFile);
+          return nullptr;
+        }
+
+        return dont_AddRef(logFile);
+    }
+
+    // The handling of the GC and CC logs could probably be deduplicated.
+
+    nsresult OpenLog(FileInfo& log)
+    {
+        // Initially create the log in a file starting with "incomplete-".
+        // We'll move the file and strip off the "incomplete-" once the dump
+        // completes.  (We do this because we don't want scripts which poll
+        // the filesystem looking for GC/CC dumps to grab a file before we're
+        // finished writing to it.)
+        nsAutoCString incomplete;
+        incomplete += "incomplete-";
+        incomplete += log.mPrefix;
+        MOZ_ASSERT(!log.mFile);
+        log.mFile = CreateTempFile(incomplete.get());
+        if (NS_WARN_IF(!log.mFile))
+            return NS_ERROR_UNEXPECTED;
+
+        MOZ_ASSERT(!log.mStream);
+        log.mFile->OpenANSIFileDesc("w", &log.mStream);
+        if (NS_WARN_IF(!log.mStream))
+            return NS_ERROR_UNEXPECTED;
+        MozillaRegisterDebugFILE(log.mStream);
+        return NS_OK;
+    }
+
+    nsresult CloseLog(FileInfo& log)
+    {
+        MOZ_ASSERT(log.mStream);
+        MOZ_ASSERT(log.mFile);
+
+        MozillaUnRegisterDebugFILE(log.mStream);
+        fclose(log.mStream);
+        log.mStream = nullptr;
+
+        // Strip off "incomplete-".
+        nsCOMPtr<nsIFile> logFileFinalDestination =
+            CreateTempFile(log.mPrefix);
+        if (NS_WARN_IF(!logFileFinalDestination))
+            return NS_ERROR_UNEXPECTED;
+
+        nsAutoString logFileFinalDestinationName;
+        logFileFinalDestination->GetLeafName(logFileFinalDestinationName);
+        if (NS_WARN_IF(logFileFinalDestinationName.IsEmpty()))
+            return NS_ERROR_UNEXPECTED;
+
+        log.mFile->MoveTo(/* directory */ nullptr, logFileFinalDestinationName);
+
+        // Copy out the path.
+        nsAutoString logPath;
+        logFileFinalDestination->GetPath(logPath);
+        log.mPath = logPath;
+
+        // Log to the error console.
+        nsCOMPtr<nsIConsoleService> cs =
+            do_GetService(NS_CONSOLESERVICE_CONTRACTID);
+        if (cs) {
+            nsString msg = NS_LITERAL_STRING("Garbage Collector log dumped to ") +
+                logPath;
+            cs->LogStringMessage(msg.get());
+        }
+        return NS_OK;
+    }
+};
+
+NS_IMPL_ISUPPORTS1(nsCycleCollectorLogSinkToFile, nsICycleCollectorLogSink)
+
+
 class nsCycleCollectorLogger MOZ_FINAL : public nsICycleCollectorListener
 {
 public:
     nsCycleCollectorLogger() :
-      mStream(nullptr), mWantAllTraces(false),
-      mDisableLog(false), mWantAfterProcessing(false)
+      mLogSink(new nsCycleCollectorLogSinkToFile),
+      mWantAllTraces(false), mDisableLog(false), mWantAfterProcessing(false)
     {
     }
+
     ~nsCycleCollectorLogger()
     {
         ClearDescribers();
-        if (mStream) {
-            MozillaUnRegisterDebugFILE(mStream);
-            fclose(mStream);
-        }
     }
+
     NS_DECL_ISUPPORTS
 
     void SetAllTraces()
@@ -1435,28 +1646,16 @@ public:
         return NS_OK;
     }
 
-    NS_IMETHOD GetFilenameIdentifier(nsAString& aIdentifier)
+    NS_IMETHOD GetLogSink(nsICycleCollectorLogSink** aLogSink)
     {
-        aIdentifier = mFilenameIdentifier;
+        NS_ADDREF(*aLogSink = mLogSink);
         return NS_OK;
     }
 
-    NS_IMETHOD SetFilenameIdentifier(const nsAString& aIdentifier)
+    NS_IMETHOD SetLogSink(nsICycleCollectorLogSink* aLogSink)
     {
-        mFilenameIdentifier = aIdentifier;
+        mLogSink = aLogSink;
         return NS_OK;
-    }
-
-    NS_IMETHOD GetGcLogPath(nsAString &aPath)
-    {
-      aPath = mGCLogPath;
-      return NS_OK;
-    }
-
-    NS_IMETHOD GetCcLogPath(nsAString &aPath)
-    {
-      aPath = mCCLogPath;
-      return NS_OK;
     }
 
     NS_IMETHOD Begin()
@@ -1467,75 +1666,21 @@ public:
             return NS_OK;
         }
 
-        // Initially create the log in a file starting with
-        // "incomplete-gc-edges".  We'll move the file and strip off the
-        // "incomplete-" once the dump completes.  (We do this because we don't
-        // want scripts which poll the filesystem looking for gc/cc dumps to
-        // grab a file before we're finished writing to it.)
-        nsCOMPtr<nsIFile> gcLogFile = CreateTempFile("incomplete-gc-edges");
-        if (NS_WARN_IF(!gcLogFile))
-            return NS_ERROR_UNEXPECTED;
-
+        mLogSink->Begin();
         // Dump the JS heap.
-        FILE* gcLogANSIFile = nullptr;
-        gcLogFile->OpenANSIFileDesc("w", &gcLogANSIFile);
-        if (NS_WARN_IF(!gcLogANSIFile))
-            return NS_ERROR_UNEXPECTED;
-        MozillaRegisterDebugFILE(gcLogANSIFile);
-        CollectorData *data = sCollectorData.get();
+        CollectorData* data = sCollectorData.get();
         if (data && data->mRuntime)
-            data->mRuntime->DumpJSHeap(gcLogANSIFile);
-        MozillaUnRegisterDebugFILE(gcLogANSIFile);
-        fclose(gcLogANSIFile);
+            data->mRuntime->DumpJSHeap(GCPrintCB, this);
 
-        // Strip off "incomplete-".
-        nsCOMPtr<nsIFile> gcLogFileFinalDestination =
-            CreateTempFile("gc-edges");
-        if (NS_WARN_IF(!gcLogFileFinalDestination))
-            return NS_ERROR_UNEXPECTED;
-
-        nsAutoString gcLogFileFinalDestinationName;
-        gcLogFileFinalDestination->GetLeafName(gcLogFileFinalDestinationName);
-        if (NS_WARN_IF(gcLogFileFinalDestinationName.IsEmpty()))
-            return NS_ERROR_UNEXPECTED;
-
-        gcLogFile->MoveTo(/* directory */ nullptr, gcLogFileFinalDestinationName);
-
-        // Log to the error console.
-        nsCOMPtr<nsIConsoleService> cs =
-            do_GetService(NS_CONSOLESERVICE_CONTRACTID);
-        if (cs) {
-            nsAutoString gcLogPath;
-            gcLogFileFinalDestination->GetPath(gcLogPath);
-
-            nsString msg = NS_LITERAL_STRING("Garbage Collector log dumped to ") +
-                           gcLogPath;
-            cs->LogStringMessage(msg.get());
-
-            mGCLogPath = gcLogPath;
-        }
-
-        // Open a file for dumping the CC graph.  We again prefix with
-        // "incomplete-".
-        mOutFile = CreateTempFile("incomplete-cc-edges");
-        if (NS_WARN_IF(!mOutFile))
-            return NS_ERROR_UNEXPECTED;
-        MOZ_ASSERT(!mStream);
-        mOutFile->OpenANSIFileDesc("w", &mStream);
-        if (NS_WARN_IF(!mStream))
-            return NS_ERROR_UNEXPECTED;
-        MozillaRegisterDebugFILE(mStream);
-
-        fprintf(mStream, "# WantAllTraces=%s\n", mWantAllTraces ? "true" : "false");
-
+        CCPrintf("# WantAllTraces=%s\n", mWantAllTraces ? "true" : "false");
         return NS_OK;
     }
     NS_IMETHOD NoteRefCountedObject(uint64_t aAddress, uint32_t refCount,
                                     const char *aObjectDescription)
     {
         if (!mDisableLog) {
-            fprintf(mStream, "%p [rc=%u] %s\n", (void*)aAddress, refCount,
-                    aObjectDescription);
+            CCPrintf("%p [rc=%u] %s\n", (void*)aAddress, refCount,
+                     aObjectDescription);
         }
         if (mWantAfterProcessing) {
             CCGraphDescriber* d =  new CCGraphDescriber();
@@ -1554,8 +1699,8 @@ public:
                               uint64_t aCompartmentAddress)
     {
         if (!mDisableLog) {
-            fprintf(mStream, "%p [gc%s] %s\n", (void*)aAddress,
-                    aMarked ? ".marked" : "", aObjectDescription);
+            CCPrintf("%p [gc%s] %s\n", (void*)aAddress,
+                     aMarked ? ".marked" : "", aObjectDescription);
         }
         if (mWantAfterProcessing) {
             CCGraphDescriber* d =  new CCGraphDescriber();
@@ -1578,7 +1723,7 @@ public:
     NS_IMETHOD NoteEdge(uint64_t aToAddress, const char *aEdgeName)
     {
         if (!mDisableLog) {
-            fprintf(mStream, "> %p %s\n", (void*)aToAddress, aEdgeName);
+            CCPrintf("> %p %s\n", (void*)aToAddress, aEdgeName);
         }
         if (mWantAfterProcessing) {
             CCGraphDescriber* d =  new CCGraphDescriber();
@@ -1595,8 +1740,8 @@ public:
                                 uint64_t aKeyDelegate, uint64_t aValue)
     {
         if (!mDisableLog) {
-            fprintf(mStream, "WeakMapEntry map=%p key=%p keyDelegate=%p value=%p\n",
-                    (void*)aMap, (void*)aKey, (void*)aKeyDelegate, (void*)aValue);
+            CCPrintf("WeakMapEntry map=%p key=%p keyDelegate=%p value=%p\n",
+                     (void*)aMap, (void*)aKey, (void*)aKeyDelegate, (void*)aValue);
         }
         // We don't support after-processing for weak map entries.
         return NS_OK;
@@ -1604,7 +1749,7 @@ public:
     NS_IMETHOD NoteIncrementalRoot(uint64_t aAddress)
     {
         if (!mDisableLog) {
-            fprintf(mStream, "IncrementalRoot %p\n", (void*)aAddress);
+            CCPrintf("IncrementalRoot %p\n", (void*)aAddress);
         }
         // We don't support after-processing for incremental roots.
         return NS_OK;
@@ -1612,14 +1757,14 @@ public:
     NS_IMETHOD BeginResults()
     {
         if (!mDisableLog) {
-            fputs("==========\n", mStream);
+            CCPrintf("==========\n");
         }
         return NS_OK;
     }
     NS_IMETHOD DescribeRoot(uint64_t aAddress, uint32_t aKnownEdges)
     {
         if (!mDisableLog) {
-            fprintf(mStream, "%p [known=%u]\n", (void*)aAddress, aKnownEdges);
+            CCPrintf("%p [known=%u]\n", (void*)aAddress, aKnownEdges);
         }
         if (mWantAfterProcessing) {
             CCGraphDescriber* d =  new CCGraphDescriber();
@@ -1633,7 +1778,7 @@ public:
     NS_IMETHOD DescribeGarbage(uint64_t aAddress)
     {
         if (!mDisableLog) {
-            fprintf(mStream, "%p [garbage]\n", (void*)aAddress);
+            CCPrintf("%p [garbage]\n", (void*)aAddress);
         }
         if (mWantAfterProcessing) {
             CCGraphDescriber* d =  new CCGraphDescriber();
@@ -1646,41 +1791,7 @@ public:
     NS_IMETHOD End()
     {
         if (!mDisableLog) {
-            MOZ_ASSERT(mStream);
-            MOZ_ASSERT(mOutFile);
-
-            MozillaUnRegisterDebugFILE(mStream);
-            fclose(mStream);
-            mStream = nullptr;
-
-            // Strip off "incomplete-" from the log file's name.
-            nsCOMPtr<nsIFile> logFileFinalDestination =
-                CreateTempFile("cc-edges");
-            if (NS_WARN_IF(!logFileFinalDestination))
-                return NS_ERROR_UNEXPECTED;
-
-            nsAutoString logFileFinalDestinationName;
-            logFileFinalDestination->GetLeafName(logFileFinalDestinationName);
-            if (NS_WARN_IF(logFileFinalDestinationName.IsEmpty()))
-                return NS_ERROR_UNEXPECTED;
-
-            mOutFile->MoveTo(/* directory = */ nullptr,
-                             logFileFinalDestinationName);
-            mOutFile = nullptr;
-
-            // Log to the error console.
-            nsCOMPtr<nsIConsoleService> cs =
-                do_GetService(NS_CONSOLESERVICE_CONTRACTID);
-            if (cs) {
-                nsAutoString ccLogPath;
-                logFileFinalDestination->GetPath(ccLogPath);
-
-                nsString msg = NS_LITERAL_STRING("Cycle Collector log dumped to ") +
-                               ccLogPath;
-                cs->LogStringMessage(msg.get());
-
-                mCCLogPath = ccLogPath;
-            }
+            mLogSink->End();
         }
         return NS_OK;
     }
@@ -1729,47 +1840,6 @@ public:
         return NS_OK;
     }
 private:
-    /**
-     * Create a new file named something like aPrefix.$PID.$IDENTIFIER.log in
-     * $MOZ_CC_LOG_DIRECTORY or in the system's temp directory.  No existing
-     * file will be overwritten; if aPrefix.$PID.$IDENTIFIER.log exists, we'll
-     * try a file named something like aPrefix.$PID.$IDENTIFIER-1.log, and so
-     * on.
-     */
-    already_AddRefed<nsIFile>
-    CreateTempFile(const char* aPrefix)
-    {
-        nsPrintfCString filename("%s.%d%s%s.log",
-            aPrefix,
-            base::GetCurrentProcId(),
-            mFilenameIdentifier.IsEmpty() ? "" : ".",
-            NS_ConvertUTF16toUTF8(mFilenameIdentifier).get());
-
-        // Get the log directory either from $MOZ_CC_LOG_DIRECTORY or from
-        // the fallback directories in OpenTempFile.  We don't use an nsCOMPtr
-        // here because OpenTempFile uses an in/out param and getter_AddRefs
-        // wouldn't work.
-        nsIFile* logFile = nullptr;
-        if (char* env = PR_GetEnv("MOZ_CC_LOG_DIRECTORY")) {
-            NS_NewNativeLocalFile(nsCString(env), /* followLinks = */ true,
-                                  &logFile);
-        }
-
-        // In Android case, this function will open a file named aFilename under
-        // specific folder (/data/local/tmp/memory-reports). Otherwise, it will
-        // open a file named aFilename under "NS_OS_TEMP_DIR".
-        nsresult rv = nsDumpUtils::OpenTempFile(
-                                     filename,
-                                     &logFile,
-                                     NS_LITERAL_CSTRING("memory-reports"));
-        if (NS_FAILED(rv)) {
-          NS_IF_RELEASE(logFile);
-          return nullptr;
-        }
-
-        return dont_AddRef(logFile);
-    }
-
     void ClearDescribers()
     {
       CCGraphDescriber* d;
@@ -1778,14 +1848,30 @@ private:
       }
     }
 
-    FILE *mStream;
-    nsCOMPtr<nsIFile> mOutFile;
+    void CCPrintf(const char* format, ...)
+    {
+        va_list ap;
+        va_start(ap, format);
+        nsAutoCString buf;
+        buf.AppendPrintf(format, ap);
+        va_end(ap);
+        mLogSink->WriteCCLog(buf);
+    }
+
+    static void GCPrintCB(void* ctx, const char* format, va_list ap)
+    {
+        nsCycleCollectorLogger* that =
+            static_cast<nsCycleCollectorLogger*>(ctx);
+
+        nsAutoCString buf;
+        buf.AppendPrintf(format, ap);
+        that->mLogSink->WriteGCLog(buf);
+    }
+
+    nsCOMPtr<nsICycleCollectorLogSink> mLogSink;
     bool mWantAllTraces;
     bool mDisableLog;
     bool mWantAfterProcessing;
-    nsString mFilenameIdentifier;
-    nsString mGCLogPath;
-    nsString mCCLogPath;
     nsCString mCurrentAddress;
     mozilla::LinkedList<CCGraphDescriber> mDescribers;
 };
@@ -1800,7 +1886,7 @@ nsCycleCollectorLoggerConstructor(nsISupports* aOuter,
     if (NS_WARN_IF(aOuter))
         return NS_ERROR_NO_AGGREGATION;
 
-    nsISupports *logger = new nsCycleCollectorLogger();
+    nsISupports* logger = new nsCycleCollectorLogger();
 
     return logger->QueryInterface(aIID, aInstancePtr);
 }
