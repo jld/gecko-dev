@@ -990,7 +990,6 @@ CycleCollectedJSRuntime::DumpJSHeap(FILE* file)
   js::DumpHeapComplete(Runtime(), file, js::CollectNurseryBeforeDump);
 }
 
-
 bool
 ReleaseSliceNow(uint32_t aSlice, void* aData)
 {

@@ -25,6 +25,7 @@
 #include "mozilla/dom/DOMStorageIPC.h"
 #include "mozilla/hal_sandbox/PHalChild.h"
 #include "mozilla/ipc/BackgroundChild.h"
+#include "mozilla/ipc/FileDescriptorUtils.h"
 #include "mozilla/ipc/GeckoChildProcessHost.h"
 #include "mozilla/ipc/TestShellChild.h"
 #include "mozilla/layers/CompositorChild.h"
@@ -45,6 +46,7 @@
 #include "mozilla/unused.h"
 
 #include "nsIConsoleListener.h"
+#include "nsICycleCollectorListener.h"
 #include "nsIIPCBackgroundChildCreateCallback.h"
 #include "nsIInterfaceRequestorUtils.h"
 #include "nsIMemoryReporter.h"
@@ -77,6 +79,7 @@
 
 #include "nsIGeolocationProvider.h"
 #include "mozilla/dom/PMemoryReportRequestChild.h"
+#include "mozilla/dom/PCycleCollectWithLogsChild.h"
 
 #ifdef MOZ_PERMISSIONS
 #include "nsIScriptSecurityManager.h"
@@ -201,6 +204,97 @@ MemoryReportRequestChild::~MemoryReportRequestChild()
 {
     MOZ_COUNT_DTOR(MemoryReportRequestChild);
 }
+
+// IPC sender for remote GC/CC logging.
+class CycleCollectWithLogsChild : public PCycleCollectWithLogsChild,
+                                  public nsICycleCollectorLogSink
+{
+public:
+    NS_DECL_ISUPPORTS
+
+    CycleCollectWithLogsChild(const FileDescriptor& aGCLog,
+                              const FileDescriptor& aCCLog)
+    {
+        MOZ_COUNT_CTOR(CycleCollectWithLogsChild);
+        mGCLog = PlatformHandleToFILE(aGCLog.PlatformHandle(), "w");
+        mCCLog = PlatformHandleToFILE(aCCLog.PlatformHandle(), "w");
+    }
+
+    virtual ~CycleCollectWithLogsChild()
+    {
+        if (mGCLog != nullptr) {
+            fclose(mGCLog);
+            mGCLog = nullptr;
+        }
+        if (mCCLog != nullptr) {
+            fclose(mCCLog);
+            mCCLog = nullptr;
+        }
+        // See comment on AllocPCycleCollectWithLogsChild for lifecycle info.
+        unused << Send__delete__(this);
+        MOZ_COUNT_DTOR(CycleCollectWithLogsChild);
+    }
+
+    NS_IMETHOD Open(FILE** aGCLog, FILE** aCCLog)
+    {
+        if (mGCLog == nullptr || mCCLog == nullptr) {
+            return NS_ERROR_FAILURE;
+        }
+        *aGCLog = mGCLog;
+        *aCCLog = mCCLog;
+        return NS_OK;
+    }
+
+    NS_IMETHOD CloseGCLog()
+    {
+        fclose(mGCLog);
+        mGCLog = nullptr;
+        return SendCloseGCLog() ? NS_OK : NS_ERROR_FAILURE;
+    }
+
+    NS_IMETHOD CloseCCLog()
+    {
+        fclose(mCCLog);
+        mCCLog = nullptr;
+        return SendCloseCCLog() ? NS_OK : NS_ERROR_FAILURE;
+    }
+
+    NS_IMETHOD GetFilenameIdentifier(nsAString& aIdentifier)
+    {
+        return NS_ERROR_UNEXPECTED;
+    }
+
+    NS_IMETHOD SetFilenameIdentifier(const nsAString& aIdentifier)
+    {
+        return NS_ERROR_UNEXPECTED;
+    }
+
+    NS_IMETHOD GetProcessIdentifier(int32_t *aIdentifier)
+    {
+        return NS_ERROR_UNEXPECTED;
+    }
+
+    NS_IMETHOD SetProcessIdentifier(int32_t aIdentifier)
+    {
+        return NS_ERROR_UNEXPECTED;
+    }
+
+    NS_IMETHOD GetGcLog(nsIFile** aPath)
+    {
+        return NS_ERROR_UNEXPECTED;
+    }
+
+    NS_IMETHOD GetCcLog(nsIFile** aPath)
+    {
+        return NS_ERROR_UNEXPECTED;
+    }
+
+private:
+    FILE* mGCLog;
+    FILE* mCCLog;
+};
+
+NS_IMPL_ISUPPORTS1(CycleCollectWithLogsChild, nsICycleCollectorLogSink);
 
 class AlertObserver
 {
@@ -668,16 +762,34 @@ ContentChild::DeallocPMemoryReportRequestChild(PMemoryReportRequestChild* actor)
     return true;
 }
 
+PCycleCollectWithLogsChild*
+ContentChild::AllocPCycleCollectWithLogsChild(const bool& aDumpAllTraces,
+                                              const FileDescriptor& aGCLog,
+                                              const FileDescriptor& aCCLog)
+{
+    CycleCollectWithLogsChild* actor = new CycleCollectWithLogsChild(aGCLog, aCCLog);
+    // Return actor with refcount 0; nsMemoryInfoDumper::DumpGCAndCCLogsToSink
+    // will take a reference, then release when it's done...
+    return actor;
+}
+
 bool
-ContentChild::RecvDumpGCAndCCLogsToFile(const nsString& aIdentifier,
-                                        const bool& aDumpAllTraces,
-                                        const bool& aDumpChildProcesses)
+ContentChild::DeallocPCycleCollectWithLogsChild(PCycleCollectWithLogsChild* aActor)
+{
+    // ...so there's nothing to do here, because the actor is already being
+    // destroyed.
+    return true;
+}
+
+bool
+ContentChild::RecvPCycleCollectWithLogsConstructor(PCycleCollectWithLogsChild* aActor,
+                                                   const bool& aDumpAllTraces,
+                                                   const FileDescriptor& aGCLog,
+                                                   const FileDescriptor& aCCLog)
 {
     nsCOMPtr<nsIMemoryInfoDumper> dumper = do_GetService("@mozilla.org/memory-info-dumper;1");
 
-    nsString gcLogPath, ccLogPath;
-    dumper->DumpGCAndCCLogsToFile(aIdentifier, aDumpAllTraces,
-                                  aDumpChildProcesses, gcLogPath, ccLogPath);
+    dumper->DumpGCAndCCLogsToSink(aDumpAllTraces, static_cast<CycleCollectWithLogsChild*>(aActor));
     return true;
 }
 

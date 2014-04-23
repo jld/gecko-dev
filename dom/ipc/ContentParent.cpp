@@ -35,6 +35,7 @@
 #include "mozilla/dom/Element.h"
 #include "mozilla/dom/ExternalHelperAppParent.h"
 #include "mozilla/dom/PFileDescriptorSetParent.h"
+#include "mozilla/dom/PCycleCollectWithLogsParent.h"
 #include "mozilla/dom/PMemoryReportRequestParent.h"
 #include "mozilla/dom/power/PowerManagerService.h"
 #include "mozilla/dom/DOMStorageIPC.h"
@@ -50,6 +51,7 @@
 #include "mozilla/hal_sandbox/PHalParent.h"
 #include "mozilla/ipc/BackgroundChild.h"
 #include "mozilla/ipc/BackgroundParent.h"
+#include "mozilla/ipc/FileDescriptorUtils.h"
 #include "mozilla/ipc/TestShellParent.h"
 #include "mozilla/ipc/InputStreamUtils.h"
 #include "mozilla/layers/CompositorParent.h"
@@ -74,12 +76,14 @@
 #include "nsIAlertsService.h"
 #include "nsIAppsService.h"
 #include "nsIClipboard.h"
+#include "nsICycleCollectorListener.h"
 #include "nsIDOMGeoGeolocation.h"
 #include "mozilla/dom/WakeLock.h"
 #include "nsIDOMWindow.h"
 #include "nsIExternalProtocolService.h"
 #include "nsIGfxInfo.h"
 #include "nsIIdleService.h"
+#include "nsIMemoryInfoDumper.h"
 #include "nsIMemoryReporter.h"
 #include "nsIMozBrowserFrame.h"
 #include "nsIMutable.h"
@@ -336,6 +340,72 @@ MemoryReportRequestParent::~MemoryReportRequestParent()
 {
     MOZ_COUNT_DTOR(MemoryReportRequestParent);
 }
+
+// IPC receiver for remote GC/CC logging.
+class CycleCollectWithLogsParent : public PCycleCollectWithLogsParent
+{
+public:
+    CycleCollectWithLogsParent(nsICycleCollectorLogSink *aSink,
+                               nsIDumpGCAndCCLogsCallback *aCallback)
+        : mSink(aSink), mCallback(aCallback)
+    {
+        MOZ_COUNT_CTOR(CycleCollectWithLogsParent);
+    }
+
+    virtual ~CycleCollectWithLogsParent()
+    {
+        MOZ_COUNT_DTOR(CycleCollectWithLogsParent);
+    }
+
+    bool DoSendConstructor(ContentParent *aManager, bool aDumpAllTraces)
+    {
+        FILE* gcLog = nullptr;
+        FILE* ccLog = nullptr;
+        nsresult rv;
+
+        rv = mSink->Open(&gcLog, &ccLog);
+        if (NS_WARN_IF(NS_FAILED(rv))) {
+            delete this;
+            return false;
+        }
+
+        return aManager->
+            SendPCycleCollectWithLogsConstructor(this,
+                                                 aDumpAllTraces,
+                                                 FILEToPlatformHandle(gcLog),
+                                                 FILEToPlatformHandle(ccLog));
+    }
+
+    virtual bool RecvCloseGCLog()
+    {
+        unused << mSink->CloseGCLog();
+        return true;
+    }
+
+    virtual bool RecvCloseCCLog()
+    {
+        unused << mSink->CloseCCLog();
+        return true;
+    }
+
+    virtual bool Recv__delete__()
+    {
+        // Report completion to mCallback only on successful
+        // completion of the protocol.
+        nsCOMPtr<nsIFile> gcLog, ccLog;
+        mSink->GetGcLog(getter_AddRefs(gcLog));
+        mSink->GetCcLog(getter_AddRefs(ccLog));
+        unused << mCallback->OnDump(gcLog, ccLog, /* parent = */ false);
+        return true;
+    }
+
+    // Ignoring ActorDestroy; there are no parent->child messages in
+    // this protocol, so no need to avoid sending them afterwards.
+
+private:
+    nsCOMPtr<nsICycleCollectorLogSink> mSink;
+    nsCOMPtr<nsIDumpGCAndCCLogsCallback> mCallback;
+};
 
 // A memory reporter for ContentParent objects themselves.
 class ContentParentsMemoryReporter MOZ_FINAL : public nsIMemoryReporter
@@ -2600,6 +2670,31 @@ ContentParent::DeallocPMemoryReportRequestParent(PMemoryReportRequestParent* act
 {
   delete actor;
   return true;
+}
+
+PCycleCollectWithLogsParent*
+ContentParent::AllocPCycleCollectWithLogsParent(const bool& aDumpAllTraces,
+                                                const FileDescriptor& aGCLog,
+                                                const FileDescriptor& aCCLog)
+{
+    MOZ_CRASH("Don't call this; allocate a CycleCollectWithLogsParent directly.");
+    return nullptr;
+}
+
+bool
+ContentParent::DeallocPCycleCollectWithLogsParent(PCycleCollectWithLogsParent* aActor)
+{
+    delete aActor;
+    return true;
+}
+
+bool
+ContentParent::CycleCollectWithLogs(bool aDumpAllTraces,
+                                    nsICycleCollectorLogSink* aSink,
+                                    nsIDumpGCAndCCLogsCallback* aCallback)
+{
+    CycleCollectWithLogsParent *actor = new CycleCollectWithLogsParent(aSink, aCallback);
+    return actor->DoSendConstructor(this, aDumpAllTraces);
 }
 
 PTestShellParent*

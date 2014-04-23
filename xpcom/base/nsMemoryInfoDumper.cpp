@@ -11,6 +11,7 @@
 #include "mozilla/dom/ContentParent.h"
 #include "mozilla/dom/ContentChild.h"
 #include "nsIConsoleService.h"
+#include "nsCycleCollector.h"
 #include "nsICycleCollectorListener.h"
 #include "nsIMemoryReporter.h"
 #include "nsDirectoryServiceDefs.h"
@@ -60,9 +61,11 @@ private:
   const bool mMinimizeMemoryUsage;
 };
 
-class GCAndCCLogDumpRunnable : public nsRunnable
+class GCAndCCLogDumpRunnable : public nsRunnable, public nsIDumpGCAndCCLogsCallback
 {
 public:
+  NS_DECL_ISUPPORTS_INHERITED
+
   GCAndCCLogDumpRunnable(const nsAString& aIdentifier,
                          bool aDumpAllTraces,
                          bool aDumpChildProcesses)
@@ -76,9 +79,18 @@ public:
     nsCOMPtr<nsIMemoryInfoDumper> dumper =
       do_GetService("@mozilla.org/memory-info-dumper;1");
 
-    nsString ccLogPath, gcLogPath;
     dumper->DumpGCAndCCLogsToFile(mIdentifier, mDumpAllTraces,
-                                  mDumpChildProcesses, gcLogPath, ccLogPath);
+                                  mDumpChildProcesses, this);
+    return NS_OK;
+  }
+
+  NS_IMETHOD OnDump(nsIFile* aGCLog, nsIFile* aCCLog, bool aIsParent)
+  {
+    return NS_OK;
+  }
+
+  NS_IMETHOD OnFinish()
+  {
     return NS_OK;
   }
 
@@ -87,6 +99,8 @@ private:
   const bool mDumpAllTraces;
   const bool mDumpChildProcesses;
 };
+
+NS_IMPL_ISUPPORTS_INHERITED1(GCAndCCLogDumpRunnable, nsRunnable, nsIDumpGCAndCCLogsCallback)
 
 } // anonymous namespace
 
@@ -226,28 +240,69 @@ EnsureNonEmptyIdentifier(nsAString& aIdentifier)
   aIdentifier.AppendInt(static_cast<int64_t>(PR_Now()) / 1000000);
 }
 
+// Use XPCOM refcounting to fire |onFinish| when all reference-holders
+// (remote dump actors or the |DumpGCAndCCLogsToFile| activation itself)
+// have gone away.
+class nsDumpGCAndCCLogsCallbackHolder : public nsIDumpGCAndCCLogsCallback
+{
+public:
+  NS_DECL_ISUPPORTS
+
+  nsDumpGCAndCCLogsCallbackHolder(nsIDumpGCAndCCLogsCallback* aCallback)
+    : mCallback(aCallback)
+  {
+  }
+
+  NS_IMETHODIMP OnFinish()
+  {
+    return NS_ERROR_UNEXPECTED;
+  }
+
+  NS_IMETHODIMP OnDump(nsIFile* aGCLog, nsIFile* aCCLog, bool aIsParent)
+  {
+    return mCallback->OnDump(aGCLog, aCCLog, aIsParent);
+  }
+
+  virtual ~nsDumpGCAndCCLogsCallbackHolder()
+  {
+    unused << mCallback->OnFinish();
+  }
+
+private:
+  nsCOMPtr<nsIDumpGCAndCCLogsCallback> mCallback;
+};
+
+NS_IMPL_ISUPPORTS1(nsDumpGCAndCCLogsCallbackHolder, nsIDumpGCAndCCLogsCallback)
+
 NS_IMETHODIMP
 nsMemoryInfoDumper::DumpGCAndCCLogsToFile(const nsAString& aIdentifier,
                                           bool aDumpAllTraces,
                                           bool aDumpChildProcesses,
-                                          nsAString& aGCLogPath,
-                                          nsAString& aCCLogPath)
+                                          nsIDumpGCAndCCLogsCallback* aCallback)
 {
   nsString identifier(aIdentifier);
   EnsureNonEmptyIdentifier(identifier);
+  nsCOMPtr<nsIDumpGCAndCCLogsCallback> callbackHolder =
+    new nsDumpGCAndCCLogsCallbackHolder(aCallback);
 
   if (aDumpChildProcesses) {
     nsTArray<ContentParent*> children;
     ContentParent::GetAll(children);
     for (uint32_t i = 0; i < children.Length(); i++) {
-      unused << children[i]->SendDumpGCAndCCLogsToFile(
-        identifier, aDumpAllTraces, aDumpChildProcesses);
+      ContentParent* cp = children[i];
+      nsCOMPtr<nsICycleCollectorLogSink> logSink =
+        nsCycleCollector_createLogSink();
+
+      logSink->SetFilenameIdentifier(identifier);
+      logSink->SetProcessIdentifier(cp->Pid());
+
+      unused << cp->CycleCollectWithLogs(aDumpAllTraces, logSink,
+                                         callbackHolder);
     }
   }
 
   nsCOMPtr<nsICycleCollectorListener> logger =
     do_CreateInstance("@mozilla.org/cycle-collector-logger;1");
-  logger->SetFilenameIdentifier(identifier);
 
   if (aDumpAllTraces) {
     nsCOMPtr<nsICycleCollectorListener> allTracesLogger;
@@ -255,10 +310,37 @@ nsMemoryInfoDumper::DumpGCAndCCLogsToFile(const nsAString& aIdentifier,
     logger = allTracesLogger;
   }
 
+  nsCOMPtr<nsICycleCollectorLogSink> logSink;
+  logger->GetLogSink(getter_AddRefs(logSink));
+
+  logSink->SetFilenameIdentifier(identifier);
+
   nsJSContext::CycleCollectNow(logger);
 
-  logger->GetGcLogPath(aGCLogPath);
-  logger->GetCcLogPath(aCCLogPath);
+  nsCOMPtr<nsIFile> gcLog, ccLog;
+  logSink->GetGcLog(getter_AddRefs(gcLog));
+  logSink->GetCcLog(getter_AddRefs(ccLog));
+  callbackHolder->OnDump(gcLog, ccLog, /* parent = */ true);
+
+  return NS_OK;
+}
+
+NS_IMETHODIMP
+nsMemoryInfoDumper::DumpGCAndCCLogsToSink(bool aDumpAllTraces,
+                                          nsICycleCollectorLogSink* aSink)
+{
+  nsCOMPtr<nsICycleCollectorListener> logger =
+    do_CreateInstance("@mozilla.org/cycle-collector-logger;1");
+
+  if (aDumpAllTraces) {
+    nsCOMPtr<nsICycleCollectorListener> allTracesLogger;
+    logger->AllTraces(getter_AddRefs(allTracesLogger));
+    logger = allTracesLogger;
+  }
+
+  logger->SetLogSink(aSink);
+
+  nsJSContext::CycleCollectNow(logger);
 
   return NS_OK;
 }

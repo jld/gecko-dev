@@ -14,6 +14,10 @@
 #include "prio.h"
 #include "private/pprio.h"
 
+#ifdef XP_WIN
+#include <io.h>
+#endif
+
 using mozilla::ipc::CloseFileRunnable;
 
 #ifdef DEBUG
@@ -76,3 +80,38 @@ CloseFileRunnable::Run()
   CloseFile();
   return NS_OK;
 }
+
+namespace mozilla {
+namespace ipc {
+
+FILE*
+PlatformHandleToFILE(FileDescriptor::PlatformHandleType aHandle,
+                     const char* aOpenMode)
+{
+#ifdef XP_WIN
+  int fd = _open_osfhandle(reinterpret_cast<intptr_t>(aHandle), 0);
+  if (fd < 0) {
+    return nullptr;
+  }
+  return _fdopen(fd, aOpenMode);
+#else
+  return fdopen(aHandle, aOpenMode);
+#endif
+}
+
+FileDescriptor::PlatformHandleType
+FILEToPlatformHandle(FILE* aStream)
+{
+#ifdef XP_WIN
+  int fd = _fileno(aStream);
+  if (fd < 0) {
+    return INVALID_HANDLE_VALUE;
+  }
+  return reinterpret_cast<HANDLE>(_get_osfhandle(fd));
+#else
+  return fileno(aStream);
+#endif
+}
+
+} // namespace ipc
+} // namespace mozilla
