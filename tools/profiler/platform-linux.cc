@@ -405,7 +405,7 @@ Sampler::FreePlatformData(PlatformData* aData)
 #define V8_HOST_ARCH_X64 1
 #endif
 static void ProfilerSignalHandler(int signal, siginfo_t* info, void* context) {
-  bool using_perf = info->si_code == SI_SIGIO;
+  bool using_perf = info->si_code == SI_SIGIO || info->si_code > 0;
   ThreadProfile *tprof;
 
   if (using_perf) {
