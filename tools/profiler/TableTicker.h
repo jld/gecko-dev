@@ -114,8 +114,8 @@ class TableTicker: public Sampler {
         ThreadInfo* info = sRegisteredThreads->at(i);
         ThreadProfile* profile = info->Profile();
         if (profile) {
-          delete profile;
           info->SetProfile(nullptr);
+          delete profile;
         }
       }
     }
@@ -140,7 +140,7 @@ class TableTicker: public Sampler {
                                                aInfo->GetPlatformData(),
                                                aInfo->IsMainThread(),
                                                aInfo->StackTop());
-    aInfo->SetProfile(profile);
+    aInfo->SetProfile(profile, this);
   }
 
   // Called within a signal. This function must be reentrant

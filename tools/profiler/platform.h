@@ -340,6 +340,8 @@ class Sampler {
     return *sRegisteredThreads;
   }
 
+  double GetInterval() const { return interval_; }
+
   static bool RegisterCurrentThread(const char* aName,
                                     PseudoStack* aPseudoStack,
                                     bool aIsMainThread, void* stackTop);
@@ -395,7 +397,7 @@ class ThreadInfo {
   bool IsMainThread() const { return mIsMainThread; }
   PseudoStack* Stack() const { return mPseudoStack; }
   
-  void SetProfile(ThreadProfile* aProfile) { mProfile = aProfile; }
+  void SetProfile(ThreadProfile* aProfile, Sampler* aMaybeSampler = nullptr);
   ThreadProfile* Profile() const { return mProfile; }
 
   PlatformData* GetPlatformData() const { return mPlatformData; }

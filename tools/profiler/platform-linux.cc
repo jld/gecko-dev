@@ -40,6 +40,8 @@
 #include <sys/syscall.h>
 #include <sys/types.h>
 #include <sys/prctl.h> // set name
+#include <linux/perf_event.h>
+#include <fcntl.h>
 #include <stdlib.h>
 #include <sched.h>
 #ifdef ANDROID
@@ -65,8 +67,9 @@
 #include <stdarg.h>
 #include "platform.h"
 #include "GeckoProfiler.h"
-#include "mozilla/Mutex.h"
 #include "mozilla/Atomics.h"
+#include "mozilla/Mutex.h"
+#include "mozilla/PodOperations.h"
 #include "ProfileEntry.h"
 #include "nsThreadUtils.h"
 #include "TableTicker.h"
@@ -100,6 +103,47 @@ pid_t gettid()
 Thread::GetCurrentId()
 {
   return gettid();
+}
+
+#ifndef F_SETOWN_EX
+#define F_SETOWN_EX 15
+#define F_GETOWN_EX 16
+
+/* Owner types.  */
+enum __pid_type {
+  F_OWNER_TID = 0,            /* Kernel thread.  */
+  F_OWNER_PID,                /* Process.  */
+  F_OWNER_PGRP,               /* Process group.  */
+  F_OWNER_GID = F_OWNER_PGRP  /* Alternative, obsolete name.  */
+};
+
+/* Structure to use with F_GETOWN_EX and F_SETOWN_EX.  */
+struct f_owner_ex {
+  enum __pid_type type;       /* Owner type of ID.  */
+  __pid_t pid;                /* ID of owner.  */
+};
+#endif
+
+#ifndef SYS_perf_event_open
+#define SYS_perf_event_open __NR_perf_event_open
+#endif
+
+#ifndef __NR_perf_event_open
+#if defined(__arm__)
+#define __NR_perf_event_open (__NR_SYSCALL_BASE+364)
+#elif defined(__x86_64__)
+#define __NR_perf_event_open 298
+#elif defined(__i386__)
+#define __NR_perf_event_open 336
+#endif
+#endif
+
+static int
+perf_event_open(struct perf_event_attr *attr,
+              pid_t pid, int cpu, int group_fd,
+              unsigned long flags)
+{
+  return syscall(SYS_perf_event_open, attr, pid, cpu, group_fd, flags);
 }
 
 #if !defined(ANDROID)
@@ -198,53 +242,148 @@ static void SetSampleContext(TickSample* sample, void* context)
 #endif
 }
 
-#ifdef ANDROID
-#define V8_HOST_ARCH_ARM 1
-#define SYS_gettid __NR_gettid
-#define SYS_tgkill __NR_tgkill
-#else
-#define V8_HOST_ARCH_X64 1
-#endif
-static void ProfilerSignalHandler(int signal, siginfo_t* info, void* context) {
-  if (!Sampler::GetActiveSampler()) {
-    sem_post(&sSignalHandlingDone);
-    return;
-  }
-
-  TickSample sample_obj;
-  TickSample* sample = &sample_obj;
-  sample->context = context;
-
-#ifdef ENABLE_SPS_LEAF_DATA
-  // If profiling, we extract the current pc and sp.
-  if (Sampler::GetActiveSampler()->IsProfiling()) {
-    SetSampleContext(sample, context);
-  }
-#endif
-  sample->threadProfile = sCurrentThreadProfile;
-  sample->timestamp = mozilla::TimeStamp::Now();
-
-  Sampler::GetActiveSampler()->Tick(sample);
-
-  sCurrentThreadProfile = NULL;
-  sem_post(&sSignalHandlingDone);
-}
-
-// If the Nuwa process is enabled, we need to use the wrapper of tgkill() to
-// perform the mapping of thread ID.
-#ifdef MOZ_NUWA_PROCESS
-extern "C" MFBT_API int tgkill(pid_t tgid, pid_t tid, int signalno);
-#else
-int tgkill(pid_t tgid, pid_t tid, int signalno) {
-  return syscall(SYS_tgkill, tgid, tid, signalno);
-}
-#endif
-
 class PlatformData : public Malloced {
+  int mFd;
+  ThreadProfile *mProfile;
+  static mozilla::Atomic<mozilla::Atomic<PlatformData*>*> sByFd;
+  static mozilla::Atomic<size_t> sNumFds;
+  static void InitByFd() {
+    if (sNumFds > 0) {
+      return;
+    }
+    struct rlimit rlimit;
+    if (0 > getrlimit(RLIMIT_NOFILE, &rlimit)) {
+      return;
+    }
+    size_t size = rlimit.rlim_max;
+    if (size == RLIM_INFINITY) {
+      return;
+    }
+    sByFd = new mozilla::Atomic<PlatformData*>[size];
+    sNumFds = size;
+  }
+  void SetFd(int aFd) {
+    if (mFd >= 0) {
+      ClearFd();
+    }
+    if (aFd < 0) {
+      return;
+    }
+    mFd = aFd;
+    InitByFd();
+    MOZ_ASSERT((size_t)aFd < sNumFds);
+    sByFd[aFd] = this;
+  }
+  void ClearFd() {
+    if (mFd < 0) {
+      return;
+    }
+    Disable();
+    sByFd[mFd] = nullptr;
+    close(mFd);
+  }
  public:
-  PlatformData()
-  {}
+  PlatformData() {
+  }
+
+  ~PlatformData() {
+  }
+
+  static PlatformData* Lookup(int aFd) {
+    if (sNumFds == 0) {
+      return nullptr;
+    }
+    MOZ_ASSERT((size_t)aFd < sNumFds);
+    return sByFd[aFd];
+  }
+
+  void Enable() {
+    if (mFd >= 0) {
+      ioctl(mFd, PERF_EVENT_IOC_ENABLE, 0);
+    }
+  }
+
+  void Disable() {
+    if (mFd >= 0) {
+      ioctl(mFd, PERF_EVENT_IOC_DISABLE, 0);
+    }
+  }
+
+  void Setup(ThreadProfile *aProfile, double aInterval) {
+    pid_t tid = aProfile->ThreadId();
+    struct f_owner_ex owner = { F_OWNER_TID, tid };
+    const char *errstr;
+    int fd;
+
+    mProfile = aProfile;      
+    struct perf_event_attr attr;
+    mozilla::PodZero(&attr);
+    attr.size = sizeof(attr);
+    attr.type = PERF_TYPE_HARDWARE;
+    attr.config = PERF_COUNT_HW_CPU_CYCLES;
+    attr.sample_freq = 1000 / aInterval;
+    attr.freq = 1;
+    attr.disabled = 1;
+    attr.wakeup_events = 1;
+
+    fd = perf_event_open(&attr, tid, -1, -1, 0);
+    if (fd < 0) {
+      errstr = "perf_event_open";
+      goto err;
+    }
+    if (fcntl(fd, F_SETSIG, SIGPROF) < 0) {
+      errstr = "fcntl F_SETSIG";
+      goto err;
+    }
+    if (fcntl(fd, F_SETOWN_EX, &owner) < 0) {
+      errstr = "fcntl F_SETOWN_EX";
+      goto err;
+    }
+    if (fcntl(fd, F_SETFL, O_ASYNC) < 0) {
+      errstr = "fcntl F_SETFL O_ASYNC: %s\n";
+      goto err;
+    }
+    SetFd(fd);
+    return;
+  err:
+    printf_stderr("%s: %s\n", errstr, strerror(errno));
+    if (fd >= 0) {
+      close(fd);
+    }
+  }
+
+  void Teardown() {
+    Disable();
+    mProfile = nullptr;
+    ClearFd();
+  }
+
+  ThreadProfile* Profile() { return mProfile; }
+
+  static void EnableAll() {
+    for (size_t i = 0; i < sNumFds; ++i) {
+      if (PlatformData *pd = sByFd[i]) {
+	pd->Enable();
+      }
+    }
+  }
 };
+
+mozilla::Atomic<mozilla::Atomic<PlatformData*>*> PlatformData::sByFd;
+mozilla::Atomic<size_t> PlatformData::sNumFds;
+
+
+void
+ThreadInfo::SetProfile(ThreadProfile* aProfile, Sampler* aMaybeSampler)
+{
+  if (!aProfile || !aMaybeSampler) {
+    mPlatformData->Teardown();
+  }
+  mProfile = aProfile;
+  if (aProfile && aMaybeSampler) {
+    mPlatformData->Setup(aProfile, aMaybeSampler->GetInterval());
+  }
+}
 
 /* static */ PlatformData*
 Sampler::AllocPlatformData(int aThreadId)
@@ -257,6 +396,61 @@ Sampler::FreePlatformData(PlatformData* aData)
 {
   delete aData;
 }
+
+#ifdef ANDROID
+#define V8_HOST_ARCH_ARM 1
+#define SYS_gettid __NR_gettid
+#define SYS_tgkill __NR_tgkill
+#else
+#define V8_HOST_ARCH_X64 1
+#endif
+static void ProfilerSignalHandler(int signal, siginfo_t* info, void* context) {
+  bool using_perf = info->si_code == SI_SIGIO;
+  ThreadProfile *tprof;
+
+  if (using_perf) {
+    PlatformData* pdata = PlatformData::Lookup(info->si_fd);
+    MOZ_ASSERT(pdata);
+    tprof = pdata->Profile();
+  } else {
+    if (!Sampler::GetActiveSampler()) {
+      sem_post(&sSignalHandlingDone);
+      return;
+    }
+    tprof = sCurrentThreadProfile;
+  }
+  MOZ_ASSERT(tprof);
+
+  TickSample sample_obj;
+  TickSample* sample = &sample_obj;
+  sample->context = context;
+
+#ifdef ENABLE_SPS_LEAF_DATA
+  // If profiling, we extract the current pc and sp.
+  if (Sampler::GetActiveSampler()->IsProfiling()) {
+    SetSampleContext(sample, context);
+  }
+#endif
+  sample->threadProfile = tprof;
+  sample->timestamp = mozilla::TimeStamp::Now();
+
+  Sampler::GetActiveSampler()->Tick(sample);
+
+  if (!using_perf) {
+    sCurrentThreadProfile = NULL;
+    sem_post(&sSignalHandlingDone);
+  }
+}
+
+// If the Nuwa process is enabled, we need to use the wrapper of tgkill() to
+// perform the mapping of thread ID.
+#ifdef MOZ_NUWA_PROCESS
+extern "C" MFBT_API int tgkill(pid_t tgid, pid_t tid, int signalno);
+#else
+int tgkill(pid_t tgid, pid_t tid, int signalno) {
+  return syscall(SYS_tgkill, tgid, tid, signalno);
+}
+#endif
 
 static void* SignalSender(void* arg) {
   // Taken from platform_thread_posix.cc
@@ -380,6 +574,12 @@ void Sampler::Start() {
   }
   LOG("Signal installed");
   signal_handler_installed_ = true;
+
+  if (getenv("MOZ_PROFILER_USE_PERF")) {
+    PlatformData::EnableAll();
+    SetActive(true);
+    return;
+  }
 
   // Start a thread that sends SIGPROF signal to VM thread.
   // Sending the signal ourselves instead of relying on itimer provides
