@@ -173,8 +173,8 @@ var shell = {
 
   deleteCrash: function shell_deleteCrash(aCrashID) {
     if (aCrashID) {
-      debugCrashReport('Deleting pending crash: ' + aCrashID);
-      shell.CrashSubmit.delete(aCrashID);
+      debugCrashReport('\nNOT deleting pending crash: ' + aCrashID + '\n');
+      // shell.CrashSubmit.delete(aCrashID);
     }
   },
 

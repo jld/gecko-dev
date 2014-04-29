@@ -14,6 +14,8 @@
 #include <poll.h>
 #include <pthread.h>
 #include <alloca.h>
+#include <stdint.h>
+#include <inttypes.h>
 #include <sys/epoll.h>
 #include <sys/mman.h>
 #include <sys/prctl.h>
@@ -21,16 +23,65 @@
 #include <sys/socket.h>
 #include <sys/stat.h>
 #include <sys/syscall.h>
+#include <linux/perf_event.h>
 #include <vector>
 
 #include "mozilla/LinkedList.h"
+#include "mozilla/PodOperations.h"
 #include "Nuwa.h"
+
+#ifndef SYS_perf_event_open
+#define SYS_perf_event_open __NR_perf_event_open
+#endif
+
+#ifndef __NR_perf_event_open
+#if defined(__arm__)
+#define __NR_perf_event_open (__NR_SYSCALL_BASE+364)
+#elif defined(__x86_64__)
+#define __NR_perf_event_open 298
+#elif defined(__i386__)
+#define __NR_perf_event_open 336
+#endif
+#endif
+
+#ifndef F_SETOWN_EX
+#define F_SETOWN_EX 15
+#define F_GETOWN_EX 16
+
+/* Owner types.  */
+enum __pid_type {
+  F_OWNER_TID = 0,            /* Kernel thread.  */
+  F_OWNER_PID,                /* Process.  */
+  F_OWNER_PGRP,               /* Process group.  */
+  F_OWNER_GID = F_OWNER_PGRP  /* Alternative, obsolete name.  */
+};
+
+/* Structure to use with F_GETOWN_EX and F_SETOWN_EX.  */
+struct f_owner_ex {
+  enum __pid_type type;       /* Owner type of ID.  */
+  __pid_t pid;                /* ID of owner.  */
+};
+#endif
+
+enum {
+  PERF_COUNT_SW_COW_FAULTS                = 10,
+};
+
+static int
+perf_event_open(struct perf_event_attr *attr,
+              pid_t pid, int cpu, int group_fd,
+              unsigned long flags)
+{
+  return syscall(SYS_perf_event_open, attr, pid, cpu, group_fd, flags);
+}
 
 using namespace mozilla;
 
 extern "C" MFBT_API int tgkill(pid_t tgid, pid_t tid, int signalno) {
   return syscall(__NR_tgkill, tgid, tid, signalno);
 }
+
+static void NuwaCowProfileStart(bool aMainThread = false);
 
 /**
  * Provides the wrappers to a selected set of pthread and system-level functions
@@ -85,6 +136,7 @@ static bool sIsFreezing = false; // Waiting for all threads getting frozen.
 static bool sNuwaReady = false;  // Nuwa process is ready.
 static bool sNuwaPendingSpawn = false; // Are there any pending spawn requests?
 static bool sNuwaForking = false;
+static bool sNuwaCowProfile = false;
 
 // Fds of transports of top level protocols.
 static NuwaProtoFdInfo sProtoFdInfos[NUWA_TOPLEVEL_MAX];
@@ -624,13 +676,30 @@ thread_create_startup(void *arg) {
   return r;
 }
 
+struct thread_postfork_info {
+  void *(*start_routine) (void *);
+  void *arg;
+};
+
+static void *
+thread_postfork_startup(void *arg) {
+  NuwaCowProfileStart();
+
+  thread_postfork_info info = *static_cast<thread_postfork_info *>(arg);
+  delete arg;
+  return info.start_routine(info.arg);
+}
+
 extern "C" MFBT_API int
 __wrap_pthread_create(pthread_t *thread,
                       const pthread_attr_t *attr,
                       void *(*start_routine) (void *),
                       void *arg) {
   if (!sIsNuwaProcess) {
-    return REAL(pthread_create)(thread, attr, start_routine, arg);
+    thread_postfork_info *info = new thread_postfork_info;
+    info->start_routine = start_routine;
+    info->arg = arg;
+    return REAL(pthread_create)(thread, attr, thread_postfork_startup, info);
   }
 
   thread_info_t *tinfo = thread_info_new();
@@ -1329,6 +1398,7 @@ thread_recreate_startup(void *arg) {
 
   prctl(PR_SET_NAME, (unsigned long)&tinfo->nativeThreadName, 0, 0, 0);
   RestoreTLSInfo(tinfo);
+  NuwaCowProfileStart();
 
   if (setjmp(tinfo->retEnv) != 0) {
     return nullptr;
@@ -1410,6 +1480,54 @@ RecreateThreads() {
     (*ctr).construct((*ctr).arg);
   }
   sFinalConstructors.clear();
+}
+
+static void
+NuwaCowProfileStart(bool aMainThread) {
+  if (!sNuwaCowProfile) {
+    return;
+  }
+
+  if (aMainThread) {
+    struct sigaction sigprofAction;
+
+    if (sigaction(SIGPROF, nullptr, &sigprofAction) == 0
+        && (sigprofAction.sa_flags & SA_SIGINFO) == 0
+        && sigprofAction.sa_handler == SIG_DFL) {
+      sigprofAction.sa_handler = SIG_IGN;
+      sigaction(SIGPROF, &sigprofAction, nullptr);
+    }
+  }
+
+  struct perf_event_attr attr;
+  mozilla::PodZero(&attr);
+  attr.size = sizeof(attr);
+  attr.type = PERF_TYPE_SOFTWARE;
+  attr.config = PERF_COUNT_SW_COW_FAULTS;
+  attr.sample_period = 1;
+  attr.wakeup_events = 1;
+
+  int fd = perf_event_open(&attr, 0, -1, -1, 0);
+  if (fd < 0) {
+    perror("perf_event_open");
+    return;
+  }
+  if (fcntl(fd, F_SETSIG, SIGPROF) < 0) {
+    perror("fcntl F_SETSIG");
+    close(fd);
+    return;
+  }
+  struct f_owner_ex owner = { F_OWNER_TID, gettid() };
+  if (fcntl(fd, F_SETOWN_EX, &owner) < 0) {
+    perror("fcntl F_SETOWN_EX");
+    close(fd);
+    return;
+  }
+  if (fcntl(fd, F_SETFL, O_ASYNC) < 0) {
+    perror("fcntl F_SETFL O_ASYNC");
+    close(fd);
+    return;
+  }
 }
 
 extern "C" {
@@ -1574,12 +1692,17 @@ static int
 ForkIPCProcess() {
   int pid;
 
+  if (getenv("MOZ_NUWA_COW_PROFILE")) {
+    sNuwaCowProfile = true;
+  }
+
   REAL(pthread_mutex_lock)(&sForkLock);
 
   PrepareProtoSockets(sProtoFdInfos, sProtoFdInfosSize);
 
   sNuwaForking = true;
   pid = fork();
+  NuwaCowProfileStart(/* main thread: */ true);
   sNuwaForking = false;
   if (pid == -1) {
     abort();

@@ -164,6 +164,8 @@ static struct sock_filter seccomp_filter[] = {
   // Used by profiler.  Also used for raise(), which causes problems
   // with Android KitKat abort(); see bug 1004832.
   ALLOW_SYSCALL(tgkill),
+  // FIXME: ifdef MOZ_NUWA_COW_PROFILE
+  ALLOW_SYSCALL(perf_event_open),
 
   /* B2G specific low-frequency syscalls */
 #ifdef MOZ_WIDGET_GONK
