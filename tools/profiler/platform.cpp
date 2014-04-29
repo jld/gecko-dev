@@ -79,7 +79,12 @@ static mozilla::StaticAutoPtr<mozilla::ProfilerIOInterposeObserver>
 // registered later based on this thread name.
 static const char * gGeckoThreadName = "GeckoMain";
 
+mozilla::ThreadLocal<ThreadInfo*> Sampler::sCurrentThreadInfo;
+
 void Sampler::Startup() {
+  if (!sCurrentThreadInfo.init()) {
+    MOZ_CRASH("Sampler::sCurrentThreadInfo.init() failed");
+  }
   sRegisteredThreads = new std::vector<ThreadInfo*>();
   sRegisteredThreadsMutex = new mozilla::Mutex("sRegisteredThreads mutex");
 }

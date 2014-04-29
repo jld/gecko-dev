@@ -81,7 +81,7 @@ extern "C" MFBT_API int tgkill(pid_t tgid, pid_t tid, int signalno) {
   return syscall(__NR_tgkill, tgid, tid, signalno);
 }
 
-static void NuwaCowProfileStart(bool aMainThread = false);
+static void NuwaCowProfileStartThread(bool aMainThread = false);
 
 /**
  * Provides the wrappers to a selected set of pthread and system-level functions
@@ -683,10 +683,11 @@ struct thread_postfork_info {
 
 static void *
 thread_postfork_startup(void *arg) {
-  NuwaCowProfileStart();
+  NuwaCowProfileStartThread();
 
-  thread_postfork_info info = *static_cast<thread_postfork_info *>(arg);
-  delete arg;
+  thread_postfork_info *pinfo = static_cast<thread_postfork_info *>(arg);
+  thread_postfork_info info = *pinfo;
+  delete pinfo;
   return info.start_routine(info.arg);
 }
 
@@ -1398,7 +1399,7 @@ thread_recreate_startup(void *arg) {
 
   prctl(PR_SET_NAME, (unsigned long)&tinfo->nativeThreadName, 0, 0, 0);
   RestoreTLSInfo(tinfo);
-  NuwaCowProfileStart();
+  NuwaCowProfileStartThread();
 
   if (setjmp(tinfo->retEnv) != 0) {
     return nullptr;
@@ -1483,7 +1484,7 @@ RecreateThreads() {
 }
 
 static void
-NuwaCowProfileStart(bool aMainThread) {
+NuwaCowProfileStartThread(bool aMainThread) {
   if (!sNuwaCowProfile) {
     return;
   }
@@ -1702,7 +1703,7 @@ ForkIPCProcess() {
 
   sNuwaForking = true;
   pid = fork();
-  NuwaCowProfileStart(/* main thread: */ true);
+  NuwaCowProfileStartThread(/* main thread: */ true);
   sNuwaForking = false;
   if (pid == -1) {
     abort();
@@ -1729,6 +1730,12 @@ ForkIPCProcess() {
   sForkWaitCondChanged = true;
   pthread_cond_signal(&sForkWaitCond);
   pthread_mutex_unlock(&sForkLock);
+
+  if (pid == 0 && sNuwaCowProfile) {
+    void (*NuwaCowProfileStart)() = (void (*)())
+      dlsym(RTLD_DEFAULT, "NuwaCowProfileStart");
+    NuwaCowProfileStart();
+  }
 
   return pid;
 }

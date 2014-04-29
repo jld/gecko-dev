@@ -43,6 +43,7 @@
 #include <math.h>
 #include "mozilla/unused.h"
 #include "mozilla/TimeStamp.h"
+#include "mozilla/ThreadLocal.h"
 #include "mozilla/Mutex.h"
 #include "MainThreadUtils.h"
 #include "PlatformMacros.h"
@@ -365,9 +366,18 @@ class Sampler {
 #endif
   }
 
+  static ThreadInfo* CurrentThreadInfo() {
+    return sCurrentThreadInfo.get();
+  }
+
  protected:
   static std::vector<ThreadInfo*>* sRegisteredThreads;
+  static mozilla::ThreadLocal<ThreadInfo*> sCurrentThreadInfo;
   static TableTicker* sActiveSampler;
+
+  static void SetCurrentThreadInfo(ThreadInfo *aInfo) {
+    sCurrentThreadInfo.set(aInfo);
+  }
 
  private:
   void SetActive(bool value) { NoBarrier_Store(&active_, value); }

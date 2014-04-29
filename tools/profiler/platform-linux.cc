@@ -67,6 +67,7 @@
 #include "GeckoProfiler.h"
 #include "mozilla/Mutex.h"
 #include "mozilla/Atomics.h"
+#include "mozilla/ThreadLocal.h"
 #include "ProfileEntry.h"
 #include "nsThreadUtils.h"
 #include "TableTicker.h"
@@ -157,9 +158,13 @@ Sampler *SamplerRegistry::sampler = NULL;
 
 static mozilla::Atomic<ThreadProfile*> sCurrentThreadProfile;
 static sem_t sSignalHandlingDone;
+static bool sNuwaCowProfile;
 
 static void ProfilerSaveSignalHandler(int signal, siginfo_t* info, void* context) {
   Sampler::GetActiveSampler()->RequestSave();
+  if (sNuwaCowProfile) {
+    sem_post(&sSignalHandlingDone);
+  }
 }
 
 static void SetSampleContext(TickSample* sample, void* context)
@@ -206,9 +211,25 @@ static void SetSampleContext(TickSample* sample, void* context)
 #define V8_HOST_ARCH_X64 1
 #endif
 static void ProfilerSignalHandler(int signal, siginfo_t* info, void* context) {
-  if (!Sampler::GetActiveSampler()) {
-    sem_post(&sSignalHandlingDone);
-    return;
+  bool wasSignalSender = info->si_code <= 0 && info->si_code != SI_SIGIO;
+  ThreadProfile *tprof;
+
+  if (wasSignalSender) {
+    if (!Sampler::GetActiveSampler()) {
+      sem_post(&sSignalHandlingDone);
+      return;
+    }
+    tprof = sCurrentThreadProfile;
+    MOZ_ASSERT(tprof);
+  } else {
+    ThreadInfo *tinfo = Sampler::CurrentThreadInfo();
+    if (!tinfo) {
+      return;
+    }
+    tprof = tinfo->Profile();
+    if (!tprof) {
+      return;
+    }
   }
 
   TickSample sample_obj;
@@ -221,13 +242,15 @@ static void ProfilerSignalHandler(int signal, siginfo_t* info, void* context) {
     SetSampleContext(sample, context);
   }
 #endif
-  sample->threadProfile = sCurrentThreadProfile;
+  sample->threadProfile = tprof;
   sample->timestamp = mozilla::TimeStamp::Now();
 
   Sampler::GetActiveSampler()->Tick(sample);
 
-  sCurrentThreadProfile = NULL;
-  sem_post(&sSignalHandlingDone);
+  if (wasSignalSender) {
+    sCurrentThreadProfile = NULL;
+    sem_post(&sSignalHandlingDone);
+  }
 }
 
 // If the Nuwa process is enabled, we need to use the wrapper of tgkill() to
@@ -278,6 +301,10 @@ static void* SignalSender(void* arg) {
 
   while (SamplerRegistry::sampler->IsActive()) {
     SamplerRegistry::sampler->HandleSaveRequest();
+    if (sNuwaCowProfile) {
+      sem_wait(&sSignalHandlingDone);
+      continue;
+    }
 
     if (!SamplerRegistry::sampler->IsPaused()) {
       mozilla::MutexAutoLock lock(*Sampler::sRegisteredThreadsMutex);
@@ -437,6 +464,7 @@ bool Sampler::RegisterCurrentThread(const char* aName,
 
   ThreadInfo* info = new ThreadInfo(aName, id,
     aIsMainThread, aPseudoStack, stackTop);
+  SetCurrentThreadInfo(info);
 
   if (sActiveSampler) {
     sActiveSampler->RegisterThread(info);
@@ -613,3 +641,15 @@ void OS::SleepMicro(int microseconds)
   }
 }
 
+extern "C" {
+
+NS_EXPORT void NuwaCowProfileStart() {
+  sNuwaCowProfile = true;
+
+  static const char *features[] = { "threads", "stackwalk", "js" };
+  mozilla_sampler_start(0, 0,
+			features, mozilla::ArrayLength(features),
+			nullptr, 0);
+}
+
+}
