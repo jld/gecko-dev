@@ -81,7 +81,7 @@ extern "C" MFBT_API int tgkill(pid_t tgid, pid_t tid, int signalno) {
   return syscall(__NR_tgkill, tgid, tid, signalno);
 }
 
-static void NuwaCowProfileStartThread(bool aMainThread = false);
+static void NuwaCowProfileStartThread(const char *aWhy, bool aMainThread = false);
 
 /**
  * Provides the wrappers to a selected set of pthread and system-level functions
@@ -137,6 +137,7 @@ static bool sNuwaReady = false;  // Nuwa process is ready.
 static bool sNuwaPendingSpawn = false; // Are there any pending spawn requests?
 static bool sNuwaForking = false;
 static bool sNuwaCowProfile = false;
+static pthread_key_t sNuwaCowFdKey;
 
 // Fds of transports of top level protocols.
 static NuwaProtoFdInfo sProtoFdInfos[NUWA_TOPLEVEL_MAX];
@@ -683,7 +684,7 @@ struct thread_postfork_info {
 
 static void *
 thread_postfork_startup(void *arg) {
-  NuwaCowProfileStartThread();
+  NuwaCowProfileStartThread("postfork");
 
   thread_postfork_info *pinfo = static_cast<thread_postfork_info *>(arg);
   thread_postfork_info info = *pinfo;
@@ -1399,7 +1400,7 @@ thread_recreate_startup(void *arg) {
 
   prctl(PR_SET_NAME, (unsigned long)&tinfo->nativeThreadName, 0, 0, 0);
   RestoreTLSInfo(tinfo);
-  NuwaCowProfileStartThread();
+  NuwaCowProfileStartThread("recreate");
 
   if (setjmp(tinfo->retEnv) != 0) {
     return nullptr;
@@ -1423,7 +1424,7 @@ thread_recreate(thread_info_t *tinfo) {
 
   // Note that the thread_recreate_startup() runs on the stack specified by
   // tinfo.
-  pthread_create(&thread, &tinfo->threadAttr, thread_recreate_startup, tinfo);
+  REAL(pthread_create)(&thread, &tinfo->threadAttr, thread_recreate_startup, tinfo);
 }
 
 /**
@@ -1484,7 +1485,25 @@ RecreateThreads() {
 }
 
 static void
-NuwaCowProfileStartThread(bool aMainThread) {
+NuwaCowProfileFinalizeThread(void *aArg) {
+  int fd = ((int)aArg) - 1;
+  uint64_t count;
+  ssize_t rv;
+
+  fprintf(stderr, "Nuwa COW profile: thread %d.%d closing fd %d ",
+          getpid(), gettid(), fd);
+  errno = 0;
+  rv = read(fd, &count, sizeof(count));
+  if (rv == sizeof(count)) {
+    fprintf(stderr, "after %" PRIu64 " sample(s)\n", count);
+  } else {
+    fprintf(stderr, "and read didn't work: %s\n", strerror(errno));
+  }
+  close(fd);
+}
+
+static void
+NuwaCowProfileStartThread(const char *aWhy, bool aMainThread) {
   if (!sNuwaCowProfile) {
     return;
   }
@@ -1498,6 +1517,8 @@ NuwaCowProfileStartThread(bool aMainThread) {
       sigprofAction.sa_handler = SIG_IGN;
       sigaction(SIGPROF, &sigprofAction, nullptr);
     }
+
+    REAL(pthread_key_create)(&sNuwaCowFdKey, NuwaCowProfileFinalizeThread);
   }
 
   struct perf_event_attr attr;
@@ -1529,6 +1550,9 @@ NuwaCowProfileStartThread(bool aMainThread) {
     close(fd);
     return;
   }
+  fprintf(stderr, "Nuwa COW profile: thread %d.%d opened fd %d because %s\n", 
+          getpid(), gettid(), fd, aWhy);
+  pthread_setspecific(sNuwaCowFdKey, (void*)(fd + 1));
 }
 
 extern "C" {
@@ -1703,7 +1727,9 @@ ForkIPCProcess() {
 
   sNuwaForking = true;
   pid = fork();
-  NuwaCowProfileStartThread(/* main thread: */ true);
+  if (pid == 0 && sNuwaCowProfile) {
+    NuwaCowProfileStartThread("main", /* main thread: */ true);
+  }
   sNuwaForking = false;
   if (pid == -1) {
     abort();
