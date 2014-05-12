@@ -10,29 +10,48 @@ MOZ_ARG_WITH_STRING(linux-headers,
                           location where the Linux kernel headers can be found],
     linux_headers=$withval)
 
-LINUX_HEADERS_INCLUDES=
+PERF_EVENT_CFLAGS=
 
 if test "$linux_headers"; then
-    LINUX_HEADERS_INCLUDES="-I$linux_headers"
+    PERF_EVENT_CFLAGS="-I$linux_headers"
 fi
 
 _SAVE_CFLAGS="$CFLAGS"
-CFLAGS="$CFLAGS $LINUX_HEADERS_INCLUDES"
+CFLAGS="$CFLAGS $PERF_EVENT_CFLAGS"
 
 dnl Performance measurement headers.
 MOZ_CHECK_HEADER(linux/perf_event.h,
     [AC_CACHE_CHECK(for perf_event_open system call,ac_cv_perf_event_open,
         [AC_TRY_COMPILE([#include <asm/unistd.h>],[return sizeof(__NR_perf_event_open);],
-        ac_cv_perf_event_open=yes,
-        ac_cv_perf_event_open=no)])])
+            ac_cv_perf_event_open=yes,
+            ac_cv_perf_event_open=no)])])
+
 if test "$ac_cv_perf_event_open" = "yes"; then
     HAVE_LINUX_PERF_EVENT_H=1
 else
-    HAVE_LINUX_PERF_EVENT_H=
-    LINUX_HEADERS_INCLUDES=
+    NR_perf_event_open=
+    case "$target_cpu" in
+    (arm)
+        NR_perf_event_open=__NR_SYSCALL_BASE+364
+        ;;
+    (i?86)
+        NR_perf_event_open=336
+        ;;
+    (x86_64)
+        NR_perf_event_open=298
+        ;;
+    esac
+    if test -n "$NR_perf_event_open"; then
+        HAVE_LINUX_PERF_EVENT_H=1
+        PERF_EVENT_CFLAGS="$PERF_EVENT_CFLAGS -D__NR_perf_event_open=$NR_perf_event_open"
+    else
+        HAVE_LINUX_PERF_EVENT_H=
+        PERF_EVENT_CFLAGS=
+    fi
+    unset NR_perf_event_open
 fi
 AC_SUBST(HAVE_LINUX_PERF_EVENT_H)
-AC_SUBST(LINUX_HEADERS_INCLUDES)
+AC_SUBST(PERF_EVENT_CFLAGS)
 
 CFLAGS="$_SAVE_CFLAGS"
 

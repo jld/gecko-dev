@@ -30,20 +30,6 @@
 #include "mozilla/PodOperations.h"
 #include "Nuwa.h"
 
-#ifndef SYS_perf_event_open
-#define SYS_perf_event_open __NR_perf_event_open
-#endif
-
-#ifndef __NR_perf_event_open
-#if defined(__arm__)
-#define __NR_perf_event_open (__NR_SYSCALL_BASE+364)
-#elif defined(__x86_64__)
-#define __NR_perf_event_open 298
-#elif defined(__i386__)
-#define __NR_perf_event_open 336
-#endif
-#endif
-
 #ifndef F_SETOWN_EX
 #define F_SETOWN_EX 15
 #define F_GETOWN_EX 16
@@ -72,7 +58,7 @@ perf_event_open(struct perf_event_attr *attr,
               pid_t pid, int cpu, int group_fd,
               unsigned long flags)
 {
-  return syscall(SYS_perf_event_open, attr, pid, cpu, group_fd, flags);
+  return syscall(__NR_perf_event_open, attr, pid, cpu, group_fd, flags);
 }
 
 using namespace mozilla;
