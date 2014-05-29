@@ -10,6 +10,12 @@
 #include <string.h>
 
 #include <sys/types.h>
+#ifdef XP_LINUX
+#include <sys/prctl.h>
+#define PR_GET_VMA 0x47564d41
+# define PR_GET_VMA_MAP_COUNTS 0
+#include <stdio.h>
+#endif
 
 #if defined(MALLOC_H)
 #  include MALLOC_H             // for memalign, valloc, malloc_size, malloc_usable_size
@@ -217,9 +223,62 @@ moz_malloc_usable_size(void *ptr)
 #endif
 }
 
+namespace mozilla {
+
+bool moz_malloc_measure_uss;
+size_t moz_malloc_total_actual;
+size_t moz_malloc_total_uss;
+
+} // namepsace mozilla
+
 size_t moz_malloc_size_of(const void *ptr)
 {
-    return moz_malloc_usable_size((void *)ptr);
+    size_t actual_size = moz_malloc_usable_size((void *)ptr);
+    if (!mozilla::moz_malloc_measure_uss) {
+        return actual_size;
+    }
+#ifndef XP_LINUX
+    return actual_size;
+#else
+    static uintptr_t page_size, page_mask;
+    uintptr_t addr, end, addr_rounded, pages;
+
+    if (page_size == 0) {
+        page_size = sysconf(_SC_PAGE_SIZE);
+        page_mask = ~(page_size - 1);
+    }
+
+    addr = reinterpret_cast<uintptr_t>(ptr);
+    end = addr + actual_size;
+    addr_rounded = addr & page_mask;
+    pages = (end - addr_rounded + page_size - 1) / page_size;
+
+    int32_t mapcount[pages]; // FIXME: don't do this if pages is large
+    if (0 != prctl(PR_GET_VMA, PR_GET_VMA_MAP_COUNTS, 
+                   addr_rounded, end - addr_rounded,
+                   (unsigned long)&mapcount)) {
+        perror("PR_GET_VMA_MAP_COUNTS");
+        return actual_size;
+    }
+    size_t uss = 0;
+    for (size_t i = 0; i < pages; ++i) {
+        uintptr_t page_start, page_end;
+        page_start = addr_rounded + i * page_size;
+        page_end = addr_rounded + (i + 1) * page_size;
+        if (page_start < addr) {
+            page_start = addr;
+        }
+        if (page_end > end) {
+            page_end = end;
+        }
+        if (mapcount[i] == 1) {
+            uss += page_end - page_start;
+        }
+    }
+    mozilla::moz_malloc_total_actual += actual_size;
+    mozilla::moz_malloc_total_uss += uss;
+    return uss;
+#endif
 }
 
 namespace mozilla {
