@@ -10,9 +10,11 @@ EXPORTS.mozilla += [
     'Sandbox.h',
 ]
 
+###    '../chromium/base/posix/unix_domain_socket_linux.cc',
 SOURCES += [
     '../chromium/sandbox/linux/seccomp-bpf/basicblock.cc',
     '../chromium/sandbox/linux/seccomp-bpf/codegen.cc',
+    '../chromium/sandbox/linux/services/broker_process.cc',
     'Sandbox.cpp',
     'SandboxAssembler.cpp',
     'SandboxFilter.cpp',
