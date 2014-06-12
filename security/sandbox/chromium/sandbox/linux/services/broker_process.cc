@@ -24,8 +24,6 @@
 #include "base/pickle.h"
 #include "base/posix/eintr_wrapper.h"
 #include "base/posix/unix_domain_socket_linux.h"
-#include "base/process/process_metrics.h"
-#include "base/third_party/valgrind/valgrind.h"
 #include "build/build_config.h"
 #include "sandbox/linux/services/linux_syscalls.h"
 
@@ -35,7 +33,11 @@
 
 namespace {
 
+#if HAVE_VALGRIND
 bool IsRunningOnValgrind() { return RUNNING_ON_VALGRIND; }
+#else
+bool IsRunningOnValgrind() { return false; }
+#endif
 
 // A little open(2) wrapper to handle some oddities for us. In the general case
 // make a direct system call since we want to keep in control of the broker
@@ -175,9 +177,6 @@ bool BrokerProcess::Init(
     return false;
   }
 
-#if !defined(THREAD_SANITIZER)
-  DCHECK_EQ(1, base::GetNumberOfThreads(base::GetCurrentProcessHandle()));
-#endif
   int child_pid = fork();
   if (child_pid == -1) {
     close(socket_pair[0]);
