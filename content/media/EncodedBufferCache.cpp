@@ -5,7 +5,7 @@
  * file, You can obtain one at http://mozilla.org/MPL/2.0/. */
 
 #include "EncodedBufferCache.h"
-#include "nsAnonymousTemporaryFile.h"
+#include "mozilla/dom/ContentChild.h"
 #include "nsDOMFile.h"
 #include "prio.h"
 
@@ -20,7 +20,7 @@ EncodedBufferCache::AppendBuffer(nsTArray<uint8_t> & aBuf)
   mEncodedBuffers.AppendElement()->SwapElements(aBuf);
 
   if (!mTempFileEnabled && mDataSize > mMaxMemoryStorage) {
-    nsresult rv = NS_OpenAnonymousTemporaryFile(&mFD);
+    nsresult rv = dom::ContentChild::OpenAnonymousTemporaryFile(&mFD);
     if (!NS_FAILED(rv)) {
       mTempFileEnabled = true;
     }

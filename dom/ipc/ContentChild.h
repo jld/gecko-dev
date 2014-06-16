@@ -15,6 +15,7 @@
 #include "nsHashKeys.h"
 #include "nsIObserver.h"
 #include "nsTHashtable.h"
+#include "prio.h" // for static OpenAnonymousTemporaryFile
 
 #include "nsWeakPtr.h"
 
@@ -341,6 +342,9 @@ public:
                                          const uint64_t& aID,
                                          const bool& aIsForApp,
                                          const bool& aIsForBrowser) MOZ_OVERRIDE;
+
+    static nsresult
+    OpenAnonymousTemporaryFile(PRFileDesc **aOutFileDesc);
 
 private:
     virtual void ActorDestroy(ActorDestroyReason why) MOZ_OVERRIDE;

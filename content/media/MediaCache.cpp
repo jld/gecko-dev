@@ -14,7 +14,7 @@
 #include "prlog.h"
 #include "mozilla/Preferences.h"
 #include "FileBlockCache.h"
-#include "nsAnonymousTemporaryFile.h"
+#include "mozilla/dom/ContentChild.h"
 #include "nsIObserverService.h"
 #include "nsISeekableStream.h"
 #include "nsIPrincipal.h"
@@ -577,7 +577,7 @@ MediaCache::Init()
   NS_ASSERTION(!mFileCache, "Cache file already open?");
 
   PRFileDesc* fileDesc = nullptr;
-  nsresult rv = NS_OpenAnonymousTemporaryFile(&fileDesc);
+  nsresult rv = dom::ContentChild::OpenAnonymousTemporaryFile(&fileDesc);
   NS_ENSURE_SUCCESS(rv,rv);
 
   mFileCache = new FileBlockCache();

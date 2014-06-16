@@ -71,6 +71,9 @@
 #include "nsLayoutStylesheetCache.h"
 #include "nsIJSRuntimeService.h"
 #include "nsThreadManager.h"
+#include "nsAnonymousTemporaryFile.h"
+#include "prio.h"
+#include "private/pprio.h"
 
 #include "IHistory.h"
 #include "nsNetUtil.h"
@@ -1901,6 +1904,20 @@ ContentChild::RecvNuwaFork()
 #else
     return false; // Makes the underlying IPC channel abort.
 #endif
+}
+
+/* static */ nsresult
+ContentChild::OpenAnonymousTemporaryFile(PRFileDesc **aOutFileDesc)
+{
+    ContentChild *child = GetSingleton();
+    if (!child) {
+        return NS_OpenAnonymousTemporaryFile(aOutFileDesc);
+    }
+    FileDescriptor fd;
+    mozilla::DebugOnly<bool> succeeded = child->SendOpenAnonymousTemporaryFile(&fd);
+    MOZ_ASSERT(succeeded);
+    *aOutFileDesc = PR_ImportFile(fd.PlatformHandle());
+    return NS_OK;
 }
 
 } // namespace dom
