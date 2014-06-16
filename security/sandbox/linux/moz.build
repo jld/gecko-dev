@@ -10,8 +10,8 @@ EXPORTS.mozilla += [
     'Sandbox.h',
 ]
 
-###    '../chromium/base/posix/unix_domain_socket_linux.cc',
 SOURCES += [
+    '../chromium/base/posix/unix_domain_socket_linux.cc',
     '../chromium/sandbox/linux/seccomp-bpf/basicblock.cc',
     '../chromium/sandbox/linux/seccomp-bpf/codegen.cc',
     '../chromium/sandbox/linux/services/broker_process.cc',
@@ -20,7 +20,9 @@ SOURCES += [
     'SandboxFilter.cpp',
 ]
 
-LOCAL_INCLUDES += ['/security/sandbox/chromium']
+LOCAL_INCLUDES += [
+    '/security/sandbox/chromium',
+]
 
 include('/ipc/chromium/chromium-config.mozbuild')
 

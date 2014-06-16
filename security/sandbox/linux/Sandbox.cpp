@@ -19,6 +19,9 @@
 #include <stdlib.h>
 #include <pthread.h>
 #include <errno.h>
+#include <vector>
+#include <string>
+#include <sys/stat.h>
 
 #include "mozilla/Atomics.h"
 #include "mozilla/NullPtr.h"
@@ -50,6 +53,9 @@
 // See definition of SandboxDie, below.
 #include "sandbox/linux/seccomp-bpf/die.h"
 
+#include "sandbox/linux/services/broker_process.h"
+using sandbox::BrokerProcess;
+
 namespace mozilla {
 #if defined(ANDROID)
 #define LOG_ERROR(args...) __android_log_print(ANDROID_LOG_ERROR, "Sandbox", ## args)
@@ -59,6 +65,102 @@ static PRLogModuleInfo* gSeccompSandboxLog;
 #else
 #define LOG_ERROR(args...)
 #endif
+
+static BrokerProcess* sSandboxBroker;
+
+static bool
+SandboxBrokerPostFork()
+{
+  // Is there anything we can/should/must do here?  Close all IPC fds?
+  // Unmap memory we know won't be used?
+  return true;
+}
+
+static void
+WhitelistFileTree(std::vector<std::string>& list, const std::string& path,
+                  const std::string& prefix = std::string())
+{
+  struct stat st;
+  if (stat(path.c_str(), &st) < 0) {
+    return;
+  }
+  if (S_ISREG(st.st_mode) || S_ISCHR(st.st_mode)) {
+    list.push_back(path);
+  } else if (S_ISDIR(st.st_mode)) {
+    DIR* dp = opendir(path.c_str());
+    if (!dp) {
+      return;
+    }
+    struct dirent* de;
+    while ((de = readdir(dp))) {
+      if (de->d_name[0] == '.') {
+        continue;
+      }
+      if (prefix.length() > 0 &&
+          strncmp(de->d_name, prefix.c_str(), prefix.length()) != 0) {
+          continue;
+      }
+      std::string newpath = path + "/" + de->d_name;
+      WhitelistFileTree(list, newpath);
+    }
+    closedir(dp);
+  }
+}
+
+static void
+StartSandboxBroker()
+{
+  // FIXME: check if these even exist before adding them.  Some are
+  // hardware-specific (ion, kgsl) or Androidisms (ashmem).
+  std::vector<std::string> writable;
+  std::vector<std::string> readable;
+  WhitelistFileTree(writable, "/dev/genlock");  // bug 980924
+  WhitelistFileTree(writable, "/dev/ashmem");   // bug 980947 (dangerous!)
+  WhitelistFileTree(writable, "/dev", "kgsl");  // bug 995072
+
+  readable = writable;
+  WhitelistFileTree(readable, "/dev/urandom");  // bug 964500, bug 995069
+  WhitelistFileTree(readable, "/dev/ion");      // bug 980937
+  WhitelistFileTree(readable, "/proc/cpuinfo"); // bug 995067
+  WhitelistFileTree(readable, "/proc/meminfo"); // bug 1025333
+  WhitelistFileTree(readable, "/sys/devices/system/cpu/present"); // bug 1025329
+  WhitelistFileTree(readable, "/sys/devices/system/soc/soc0/id"); // bug 1025339
+
+  // HACKS
+  WhitelistFileTree(readable, "/system/fonts");
+  WhitelistFileTree(readable, "/system/lib/hw");
+  WhitelistFileTree(readable, "/system/lib/egl");
+  WhitelistFileTree(readable, "/system/lib", "libGLES");
+  WhitelistFileTree(readable, "/system/lib/libgenlock.so");
+  WhitelistFileTree(readable, "/system/lib/libETC1.so");
+  WhitelistFileTree(readable, "/system/lib/libgsl.so");
+  WhitelistFileTree(readable, "/system/lib/libsc-a2xx.so");
+
+  // MozHunspell:
+  readable.push_back("/system/b2g/dictionaries"); // XXX dir open could be bad?
+  WhitelistFileTree(readable, "/system/b2g/dictionaries");
+
+  // Camera hacks:
+  WhitelistFileTree(readable, "/etc/media_profiles.xml");
+  WhitelistFileTree(readable, "/system/lib/libOpenSLES.so");
+  WhitelistFileTree(readable, "/system/lib/libwilhelm.so");
+
+  // Video hacks:
+  WhitelistFileTree(readable, "/system/lib", "libstagefright");
+  WhitelistFileTree(readable, "/system/lib", "libmm");
+  WhitelistFileTree(readable, "/system/lib", "libOmx");
+  WhitelistFileTree(readable, "/system/lib/libDivxDrm.so");
+
+  // NSS hacks:
+  WhitelistFileTree(readable, "/system/b2g/libsoftokn3.so");
+  WhitelistFileTree(readable, "/system/b2g/libfreebl3.so");
+
+  sSandboxBroker = new BrokerProcess(ENOENT, readable, writable);
+  bool inited = sSandboxBroker->Init(SandboxBrokerPostFork);
+  if (!inited) {
+    MOZ_CRASH("Sandbox broker initialization failed!");
+  }
+}
 
 /**
  * Log JS stack info in the same place as the sandbox violation
@@ -103,6 +205,32 @@ SandboxLogJSStack(void)
   }
 }
 
+static bool
+MaybeInterceptSyscall(ucontext_t *ctx)
+{
+  switch(SECCOMP_SYSCALL(ctx)) {
+  case __NR_open: {
+    const char* path = reinterpret_cast<const char *>(SECCOMP_PARM1(ctx));
+    if (strncmp(path, "/data/local/tmp/", 16) == 0) {
+      return false;
+    }
+    int flags = SECCOMP_PARM2(ctx);
+    int fd_or_error = sSandboxBroker->Open(path, flags);
+    if (fd_or_error < 0) {
+      LOG_ERROR("brokered open(\"%s\", 0x%x) rejected: %s",
+                path, flags, strerror(-fd_or_error));
+      // return false;
+    } else if (strncmp(path, "/system/lib/", 12) == 0) {
+      LOG_ERROR("LIBRARY: %s", path);
+    }
+    SECCOMP_RESULT(ctx) = fd_or_error;
+    return true;
+  }
+  default:
+    return false;
+  }
+}
+
 /**
  * This is the SIGSYS handler function. It is used to report to the user
  * which system call has been denied by Seccomp.
@@ -110,11 +238,10 @@ SandboxLogJSStack(void)
  * will otherwise generally lead to unexpected behavior from the process,
  * since we don't know if all functions will handle such denials gracefully.
  *
- * @see InstallSyscallReporter() function.
+ * @see InstallSandboxTrapHandler() function.
  */
-#ifdef MOZ_CONTENT_SANDBOX_REPORTER
 static void
-Reporter(int nr, siginfo_t *info, void *void_context)
+SandboxTrapHandler(int nr, siginfo_t *info, void *void_context)
 {
   ucontext_t *ctx = static_cast<ucontext_t*>(void_context);
   unsigned long syscall_nr, args[6];
@@ -127,6 +254,10 @@ Reporter(int nr, siginfo_t *info, void *void_context)
     return;
   }
   if (!ctx) {
+    return;
+  }
+
+  if (MaybeInterceptSyscall(ctx)) {
     return;
   }
 
@@ -164,18 +295,14 @@ Reporter(int nr, siginfo_t *info, void *void_context)
  * The reporter is called when the process receives a SIGSYS signal.
  * The signal is sent by the kernel when Seccomp encounter a system call
  * that has not been allowed.
- * We register an action for that signal (calling the Reporter function).
- *
- * This function should not be used in production and thus generally be
- * called from debug code. In production, the process is directly killed.
- * For this reason, the function is ifdef'd, as there is no reason to
- * compile it while unused.
+ * We register an action for that signal (calling the SandboxTrapHandler
+ * function).
  *
  * @return 0 on success, -1 on failure.
- * @see Reporter() function.
+ * @see SandboxTrapHandler() function.
  */
 static int
-InstallSyscallReporter(void)
+InstallSandboxTrapHandler(void)
 {
   struct sigaction act;
   sigset_t mask;
@@ -183,7 +310,7 @@ InstallSyscallReporter(void)
   sigemptyset(&mask);
   sigaddset(&mask, SIGSYS);
 
-  act.sa_sigaction = &Reporter;
+  act.sa_sigaction = &SandboxTrapHandler;
   act.sa_flags = SA_SIGINFO | SA_NODEFER;
   if (sigaction(SIGSYS, &act, nullptr) < 0) {
     return -1;
@@ -195,7 +322,6 @@ InstallSyscallReporter(void)
   }
   return 0;
 }
-#endif
 
 /**
  * This function installs the syscall filter, a.k.a. seccomp.
@@ -417,13 +543,12 @@ SetCurrentProcessSandbox()
   PR_ASSERT(gSeccompSandboxLog);
 #endif
 
-#if defined(MOZ_CONTENT_SANDBOX_REPORTER)
-  if (InstallSyscallReporter()) {
+  if (InstallSandboxTrapHandler()) {
     LOG_ERROR("install_syscall_reporter() failed\n");
   }
-#endif
 
   if (IsSandboxingSupported()) {
+    StartSandboxBroker();
     BroadcastSetThreadSandbox();
   }
 }
@@ -444,19 +569,3 @@ Die::SandboxDie(const char* msg, const char* file, int line)
 
 } // namespace sandbox
 
-
-// Stubs for unreached logging calls from Chromium CHECK() macro.
-#include "base/logging.h"
-namespace logging {
-
-LogMessage::LogMessage(const char *file, int line, int)
-  : line_(line), file_(file)
-{
-  MOZ_CRASH("Unexpected call to logging::LogMessage::LogMessage");
-}
-
-LogMessage::~LogMessage() {
-  MOZ_CRASH("Unexpected call to logging::LogMessage::~LogMessage");
-}
-
-} // namespace logging

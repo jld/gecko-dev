@@ -9,8 +9,6 @@
 #include <vector>
 
 #include "base/basictypes.h"
-#include "base/callback_forward.h"
-#include "base/pickle.h"
 #include "sandbox/linux/sandbox_export.h"
 
 namespace sandbox {
@@ -45,7 +43,7 @@ class SANDBOX_EXPORT BrokerProcess {
   // point, since we need to fork().
   // broker_process_init_callback will be called in the new broker process,
   // after fork() returns.
-  bool Init(const base::Callback<bool(void)>& broker_process_init_callback);
+  bool Init(bool (*broker_process_init_callback)(void));
 
   // Can be used in place of access(). Will be async signal safe.
   // X_OK will always return an error in practice since the broker process
@@ -66,21 +64,28 @@ class SANDBOX_EXPORT BrokerProcess {
     kCommandOpen,
     kCommandAccess,
   };
+  struct RequestHeader {
+    IPCCommands command;
+    int flags;
+    // Followed by the pathname (not null-terminated).
+  };
+  struct ResponseHeader {
+    int return_value;
+  };
   int PathAndFlagsSyscall(enum IPCCommands command_type,
                           const char* pathname,
                           int flags) const;
   bool HandleRequest() const;
-  bool HandleRemoteCommand(IPCCommands command_type,
-                           int reply_ipc,
-                           const Pickle& read_pickle,
-                           PickleIterator iter) const;
+  bool HandleRemoteCommand(const RequestHeader* header,
+                           const std::string& requested_filename,
+                           int reply_ipc) const;
 
   void AccessFileForIPC(const std::string& requested_filename,
                         int mode,
-                        Pickle* write_pickle) const;
+                        ResponseHeader* header) const;
   void OpenFileForIPC(const std::string& requested_filename,
                       int flags,
-                      Pickle* write_pickle,
+                      ResponseHeader* header,
                       std::vector<int>* opened_files) const;
   bool GetFileNameIfAllowedToAccess(const char*, int, const char**) const;
   bool GetFileNameIfAllowedToOpen(const char*, int, const char**) const;

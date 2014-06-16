@@ -18,10 +18,8 @@
 #include <vector>
 
 #include "base/basictypes.h"
-#include "base/callback.h"
 #include "base/compiler_specific.h"
 #include "base/logging.h"
-#include "base/pickle.h"
 #include "base/posix/eintr_wrapper.h"
 #include "base/posix/unix_domain_socket_linux.h"
 #include "build/build_config.h"
@@ -125,7 +123,7 @@ bool IsAllowedOpenFlags(int flags) {
   const int known_flags =
     O_APPEND | O_ASYNC | O_CLOEXEC | O_CREAT | O_DIRECT |
     O_DIRECTORY | O_EXCL | O_LARGEFILE | O_NOATIME | O_NOCTTY |
-    O_NOFOLLOW | O_NONBLOCK | O_NDELAY | O_SYNC | O_TRUNC;
+    O_NOFOLLOW | O_NONBLOCK | O_NDELAY | O_SYNC | O_TRUNC | 04000000;
 
   const int unknown_flags = ~known_flags;
   const bool has_unknown_flags = creation_and_status_flags & unknown_flags;
@@ -165,15 +163,14 @@ BrokerProcess::~BrokerProcess() {
   }
 }
 
-bool BrokerProcess::Init(
-    const base::Callback<bool(void)>& broker_process_init_callback) {
+bool BrokerProcess::Init(bool (*broker_process_init_callback)(void)) {
   CHECK(!initialized_);
   int socket_pair[2];
   // Use SOCK_SEQPACKET, because we need to preserve message boundaries
   // but we also want to be notified (recvmsg should return and not block)
   // when the connection has been broken (one of the processes died).
   if (socketpair(AF_UNIX, SOCK_SEQPACKET, 0, socket_pair)) {
-    LOG(ERROR) << "Failed to create socketpair";
+    CHROMIUM_LOG(ERROR) << "Failed to create socketpair";
     return false;
   }
 
@@ -202,7 +199,7 @@ bool BrokerProcess::Init(
     shutdown(socket_pair[0], SHUT_WR);
     ipc_socketpair_ = socket_pair[0];
     is_child_ = true;
-    CHECK(broker_process_init_callback.Run());
+    CHECK(broker_process_init_callback());
     initialized_ = true;
     for (;;) {
       HandleRequest();
@@ -257,59 +254,70 @@ int BrokerProcess::PathAndFlagsSyscall(enum IPCCommands syscall_type,
     }
   }
 
-  Pickle write_pickle;
-  write_pickle.WriteInt(syscall_type);
-  write_pickle.WriteString(pathname);
-  write_pickle.WriteInt(flags);
-  RAW_CHECK(write_pickle.size() <= kMaxMessageLength);
-
   int returned_fd = -1;
   uint8_t reply_buf[kMaxMessageLength];
+  ssize_t msg_len;
 
-  // Send a request (in write_pickle) as well that will include a new
-  // temporary socketpair (created internally by SendRecvMsg()).
-  // Then read the reply on this new socketpair in reply_buf and put an
-  // eventual attached file descriptor in |returned_fd|.
-  ssize_t msg_len = UnixDomainSocket::SendRecvMsgWithFlags(ipc_socketpair_,
-                                                           reply_buf,
-                                                           sizeof(reply_buf),
-                                                           recvmsg_flags,
-                                                           &returned_fd,
-                                                           write_pickle);
+  {
+    union {
+      RequestHeader header;
+      char buf[kMaxMessageLength];
+    } request;
+    request.header.command = syscall_type;
+    request.header.flags = flags;
+    size_t path_length = strlen(pathname);
+    if (path_length > kMaxMessageLength - sizeof(RequestHeader)) {
+      RAW_LOG(ERROR, "Path name too long");
+      NOTREACHED();
+      return -ENAMETOOLONG;
+    }
+    memcpy(&request.buf[sizeof(RequestHeader)], pathname, path_length);
+    size_t request_len = sizeof(RequestHeader) + path_length;
+
+    // Send a request that will include a new
+    // temporary socketpair (created internally by SendRecvMsg()).
+    // Then read the reply on this new socketpair in reply_buf and put an
+    // eventual attached file descriptor in |returned_fd|.
+    msg_len = UnixDomainSocket::SendRecvMsgWithFlags(ipc_socketpair_,
+						     reply_buf,
+						     sizeof(reply_buf),
+						     recvmsg_flags,
+						     &returned_fd,
+						     request.buf,
+						     request_len);
+  }
+
   if (msg_len <= 0) {
     if (!quiet_failures_for_tests_)
       RAW_LOG(ERROR, "Could not make request to broker process");
     return -ENOMEM;
   }
 
-  Pickle read_pickle(reinterpret_cast<char*>(reply_buf), msg_len);
-  PickleIterator iter(read_pickle);
-  int return_value = -1;
-  // Now deserialize the return value and eventually return the file
-  // descriptor.
-  if (read_pickle.ReadInt(&iter, &return_value)) {
-    switch (syscall_type) {
-      case kCommandAccess:
-        // We should never have a fd to return.
-        RAW_CHECK(returned_fd == -1);
-        return return_value;
-      case kCommandOpen:
-        if (return_value < 0) {
-          RAW_CHECK(returned_fd == -1);
-          return return_value;
-        } else {
-          // We have a real file descriptor to return.
-          RAW_CHECK(returned_fd >= 0);
-          return returned_fd;
-        }
-      default:
-        RAW_LOG(ERROR, "Unsupported command");
-        return -ENOSYS;
-    }
-  } else {
-    RAW_LOG(ERROR, "Could not read pickle");
+  if (msg_len < sizeof(ResponseHeader)) {
+    RAW_LOG(ERROR, "Could not read response");
     NOTREACHED();
     return -ENOMEM;
+  }
+  // Now deserialize the return value and eventually return the file
+  // descriptor.
+  int return_value = reinterpret_cast<ResponseHeader*>(reply_buf)->return_value;
+  switch (syscall_type) {
+  case kCommandAccess:
+    // We should never have a fd to return.
+    RAW_CHECK(returned_fd == -1);
+    return return_value;
+  case kCommandOpen:
+    if (return_value < 0) {
+      RAW_CHECK(returned_fd == -1);
+      return return_value;
+    } else {
+      // We have a real file descriptor to return.
+      RAW_CHECK(returned_fd >= 0);
+      return returned_fd;
+    }
+  default:
+    RAW_LOG(ERROR, "Unsupported command");
+    return -ENOSYS;
   }
 }
 
@@ -339,65 +347,56 @@ bool BrokerProcess::HandleRequest() const {
 
   const int temporary_ipc = fds.at(0);
 
-  Pickle pickle(buf, msg_len);
-  PickleIterator iter(pickle);
-  int command_type;
-  if (pickle.ReadInt(&iter, &command_type)) {
-    bool r = false;
-    // Go through all the possible IPC messages.
-    switch (command_type) {
-      case kCommandAccess:
-      case kCommandOpen:
-        // We reply on the file descriptor sent to us via the IPC channel.
-        r = HandleRemoteCommand(static_cast<IPCCommands>(command_type),
-                                temporary_ipc, pickle, iter);
-        break;
-      default:
-        NOTREACHED();
-        r = false;
-        break;
-    }
-    int ret = IGNORE_EINTR(close(temporary_ipc));
-    DCHECK(!ret) << "Could not close temporary IPC channel";
-    return r;
+  if (msg_len < sizeof(RequestHeader)) {
+    CHROMIUM_LOG(ERROR) << "Error parsing IPC request";
+    return false;
   }
+  const RequestHeader* header = reinterpret_cast<const RequestHeader*>(buf);
+  std::string pathname(&buf[sizeof(*header)], msg_len - sizeof(*header));
 
-  LOG(ERROR) << "Error parsing IPC request";
-  return false;
-}
-
-// Handle a |command_type| request contained in |read_pickle| and send the reply
-// on |reply_ipc|.
-// Currently kCommandOpen and kCommandAccess are supported.
-bool BrokerProcess::HandleRemoteCommand(IPCCommands command_type, int reply_ipc,
-                                        const Pickle& read_pickle,
-                                        PickleIterator iter) const {
-  // Currently all commands have two arguments: filename and flags.
-  std::string requested_filename;
-  int flags = 0;
-  if (!read_pickle.ReadString(&iter, &requested_filename) ||
-      !read_pickle.ReadInt(&iter, &flags)) {
-    return -1;
-  }
-
-  Pickle write_pickle;
-  std::vector<int> opened_files;
-
-  switch (command_type) {
+  bool r = false;
+  // Go through all the possible IPC messages.
+  switch (header->command) {
     case kCommandAccess:
-      AccessFileForIPC(requested_filename, flags, &write_pickle);
-      break;
     case kCommandOpen:
-      OpenFileForIPC(requested_filename, flags, &write_pickle, &opened_files);
+      // We reply on the file descriptor sent to us via the IPC channel.
+      r = HandleRemoteCommand(header, pathname, temporary_ipc);
       break;
     default:
-      LOG(ERROR) << "Invalid IPC command";
+      NOTREACHED();
+      r = false;
+      break;
+  }
+  int ret = IGNORE_EINTR(close(temporary_ipc));
+  DCHECK(!ret) << "Could not close temporary IPC channel";
+  return r;
+}
+
+// Handle a request represented by |header| and |requested_filename|
+// and send the reply on |reply_ipc|.
+// Currently kCommandOpen and kCommandAccess are supported.
+bool BrokerProcess::HandleRemoteCommand(const RequestHeader* req_header,
+					const std::string& requested_filename,
+					int reply_ipc) const {
+  std::vector<int> opened_files;
+  ResponseHeader resp_header;
+  switch (req_header->command) {
+    case kCommandAccess:
+      AccessFileForIPC(requested_filename, req_header->flags, &resp_header);
+      break;
+    case kCommandOpen:
+      OpenFileForIPC(requested_filename, req_header->flags, &resp_header,
+		     &opened_files);
+      break;
+    default:
+      CHROMIUM_LOG(ERROR) << "Invalid IPC command";
       break;
   }
 
-  CHECK_LE(write_pickle.size(), kMaxMessageLength);
-  ssize_t sent = UnixDomainSocket::SendMsg(reply_ipc, write_pickle.data(),
-                                           write_pickle.size(), opened_files);
+  ssize_t sent = UnixDomainSocket::SendMsg(reply_ipc,
+					   &resp_header, 
+					   sizeof(resp_header),
+					   opened_files);
 
   // Close anything we have opened in this process.
   for (std::vector<int>::iterator it = opened_files.begin();
@@ -407,17 +406,16 @@ bool BrokerProcess::HandleRemoteCommand(IPCCommands command_type, int reply_ipc,
   }
 
   if (sent <= 0) {
-    LOG(ERROR) << "Could not send IPC reply";
+    CHROMIUM_LOG(ERROR) << "Could not send IPC reply";
     return false;
   }
   return true;
 }
 
 // Perform access(2) on |requested_filename| with mode |mode| if allowed by our
-// policy. Write the syscall return value (-errno) to |write_pickle|.
+// policy. Write the syscall return value (-errno) to |header|.
 void BrokerProcess::AccessFileForIPC(const std::string& requested_filename,
-                                     int mode, Pickle* write_pickle) const {
-  DCHECK(write_pickle);
+                                     int mode, ResponseHeader* header) const {
   const char* file_to_access = NULL;
   const bool safe_to_access_file = GetFileNameIfAllowedToAccess(
       requested_filename.c_str(), mode, &file_to_access);
@@ -427,21 +425,20 @@ void BrokerProcess::AccessFileForIPC(const std::string& requested_filename,
     int access_ret = access(file_to_access, mode);
     int access_errno = errno;
     if (!access_ret)
-      write_pickle->WriteInt(0);
+      header->return_value = 0;
     else
-      write_pickle->WriteInt(-access_errno);
+      header->return_value = -access_errno;
   } else {
-    write_pickle->WriteInt(-denied_errno_);
+    header->return_value = -denied_errno_;
   }
 }
 
 // Open |requested_filename| with |flags| if allowed by our policy.
-// Write the syscall return value (-errno) to |write_pickle| and append
+// Write the syscall return value (-errno) to |header| and append
 // a file descriptor to |opened_files| if relevant.
 void BrokerProcess::OpenFileForIPC(const std::string& requested_filename,
-                                   int flags, Pickle* write_pickle,
+                                   int flags, ResponseHeader *header,
                                    std::vector<int>* opened_files) const {
-  DCHECK(write_pickle);
   DCHECK(opened_files);
   const char* file_to_open = NULL;
   const bool safe_to_open_file = GetFileNameIfAllowedToOpen(
@@ -451,14 +448,14 @@ void BrokerProcess::OpenFileForIPC(const std::string& requested_filename,
     CHECK(file_to_open);
     int opened_fd = sys_open(file_to_open, flags);
     if (opened_fd < 0) {
-      write_pickle->WriteInt(-errno);
+      header->return_value = -errno;
     } else {
       // Success.
       opened_files->push_back(opened_fd);
-      write_pickle->WriteInt(0);
+      header->return_value = 0;
     }
   } else {
-    write_pickle->WriteInt(-denied_errno_);
+    header->return_value = -denied_errno_;
   }
 }
 

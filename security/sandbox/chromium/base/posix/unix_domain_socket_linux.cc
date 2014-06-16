@@ -126,12 +126,37 @@ ssize_t UnixDomainSocket::SendRecvMsg(int fd,
 }
 
 // static
+ssize_t UnixDomainSocket::SendRecvMsg(int fd,
+                                      uint8_t* reply,
+                                      unsigned max_reply_len,
+                                      int* result_fd,
+                                      const void* request,
+                                      unsigned request_len) {
+  return UnixDomainSocket::SendRecvMsgWithFlags(fd, reply, max_reply_len,
+                                                0,  /* recvmsg_flags */
+                                                result_fd, request, request_len);
+}
+
+// static
 ssize_t UnixDomainSocket::SendRecvMsgWithFlags(int fd,
                                                uint8_t* reply,
                                                unsigned max_reply_len,
                                                int recvmsg_flags,
                                                int* result_fd,
                                                const Pickle& request) {
+  return UnixDomainSocket::SendRecvMsgWithFlags(fd, reply, max_reply_len,
+                                                recvmsg_flags, result_fd,
+                                                request.data(), request.size());
+}
+
+// static
+ssize_t UnixDomainSocket::SendRecvMsgWithFlags(int fd,
+                                               uint8_t* reply,
+                                               unsigned max_reply_len,
+                                               int recvmsg_flags,
+                                               int* result_fd,
+                                               const void* request,
+                                               unsigned request_len) {
   int fds[2];
 
   // This socketpair is only used for the IPC and is cleaned up before
@@ -141,7 +166,7 @@ ssize_t UnixDomainSocket::SendRecvMsgWithFlags(int fd,
 
   std::vector<int> fd_vector;
   fd_vector.push_back(fds[1]);
-  if (!SendMsg(fd, request.data(), request.size(), fd_vector)) {
+  if (!SendMsg(fd, request, request_len, fd_vector)) {
     close(fds[0]);
     close(fds[1]);
     return -1;
