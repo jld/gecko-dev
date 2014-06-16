@@ -22,6 +22,7 @@
 #include <vector>
 #include <string>
 #include <sys/stat.h>
+#include <fcntl.h>
 
 #include "mozilla/Atomics.h"
 #include "mozilla/NullPtr.h"
@@ -155,7 +156,7 @@ StartSandboxBroker()
   WhitelistFileTree(readable, "/system/b2g/libsoftokn3.so");
   WhitelistFileTree(readable, "/system/b2g/libfreebl3.so");
 
-  sSandboxBroker = new BrokerProcess(ENOENT, readable, writable);
+  sSandboxBroker = new BrokerProcess(EACCES, readable, writable);
   bool inited = sSandboxBroker->Init(SandboxBrokerPostFork);
   if (!inited) {
     MOZ_CRASH("Sandbox broker initialization failed!");
@@ -211,13 +212,10 @@ MaybeInterceptSyscall(ucontext_t *ctx)
   switch(SECCOMP_SYSCALL(ctx)) {
   case __NR_open: {
     const char* path = reinterpret_cast<const char *>(SECCOMP_PARM1(ctx));
-    if (strncmp(path, "/data/local/tmp/", 16) == 0) {
-      return false;
-    }
     int flags = SECCOMP_PARM2(ctx);
     int fd_or_error = sSandboxBroker->Open(path, flags);
     if (fd_or_error < 0) {
-      LOG_ERROR("brokered open(\"%s\", 0x%x) rejected: %s",
+      LOG_ERROR("brokered open(\"%s\", 0%o) rejected: %s",
                 path, flags, strerror(-fd_or_error));
       // return false;
     } else if (strncmp(path, "/system/lib/", 12) == 0) {
@@ -226,6 +224,41 @@ MaybeInterceptSyscall(ucontext_t *ctx)
     SECCOMP_RESULT(ctx) = fd_or_error;
     return true;
   }
+  case __NR_access: {
+    const char *path = reinterpret_cast<const char*>(SECCOMP_PARM1(ctx));
+    int mode = SECCOMP_PARM2(ctx);
+    int retval = sSandboxBroker->Access(path, mode);
+    if (retval < 0) {
+      LOG_ERROR("brokered access(\"%s\", %d) rejected: %s",
+                path, mode, strerror(-retval));
+    }
+    SECCOMP_RESULT(ctx) = retval;
+    return true;
+  }
+#ifdef __NR_stat64
+  case __NR_stat64:
+  case __NR_lstat64:
+#endif
+  case __NR_stat:
+  case __NR_lstat: {
+    const char *path = reinterpret_cast<const char *>(SECCOMP_PARM1(ctx));
+    struct stat *buf = reinterpret_cast<struct stat *>(SECCOMP_PARM2(ctx));
+    int fd_or_error = sSandboxBroker->Open(path, O_RDONLY);
+    if (fd_or_error < 0) {
+      LOG_ERROR("brokered stat(\"%s\") rejected: %s",
+                path, strerror(-fd_or_error));
+    } else {
+      int stat_errno = 0;
+      if (fstat(fd_or_error, buf) != 0) {
+        stat_errno = errno;
+      }
+      close(fd_or_error);
+      fd_or_error = -stat_errno;
+    }
+    SECCOMP_RESULT(ctx) = fd_or_error;
+    return true;
+  }
+
   default:
     return false;
   }
