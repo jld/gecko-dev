@@ -145,6 +145,7 @@ StartSandboxBroker()
   WhitelistFileTree(readable, "/etc/media_profiles.xml");
   WhitelistFileTree(readable, "/system/lib/libOpenSLES.so");
   WhitelistFileTree(readable, "/system/lib/libwilhelm.so");
+  WhitelistFileTree(readable, "/etc/media_codecs.xml");
 
   // Video hacks:
   WhitelistFileTree(readable, "/system/lib", "libstagefright");
@@ -155,6 +156,13 @@ StartSandboxBroker()
   // NSS hacks:
   WhitelistFileTree(readable, "/system/b2g/libsoftokn3.so");
   WhitelistFileTree(readable, "/system/b2g/libfreebl3.so");
+
+  // msm8610 hacks:
+  WhitelistFileTree(readable, "/system/lib/libmemalloc.so");
+  WhitelistFileTree(readable, "/system/lib/libqdutils.so");
+
+  // I give up.  Just throw in everything:
+  WhitelistFileTree(readable, "/vendor/lib");
 
   sSandboxBroker = new BrokerProcess(EACCES, readable, writable);
   bool inited = sSandboxBroker->Init(SandboxBrokerPostFork);
@@ -218,7 +226,8 @@ MaybeInterceptSyscall(ucontext_t *ctx)
       LOG_ERROR("brokered open(\"%s\", 0%o) rejected: %s",
                 path, flags, strerror(-fd_or_error));
       // return false;
-    } else if (strncmp(path, "/system/lib/", 12) == 0) {
+    } else if (strncmp(path, "/system/lib/", 12) == 0 ||
+               strncmp(path, "/vendor/lib/", 12) == 0) {
       LOG_ERROR("LIBRARY: %s", path);
     }
     SECCOMP_RESULT(ctx) = fd_or_error;
