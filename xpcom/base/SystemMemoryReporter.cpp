@@ -102,12 +102,7 @@ IsNumeric(const char* aStr)
 static bool
 IsAnonymous(const nsACString& aName)
 {
-  // Recent kernels (e.g. 3.5) have multiple [stack:nnnn] entries, where |nnnn|
-  // is a thread ID.  However, [stack:nnnn] entries count both stack memory
-  // *and* anonymous memory because the kernel only knows about the start of
-  // each thread stack, not its end.  So we treat such entries as anonymous
-  // memory instead of stack.  This is consistent with older kernels that don't
-  // even show [stack:nnnn] entries.
+  // FIXME write a new comment for this
   return aName.IsEmpty() ||
          StringBeginsWith(aName, NS_LITERAL_CSTRING("[stack:"));
 }
@@ -290,7 +285,8 @@ private:
           // so just skip if we can't open the file.
           continue;
         }
-        nsresult rv = ParseMappings(f, processName, aHandleReport, aData,
+        nsresult rv = ParseMappings(f, processName, atoi(pidStr),
+                                    aHandleReport, aData,
                                     &processSizes, aTotalPss);
         fclose(f);
         if (NS_FAILED(rv)) {
@@ -314,13 +310,40 @@ private:
     return NS_OK;
   }
 
+  // FIXME needs comments
+  void GetThreadName(pid_t aTid, nsACString& aName)
+  {
+    aName.Truncate();
+    if (aTid <= 0) {
+      return;
+    }
+    char buf[18]; // 16 chars max + '\n' + '\0'
+    nsPrintfCString path("/proc/%d/comm", aTid);
+    FILE* fp = fopen(path.get(), "r");
+    if (!fp) {
+      return;
+    }
+    size_t len = fread(buf, 1, sizeof(buf) - 1, fp);
+    fclose(fp);
+    while (len > 0 &&
+           (isspace(buf[len - 1]) || isdigit(buf[len - 1]) ||
+            buf[len - 1] == '#' || buf[len - 1] == '_')) {
+      --len;
+    }
+    aName.Assign(buf, len);
+  }
+
   nsresult ParseMappings(FILE* aFile,
                          const nsACString& aProcessName,
+                         pid_t aPid,
                          nsIHandleReportCallback* aHandleReport,
                          nsISupports* aData,
                          ProcessSizes* aProcessSizes,
                          int64_t* aTotalPss)
   {
+    nsAutoCString mainThreadName;
+    GetThreadName(aPid, mainThreadName);
+
     // The first line of an entry in /proc/<pid>/smaps looks just like an entry
     // in /proc/<pid>/maps:
     //
@@ -379,7 +402,8 @@ private:
       size_t pss = pss_kb * 1024;
       if (pss > 0) {
         nsAutoCString name, description, tag;
-        GetReporterNameAndDescription(path.get(), perms, name, description, tag);
+        GetReporterNameAndDescription(mainThreadName, path.get(), perms, name,
+                                      description, tag);
 
         nsAutoCString path("mem/processes/");
         path.Append(aProcessName);
@@ -399,7 +423,8 @@ private:
     return NS_OK;
   }
 
-  void GetReporterNameAndDescription(const char* aPath,
+  void GetReporterNameAndDescription(const nsACString& aMainThreadName,
+                                     const char* aPath,
                                      const char* aPerms,
                                      nsACString& aName,
                                      nsACString& aDesc,
@@ -408,6 +433,10 @@ private:
     aName.Truncate();
     aDesc.Truncate();
     aTag.Truncate();
+
+    nsAutoCString escapedMainThreadName;
+    escapedMainThreadName.Assign(aMainThreadName);
+    escapedMainThreadName.ReplaceChar('/', '\\');
 
     // If aPath points to a file, we have its absolute path; it might
     // also be a bracketed pseudo-name (see below).  In either case
@@ -425,11 +454,42 @@ private:
         "This corresponds to '[heap]' in /proc/<pid>/smaps.");
       aTag = aName;
     } else if (absPath.EqualsLiteral("[stack]")) {
-      aName.AppendLiteral("main-thread-stack");
+      aName.AppendLiteral("stack/main-thread");
       aDesc.AppendLiteral(
         "The stack size of the process's main thread.  This corresponds to "
         "'[stack]' in /proc/<pid>/smaps.");
       aTag = aName;
+    } else if (MozTaggedMemoryIsSupported() &&
+               StringBeginsWith(absPath, NS_LITERAL_CSTRING("[stack:"))) {
+      pid_t tid = atoi(absPath.get() + 7);
+      nsAutoCString threadName, escapedThreadName;
+      GetThreadName(tid, threadName);
+      bool hasName = !threadName.IsEmpty() && threadName != aMainThreadName
+        && !threadName.EqualsLiteral("(Nuwa)"); // FIXME explain hack
+
+      escapedThreadName.Assign(threadName);
+      escapedThreadName.ReplaceChar('/', '\\');
+
+      aName.AppendLiteral("stack/non-main-thread/");
+      if (hasName) {
+        aName.Append(escapedThreadName);
+        aTag = aName;
+      } else {
+        aName.AppendLiteral("(unnamed)");
+        aTag = aName;
+        aTag.Append('/');
+        aTag.Append(escapedMainThreadName);
+      }
+      aName.AppendPrintf("/tid(%d)", tid);
+
+
+      aDesc.AppendLiteral("The stack size of a non-main thread ");
+      if (hasName) {
+        aDesc.AppendLiteral("named '");
+        aDesc.Append(threadName);
+        aDesc.AppendLiteral("' ");
+      }
+      aDesc.AppendPrintf("with thread ID %d.", tid);
     } else if (absPath.EqualsLiteral("[vdso]")) {
       aName.AppendLiteral("vdso");
       aDesc.AppendLiteral(
