@@ -378,10 +378,6 @@ void SandboxFilterImplGMP::Build() {
   Allow(SYSCALL(set_robust_list));
 #endif
 
-  // NSPR can call this when creating a thread, but it will accept a
-  // polite "no".
-  Deny(EACCES, SYSCALL(getpriority));
-
   // Stack bounds are obtained via pthread_getattr_np, which calls
   // this but doesn't actually need it:
   Deny(ENOSYS, SYSCALL(sched_getaffinity));
