@@ -377,12 +377,11 @@ void SandboxFilterImplGMP::Build() {
   // polite "no".
   Deny(EACCES, SYSCALL(getpriority));
 
-#ifdef MOZ_ASAN
-  // Sanitizer builds hook thread creation and want stack bounds, so
-  // they call pthread_getattr_np, which calls this:
+  // Stack bounds are obtained via pthread_getattr_np, which calls
+  // this but doesn't actually need it:
   Deny(ENOSYS, SYSCALL(sched_getaffinity));
 
-  // And they use sigaltstack.
+#ifdef MOZ_ASAN
   Allow(SYSCALL(sigaltstack));
 #endif
 
