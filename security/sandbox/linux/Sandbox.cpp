@@ -70,6 +70,9 @@ struct SandboxFlags {
   SandboxFlags() {
     isSupported = prctl(PR_SET_SECCOMP, SECCOMP_MODE_FILTER, nullptr) == -1 &&
       errno == EFAULT;
+    if (getenv("MOZ_FAKE_NO_SANDBOX")) {
+      isSupported = false;
+    }
 #ifdef MOZ_CONTENT_SANDBOX
     isDisabledForContent = getenv("MOZ_DISABLE_CONTENT_SANDBOX");
 #endif
