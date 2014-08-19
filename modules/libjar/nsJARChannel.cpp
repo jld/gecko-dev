@@ -21,6 +21,7 @@
 #include "nsIFileURL.h"
 
 #include "mozilla/Preferences.h"
+#include "mozilla/dom/RemoteAnonymousTemporaryFile.h"
 #include "mozilla/net/RemoteOpenFileChild.h"
 #include "nsITabChild.h"
 #include "private/pprio.h"
@@ -867,7 +868,9 @@ nsJARChannel::AsyncOpen(nsIStreamListener *listener, nsISupports *ctx)
     if (!mJarFile) {
         // Not a local file...
         // kick off an async download of the base URI...
-        rv = NS_NewDownloader(getter_AddRefs(mDownloader), this);
+        nsCOMPtr<nsIFile> tmpFile =
+            mozilla::dom::RemoteAnonymousTemporaryFile::CreateIfChild();
+        rv = NS_NewDownloader(getter_AddRefs(mDownloader), this, tmpFile);
         if (NS_SUCCEEDED(rv)) {
             // Since we might not have a loadinfo on all channels yet
             // we have to provide default arguments in case mLoadInfo is null;
