@@ -3,6 +3,8 @@
  * file, You can obtain one at http://mozilla.org/MPL/2.0/. */
 
 #include "nsDownloader.h"
+
+#include "mozilla/net/NeckoCommon.h"
 #include "nsIInputStream.h"
 #include "nsDirectoryServiceUtils.h"
 #include "nsDirectoryServiceDefs.h"
@@ -44,6 +46,7 @@ nsDownloader::OnStartRequest(nsIRequest *request, nsISupports *ctxt)
 {
     nsresult rv;
     if (!mLocation) {
+        MOZ_ASSERT(XRE_GetProcessType() != GeckoProcessType_Content);
         nsCOMPtr<nsIFile> location;
         rv = NS_GetSpecialDirectory(NS_OS_TEMP_DIR, getter_AddRefs(location));
         if (NS_FAILED(rv)) return rv;

@@ -20,6 +20,7 @@
 #include "nsIFileURL.h"
 
 #include "mozilla/Preferences.h"
+#include "mozilla/dom/RemoteAnonymousTemporaryFile.h"
 #include "mozilla/net/RemoteOpenFileChild.h"
 #include "nsITabChild.h"
 #include "private/pprio.h"
@@ -850,7 +851,9 @@ nsJARChannel::AsyncOpen(nsIStreamListener *listener, nsISupports *ctx)
     if (!mJarFile) {
         // Not a local file...
         // kick off an async download of the base URI...
-        rv = NS_NewDownloader(getter_AddRefs(mDownloader), this);
+        nsCOMPtr<nsIFile> tmpFile =
+            mozilla::dom::RemoteAnonymousTemporaryFile::CreateIfChild();
+        rv = NS_NewDownloader(getter_AddRefs(mDownloader), this, tmpFile);
         if (NS_SUCCEEDED(rv))
             rv = NS_OpenURI(mDownloader, nullptr, mJarBaseURI, nullptr,
                             mLoadGroup, mCallbacks,
