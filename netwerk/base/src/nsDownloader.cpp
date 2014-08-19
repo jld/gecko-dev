@@ -3,6 +3,9 @@
  * file, You can obtain one at http://mozilla.org/MPL/2.0/. */
 
 #include "nsDownloader.h"
+
+#include "mozilla/dom/ContentChild.h"
+#include "mozilla/dom/RemoteAnonymousTemporaryFile.h"
 #include "nsIInputStream.h"
 #include "nsDirectoryServiceUtils.h"
 #include "nsDirectoryServiceDefs.h"
@@ -44,21 +47,36 @@ nsDownloader::OnStartRequest(nsIRequest *request, nsISupports *ctxt)
 {
     nsresult rv;
     if (!mLocation) {
-        nsCOMPtr<nsIFile> location;
-        rv = NS_GetSpecialDirectory(NS_OS_TEMP_DIR, getter_AddRefs(location));
-        if (NS_FAILED(rv)) return rv;
+	if (mozilla::dom::ContentChild* child =
+	    mozilla::dom::ContentChild::GetSingleton()) {
+	    nsRefPtr<mozilla::dom::RemoteAnonymousTemporaryFile> location =
+		new mozilla::dom::RemoteAnonymousTemporaryFile();
+	    rv = location->Init(child);
+	    if (NS_WARN_IF(NS_FAILED(rv))) {
+		return rv;
+	    }
+	    mLocation = location;
+	    // The file will be deleted on last close, so
+	    // mLocationIsTemp is unnecessary.
+	} else {
+	    nsCOMPtr<nsIFile> location;
 
-        char buf[13];
-        NS_MakeRandomString(buf, 8);
-        memcpy(buf+8, ".tmp", 5);
-        rv = location->AppendNative(nsDependentCString(buf, 12));
-        if (NS_FAILED(rv)) return rv;
+	    rv = NS_GetSpecialDirectory(NS_OS_TEMP_DIR,
+					getter_AddRefs(location));
+	    if (NS_FAILED(rv)) return rv;
 
-        rv = location->CreateUnique(nsIFile::NORMAL_FILE_TYPE, 0600);
-        if (NS_FAILED(rv)) return rv;
+	    char buf[13];
+	    NS_MakeRandomString(buf, 8);
+	    memcpy(buf+8, ".tmp", 5);
+	    rv = location->AppendNative(nsDependentCString(buf, 12));
+	    if (NS_FAILED(rv)) return rv;
 
-        location.swap(mLocation);
-        mLocationIsTemp = true;
+	    rv = location->CreateUnique(nsIFile::NORMAL_FILE_TYPE, 0600);
+	    if (NS_FAILED(rv)) return rv;
+
+	    location.swap(mLocation);
+	    mLocationIsTemp = true;
+	}
     }
 
     rv = NS_NewLocalFileOutputStream(getter_AddRefs(mSink), mLocation);
