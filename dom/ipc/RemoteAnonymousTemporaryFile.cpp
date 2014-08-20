@@ -78,6 +78,10 @@ RemoteAnonymousTemporaryFile::OpenNSPRFileDesc(int32_t aFlags, int32_t aMode,
 #else
     duplicate = dup(mHandle);
     success = duplicate >= 0;
+    if (success) {
+        // hax
+        lseek(duplicate, 0, SEEK_SET);
+    }
 #endif
 
     if (NS_WARN_IF(!success)) {
