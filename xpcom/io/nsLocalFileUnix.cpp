@@ -40,6 +40,7 @@
 #include "nsLocalFile.h"
 #include "nsIComponentManager.h"
 #include "nsXPIDLString.h"
+#include "nsXULAppAPI.h"
 #include "prproces.h"
 #include "nsIDirectoryEnumerator.h"
 #include "nsISimpleEnumerator.h"
@@ -437,10 +438,20 @@ do_mkdir(const char* aPath, int aFlags, mode_t aMode, PRFileDesc** aResult)
   return mkdir(aPath, aMode);
 }
 
+extern "C" {
+  void DumpJSStack();
+}
+
 nsresult
 nsLocalFile::CreateAndKeepOpen(uint32_t aType, int aFlags,
                                uint32_t aPermissions, PRFileDesc** aResult)
 {
+  if (XRE_GetProcessType() == GeckoProcessType_Content) {
+    printf_stderr("DO NOT CREATE FILES IN THIS PROCESS.\n");
+    DumpJSStack();
+    return NS_ERROR_FILE_ACCESS_DENIED;
+  }
+
   if (aType != NORMAL_FILE_TYPE && aType != DIRECTORY_TYPE) {
     return NS_ERROR_FILE_UNKNOWN_TYPE;
   }

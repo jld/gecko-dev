@@ -187,7 +187,7 @@ SandboxFilterImplContent::Build() {
   Allow(SYSCALL(readlink)); /* Workaround for bug 964455 */
   Allow(SYSCALL(prctl));
   Allow(SYSCALL(access));
-  Allow(SYSCALL(unlink));
+  //  Allow(SYSCALL(unlink));
   Allow(SYSCALL(fsync));
   Allow(SYSCALL(msync));
 
