@@ -308,22 +308,17 @@ function checkInputRequiredValidityForFile()
   element.type = 'file'
   document.forms[0].appendChild(element);
 
-  function createFileWithData(fileName, fileData) {
+  function createFileWithData(fileName) {
     var dirSvc = SpecialPowers.Cc["@mozilla.org/file/directory_service;1"]
                               .getService(SpecialPowers.Ci.nsIProperties);
     var testFile = dirSvc.get("ProfD", SpecialPowers.Ci.nsIFile);
     testFile.append(fileName);
-    var outStream = SpecialPowers.Cc["@mozilla.org/network/file-output-stream;1"].
-                    createInstance(SpecialPowers.Ci.nsIFileOutputStream);
-    outStream.init(testFile, 0x02 | 0x08 | 0x20, // write, create, truncate
-                   0666, 0);
-    outStream.write(fileData, fileData.length);
-    outStream.close();
+    testFile.createUnique(SpecialPowers.Ci.nsIFile.NORMAL_FILE_TYPE, 0644);
 
     return testFile;
   }
 
-  var file = createFileWithData("345822_file", "file content");
+  var file = createFileWithData("345822_file");
 
   SpecialPowers.wrap(element).value = "";
   element.required = false;
