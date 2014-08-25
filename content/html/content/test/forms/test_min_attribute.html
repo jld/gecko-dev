@@ -177,12 +177,10 @@ for (var test of data) {
                                 .getService(SpecialPowers.Ci.nsIProperties);
       var file = dirSvc.get("ProfD", SpecialPowers.Ci.nsIFile);
       file.append('635499_file');
-      file.createUnique(SpecialPowers.Ci.nsIFile.NORMAL_FILE_TYPE, 0644);
 
       SpecialPowers.wrap(input).value = file.path;
       checkValidity(input, true, apply, apply);
 
-      file.remove(false);
       break;
     case 'date':
       input.value = '2012-06-28';

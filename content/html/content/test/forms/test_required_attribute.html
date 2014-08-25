@@ -313,7 +313,6 @@ function checkInputRequiredValidityForFile()
                               .getService(SpecialPowers.Ci.nsIProperties);
     var testFile = dirSvc.get("ProfD", SpecialPowers.Ci.nsIFile);
     testFile.append(fileName);
-    testFile.createUnique(SpecialPowers.Ci.nsIFile.NORMAL_FILE_TYPE, 0644);
 
     return testFile;
   }
@@ -345,7 +344,6 @@ function checkInputRequiredValidityForFile()
 
   element.required = true;
   SpecialPowers.wrap(element).value = '';
-  file.remove(false);
   document.forms[0].removeChild(element);
   checkSufferingFromBeingMissing(element, true);
 }
