@@ -290,6 +290,11 @@ struct DataStoreSetting {
   bool enabled;
 };
 
+union MaybeFileDesc {
+    FileDescriptor;
+    void_t;
+};
+
 intr protocol PContent
 {
     parent opens PCompositor;
@@ -364,7 +369,7 @@ child:
     async SetProcessSandbox();
 
     PMemoryReportRequest(uint32_t generation, bool anonymize,
-                         bool minimizeMemoryUsage, FileDescriptor DMDFile);
+                         bool minimizeMemoryUsage, MaybeFileDesc DMDFile);
 
     /**
      * Notify the AudioChannelService in the child processes.
