@@ -18,13 +18,14 @@
 
 #include "base/compiler_specific.h"
 #include "base/memory/scoped_ptr.h"
-#include "sandbox/linux/sandbox_export.h"
 #include "sandbox/linux/seccomp-bpf/die.h"
 #include "sandbox/linux/seccomp-bpf/errorcode.h"
 #include "sandbox/linux/seccomp-bpf/linux_seccomp.h"
+#include "sandbox/sandbox_export.h"
 
 namespace sandbox {
 
+// This must match the kernel's seccomp_data structure.
 struct arch_seccomp_data {
   int nr;
   uint32_t arch;
@@ -65,15 +66,6 @@ class SANDBOX_EXPORT SandboxBPF {
     PROCESS_MULTI_THREADED,   // The program may be multi-threaded.
   };
 
-  // When calling setSandboxPolicy(), the caller can provide an arbitrary
-  // pointer in |aux|. This pointer will then be forwarded to the sandbox
-  // policy each time a call is made through an EvaluateSyscall function
-  // pointer.  One common use case would be to pass the "aux" pointer as an
-  // argument to Trap() functions.
-  typedef ErrorCode (*EvaluateSyscall)(SandboxBPF* sandbox_compiler,
-                                       int system_call_number,
-                                       void* aux);
-  typedef std::vector<std::pair<EvaluateSyscall, void*> > Evaluators;
   // A vector of BPF instructions that need to be installed as a filter
   // program in the kernel.
   typedef std::vector<struct sock_filter> Program;
@@ -103,26 +95,16 @@ class SANDBOX_EXPORT SandboxBPF {
   // provided by the caller.
   static SandboxStatus SupportsSeccompSandbox(int proc_fd);
 
+  // Determines if the kernel has support for the seccomp() system call to
+  // synchronize BPF filters across a thread group.
+  static SandboxStatus SupportsSeccompThreadFilterSynchronization();
+
   // The sandbox needs to be able to access files in "/proc/self". If this
   // directory is not accessible when "startSandbox()" gets called, the caller
   // can provide an already opened file descriptor by calling "set_proc_fd()".
   // The sandbox becomes the new owner of this file descriptor and will
   // eventually close it when "StartSandbox()" executes.
   void set_proc_fd(int proc_fd);
-
-  // The system call evaluator function is called with the system
-  // call number. It can decide to allow the system call unconditionally
-  // by returning ERR_ALLOWED; it can deny the system call unconditionally by
-  // returning an appropriate "errno" value; or it can request inspection
-  // of system call argument(s) by returning a suitable ErrorCode.
-  // The "aux" parameter can be used to pass optional data to the system call
-  // evaluator. There are different possible uses for this data, but one of the
-  // use cases would be for the policy to then forward this pointer to a Trap()
-  // handler. In this case, of course, the data that is pointed to must remain
-  // valid for the entire time that Trap() handlers can be called; typically,
-  // this would be the lifetime of the program.
-  // DEPRECATED: use the policy interface below.
-  void SetSandboxPolicyDeprecated(EvaluateSyscall syscallEvaluator, void* aux);
 
   // Set the BPF policy as |policy|. Ownership of |policy| is transfered here
   // to the sandbox object.
@@ -148,6 +130,10 @@ class SANDBOX_EXPORT SandboxBPF {
   //   entire sandbox should be considered compromised.
   ErrorCode UnsafeTrap(Trap::TrapFnc fnc, const void* aux);
 
+  // UnsafeTraps require some syscalls to always be allowed.
+  // This helper function returns true for these calls.
+  static bool IsRequiredForUnsafeTrap(int sysno);
+
   // From within an UnsafeTrap() it is often useful to be able to execute
   // the system call that triggered the trap. The ForwardSyscall() method
   // makes this easy. It is more efficient than calling glibc's syscall()
@@ -161,13 +147,21 @@ class SANDBOX_EXPORT SandboxBPF {
   // We can also use ErrorCode to request evaluation of a conditional
   // statement based on inspection of system call parameters.
   // This method wrap an ErrorCode object around the conditional statement.
-  // Argument "argno" (1..6) will be compared to "value" using comparator
-  // "op". If the condition is true "passed" will be returned, otherwise
-  // "failed".
+  // Argument "argno" (1..6) will be bitwise-AND'd with "mask" and compared
+  // to "value"; if equal, then "passed" will be returned, otherwise "failed".
   // If "is32bit" is set, the argument must in the range of 0x0..(1u << 32 - 1)
   // If it is outside this range, the sandbox treats the system call just
   // the same as any other ABI violation (i.e. it aborts with an error
   // message).
+  ErrorCode CondMaskedEqual(int argno,
+                            ErrorCode::ArgType is_32bit,
+                            uint64_t mask,
+                            uint64_t value,
+                            const ErrorCode& passed,
+                            const ErrorCode& failed);
+
+  // Legacy variant of CondMaskedEqual that supports a few comparison
+  // operations, which get converted into masked-equality comparisons.
   ErrorCode Cond(int argno,
                  ErrorCode::ArgType is_32bit,
                  ErrorCode::Operation op,
@@ -223,6 +217,13 @@ class SANDBOX_EXPORT SandboxBPF {
   typedef std::map<uint32_t, ErrorCode> ErrMap;
   typedef std::set<ErrorCode, struct ErrorCode::LessThan> Conds;
 
+  // Used by CondExpressionHalf to track which half of the argument it's
+  // emitting instructions for.
+  enum ArgHalf {
+    LowerHalf,
+    UpperHalf,
+  };
+
   // Get a file descriptor pointing to "/proc", if currently available.
   int proc_fd() { return proc_fd_; }
 
@@ -230,8 +231,7 @@ class SANDBOX_EXPORT SandboxBPF {
   // policy. The caller has to make sure that "this" has not yet been
   // initialized with any other policies.
   bool RunFunctionInPolicy(void (*code_in_sandbox)(),
-                           EvaluateSyscall syscall_evaluator,
-                           void* aux);
+                           scoped_ptr<SandboxBPFPolicy> policy);
 
   // Performs a couple of sanity checks to verify that the kernel supports the
   // features that we need for successful sandboxing.
@@ -244,7 +244,7 @@ class SANDBOX_EXPORT SandboxBPF {
 
   // Assembles and installs a filter based on the policy that has previously
   // been configured with SetSandboxPolicy().
-  void InstallFilter(SandboxThreadState thread_state);
+  void InstallFilter(bool must_sync_threads);
 
   // Verify the correctness of a compiled program by comparing it against the
   // current policy. This function should only ever be called by unit tests and
@@ -275,6 +275,14 @@ class SANDBOX_EXPORT SandboxBPF {
   // This function recursively calls RetExpression(); it should only ever be
   // called from RetExpression().
   Instruction* CondExpression(CodeGen* gen, const ErrorCode& cond);
+
+  // Returns a BPF program that evaluates half of a conditional expression;
+  // it should only ever be called from CondExpression().
+  Instruction* CondExpressionHalf(CodeGen* gen,
+                                  const ErrorCode& cond,
+                                  ArgHalf half,
+                                  Instruction* passed,
+                                  Instruction* failed);
 
   static SandboxStatus status_;
 
