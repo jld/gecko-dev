@@ -44,7 +44,6 @@ SOURCES += [
     '../chromium/sandbox/linux/seccomp-bpf/trap.cc',
     '../chromium/sandbox/linux/seccomp-bpf/verifier.cc',
     'Sandbox.cpp',
-    'SandboxAssembler.cpp',
     'SandboxFilter.cpp',
 ]
 

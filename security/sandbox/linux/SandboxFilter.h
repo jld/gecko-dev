@@ -7,28 +7,16 @@
 #ifndef mozilla_SandboxFilter_h
 #define mozilla_SandboxFilter_h
 
-struct sock_fprog;
-struct sock_filter;
+namespace sandbox {
+
+class SandboxBPFPolicy;
+
+} // namespace sandbox
 
 namespace mozilla {
 
-enum SandboxType {
-  kSandboxContentProcess,
-  kSandboxMediaPlugin
-};
-
-class SandboxFilter {
-  sock_filter *mFilter;
-  sock_fprog *mProg;
-  const sock_fprog **mStored;
-public:
-  // RAII: on construction, builds the filter and stores it in the
-  // provided variable (with optional logging); on destruction, frees
-  // the filter and nulls out the pointer.
-  SandboxFilter(const sock_fprog** aStored, SandboxType aBox,
-                bool aVerbose = false);
-  ~SandboxFilter();
-};
+SandboxBPFPolicy* GetContentSandboxPolicy();
+SandboxBPFPolicy* GetMediaSandboxPolicy();
 
 } // namespace mozilla
 

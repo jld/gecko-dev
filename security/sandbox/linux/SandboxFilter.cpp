@@ -5,7 +5,6 @@
  * You can obtain one at http://mozilla.org/MPL/2.0/. */
 
 #include "SandboxFilter.h"
-#include "SandboxAssembler.h"
 
 #include "linux_seccomp.h"
 #include "linux_syscalls.h"
@@ -22,14 +21,70 @@
 #include <time.h>
 #include <unistd.h>
 
+#include "sandbox/linux/bpf_dfl/bpf_dsl.h"
+
+using namespace sandbox::bpf_dsl;
+#define CASES SANDBOX_BPF_DSL_CASES
+
+// "Machine independent" pseudo-syscall numbers, to deal with arch
+// dependencies.  (Most 32-bit archs started with 32-bit off_t; older
+// archs started with 16-bit uid_t/gid_t; 32-bit registers can't hold
+// a 64-bit offset for mmap; and so on.)
+//
+// For some of these, the "old" syscalls are also in use in some
+// cases; see, e.g., the handling of RT vs. non-RT signal syscalls.
+
+#ifdef __NR_mmap2
+#define MI_NR_mmap __NR_mmap2
+#else
+#define MI_NR_mmap __NR_mmap
+#endif
+
+#ifdef __NR_getuid32
+#define MI_NR_getuid __NR_getuid32
+#define MI_NR_getgid __NR_getgid32
+#define MI_NR_geteuid __NR_geteuid32
+#define MI_NR_getegid __NR_getegid32
+#define MI_NR_getresuid __NR_getresuid32
+#define MI_NR_getresgid __NR_getresgid32
+// The set*id syscalls are omitted; we'll probably never need to allow them.
+#else
+#define MI_NR_getuid __NR_getuid
+#define MI_NR_getgid __NR_getgid
+#define MI_NR_geteuid __NR_geteuid
+#define MI_NR_getegid __NR_getegid
+#define MI_NR_getresuid __NR_getresuid
+#define MI_NR_getresgid __NR_getresgid
+#endif
+
+#ifdef __NR_stat64
+#define MI_NR_stat __NR_stat64
+#define MI_NR_fstat __NR_fstat64
+#define MI_NR_lstat __NR_lstat64
+#define MI_NR_fcntl __NR_fcntl64
+#define MI_NR_getdents __NR_getdents64
+#else
+#define MI_NR_stat __NR_stat
+#define MI_NR_fstat __NR_fstat
+#define MI_NR_lstat __NR_lstat
+#define MI_NR_fcntl __NR_fcntl
+#define MI_NR_getdents __NR_getdents
+#endif
+
 namespace mozilla {
 
-class SandboxFilterImpl : public SandboxAssembler
-{
+class PolicyBase : SandboxBPFDSLPolicy {
 public:
-  virtual void Build() = 0;
-  virtual ~SandboxFilterImpl() { }
+  ResultExpr Block() const {
+    return Trap(SandboxHandler, nullptr);
+  }
+  virtual InvalidSyscall() const OVERRIDE {
+    return Block();
+  }
+  // TODO: move useful common stuff here
 };
+
+#ifdef MOZ_CONTENT_SANDBOX
 
 // Some helper macros to make the code that builds the filter more
 // readable, and to help deal with differences among architectures.
@@ -72,30 +127,12 @@ public:
 #define SYSVIPCCALL(name, NAME) SYSCALL(name)
 #endif
 
-#ifdef MOZ_CONTENT_SANDBOX
-class SandboxFilterImplContent : public SandboxFilterImpl {
-protected:
-  virtual void Build() MOZ_OVERRIDE;
-};
+class ContentSandboxPolicy : public PolicyBase {
+public:
+  ContentSandboxPolicy();
+  virtual ~ContentSandboxPolicy();
+  virtual ResultExpr EvaluateSyscall(int sysno) const OVERRIDE {
 
-void
-SandboxFilterImplContent::Build() {
-  /* Most used system calls should be at the top of the whitelist
-   * for performance reasons. The whitelist BPF filter exits after
-   * processing any ALLOW_SYSCALL macro.
-   *
-   * How are those syscalls found?
-   * 1) via strace -p <child pid> or/and
-   * 2) the child will report which system call has been denied by seccomp-bpf,
-   *    just before exiting
-   * System call number to name mapping is found in:
-   * bionic/libc/kernel/arch-arm/asm/unistd.h
-   * or your libc's unistd.h/kernel headers.
-   *
-   * Current list order has been optimized through manual guess-work.
-   * It could be further optimized by analyzing the output of:
-   * 'strace -c -p <child pid>' for most used web apps.
-   */
 
   Allow(SYSCALL(futex));
   Allow(SOCKETCALL(recvmsg, RECVMSG));
@@ -318,112 +355,196 @@ SandboxFilterImplContent::Build() {
   Allow(SYSCALL(uname));
   Allow(SYSCALL(exit_group));
   Allow(SYSCALL(exit));
-}
+  }
+};
 #endif // MOZ_CONTENT_SANDBOX
 
+
 #ifdef MOZ_GMP_SANDBOX
-class SandboxFilterImplGMP : public SandboxFilterImpl {
-protected:
-  virtual void Build() MOZ_OVERRIDE;
-};
+class GMPSandboxPolicy : public PolicyBase {
+public:
+  ContentSandboxPolicy();
+  virtual ~ContentSandboxPolicy();
+  virtual ResultExpr EvaluateSyscall(int sysno) const OVERRIDE {
+    switch (sysno) {
+      // Timekeeping
+    case __NR_clock_gettime: {
+      Arg<clockid_t> clk_id(0);
+      return If(clk_id == CLOCK_MONOTONIC, Allow())
+        .ElseIf(clk_id == CLOCK_REALTIME, Allow())
+        .Else(Block());
+    }
+    case __NR_gettimeofday:
+    case __NR_time:
+    case __NR_nanosleep:
+      return Allow();
 
-void SandboxFilterImplGMP::Build() {
-  // As for content processes, check the most common syscalls first.
+      // Thread synchronization
+    case __NR_futex:
+      // FIXME: lock down ops; disallow PI futexes.
+      return Allow();
 
-  Allow(SYSCALL_WITH_ARG(clock_gettime, 0, CLOCK_MONOTONIC, CLOCK_REALTIME));
-  Allow(SYSCALL(futex));
-  Allow(SYSCALL(gettimeofday));
-  Allow(SYSCALL(poll));
-  Allow(SYSCALL(write));
-  Allow(SYSCALL(read));
-  Allow(SYSCALL(epoll_wait));
-  Allow(SOCKETCALL(recvmsg, RECVMSG));
-  Allow(SOCKETCALL(sendmsg, SENDMSG));
-  Allow(SYSCALL(time));
+      // Asynchronous I/O
+    case __NR_epoll_wait:
+    case __NR_epoll_ctl:
+    case __NR_poll:
+      return Allow();
 
-  // Nothing after this line is performance-critical.
+      // Discard capabilities
+    case __NR_close:
+        return Allow();
 
-#if SYSCALL_EXISTS(mmap2)
-  Allow(SYSCALL(mmap2));
+      // Metadata of opened files
+    case MI_NR_fstat:
+      return Allow();
+
+      // Simple I/O
+    case __NR_write:
+    case __NR_read:
+      return Allow();
+
+      // Fancy I/O; and the crash reporter needs socketpair()
+      //
+      // WARNING: if the process obtains a UDP socket, it can use
+      // sendmsg() to send packets to any reachable address, and we
+      // can't block that with seccomp while still allowing fd passing.
+#ifdef __NR_socketcall
+    case __NR_socketcall: {
+      Arg<int> call(0);
+      return Switch(call)
+        .CASES((SYS_recvmsg,
+                SYS_sendmsg,
+                SYS_socketpair), Allow())
+        .Default(Block());
+    }
 #else
-  Allow(SYSCALL(mmap));
-#endif
-  Allow(SYSCALL_LARGEFILE(fstat, fstat64));
-  Allow(SYSCALL(munmap));
-
-  Allow(SYSCALL(getpid));
-  Allow(SYSCALL(gettid));
-
-  // The glibc source hasn't changed the thread creation clone flags
-  // since 2004, so this *should* be safe to hard-code.  Bionic is
-  // different, but MOZ_GMP_SANDBOX isn't supported there yet.
-  //
-  // At minimum we should require CLONE_THREAD, so that a single
-  // SIGKILL from the parent will destroy all descendant tasks.  In
-  // general, pinning down as much of the flags word as possible is a
-  // good idea, because it exposes a lot of subtle (and probably not
-  // well tested in all cases) kernel functionality.
-  //
-  // WARNING: s390 and cris pass the flags in a different arg -- see
-  // CLONE_BACKWARDS2 in arch/Kconfig in the kernel source -- but we
-  // don't support seccomp-bpf on those archs yet.
-  static const int new_thread_flags = CLONE_VM | CLONE_FS | CLONE_FILES |
-    CLONE_SIGHAND | CLONE_THREAD | CLONE_SYSVSEM | CLONE_SETTLS |
-    CLONE_PARENT_SETTID | CLONE_CHILD_CLEARTID;
-  Allow(SYSCALL_WITH_ARG(clone, 0, new_thread_flags));
-
-  Allow(SYSCALL_WITH_ARG(prctl, 0, PR_GET_SECCOMP, PR_SET_NAME));
-
-#if SYSCALL_EXISTS(set_robust_list)
-  Allow(SYSCALL(set_robust_list));
+    case __NR_recvmsg:
+    case __NR_sendmsg:
+    case __NR_socketpair:
+      return Allow();
 #endif
 
-  // NSPR can call this when creating a thread, but it will accept a
-  // polite "no".
-  Deny(EACCES, SYSCALL(getpriority));
+      // Memory mapping
+    case MI_NR_mmap:
+    case __NR_mprotect:
+    case __NR_munmap:
+      return Allow();
+    case __NR_madvise: {
+      Arg<int> advice(2);
+      return If(advice == MADV_DONTNEED, Allow())
+        .Else(Block());
+    }
 
-  // Stack bounds are obtained via pthread_getattr_np, which calls
-  // this but doesn't actually need it:
-  Deny(ENOSYS, SYSCALL(sched_getaffinity));
-
+      // Signal handling
 #ifdef MOZ_ASAN
-  Allow(SYSCALL(sigaltstack));
+    case __NR_sigaltstack:
+#endif
+#ifdef __NR_sigreturn
+    case __NR_sigreturn:
+#endif
+    case __NR_rt_sigreturn:
+#ifdef __NR_sigprocmask
+    case __NR_sigprocmask:
+#endif
+    case __NR_rt_sigprocmask:
+#if __NR_sigaction
+    case __NR_sigaction:
+#endif
+    case __NR_rt_sigaction:
+      return Allow();
+
+      // Send signals within the process (raise(), profiling, etc.)
+    case __NR_tgkill: {
+      Arg<pid_t> tgid(0);
+      return If(tgid == getpid(), Allow())
+        .Else(Block());
+    }
+
+      // Read own pid/tid.
+    case __NR_getpid:
+    case __NR_gettid:
+      return Allow();
+
+      // Thread creation.  TODO: share across sandboxes.
+    case __NR_clone: {
+      // WARNING: s390 and cris pass the flags in the second arg -- see
+      // CLONE_BACKWARDS2 in arch/Kconfig in the kernel source -- but we
+      // don't support seccomp-bpf on those archs yet.
+      Arg<int> flags(0);
+
+#ifdef __GLIBC__
+      // The glibc source hasn't changed the thread creation clone flags
+      // since 2004, so this *should* be safe to hard-code.
+      static const int new_thread_flags = CLONE_VM | CLONE_FS | CLONE_FILES |
+        CLONE_SIGHAND | CLONE_THREAD | CLONE_SYSVSEM | CLONE_SETTLS |
+        CLONE_PARENT_SETTID | CLONE_CHILD_CLEARTID;
+      return If(flags == new_thread_flags, Allow())
+        .Else(Block());
+#else
+      // TODO: nail this down more for Bionic.
+      //
+      // At minimum we should require CLONE_THREAD, so that a single
+      // SIGKILL from the parent will destroy all descendant tasks.  In
+      // general, pinning down as much of the flags word as possible is a
+      // good idea, because it exposes a lot of subtle (and probably not
+      // well tested in all cases) kernel functionality.
+      return If((flags & CLONE_THREAD) == CLONE_THREAD, Allow())
+        .Else(Block());
+#endif
+    }
+
+      // More thread creation.
+#ifdef __NR_set_robust_list
+    case __NR_set_robust_list:
+      Allow();
 #endif
 
-  Allow(SYSCALL(mprotect));
-  Allow(SYSCALL_WITH_ARG(madvise, 2, MADV_DONTNEED));
+      // prctl
+    case __NR_prctl: {
+      // FIXME: PR_SET_VMA
+      Arg<int> op(0);
+      return Switch(op)
+        .CASES((PR_GET_SECCOMP, // BroadcastSetThreadSandbox, etc.
+                PR_SET_NAME,    // Thread creation
+                PR_SET_DUMPABLE), // Crash reporting
+               Allow())
+        .Default(Block());
+    }
 
-#if SYSCALL_EXISTS(sigreturn)
-  Allow(SYSCALL(sigreturn));
+      // NSPR can call this when creating a thread, but it will accept a
+      // polite "no".
+    case __NR_getpriority:
+      return Error(EACCES);
+
+      // Stack bounds are obtained via pthread_getattr_np, which calls
+      // this but doesn't actually need it:
+    case __NR_sched_getaffinity:
+      return Error(ENOSYS);
+
+      // Machine-dependent stuff
+#ifdef __arm__
+    case __ARM_NR_breakpoint:
+    case __ARM_NR_cacheflush:
+    case __ARM_NR_usr26: // FIXME: Do we actually need this?
+    case __ARM_NR_usr32:
+    case __ARM_NR_set_tls:
+      return Allow();
 #endif
-  Allow(SYSCALL(rt_sigreturn));
 
-  Allow(SYSCALL(restart_syscall));
-  Allow(SYSCALL(close));
+      // Needed when being debugged:
+    case __NR_restart_syscall:
+      return Allow();
 
-  // "Sleeping for 300 seconds" in debug crashes; possibly other uses.
-  Allow(SYSCALL(nanosleep));
+      // Terminate threads or the process 
+    case __NR_exit:
+    case __NR_exit_group:
+      return Allow();
 
-  // For the crash reporter:
-#if SYSCALL_EXISTS(sigprocmask)
-  Allow(SYSCALL(sigprocmask));
-#endif
-  Allow(SYSCALL(rt_sigprocmask));
-#if SYSCALL_EXISTS(sigaction)
-  Allow(SYSCALL(sigaction));
-#endif
-  Allow(SYSCALL(rt_sigaction));
-  Allow(SOCKETCALL(socketpair, SOCKETPAIR));
-  Allow(SYSCALL_WITH_ARG(tgkill, 0, uint32_t(getpid())));
-  Allow(SYSCALL_WITH_ARG(prctl, 0, PR_SET_DUMPABLE));
-
-  // Note for when GMP is supported on an ARM platform: Add whichever
-  // of the ARM-specific syscalls are needed for this type of process.
-
-  Allow(SYSCALL(epoll_ctl));
-  Allow(SYSCALL(exit));
-  Allow(SYSCALL(exit_group));
-}
+    default:
+      return Block();
+    }
+  }
+};
 #endif // MOZ_GMP_SANDBOX
 
 SandboxFilter::SandboxFilter(const sock_fprog** aStored, SandboxType aType,

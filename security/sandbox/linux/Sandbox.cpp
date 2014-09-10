@@ -34,8 +34,9 @@
 #include "linux_seccomp.h"
 #include "SandboxFilter.h"
 
-// See definition of SandboxDie, below.
-#include "sandbox/linux/seccomp-bpf/die.h"
+#include "sandbox/linux/seccomp-bpf/sandbox_bpf.h"
+
+using sandbox::SandboxBPF;
 
 namespace mozilla {
 
@@ -85,41 +86,13 @@ struct SandboxFlags {
 static const SandboxFlags gSandboxFlags;
 
 /**
- * This is the SIGSYS handler function. It is used to report to the user
- * which system call has been denied by Seccomp.
- * This function also makes the process exit as denying the system call
- * will otherwise generally lead to unexpected behavior from the process,
- * since we don't know if all functions will handle such denials gracefully.
- *
- * @see InstallSyscallReporter() function.
+ * FIXME.
  */
-static void
-Reporter(int nr, siginfo_t *info, void *void_context)
+intptr_t
+SandboxHandler(const struct arch_seccomp_data& args, void* aux)
 {
-  ucontext_t *ctx = static_cast<ucontext_t*>(void_context);
-  unsigned long syscall_nr, args[6];
-  pid_t pid = getpid();
-
-  if (nr != SIGSYS) {
-    return;
-  }
-  if (info->si_code != SYS_SECCOMP) {
-    return;
-  }
-  if (!ctx) {
-    return;
-  }
-
-  syscall_nr = SECCOMP_SYSCALL(ctx);
-  args[0] = SECCOMP_PARM1(ctx);
-  args[1] = SECCOMP_PARM2(ctx);
-  args[2] = SECCOMP_PARM3(ctx);
-  args[3] = SECCOMP_PARM4(ctx);
-  args[4] = SECCOMP_PARM5(ctx);
-  args[5] = SECCOMP_PARM6(ctx);
-
 #ifdef MOZ_GMP_SANDBOX
-  if (syscall_nr == __NR_open && gMediaPluginFilePath) {
+  if (args.nr == __NR_open && gMediaPluginFilePath) {
     const char *path = reinterpret_cast<const char*>(args[0]);
     int flags = int(args[1]);
 
@@ -139,79 +112,24 @@ Reporter(int nr, siginfo_t *info, void *void_context)
   }
 #endif
 
-  SANDBOX_LOG_ERROR("seccomp sandbox violation: pid %d, syscall %lu,"
-                    " args %lu %lu %lu %lu %lu %lu.  Killing process.",
-                    pid, syscall_nr,
-                    args[0], args[1], args[2], args[3], args[4], args[5]);
+  pid_t pid = getpid(), tid = syscall(__NR_gettid);
 
+  SANDBOX_LOG_ERROR("seccomp sandbox violation: pid %d, tid %d, syscall %lu,"
+                    " args %lu %lu %lu %lu %lu %lu.  Killing process.",
+                    pid, tid, args.nr, args.args[0], args.args[1], args.args[2],
+                    args.args[3], args.args[4], args.args[5]);
+
+  // FIXME: improve Chromium's sandbox::Trap so we get back the siginfo
+#if 0
   // Bug 1017393: record syscall number somewhere useful.
-  info->si_addr = reinterpret_cast<void*>(syscall_nr);
+  info->si_addr = reinterpret_cast<void*>(args.nr);
 
   gSandboxCrashFunc(nr, info, void_context);
+#endif
+
+  // Until then, crash the process like Chrome does.
+  *((volatile char*)(args.nr & 0xFFF)) = 0;
   _exit(127);
-}
-
-/**
- * The reporter is called when the process receives a SIGSYS signal.
- * The signal is sent by the kernel when Seccomp encounter a system call
- * that has not been allowed.
- * We register an action for that signal (calling the Reporter function).
- *
- * This function should not be used in production and thus generally be
- * called from debug code. In production, the process is directly killed.
- * For this reason, the function is ifdef'd, as there is no reason to
- * compile it while unused.
- *
- * @return 0 on success, -1 on failure.
- * @see Reporter() function.
- */
-static int
-InstallSyscallReporter(void)
-{
-  struct sigaction act;
-  sigset_t mask;
-  memset(&act, 0, sizeof(act));
-  sigemptyset(&mask);
-  sigaddset(&mask, SIGSYS);
-
-  act.sa_sigaction = &Reporter;
-  act.sa_flags = SA_SIGINFO | SA_NODEFER;
-  if (sigaction(SIGSYS, &act, nullptr) < 0) {
-    return -1;
-  }
-  if (sigemptyset(&mask) ||
-    sigaddset(&mask, SIGSYS) ||
-    sigprocmask(SIG_UNBLOCK, &mask, nullptr)) {
-      return -1;
-  }
-  return 0;
-}
-
-/**
- * This function installs the syscall filter, a.k.a. seccomp.
- * PR_SET_NO_NEW_PRIVS ensures that it is impossible to grant more
- * syscalls to the process beyond this point (even after fork()).
- * SECCOMP_MODE_FILTER is the "bpf" mode of seccomp which allows
- * to pass a bpf program (in our case, it contains a syscall
- * whitelist).
- *
- * Reports failure by crashing.
- *
- * @see sock_fprog (the seccomp_prog).
- */
-static void
-InstallSyscallFilter(const sock_fprog *prog)
-{
-  if (prctl(PR_SET_NO_NEW_PRIVS, 1, 0, 0, 0)) {
-    SANDBOX_LOG_ERROR("prctl(PR_SET_NO_NEW_PRIVS) failed: %s", strerror(errno));
-    MOZ_CRASH("prctl(PR_SET_NO_NEW_PRIVS)");
-  }
-
-  if (prctl(PR_SET_SECCOMP, SECCOMP_MODE_FILTER, (unsigned long)prog, 0, 0)) {
-    SANDBOX_LOG_ERROR("prctl(PR_SET_SECCOMP, SECCOMP_MODE_FILTER) failed: %s",
-                      strerror(errno));
-    MOZ_CRASH("prctl(PR_SET_SECCOMP, SECCOMP_MODE_FILTER)");
-  }
 }
 
 // Use signals for permissions that need to be set per-thread.
@@ -271,17 +189,17 @@ SetThreadSandboxHandler(int signum)
 }
 
 static void
-BroadcastSetThreadSandbox(SandboxType aType)
+BroadcastSetThreadSandbox(const struct sock_fprog *aFilter)
 {
   int signum;
   pid_t pid, tid, myTid;
   DIR *taskdp;
   struct dirent *de;
-  SandboxFilter filter(&sSetSandboxFilter, aType,
-                       getenv("MOZ_SANDBOX_VERBOSE"));
 
   static_assert(sizeof(mozilla::Atomic<int>) == sizeof(int),
                 "mozilla::Atomic<int> isn't represented by an int");
+  MOZ_ASSERT(!sSetSandboxFilter);
+  sSetSandboxFilter = aFilter;
   pid = getpid();
   myTid = syscall(__NR_gettid);
   taskdp = opendir("/proc/self/task");
@@ -403,11 +321,13 @@ BroadcastSetThreadSandbox(SandboxType aType)
   unused << closedir(taskdp);
   // And now, deprivilege the main thread:
   SetThreadSandbox();
+
+  sSetSandboxFilter = nullptr;
 }
 
 // Common code for sandbox startup.
 static void
-SetCurrentProcessSandbox(SandboxType aType)
+SetCurrentProcessSandbox(SandboxBPFPolicy* aPolicy);
 {
   MOZ_ASSERT(gSandboxCrashFunc);
 
@@ -415,7 +335,12 @@ SetCurrentProcessSandbox(SandboxType aType)
     SANDBOX_LOG_ERROR("install_syscall_reporter() failed\n");
   }
 
-  BroadcastSetThreadSandbox(aType);
+  SandboxBPF sandbox;
+  sandbox.SetSandboxPolicy(aPolicy);
+#if 0
+  sandbox.SetMultiThreadFallback(BroadcastSetThreadSandbox);
+#endif
+  sandbox.StartSandbox(SandoxBPF::PROCESS_MULTI_THREADED);
 }
 
 #ifdef MOZ_CONTENT_SANDBOX
