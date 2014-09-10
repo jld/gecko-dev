@@ -253,7 +253,8 @@ SandboxBPF::SandboxBPF()
     : quiet_(false),
       proc_fd_(-1),
       conds_(new Conds),
-      sandbox_has_started_(false) {}
+      sandbox_has_started_(false),
+      multi_thread_fallback_(NULL) {}
 
 SandboxBPF::~SandboxBPF() {
   // It is generally unsafe to call any memory allocator operations or to even
@@ -519,7 +520,7 @@ bool SandboxBPF::StartSandbox(SandboxThreadState thread_state) {
                   "process may be single-threaded when reported as not");
       return false;
     }
-    if (!supports_tsync) {
+    if (!supports_tsync && !multi_thread_fallback_) {
       SANDBOX_DIE("Cannot start sandbox; kernel does not support synchronizing "
                   "filters for a threadgroup");
       return false;
@@ -563,6 +564,11 @@ void SandboxBPF::SetSandboxPolicy(SandboxBPFPolicy* policy) {
   policy_.reset(policy);
 }
 
+void SandboxBPF::SetMultiThreadFallback(MultiThreadFallbackFunc func)
+{
+  multi_thread_fallback_ = func;
+}
+
 void SandboxBPF::InstallFilter(bool must_sync_threads) {
   // We want to be very careful in not imposing any requirements on the
   // policies that are set with SetSandboxPolicy(). This means, as soon as
@@ -601,8 +607,12 @@ void SandboxBPF::InstallFilter(bool must_sync_threads) {
     int rv = syscall(__NR_seccomp, SECCOMP_SET_MODE_FILTER,
         SECCOMP_FILTER_FLAG_TSYNC, reinterpret_cast<const char*>(&prog));
     if (rv) {
-      SANDBOX_DIE(quiet_ ? NULL :
-          "Kernel refuses to turn on and synchronize threads for BPF filters");
+      if (multi_thread_fallback_) {
+	multi_thread_fallback_(&prog);
+      } else {
+	SANDBOX_DIE(quiet_ ? NULL :
+	  "Kernel refuses to turn on and synchronize threads for BPF filters");
+      }
     }
   } else {
     if (prctl(PR_SET_SECCOMP, SECCOMP_MODE_FILTER, &prog)) {

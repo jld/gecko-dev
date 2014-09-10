@@ -361,9 +361,7 @@ SetCurrentProcessSandbox(SandboxBPFPolicy* aPolicy)
   sandbox::Die::EnableSimpleExit();
   SandboxBPF sandbox;
   sandbox.SetSandboxPolicy(aPolicy);
-#if 0
   sandbox.SetMultiThreadFallback(BroadcastSetThreadSandbox);
-#endif
   if (!sandbox.StartSandbox(SandboxBPF::PROCESS_MULTI_THREADED)) {
     MOZ_CRASH();
   }

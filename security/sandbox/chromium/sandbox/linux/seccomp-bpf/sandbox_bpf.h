@@ -70,6 +70,8 @@ class SANDBOX_EXPORT SandboxBPF {
   // program in the kernel.
   typedef std::vector<struct sock_filter> Program;
 
+  typedef void (*MultiThreadFallbackFunc)(const struct sock_fprog*);
+
   // Constructors and destructors.
   // NOTE: Setting a policy and starting the sandbox is a one-way operation.
   //       The kernel does not provide any option for unloading a loaded
@@ -202,6 +204,8 @@ class SANDBOX_EXPORT SandboxBPF {
   // This method is primarily needed for testing purposes.
   ErrorCode Unexpected64bitArgument();
 
+  void SetMultiThreadFallback(MultiThreadFallbackFunc);
+
  private:
   friend class CodeGen;
   friend class SandboxUnittestHelper;
@@ -291,6 +295,7 @@ class SANDBOX_EXPORT SandboxBPF {
   scoped_ptr<const SandboxBPFPolicy> policy_;
   Conds* conds_;
   bool sandbox_has_started_;
+  MultiThreadFallbackFunc multi_thread_fallback_;
 
   DISALLOW_COPY_AND_ASSIGN(SandboxBPF);
 };
