@@ -76,11 +76,6 @@ LogMessage::SaveLastError::~SaveLastError()
   ::SetLastError(last_error_);
 }
 
-SystemErrorCode GetLastSystemErrorCode()
-{
-  return ::GetLastError();
-}
-
 Win32ErrorLogMessage::Win32ErrorLogMessage(const char* file, int line,
                                            LogSeverity severity,
                                            SystemErrorCode err,
@@ -104,6 +99,42 @@ Win32ErrorLogMessage::Win32ErrorLogMessage(const char* file,
 Win32ErrorLogMessage::~Win32ErrorLogMessage()
 {
 }
+#elif defined(OS_POSIX)
+ErrnoLogMessage::ErrnoLogMessage(const char* file,
+                                 int line,
+                                 LogSeverity severity,
+                                 SystemErrorCode err)
+    : err_(err),
+      log_message_(file, line, severity) {
+}
+
+ErrnoLogMessage::~ErrnoLogMessage() {
+}
 #endif // OS_WIN
+
+SystemErrorCode GetLastSystemErrorCode() {
+#if defined(OS_WIN)
+  return ::GetLastError();
+#elif defined(OS_POSIX)
+  return errno;
+#else
+#error Not implemented
+#endif
+}
+
+// MSVC doesn't like complex extern templates and DLLs.
+#if !defined(COMPILER_MSVC)
+// Explicit instantiations for commonly used comparisons.
+template std::string* MakeCheckOpString<int, int>(
+    const int&, const int&, const char* names);
+template std::string* MakeCheckOpString<unsigned long, unsigned long>(
+    const unsigned long&, const unsigned long&, const char* names);
+template std::string* MakeCheckOpString<unsigned long, unsigned int>(
+    const unsigned long&, const unsigned int&, const char* names);
+template std::string* MakeCheckOpString<unsigned int, unsigned long>(
+    const unsigned int&, const unsigned long&, const char* names);
+template std::string* MakeCheckOpString<std::string, std::string>(
+    const std::string&, const std::string&, const char* name);
+#endif
 
 } // namespace logging
