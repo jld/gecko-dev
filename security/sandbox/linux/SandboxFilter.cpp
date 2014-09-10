@@ -496,7 +496,7 @@ public:
       // More thread creation.
 #ifdef __NR_set_robust_list
     case __NR_set_robust_list:
-      Allow();
+      return Allow();
 #endif
 
       // prctl
