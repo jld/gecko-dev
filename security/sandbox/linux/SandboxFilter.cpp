@@ -5,11 +5,10 @@
  * You can obtain one at http://mozilla.org/MPL/2.0/. */
 
 #include "SandboxFilter.h"
+#include "SandboxInternal.h"
 
-#include "linux_seccomp.h"
 #include "linux_syscalls.h"
 
-#include "mozilla/ArrayUtils.h"
 #include "mozilla/NullPtr.h"
 
 #include <errno.h>
@@ -21,7 +20,7 @@
 #include <time.h>
 #include <unistd.h>
 
-#include "sandbox/linux/bpf_dfl/bpf_dsl.h"
+#include "sandbox/linux/bpf_dsl/bpf_dsl.h"
 
 using namespace sandbox::bpf_dsl;
 #define CASES SANDBOX_BPF_DSL_CASES
@@ -73,12 +72,12 @@ using namespace sandbox::bpf_dsl;
 
 namespace mozilla {
 
-class PolicyBase : SandboxBPFDSLPolicy {
+class PolicyBase : public SandboxBPFDSLPolicy {
 public:
   ResultExpr Block() const {
     return Trap(SandboxHandler, nullptr);
   }
-  virtual InvalidSyscall() const OVERRIDE {
+  virtual ResultExpr InvalidSyscall() const OVERRIDE {
     return Block();
   }
   // TODO: move useful common stuff here
@@ -363,8 +362,9 @@ public:
 #ifdef MOZ_GMP_SANDBOX
 class GMPSandboxPolicy : public PolicyBase {
 public:
-  ContentSandboxPolicy();
-  virtual ~ContentSandboxPolicy();
+  GMPSandboxPolicy() { }
+  virtual ~GMPSandboxPolicy() { }
+
   virtual ResultExpr EvaluateSyscall(int sysno) const OVERRIDE {
     switch (sysno) {
       // Timekeeping
@@ -545,54 +545,13 @@ public:
     }
   }
 };
+
+sandbox::SandboxBPFPolicy*
+GetMediaSandboxPolicy()
+{
+  return new GMPSandboxPolicy();
+}
+
 #endif // MOZ_GMP_SANDBOX
-
-SandboxFilter::SandboxFilter(const sock_fprog** aStored, SandboxType aType,
-                             bool aVerbose)
-  : mStored(aStored)
-{
-  MOZ_ASSERT(*mStored == nullptr);
-  std::vector<struct sock_filter> filterVec;
-  SandboxFilterImpl *impl;
-
-  switch (aType) {
-  case kSandboxContentProcess:
-#ifdef MOZ_CONTENT_SANDBOX
-    impl = new SandboxFilterImplContent();
-#else
-    MOZ_CRASH("Content process sandboxing not supported in this build!");
-#endif
-    break;
-  case kSandboxMediaPlugin:
-#ifdef MOZ_GMP_SANDBOX
-    impl = new SandboxFilterImplGMP();
-#else
-    MOZ_CRASH("Gecko Media Plugin process sandboxing not supported in this"
-              " build!");
-#endif
-    break;
-  default:
-    MOZ_CRASH("Nonexistent sandbox type!");
-  }
-  impl->Build();
-  impl->Finish();
-  impl->Compile(&filterVec, aVerbose);
-  delete impl;
-
-  mProg = new sock_fprog;
-  mProg->len = filterVec.size();
-  mProg->filter = mFilter = new sock_filter[mProg->len];
-  for (size_t i = 0; i < mProg->len; ++i) {
-    mFilter[i] = filterVec[i];
-  }
-  *mStored = mProg;
-}
-
-SandboxFilter::~SandboxFilter()
-{
-  *mStored = nullptr;
-  delete[] mFilter;
-  delete mProg;
-}
 
 }

@@ -14,11 +14,15 @@
 
 #include "mozilla/Types.h"
 
+namespace sandbox {
+
 struct arch_seccomp_data;
+
+} // namespace sandbox
 
 namespace mozilla {
 
-intptr_t SandboxHandler(const struct arch_seccomp_data&, void*);
+intptr_t SandboxHandler(const struct sandbox::arch_seccomp_data&, void*);
 
 typedef void (*SandboxCrashFunc)(int, siginfo_t*, void*);
 extern MOZ_EXPORT SandboxCrashFunc gSandboxCrashFunc;

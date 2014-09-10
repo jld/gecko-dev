@@ -7,6 +7,7 @@
 #include "Sandbox.h"
 #include "SandboxInternal.h"
 #include "SandboxLogging.h"
+#include "SandboxFilter.h"
 
 #include <unistd.h>
 #include <stdio.h>
@@ -31,12 +32,11 @@
 #include "android_ucontext.h"
 #endif
 
-#include "linux_seccomp.h"
-#include "SandboxFilter.h"
-
+#include "sandbox/linux/seccomp-bpf/die.h"
 #include "sandbox/linux/seccomp-bpf/sandbox_bpf.h"
 
 using sandbox::SandboxBPF;
+using sandbox::SandboxBPFPolicy;
 
 namespace mozilla {
 
@@ -89,12 +89,12 @@ static const SandboxFlags gSandboxFlags;
  * FIXME.
  */
 intptr_t
-SandboxHandler(const struct arch_seccomp_data& args, void* aux)
+SandboxHandler(const struct sandbox::arch_seccomp_data& args, void* aux)
 {
 #ifdef MOZ_GMP_SANDBOX
   if (args.nr == __NR_open && gMediaPluginFilePath) {
-    const char *path = reinterpret_cast<const char*>(args[0]);
-    int flags = int(args[1]);
+    const char *path = reinterpret_cast<const char*>(args.args[0]);
+    unsigned flags = static_cast<unsigned>(args.args[1]);
 
     if ((flags & O_ACCMODE) != O_RDONLY) {
       SANDBOX_LOG_ERROR("non-read-only open of file %s attempted (flags=0%o)",
@@ -105,16 +105,16 @@ SandboxHandler(const struct arch_seccomp_data& args, void* aux)
     } else if (gMediaPluginFileDesc == -1) {
       SANDBOX_LOG_ERROR("multiple opens of media plugin file unimplemented");
     } else {
-      SECCOMP_RESULT(ctx) = gMediaPluginFileDesc;
+      int retval = gMediaPluginFileDesc;
       gMediaPluginFileDesc = -1;
-      return;
+      return retval;
     }
   }
 #endif
 
   pid_t pid = getpid(), tid = syscall(__NR_gettid);
 
-  SANDBOX_LOG_ERROR("seccomp sandbox violation: pid %d, tid %d, syscall %lu,"
+  SANDBOX_LOG_ERROR("seccomp sandbox violation: pid %d, tid %d, syscall %u,"
                     " args %lu %lu %lu %lu %lu %lu.  Killing process.",
                     pid, tid, args.nr, args.args[0], args.args[1], args.args[2],
                     args.args[3], args.args[4], args.args[5]);
@@ -128,7 +128,7 @@ SandboxHandler(const struct arch_seccomp_data& args, void* aux)
 #endif
 
   // Until then, crash the process like Chrome does.
-  *((volatile char*)(args.nr & 0xFFF)) = 0;
+  *((volatile char*)(uintptr_t)(args.nr & 0xFFF)) = 0;
   _exit(127);
 }
 
@@ -158,6 +158,33 @@ FindFreeSignalNumber()
     }
   }
   return 0;
+}
+
+/**
+ * This function installs the syscall filter, a.k.a. seccomp.
+ * PR_SET_NO_NEW_PRIVS ensures that it is impossible to grant more
+ * syscalls to the process beyond this point (even after fork()).
+ * SECCOMP_MODE_FILTER is the "bpf" mode of seccomp which allows
+ * to pass a bpf program (in our case, it contains a syscall
+ * whitelist).
+ *
+ * Reports failure by crashing.
+ *
+ * @see sock_fprog (the seccomp_prog).
+ */
+static void
+InstallSyscallFilter(const sock_fprog *prog)
+{
+  if (prctl(PR_SET_NO_NEW_PRIVS, 1, 0, 0, 0)) {
+    SANDBOX_LOG_ERROR("prctl(PR_SET_NO_NEW_PRIVS) failed: %s", strerror(errno));
+    MOZ_CRASH("prctl(PR_SET_NO_NEW_PRIVS)");
+  }
+
+  if (prctl(PR_SET_SECCOMP, SECCOMP_MODE_FILTER, (unsigned long)prog, 0, 0)) {
+    SANDBOX_LOG_ERROR("prctl(PR_SET_SECCOMP, SECCOMP_MODE_FILTER) failed: %s",
+                      strerror(errno));
+    MOZ_CRASH("prctl(PR_SET_SECCOMP, SECCOMP_MODE_FILTER)");
+  }
 }
 
 // Returns true if sandboxing was enabled, or false if sandboxing
@@ -327,20 +354,19 @@ BroadcastSetThreadSandbox(const struct sock_fprog *aFilter)
 
 // Common code for sandbox startup.
 static void
-SetCurrentProcessSandbox(SandboxBPFPolicy* aPolicy);
+SetCurrentProcessSandbox(SandboxBPFPolicy* aPolicy)
 {
   MOZ_ASSERT(gSandboxCrashFunc);
 
-  if (InstallSyscallReporter()) {
-    SANDBOX_LOG_ERROR("install_syscall_reporter() failed\n");
-  }
-
+  sandbox::Die::EnableSimpleExit();
   SandboxBPF sandbox;
   sandbox.SetSandboxPolicy(aPolicy);
 #if 0
   sandbox.SetMultiThreadFallback(BroadcastSetThreadSandbox);
 #endif
-  sandbox.StartSandbox(SandoxBPF::PROCESS_MULTI_THREADED);
+  if (!sandbox.StartSandbox(SandboxBPF::PROCESS_MULTI_THREADED)) {
+    MOZ_CRASH();
+  }
 }
 
 #ifdef MOZ_CONTENT_SANDBOX
@@ -357,7 +383,7 @@ SetContentProcessSandbox()
     return;
   }
 
-  SetCurrentProcessSandbox(kSandboxContentProcess);
+  SetCurrentProcessSandbox(GetContentSandboxPolicy());
 }
 
 bool
@@ -396,7 +422,7 @@ SetMediaPluginSandbox(const char *aFilePath)
     }
   }
   // Finally, start the sandbox.
-  SetCurrentProcessSandbox(kSandboxMediaPlugin);
+  SetCurrentProcessSandbox(GetMediaSandboxPolicy());
 }
 
 bool

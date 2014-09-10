@@ -15,8 +15,8 @@ class SandboxBPFPolicy;
 
 namespace mozilla {
 
-SandboxBPFPolicy* GetContentSandboxPolicy();
-SandboxBPFPolicy* GetMediaSandboxPolicy();
+sandbox::SandboxBPFPolicy* GetContentSandboxPolicy();
+sandbox::SandboxBPFPolicy* GetMediaSandboxPolicy();
 
 } // namespace mozilla
 
