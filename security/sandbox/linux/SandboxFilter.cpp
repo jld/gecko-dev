@@ -280,20 +280,9 @@ public:
   /* we can place desktop syscalls at the end */
 #ifndef ANDROID
   Allow(SYSCALL(stat));
-  Allow(SYSCALL(getdents));
   Allow(SYSCALL(lstat));
-#if SYSCALL_EXISTS(mmap2)
-  Allow(SYSCALL(mmap2));
-#else
-  Allow(SYSCALL(mmap));
-#endif
   Allow(SYSCALL(openat));
-  Allow(SYSCALL(fcntl));
-  Allow(SYSCALL(fstat));
-  Allow(SYSCALL(readlink));
   Allow(SOCKETCALL(getsockname, GETSOCKNAME));
-  Allow(SYSCALL(getuid));
-  Allow(SYSCALL(geteuid));
   Allow(SYSCALL(mkdir));
   Allow(SYSCALL(getcwd));
   Allow(SYSCALL(readahead));
@@ -311,22 +300,19 @@ public:
   Allow(SYSCALL(clock_getres));
   Allow(SYSCALL(sysinfo));
   Allow(SYSCALL(getresuid));
-  Allow(SYSCALL(umask));
   Allow(SYSCALL(getresgid));
-  Allow(SYSCALL(poll));
+  Allow(SYSCALL(umask));
   Allow(SYSCALL(inotify_init1));
   Allow(SYSCALL(wait4));
   Allow(SYSVIPCCALL(shmctl, SHMCTL));
   Allow(SYSCALL(set_robust_list));
   Allow(SYSCALL(rmdir));
-  Allow(SOCKETCALL(recvfrom, RECVFROM));
   Allow(SYSVIPCCALL(shmdt, SHMDT));
   Allow(SYSCALL(pipe2));
   Allow(SOCKETCALL(setsockopt, SETSOCKOPT));
   Allow(SYSVIPCCALL(shmat, SHMAT));
   Allow(SYSCALL(set_tid_address));
   Allow(SYSCALL(inotify_add_watch));
-  Allow(SYSCALL(rt_sigprocmask));
   Allow(SYSVIPCCALL(shmget, SHMGET));
 #if SYSCALL_EXISTS(utimes)
   Allow(SYSCALL(utimes));
@@ -340,13 +326,11 @@ public:
   /* We should remove all of the following in the future (possibly even more) */
   Allow(SOCKETCALL(socket, SOCKET));
   Allow(SYSCALL(chmod));
-  Allow(SYSCALL(execve));
   Allow(SYSCALL(rename));
   Allow(SYSCALL(symlink));
   Allow(SOCKETCALL(connect, CONNECT));
   Allow(SYSCALL(quotactl));
   Allow(SYSCALL(kill));
-  Allow(SOCKETCALL(sendto, SENDTO));
 #endif
 
   /* nsSystemInfo uses uname (and we cache an instance, so */
