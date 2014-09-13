@@ -10,6 +10,7 @@
 #include "linux_syscalls.h"
 
 #include "mozilla/NullPtr.h"
+#include "mozilla/UniquePtr.h"
 
 #include <errno.h>
 #include <linux/ipc.h>
@@ -59,17 +60,20 @@ using namespace sandbox::bpf_dsl;
 
 #ifdef __NR_stat64
 #define CASES_FOR_stat   case __NR_stat64
-#define CASES_FOR_fstat   case __NR_fstat64
 #define CASES_FOR_lstat   case __NR_lstat64
+#define CASES_FOR_statfs   case __NR_statfs64
+#define CASES_FOR_fstat   case __NR_fstat64
 #define CASES_FOR_fcntl   case __NR_fcntl64
-#define CASES_FOR_getdents   case __NR_getdents64
+// We're using the 32-bit version on 32-bit desktop for some reason.
+#define CASES_FOR_getdents   case __NR_getdents64: case __NR_getdents
 // FIXME: we might not need the compat cases for these on non-Android:
 #define CASES_FOR_lseek   case __NR_lseek: case __NR__llseek
 #define CASES_FOR_ftruncate   case __NR_ftruncate: case __NR_ftruncate64
 #else
 #define CASES_FOR_stat   case __NR_stat
-#define CASES_FOR_fstat   case __NR_fstat
 #define CASES_FOR_lstat   case __NR_lstat
+#define CASES_FOR_statfs   case __NR_statfs
+#define CASES_FOR_fstat   case __NR_fstat
 #define CASES_FOR_fcntl   case __NR_fcntl
 #define CASES_FOR_getdents   case __NR_getdents
 #define CASES_FOR_lseek   case __NR_lseek
@@ -216,27 +220,28 @@ public:
 #ifdef __NR_socketcall
     case __NR_socketcall: {
       Arg<int> call(0);
-      auto acc = Switch(call);
+      mozilla::UniquePtr<Caser<int>> acc(new Caser<int>(Switch(call)));
       for (int i = SYS_SOCKET; i <= SYS_SENDMMSG; ++i) {
         auto thisCase = SocketCallPolicy(i, 1);
         // Optimize out cases that are equal to the default.
         if (thisCase != Block()) {
-          acc = acc.Case(i, thisCase);
+          acc.reset(new Caser<int>(acc->Case(i, thisCase)));
         }
       }
-      return acc.Default(Block());
+      return acc->Default(Block());
     }
     case __NR_ipc: {
-      Arg<int> call(0);
-      auto acc = Switch(call & 0xFFFF); // FIXME: is this right?
+      Arg<int> callAndVersion(0);
+      auto call = callAndVersion & 0xFFFF;
+      mozilla::UniquePtr<Caser<int>> acc(new Caser<int>(Switch(call)));
       for (int i = SEMOP; i <= DIPC; ++i) {
         auto thisCase = SysvCallPolicy(i, 1);
         // Optimize out cases that are equal to the default.
         if (thisCase != Block()) {
-          acc = acc.Case(i, thisCase);
+          acc.reset(new Caser<int>(acc->Case(i, thisCase)));
         }
       }
-      return acc.Default(Block());
+      return acc->Default(Block());
     }
 #else
 #define DISPATCH_SOCKETCALL(sysnum, socketnum)         \
@@ -382,6 +387,9 @@ public:
     case SYS_SOCKET:
       return Error(EACCES);
 #else
+      // ???
+    case SYS_RECV:
+    case SYS_SEND:
       // FIXME!
     case SYS_SOCKET:
     case SYS_CONNECT:
@@ -426,7 +434,7 @@ public:
     case __NR_mkdir:
     case __NR_rmdir:
     case __NR_getcwd:
-    case __NR_statfs:
+    CASES_FOR_statfs:
     case __NR_chmod:
     case __NR_rename:
     case __NR_symlink:
