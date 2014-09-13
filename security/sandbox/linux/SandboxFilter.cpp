@@ -175,6 +175,10 @@ public:
     }
   }
 
+  virtual ResultExpr SysvCallPolicy(int aCall, int aOffset) const {
+    return Block();
+  }
+
   virtual ResultExpr EvaluateSyscall(int sysno) const OVERRIDE {
     switch (sysno) {
       // Timekeeping
@@ -209,18 +213,24 @@ public:
     case __NR_read:
       return Allow();
 
-      // Fancy I/O; and the crash reporter needs socketpair()
-      //
-      // WARNING: if the process obtains a UDP socket, it can use
-      // sendmsg() to send packets to any reachable address, and we
-      // can't block that with seccomp while still allowing fd passing.
 #ifdef __NR_socketcall
     case __NR_socketcall: {
       Arg<int> call(0);
       auto acc = Switch(call);
-
       for (int i = SYS_SOCKET; i <= SYS_SENDMMSG; ++i) {
         auto thisCase = SocketCallPolicy(i, 1);
+        // Optimize out cases that are equal to the default.
+        if (thisCase != Block()) {
+          acc = acc.Case(i, thisCase);
+        }
+      }
+      return acc.Default(Block());
+    }
+    case __NR_ipc: {
+      Arg<int> call(0);
+      auto acc = Switch(call & 0xFFFF); // FIXME: is this right?
+      for (int i = SEMOP; i <= DIPC; ++i) {
+        auto thisCase = SysvCallPolicy(i, 1);
         // Optimize out cases that are equal to the default.
         if (thisCase != Block()) {
           acc = acc.Case(i, thisCase);
@@ -232,7 +242,6 @@ public:
 #define DISPATCH_SOCKETCALL(sysnum, socketnum)         \
     case sysnum:                                       \
       return SocketCallPolicy(socketnum, 0)
-
       DISPATCH_SOCKETCALL(__NR_socket,      SYS_SOCKET);
       DISPATCH_SOCKETCALL(__NR_bind,        SYS_BIND);
       DISPATCH_SOCKETCALL(__NR_connect,     SYS_CONNECT);
@@ -255,8 +264,23 @@ public:
       DISPATCH_SOCKETCALL(__NR_accept4,     SYS_ACCEPT4);
       DISPATCH_SOCKETCALL(__NR_recvmmsg,    SYS_RECVMMSG);
       DISPATCH_SOCKETCALL(__NR_sendmmsg,    SYS_SENDMMSG);
-
 #undef DISPATCH_SOCKETCALL
+#define DISPATCH_SYSVCALL(sysnum, ipcnum)         \
+    case sysnum:                                  \
+      return SysvCallPolicy(ipcnum, 0);
+      DISPATCH_SYSVCALL(__NR_semop,       SEMOP);
+      DISPATCH_SYSVCALL(__NR_semget,      SEMGET);
+      DISPATCH_SYSVCALL(__NR_semctl,      SEMCTL);
+      DISPATCH_SYSVCALL(__NR_semtimedop,  SEMTIMEDOP);
+      DISPATCH_SYSVCALL(__NR_msgsnd,      MSGSND);
+      DISPATCH_SYSVCALL(__NR_msgrcv,      MSGRCV);
+      DISPATCH_SYSVCALL(__NR_msgget,      MSGGET);
+      DISPATCH_SYSVCALL(__NR_msgctl,      MSGCTL);
+      DISPATCH_SYSVCALL(__NR_shmat,       SHMAT);
+      DISPATCH_SYSVCALL(__NR_shmdt,       SHMDT);
+      DISPATCH_SYSVCALL(__NR_shmget,      SHMGET);
+      DISPATCH_SYSVCALL(__NR_shmctl,      SHMCTL);
+#undef DISPATCH_SYSVCALL
 #endif
 
       // Memory mapping
@@ -341,48 +365,6 @@ public:
 ResultExpr PolicyBase::sBlock(nullptr);
 
 #ifdef MOZ_CONTENT_SANDBOX
-
-// Some helper macros to make the code that builds the filter more
-// readable, and to help deal with differences among architectures.
-
-#define SYSCALL_EXISTS(name) (defined(__NR_##name))
-
-#define SYSCALL(name) (Condition(__NR_##name))
-#if defined(__arm__) && (defined(__thumb__) || defined(__ARM_EABI__))
-#define ARM_SYSCALL(name) (Condition(__ARM_NR_##name))
-#endif
-
-#define SYSCALL_WITH_ARG(name, arg, values...) ({ \
-  uint32_t argValues[] = { values };              \
-  Condition(__NR_##name, arg, argValues);         \
-})
-
-// Some architectures went through a transition from 32-bit to
-// 64-bit off_t and had to version all the syscalls that referenced
-// it; others (newer and/or 64-bit ones) didn't.  Adjust the
-// conditional as needed.
-#if SYSCALL_EXISTS(stat64)
-#define SYSCALL_LARGEFILE(plain, versioned) SYSCALL(versioned)
-#else
-#define SYSCALL_LARGEFILE(plain, versioned) SYSCALL(plain)
-#endif
-
-// i386 multiplexes all the socket-related interfaces into a single
-// syscall.
-#if SYSCALL_EXISTS(socketcall)
-#define SOCKETCALL(name, NAME) SYSCALL_WITH_ARG(socketcall, 0, SYS_##NAME)
-#else
-#define SOCKETCALL(name, NAME) SYSCALL(name)
-#endif
-
-// i386 multiplexes all the SysV-IPC-related interfaces into a single
-// syscall.
-#if SYSCALL_EXISTS(ipc)
-#define SYSVIPCCALL(name, NAME) SYSCALL_WITH_ARG(ipc, 0, NAME)
-#else
-#define SYSVIPCCALL(name, NAME) SYSCALL(name)
-#endif
-
 class ContentSandboxPolicy : public PolicyBase {
 public:
   ContentSandboxPolicy() { }
@@ -411,6 +393,21 @@ public:
 #endif
     default:
       return PolicyBase::SocketCallPolicy(aCall, aOffset);
+    }
+  }
+
+  virtual ResultExpr SysvCallPolicy(int aCall, int aOffset) const OVERRIDE {
+    switch(aCall) {
+#ifndef ANDROID
+      // FIXME?
+    case SHMGET:
+    case SHMCTL:
+    case SHMAT:
+    case SHMDT:
+      return Allow();
+#endif
+    default:
+      return PolicyBase::SysvCallPolicy(aCall, aOffset);
     }
   }
 
@@ -471,7 +468,7 @@ public:
 #endif
       return Allow();
 
-#if SYSCALL_EXISTS(set_thread_area)
+#ifdef __NR_set_thread_area
     case __NR_set_thread_area:
       return Allow();
 #endif
@@ -522,7 +519,7 @@ public:
     case __NR_umask:
     case __NR_kill:
     case __NR_wait4:
-#if SYSCALL_EXISTS(arch_prctl)
+#ifdef __NR_arch_prctl
     case __NR_arch_prctl:
 #endif
       return Allow();
@@ -535,13 +532,6 @@ public:
     case __NR_set_robust_list:
     case __NR_set_tid_address:
       return Allow();
-#endif
-
-#if 0
-  Allow(SYSVIPCCALL(shmctl, SHMCTL));
-  Allow(SYSVIPCCALL(shmdt, SHMDT));
-  Allow(SYSVIPCCALL(shmat, SHMAT));
-  Allow(SYSVIPCCALL(shmget, SHMGET));
 #endif
 
   /* nsSystemInfo uses uname (and we cache an instance, so */
