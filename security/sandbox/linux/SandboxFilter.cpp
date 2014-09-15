@@ -193,7 +193,9 @@ public:
         .Else(Block());
     }
     case __NR_gettimeofday:
+#ifdef __NR_time
     case __NR_time:
+#endif
     case __NR_nanosleep:
       return Allow();
 
@@ -221,7 +223,7 @@ public:
     case __NR_socketcall: {
       Arg<int> call(0);
       mozilla::UniquePtr<Caser<int>> acc(new Caser<int>(Switch(call)));
-      for (int i = SYS_SOCKET; i <= SYS_SENDMMSG; ++i) {
+      for (int i = SYS_SOCKET; i <= SYS_SENDMSG; ++i) {
         auto thisCase = SocketCallPolicy(i, 1);
         // Optimize out cases that are equal to the default.
         if (thisCase != Block()) {
@@ -230,6 +232,7 @@ public:
       }
       return acc->Default(Block());
     }
+#ifndef ANDROID
     case __NR_ipc: {
       Arg<int> callAndVersion(0);
       auto call = callAndVersion & 0xFFFF;
@@ -243,7 +246,8 @@ public:
       }
       return acc->Default(Block());
     }
-#else
+#endif // ANDROID
+#else // __NR_socketcall
 #define DISPATCH_SOCKETCALL(sysnum, socketnum)         \
     case sysnum:                                       \
       return SocketCallPolicy(socketnum, 0)
@@ -266,10 +270,8 @@ public:
       DISPATCH_SOCKETCALL(__NR_getsockopt,  SYS_GETSOCKOPT);
       DISPATCH_SOCKETCALL(__NR_sendmsg,     SYS_SENDMSG);
       DISPATCH_SOCKETCALL(__NR_recvmsg,     SYS_RECVMSG);
-      DISPATCH_SOCKETCALL(__NR_accept4,     SYS_ACCEPT4);
-      DISPATCH_SOCKETCALL(__NR_recvmmsg,    SYS_RECVMMSG);
-      DISPATCH_SOCKETCALL(__NR_sendmmsg,    SYS_SENDMMSG);
 #undef DISPATCH_SOCKETCALL
+#ifndef ANDROID
 #define DISPATCH_SYSVCALL(sysnum, ipcnum)         \
     case sysnum:                                  \
       return SysvCallPolicy(ipcnum, 0);
@@ -286,7 +288,8 @@ public:
       DISPATCH_SYSVCALL(__NR_shmget,      SHMGET);
       DISPATCH_SYSVCALL(__NR_shmctl,      SHMCTL);
 #undef DISPATCH_SYSVCALL
-#endif
+#endif // ANDROID
+#endif // __NR_socketcall
 
       // Memory mapping
     CASES_FOR_mmap:

@@ -9,6 +9,7 @@
 #include "SandboxLogging.h"
 #include "SandboxFilter.h"
 
+#include <inttypes.h>
 #include <unistd.h>
 #include <stdio.h>
 #include <sys/ptrace.h>
@@ -115,7 +116,8 @@ SandboxHandler(const struct sandbox::arch_seccomp_data& args, void* aux)
   pid_t pid = getpid(), tid = syscall(__NR_gettid);
 
   SANDBOX_LOG_ERROR("seccomp sandbox violation: pid %d, tid %d, syscall %u,"
-                    " args %lu %lu %lu %lu %lu %lu.  Killing process.",
+                    " args %" PRIu64 " %" PRIu64 " %" PRIu64 " %" PRIu64
+                    " %" PRIu64 " %" PRIu64 ".  Killing process.",
                     pid, tid, args.nr, args.args[0], args.args[1], args.args[2],
                     args.args[3], args.args[4], args.args[5]);
 
