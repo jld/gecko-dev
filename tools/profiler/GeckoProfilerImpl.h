@@ -148,9 +148,9 @@ JSObject* profiler_get_profile_jsobject(JSContext* aCx)
 }
 
 static inline
-void profiler_save_profile_to_file(const char* aFilename)
+void profiler_save_profile_to_file()
 {
-  return mozilla_sampler_save_profile_to_file(aFilename);
+  return mozilla_sampler_save_profile_to_file();
 }
 
 static inline

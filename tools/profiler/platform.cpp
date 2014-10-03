@@ -6,6 +6,7 @@
 #include <fstream>
 #include <sstream>
 #include <errno.h>
+#include <stdio.h>
 
 #include "ProfilerIOInterposeObserver.h"
 #include "platform.h"
@@ -23,10 +24,19 @@
 #include "nsThreadUtils.h"
 #include "ProfilerMarkers.h"
 #include "nsXULAppAPI.h"
+#include "mozilla/dom/ContentChild.h"
+#include "mozilla/ipc/FileDescriptor.h"
+#include "mozilla/ipc/FileDescriptorUtils.h"
 
 #if defined(SPS_OS_android) && !defined(MOZ_WIDGET_GONK)
   #include "AndroidBridge.h"
   using namespace mozilla::widget::android;
+#endif
+
+#ifdef XP_WIN
+ #include <windows.h>
+#else
+ #include <unistd.h>
 #endif
 
 mozilla::ThreadLocal<PseudoStack *> tlsPseudoStack;
@@ -621,19 +631,90 @@ JSObject *mozilla_sampler_get_profile_data(JSContext *aCx)
   return t->ToJSObject(aCx);
 }
 
-void mozilla_sampler_save_profile_to_file(const char* aFilename)
+static nsCString profile_file_path(int aProcType, unsigned aProcID)
+{
+#if defined(SPS_PLAT_arm_android) && !defined(MOZ_WIDGET_GONK)
+  nsCString path;
+  tmpPath.AppendPrintf("/sdcard/profile_%i_%u.txt", aProcType, aProcID);
+#else
+  nsCOMPtr<nsIFile> file;
+  nsCString path;
+  if (NS_FAILED(NS_GetSpecialDirectory(NS_OS_TEMP_DIR, getter_AddRefs(file)))) {
+    LOG("Failed to find temporary directory.");
+    return EmptyCString();
+  }
+  path.AppendPrintf("profile_%i_%u.txt", aProcType, aProcID);
+
+  nsresult rv = file->AppendNative(path);
+  if (NS_WARN_IF(NS_FAILED(rv))) {
+    return EmptyCString();
+  }
+
+  rv = file->GetNativePath(path);
+  if (NS_WARN_IF(NS_FAILED(rv))) {
+    return EmptyCString();
+  }
+#endif
+
+  return path;
+}
+
+void mozilla_sampler_open_remote_profile_file(unsigned aProcID,
+					      mozilla::ipc::FileDescriptor& aOutFd)
+{
+  nsCString path = profile_file_path(GeckoProcessType_Content, aProcID);
+  if (path.IsEmpty()) {
+    return;
+  }
+  FILE *stream = fopen(path.get(), "w");
+  if (stream) {
+    LOGF("Opened %s for content child %u.", path.get(), aProcID);
+    aOutFd = mozilla::ipc::FILEToFileDescriptor(stream);
+    fclose(stream);
+  }
+}
+
+void mozilla_sampler_save_profile_to_file()
 {
   TableTicker *t = tlsTicker.get();
   if (!t) {
     return;
   }
 
+  GeckoProcessType procType = XRE_GetProcessType();
+
+  if (procType == GeckoProcessType_Content) {
+    mozilla::ipc::FileDescriptor desc;
+    bool sent = mozilla::dom::ContentChild::GetSingleton()
+      ->SendOpenProfilerLogFile(&desc);
+    if (sent && desc.IsValid()) {
+      mozilla::UniquePtr<std::filebuf> buf = FileDescriptorToFileBuf(desc, std::ios_base::out);
+      std::ostream stream(buf.get());
+      t->ToStreamAsJSON(stream);
+      LOG("Saved remotely.");
+    } else {
+      LOG("Failed to remotely open profile log file.");
+    }
+    return;
+  }
+
+#ifdef XP_WIN
+  unsigned pid = GetCurrentProcessId();
+#else
+  unsigned pid = static_cast<unsigned>(getpid());
+#endif
+
+  nsCString path = profile_file_path(procType, pid);
+  if (path.IsEmpty()) {
+    return;
+  }
+
   std::ofstream stream;
-  stream.open(aFilename);
+  stream.open(path.get());
   if (stream.is_open()) {
     t->ToStreamAsJSON(stream);
     stream.close();
-    LOGF("Saved to %s", aFilename);
+    LOGF("Saved to %s", path.get());
   } else {
     LOG("Fail to open profile log file.");
   }

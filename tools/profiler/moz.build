@@ -88,6 +88,8 @@ if CONFIG['MOZ_ENABLE_PROFILER_SPS']:
         '/xpcom/base',
     ]
 
+    include('/ipc/chromium/chromium-config.mozbuild')
+
     # We need access to Breakpad's getcontext(3) which is suitable for Android
     if CONFIG['OS_TARGET'] == 'Android':
         LOCAL_INCLUDES += [

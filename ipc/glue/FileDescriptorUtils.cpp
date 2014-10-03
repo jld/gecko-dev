@@ -6,6 +6,7 @@
 
 #include "nsIEventTarget.h"
 
+#include "mozilla/NullPtr.h"
 #include "nsCOMPtr.h"
 #include "nsDebug.h"
 #include "nsNetCID.h"
@@ -19,6 +20,13 @@
 #include <io.h>
 #else
 #include <unistd.h>
+#endif
+
+#include <iostream>
+#ifdef __GLIBCXX__
+#include <ext/stdio_filebuf.h>
+#else
+#include <fstream>
 #endif
 
 using mozilla::ipc::CloseFileRunnable;
@@ -132,6 +140,23 @@ FILEToFileDescriptor(FILE* aStream)
 #else
   return FileDescriptor(fileno(aStream));
 #endif
+}
+
+mozilla::UniquePtr<std::filebuf>
+FileDescriptorToFileBuf(const FileDescriptor& aDesc, std::ios_base::openmode aMode)
+{
+#ifdef __GLIBCXX__
+# ifdef XP_WIN
+# error "GNU libstdc++ on Windows can't happen?"
+  // (If it can, this will need to use _open_osfhandle.)
+# endif
+  std::filebuf* buf = new __gnu_cxx::stdio_filebuf<char>(aDesc.PlatformHandle(), aMode);
+#else
+  // Hope this is stlport.  (FIXME: ifdef)
+  std::filebuf* buf = new std::filebuf();
+  buf->open(aDesc.PlatformHandle(), aMode);
+#endif
+  return mozilla::UniquePtr<std::filebuf>(buf);
 }
 
 } // namespace ipc

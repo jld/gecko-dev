@@ -28,6 +28,7 @@
 #include "AudioChannelService.h"
 #include "BlobParent.h"
 #include "CrashReporterParent.h"
+#include "GeckoProfilerFunc.h"
 #include "IHistory.h"
 #include "mozIApplication.h"
 #include "mozilla/ClearOnShutdown.h"
@@ -3977,6 +3978,15 @@ ContentParent::RecvOpenAnonymousTemporaryFile(FileDescriptor *aFD)
     PR_Close(prfd);
     return true;
 }
+
+bool
+ContentParent::RecvOpenProfilerLogFile(FileDescriptor* aFD)
+{
+    *aFD = FileDescriptor();
+    mozilla_sampler_open_remote_profile_file(Pid(), *aFD);
+    return true;
+}
+
 
 PFileDescriptorSetParent*
 ContentParent::AllocPFileDescriptorSetParent(const FileDescriptor& aFD)

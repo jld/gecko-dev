@@ -13,6 +13,9 @@
 
 namespace mozilla {
 class TimeStamp;
+namespace ipc {
+class FileDescriptor;
+}
 }
 
 class ProfilerBacktrace;
@@ -56,7 +59,9 @@ char* mozilla_sampler_get_profile();
 
 JSObject *mozilla_sampler_get_profile_data(JSContext *aCx);
 
-void mozilla_sampler_save_profile_to_file(const char* aFilename);
+void mozilla_sampler_save_profile_to_file();
+void mozilla_sampler_open_remote_profile_file(unsigned aProcID,
+                                              mozilla::ipc::FileDescriptor& aOutFd);
 
 const char** mozilla_sampler_get_features();
 

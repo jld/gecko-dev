@@ -718,6 +718,8 @@ parent:
 
     sync OpenAnonymousTemporaryFile() returns (FileDescriptor aFD);
 
+    sync OpenProfilerLogFile() returns (FileDescriptor aFD);
+
     // Use only for testing!
     sync GetFileReferences(PersistenceType persistenceType,
                            nsCString origin,

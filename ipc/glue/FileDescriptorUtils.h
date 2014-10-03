@@ -7,9 +7,11 @@
 #define mozilla_ipc_FileDescriptorUtils_h
 
 #include "mozilla/Attributes.h"
+#include "mozilla/UniquePtr.h"
 #include "mozilla/ipc/FileDescriptor.h"
 #include "nsIRunnable.h"
 #include <stdio.h>
+#include <iostream>
 
 namespace mozilla {
 namespace ipc {
@@ -53,6 +55,9 @@ FILE* FileDescriptorToFILE(const FileDescriptor& aDesc,
 // fclose()d as normal, and this does not invalidate the returned
 // FileDescriptor.
 FileDescriptor FILEToFileDescriptor(FILE* aStream);
+
+// COMMENTME
+mozilla::UniquePtr<std::filebuf> FileDescriptorToFileBuf(const FileDescriptor& aDesc, std::ios_base::openmode aMode);
 
 } // namespace ipc
 } // namespace mozilla
