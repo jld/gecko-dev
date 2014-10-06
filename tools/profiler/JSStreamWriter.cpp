@@ -178,3 +178,7 @@ JSStreamWriter::Value(const char *aValue)
     mNeedsName = true;
   }
 }
+
+// Clean up preprocessor state for unified builds.
+#undef ARRAY
+#undef OBJECT

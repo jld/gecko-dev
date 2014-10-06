@@ -95,26 +95,37 @@ CloseFileRunnable::Run()
 namespace mozilla {
 namespace ipc {
 
-FILE*
-FileDescriptorToFILE(const FileDescriptor& aDesc,
-                     const char* aOpenMode)
+static int
+FileDescriptorToPOSIX(const FileDescriptor& aDesc)
 {
   // Debug builds check whether the handle was "used", even if it's
   // invalid, so that needs to happen first.
   FileDescriptor::PlatformHandleType handle = aDesc.PlatformHandle();
   if (!aDesc.IsValid()) {
     errno = EBADF;
-    return nullptr;
+    return -1;
   }
 #ifdef XP_WIN
   int fd = _open_osfhandle(reinterpret_cast<intptr_t>(handle), 0);
   if (fd == -1) {
     CloseHandle(handle);
-    return nullptr;
+    return -1;
   }
 #else
   int fd = handle;
 #endif
+
+  return fd;
+}
+
+FILE*
+FileDescriptorToFILE(const FileDescriptor& aDesc,
+                     const char* aOpenMode)
+{
+  int fd = FileDescriptorToPOSIX(aDesc);
+  if (fd == -1) {
+    return nullptr;
+  }
   FILE* file = fdopen(fd, aOpenMode);
   if (!file) {
     int saved_errno = errno;
@@ -145,17 +156,17 @@ FILEToFileDescriptor(FILE* aStream)
 mozilla::UniquePtr<std::filebuf>
 FileDescriptorToFileBuf(const FileDescriptor& aDesc, std::ios_base::openmode aMode)
 {
+  std::filebuf* buf = nullptr;
+  int fd = FileDescriptorToPOSIX(aDesc);
+  if (fd != -1) {
 #ifdef __GLIBCXX__
-# ifdef XP_WIN
-# error "GNU libstdc++ on Windows can't happen?"
-  // (If it can, this will need to use _open_osfhandle.)
-# endif
-  std::filebuf* buf = new __gnu_cxx::stdio_filebuf<char>(aDesc.PlatformHandle(), aMode);
+    buf = new __gnu_cxx::stdio_filebuf<char>(fd, aMode);
 #else
-  // Hope this is stlport.  (FIXME: ifdef)
-  std::filebuf* buf = new std::filebuf();
-  buf->open(aDesc.PlatformHandle(), aMode);
+    // Hope this is stlport.  (FIXME: ifdef)
+    buf = new std::filebuf();
+    buf->open(fd, aMode);
 #endif
+  }
   return mozilla::UniquePtr<std::filebuf>(buf);
 }
 

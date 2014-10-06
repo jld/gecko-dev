@@ -61,7 +61,9 @@ typedef ucontext_t tickcontext_t;
 
 #if defined(LINUX) || defined(XP_MACOSX)
 #include <sys/types.h>
-pid_t gettid();
+extern "C" {
+  pid_t gettid();
+}
 #endif
 
 #if defined(SPS_ARCH_arm) && defined(MOZ_WIDGET_GONK)
