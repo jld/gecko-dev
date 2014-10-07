@@ -635,7 +635,7 @@ static nsCString profile_file_path(int aProcType, unsigned aProcID)
 {
 #if defined(SPS_PLAT_arm_android) && !defined(MOZ_WIDGET_GONK)
   nsCString path;
-  tmpPath.AppendPrintf("/sdcard/profile_%i_%u.txt", aProcType, aProcID);
+  path.AppendPrintf("/sdcard/profile_%i_%u.txt", aProcType, aProcID);
 #else
   nsCOMPtr<nsIFile> file;
   nsCString path;

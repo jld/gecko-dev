@@ -159,8 +159,10 @@ FileDescriptorToFileBuf(const FileDescriptor& aDesc, std::ios_base::openmode aMo
   std::filebuf* buf = nullptr;
   int fd = FileDescriptorToPOSIX(aDesc);
   if (fd != -1) {
-#ifdef __GLIBCXX__
+#if defined(__GLIBCXX__)
     buf = new __gnu_cxx::stdio_filebuf<char>(fd, aMode);
+#elif defined(XP_WIN)
+    buf = new std::filebuf(aDesc);
 #else
     // Hope this is stlport.  (FIXME: ifdef)
     buf = new std::filebuf();
