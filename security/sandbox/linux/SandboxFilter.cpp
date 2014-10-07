@@ -339,6 +339,7 @@ SandboxFilterImplContent::Build() {
   Allow(SYSCALL(quotactl));
   Allow(SYSCALL(kill));
   Allow(SOCKETCALL(sendto, SENDTO));
+  Deny(EPERM, SYSCALL(clone));
 #endif
 
   /* nsSystemInfo uses uname (and we cache an instance, so */
