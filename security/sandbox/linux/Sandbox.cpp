@@ -159,6 +159,32 @@ Reporter(int nr, siginfo_t *info, void *void_context)
   }
 #endif
 
+#ifdef MOZ_ASAN
+  // The ASAN error reporter attempts some filesystem accesses, even
+  // with notified of sandboxing; these need to not crash.
+  if (syscall_nr == __NR_readlink ||
+#ifdef __NR_stat64
+      syscall_nr == __NR_stat64
+#else
+      syscall_nr == __NR_stat
+#endif
+      ) {
+    const char *path = reinterpret_cast<const char*>(args[0]);
+    const char *expectedPath;
+    if (syscall_nr == __NR_readlink) {
+      // Fixed by compiler-rt r209773
+      expectedPath = "/proc/self/exe";
+    } else {
+      expectedPath = getenv("ASAN_SYMBOLIZER_PATH");
+    }
+    if (expectedPath && strcmp(path, expectedPath) == 0) {
+      SECCOMP_RESULT(ctx) = -ENOENT;
+      return;
+    }
+    SANDBOX_LOG_ERROR("unexpected path for ASAN workaround: %s", path);
+  }
+#endif
+
   SANDBOX_LOG_ERROR("seccomp sandbox violation: pid %d, syscall %lu,"
                     " args %lu %lu %lu %lu %lu %lu.  Killing process.",
                     pid, syscall_nr,

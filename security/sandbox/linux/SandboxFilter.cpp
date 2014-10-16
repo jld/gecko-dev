@@ -390,10 +390,6 @@ void SandboxFilterImplGMP::Build() {
   Allow(SYSCALL(sigaltstack));
   // ASAN's error reporter wants to know if stderr is a tty.
   Deny(ENOTTY, SYSCALL_WITH_ARG(ioctl, 0, STDERR_FILENO));
-  // ...and, in some versions/configurations, it will try to access
-  // the filesystem despite being told it's sandboxed:
-  Deny(ENOENT, SYSCALL(readlink)); // probably fixed by compiler-rt r209773
-  Deny(ENOENT, SYSCALL_LARGEFILE(stat, stat64));
 #endif
 
   Allow(SYSCALL(mprotect));
