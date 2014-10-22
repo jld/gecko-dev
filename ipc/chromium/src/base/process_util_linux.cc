@@ -13,6 +13,8 @@
 #include <string>
 #include <sys/types.h>
 #include <sys/wait.h>
+#include <linux/sched.h>
+#include <sys/syscall.h>
 
 #include "base/eintr_wrapper.h"
 #include "base/file_util.h"
@@ -278,7 +280,32 @@ bool LaunchApp(const std::vector<std::string>& argv,
   }
 #endif
 
-  pid_t pid = fork();
+  pid_t pid;
+  if (privs == PRIVILEGES_ISOLATED) {
+    const int flags = CLONE_NEWPID | CLONE_NEWNET;
+    // Try this first; it works only if we're root.
+    pid = syscall(__NR_clone, SIGCHLD | flags, 0, 0, 0);
+    if (pid < 0) {
+      // Otherwise we're not really root, so skip SetCurrentProcessPrivileges.
+      privs = PRIVILEGES_INHERIT;
+      pid = syscall(__NR_clone, SIGCHLD | CLONE_NEWUSER | flags, 0, 0, 0);
+      if (pid < 0) {
+        const char* extrastring = "";
+        if (errno == EPERM) {
+          extrastring = "; try adding kernel.unprivileged_userns_clone=1"
+            " to /etc/sysctl.conf";
+        } else if (errno == EINVAL) {
+          extrastring = "; kernel too old or feature disabled";
+        }
+        DLOG(ERROR) << "failed to isolate child process: " << strerror(errno)
+                    << extrastring;
+        // Unfortunately, about 1/3 of Linux desktops wind up here...
+        pid = fork();
+      }
+    }
+  } else {
+    pid = fork();
+  }
   if (pid < 0)
     return false;
 

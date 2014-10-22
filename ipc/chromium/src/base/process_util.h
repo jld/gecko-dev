@@ -138,6 +138,7 @@ void CloseSuperfluousFds(const base::InjectiveMultimap& saved_map);
 enum ChildPrivileges {
   PRIVILEGES_DEFAULT,
   PRIVILEGES_UNPRIVILEGED,
+  PRIVILEGES_ISOLATED,
   PRIVILEGES_INHERIT,
   PRIVILEGES_LAST
 };

@@ -903,7 +903,9 @@ void
 GeckoChildProcessHost::OpenPrivilegedHandle(base::ProcessId aPid)
 {
   if (mChildProcessHandle) {
-    MOZ_ASSERT(aPid == base::GetProcId(mChildProcessHandle));
+    if (mPrivileges != base::PRIVILEGES_ISOLATED) {
+      MOZ_ASSERT(aPid == base::GetProcId(mChildProcessHandle));
+    }
     return;
   }
   if (!base::OpenPrivilegedProcessHandle(aPid, &mChildProcessHandle)) {
