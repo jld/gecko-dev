@@ -8,6 +8,7 @@
 #define mozilla_Sandbox_h
 
 #include "mozilla/Types.h"
+#include "nsXULAppAPI.h"
 
 // This defines the entry points for a content process to start
 // sandboxing itself.  See also common/SandboxInfo.h for what parts of
@@ -22,6 +23,8 @@
 #endif
 
 namespace mozilla {
+// FIXME: comment
+MOZ_SANDBOX_EXPORT void SandboxEarlyInit(GeckoProcessType aProcType);
 
 #ifdef MOZ_CONTENT_SANDBOX
 // Call only if SandboxInfo::CanSandboxContent() returns true.

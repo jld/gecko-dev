@@ -27,6 +27,7 @@ SOURCES += [
     'Sandbox.cpp',
     'SandboxAssembler.cpp',
     'SandboxFilter.cpp',
+    'UnsafeSyscallProxy.cpp',
 ]
 
 # gcc lto likes to put the top level asm in syscall.cc in a different partition
