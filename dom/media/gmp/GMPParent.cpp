@@ -138,7 +138,7 @@ GMPParent::LoadProcess()
 
   if (!mProcess) {
     mProcess = new GMPProcessParent(NS_ConvertUTF16toUTF8(path).get());
-    if (!mProcess->Launch(30 * 1000)) {
+    if (!mProcess->Launch(3000 * 1000)) {
       mProcess->Delete();
       mProcess = nullptr;
       return NS_ERROR_FAILURE;
