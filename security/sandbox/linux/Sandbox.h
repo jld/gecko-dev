@@ -9,7 +9,11 @@
 
 #include "mozilla/Types.h"
 
+#include "nsXULAppAPI.h"
+
 namespace mozilla {
+
+MOZ_EXPORT void SandboxEarlyInit(GeckoProcessType aProcType);
 
 // The Set*Sandbox() functions must not be called if the corresponding
 // CanSandbox*() function has returned false; if sandboxing is

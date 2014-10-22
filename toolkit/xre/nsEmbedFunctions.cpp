@@ -79,6 +79,10 @@
 #include "mozilla/warnonlysandbox/wosCallbacks.h"
 #endif
 
+#if defined(XP_LINUX) && defined(MOZ_SANDBOX)
+#include "mozilla/Sandbox.h"
+#endif
+
 #ifdef MOZ_IPDL_TESTS
 #include "mozilla/_ipdltest/IPDLUnitTests.h"
 #include "mozilla/_ipdltest/IPDLUnitTestProcessChild.h"
@@ -316,6 +320,10 @@ XRE_InitChildProcess(int aArgc,
     if (_fileno(stdin) == -1 || _get_osfhandle(fileno(stdin)) == -1)
         freopen("CONIN$", "r", stdin);
   }
+#endif
+
+#if defined(XP_LINUX) && defined(MOZ_SANDBOX)
+    mozilla::SandboxEarlyInit(XRE_GetProcessType());
 #endif
 
   char aLocal;
