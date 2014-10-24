@@ -16,6 +16,8 @@
 #include <sys/prctl.h>
 #include <sys/stat.h>
 #include <sys/syscall.h>
+#include <sys/types.h> // FIXME
+#include <sys/wait.h>  // FIXME
 #include <signal.h>
 #include <string.h>
 #include <stdlib.h>
@@ -313,6 +315,20 @@ SandboxLogicalStart()
   asanArgs.coverage_max_block_size = 0;
   __sanitizer_sandbox_on_notify(&asanArgs);
 #endif
+
+  const char *helperAPI = getenv("SBX_CHROME_API_PRV");
+  if (helperAPI && strcmp(helperAPI, "1") == 0) {
+    int fd = atoi(getenv("SBX_D"));
+    pid_t pid = atoi(getenv("SBX_HELPER_PID"));
+    char resp;
+
+    // OMG HAX.  Fix this.
+    close(7);
+    write(fd, "C", 1);
+    read(fd, &resp, 1);
+    waitpid(pid, nullptr, 0);
+    close(fd);
+  }
 
   if (!gEarlySandboxProxy.Stop()) {
     MOZ_CRASH("SandboxEarlyInit() wasn't called!");

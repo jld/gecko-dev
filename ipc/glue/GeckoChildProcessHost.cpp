@@ -660,6 +660,17 @@ GeckoChildProcessHost::PerformAsyncLaunchInternal(std::vector<std::string>& aExt
 
   std::vector<std::string> childArgv;
 
+#if defined(XP_LINUX) && defined(MOZ_SANDBOX)
+  const char *sandbox = getenv("MOZ_DEVEL_SANDBOX");
+  if (sandbox) {
+    newEnvVars["SBX_CHROME_API_RQ"] = "1";
+    newEnvVars["SANDBOX_LD_PRELOAD"] = newEnvVars["LD_PRELOAD"];
+    newEnvVars["SANDBOX_LD_LIBRARY_PATH"] = newEnvVars["LD_LIBRARY_PATH"];
+    childArgv.push_back(sandbox);
+    mFileMap.push_back(std::pair<int,int>(STDERR_FILENO, 7));
+  }
+#endif
+
   childArgv.push_back(exePath.value());
 
   childArgv.insert(childArgv.end(), aExtraOpts.begin(), aExtraOpts.end());
