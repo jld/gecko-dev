@@ -912,7 +912,9 @@ void
 GeckoChildProcessHost::OpenPrivilegedHandle(base::ProcessId aPid)
 {
   if (mChildProcessHandle) {
+#ifndef XP_LINUX
     MOZ_ASSERT(aPid == base::GetProcId(mChildProcessHandle));
+#endif
     return;
   }
   if (!base::OpenPrivilegedProcessHandle(aPid, &mChildProcessHandle)) {
