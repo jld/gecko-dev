@@ -24,6 +24,11 @@
 #include "nsLiteralString.h"
 #include "mozilla/UniquePtr.h"
 
+#include "prenv.h"
+#include "prmem.h"
+// FIXME autoconf this
+#define HAVE_PR_DUPLICATE_ENVIRONMENT
+
 #ifdef MOZ_B2G_LOADER
 #include "ProcessUtils.h"
 
@@ -49,21 +54,6 @@ using namespace mozilla::ipc;
 # define CHILD_UNPRIVILEGED_GID 65534
 #endif
 
-#ifdef ANDROID
-#include <pthread.h>
-/*
- * Currently, PR_DuplicateEnvironment is implemented in
- * mozglue/build/BionicGlue.cpp
- */
-#define HAVE_PR_DUPLICATE_ENVIRONMENT
-
-#include "plstr.h"
-#include "prenv.h"
-#include "prmem.h"
-/* Temporary until we have PR_DuplicateEnvironment in prenv.h */
-extern "C" { NSPR_API(pthread_mutex_t *)PR_GetEnvLock(void); }
-#endif
-
 namespace {
 
 enum ParsingState {
@@ -78,29 +68,6 @@ static mozilla::EnvironmentLog gProcessLog("MOZ_PROCESS_LOG");
 namespace base {
 
 #ifdef HAVE_PR_DUPLICATE_ENVIRONMENT
-/* 
- * I tried to put PR_DuplicateEnvironment down in mozglue, but on android 
- * this winds up failing because the strdup/free calls wind up mismatching. 
- */
-
-static char **
-PR_DuplicateEnvironment(void)
-{
-    char **result = NULL;
-    char **s;
-    char **d;
-    pthread_mutex_lock(PR_GetEnvLock());
-    for (s = environ; *s != NULL; s++)
-      ;
-    if ((result = (char **)PR_Malloc(sizeof(char *) * (s - environ + 1))) != NULL) {
-      for (s = environ, d = result; *s != NULL; s++, d++) {
-        *d = PL_strdup(*s);
-      }
-      *d = NULL;
-    }
-    pthread_mutex_unlock(PR_GetEnvLock());
-    return result;
-}
 
 class EnvironmentEnvp
 {
@@ -120,7 +87,9 @@ public:
       std::string str = it->first;
       str += "=";
       str += it->second;
-      *e = PL_strdup(str.c_str());
+      size_t len = str.length() + 1;
+      *e = static_cast<char*>(PR_Malloc(len));
+      memcpy(*e, str.c_str(), len);
     }
     *e = NULL;
   }
@@ -131,7 +100,7 @@ public:
       return;
     }
     for (char **e = mEnvp; *e; ++e) {
-      PL_strfree(*e);
+      PR_Free(*e);
     }
     PR_Free(mEnvp);
   }
@@ -338,6 +307,7 @@ bool LaunchApp(const std::vector<std::string>& argv,
     execv(argv_cstr[0], argv_cstr.get());
 #endif
     // if we get here, we're in serious trouble and should complain loudly
+    // FIXME: async signal unsafe; could deadlock instead
     DLOG(ERROR) << "FAILED TO exec() CHILD PROCESS, path: " << argv_cstr[0];
     _exit(127);
   } else {
