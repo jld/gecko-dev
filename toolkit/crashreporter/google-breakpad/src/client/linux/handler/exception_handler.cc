@@ -343,12 +343,12 @@ void ExceptionHandler::SignalHandler(int sig, siginfo_t* info, void* uc) {
     // This signal was sent by another process.  (Positive values of
     // si_code are reserved for kernel-originated signals.)  In order
     // to retrigger it, we have to queue a new signal.
-    if (tgkill(getpid(), syscall(__NR_gettid), sig) < 0) {
-      // If we failed to kill ourselves (e.g. because a sandbox disallows us
-      // to do so), we instead resort to terminating our process. This will
-      // result in an incorrect exit code.
-      _exit(1);
-    }
+    tgkill(getpid(), syscall(__NR_gettid), sig);
+    // If we failed to kill ourselves (e.g. because a sandbox disallows us
+    // to do so, or because this process is PID 1 in its PID namespace), we
+    // instead resort to terminating our process. This will result in an
+    // incorrect exit code.
+    _exit(1);
   } else {
     // This was a synchronous signal triggered by a hard fault (e.g. SIGSEGV).
     // No need to reissue the signal. It will automatically trigger again,
