@@ -104,6 +104,14 @@ struct SandboxFlags {
 
 static const SandboxFlags gSandboxFlags;
 
+SandboxFeatureFlags
+GetSandboxFeatureFlags()
+{
+  return gSandboxFlags.isSupported
+    ? kSandboxFeatureSeccompBPF
+    : static_cast<SandboxFeatureFlags>(0);
+}
+
 /**
  * This is the SIGSYS handler function. It is used to report to the user
  * which system call has been denied by Seccomp.
@@ -463,10 +471,11 @@ SetContentProcessSandbox()
   SetCurrentProcessSandbox(kSandboxContentProcess);
 }
 
-bool
+SandboxAvailability
 CanSandboxContentProcess()
 {
-  return gSandboxFlags.isSupported || gSandboxFlags.isDisabledForContent;
+  return gSandboxFlags.isDisabledForContent ? kSandboxingDisabled :
+    gSandboxFlags.isSupported ? kSandboxingSupported : kSandboxingWouldFail;
 }
 #endif // MOZ_CONTENT_SANDBOX
 
@@ -502,10 +511,11 @@ SetMediaPluginSandbox(const char *aFilePath)
   SetCurrentProcessSandbox(kSandboxMediaPlugin);
 }
 
-bool
+SandboxAvailability
 CanSandboxMediaPlugin()
 {
-  return gSandboxFlags.isSupported || gSandboxFlags.isDisabledForGMP;
+  return gSandboxFlags.isDisabledForGMP ? kSandboxingDisabled :
+    gSandboxFlags.isSupported ? kSandboxingSupported : kSandboxingWouldFail;
 }
 #endif // MOZ_GMP_SANDBOX
 
