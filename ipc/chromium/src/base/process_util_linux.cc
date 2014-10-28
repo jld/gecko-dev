@@ -218,6 +218,76 @@ IsLaunchingNuwa(const std::vector<std::string>& argv) {
 }
 #endif // MOZ_B2G_LOADER
 
+static pid_t
+ForkIsolated(char * const *envp)
+{
+  const int flags = CLONE_NEWPID | CLONE_NEWNET;
+  bool failed = false;
+  pid_t pid;
+
+  // Try this first; it works only if we're root.
+  pid = syscall(__NR_clone, SIGCHLD | flags, 0, 0, 0);
+  if (pid < 0) {
+    // Otherwise we're not really root, so skip SetCurrentProcessPrivileges.
+    pid = syscall(__NR_clone, SIGCHLD | CLONE_NEWUSER | flags, 0, 0, 0);
+    if (pid < 0) {
+      const char* extrastring = "";
+      if (errno == EPERM) {
+        extrastring = "; try adding kernel.unprivileged_userns_clone=1"
+          " to /etc/sysctl.conf";
+      } else if (errno == EINVAL) {
+        extrastring = "; kernel too old or feature disabled";
+      }
+      DLOG(ERROR) << "failed to isolate child process: " << strerror(errno)
+                  << extrastring;
+      // Unfortunately, about 1/3 of Linux desktops wind up here...
+      failed = true;
+      pid = fork();
+    }
+  }
+  // Start chroot helper if applicable.  FIXME: factor this out or something.
+  if (!failed && pid == 0) {
+    int fd[2];
+    pid_t helper_pid;
+
+    if (pipe(fd) < 0) {
+      return pid;
+    }
+
+    helper_pid = syscall(__NR_clone, SIGCHLD | CLONE_FS);
+    if (helper_pid < 0) {
+      return pid;
+    }
+    if (helper_pid == 0) {
+      char req;
+      close(fd[0]);
+      // FIXME errors, EINTR, etc.
+      read(fd[1], &req, 1);
+      if (req == 'C') {
+        chroot("/proc/self/fdinfo");
+        chdir("/");
+        req = 'O';
+        write(fd[1], &req, 1);
+        _exit(0);
+      }
+      _exit(1);
+    }
+    close(fd[1]);
+    for (char** mut_envp = const_cast<char**>(envp); *mut_envp; ++mut_envp) {
+      char *kv = *mut_envp;
+      if (strncmp(kv, "SBX_MOZ_API_PRV=", sizeof("SBX_MOZ_API_PRV")) == 0) {
+        kv[sizeof("SBX_MOZ_API_PRV")] = '0';
+      } else if (strncmp(kv, "SBX_D=", sizeof("SBX_D")) == 0) {
+        // FIXME: can this snprintf be avoided by using something else pre-fork?
+        snprintf(kv + sizeof("SBX_D"), 11, "%d", fd[0]);
+      } else if (strncmp(kv, "SBX_HELPER_PID=", sizeof("SBX_HELPER_PID")) == 0) {
+        snprintf(kv + sizeof("SBX_HELPER_PID"), 11, "%d", helper_pid);
+      }
+    }
+  }
+  return pid;
+}
+
 bool LaunchApp(const std::vector<std::string>& argv,
                const file_handle_mapping_vector& fds_to_remap,
                const environment_map& env_vars_to_set,
@@ -242,6 +312,12 @@ bool LaunchApp(const std::vector<std::string>& argv,
 #ifdef HAVE_PR_DUPLICATE_ENVIRONMENT
   Environment env;
   env.Merge(env_vars_to_set);
+  if (privs == PRIVILEGES_ISOLATED) {
+    env["SBX_D"] = "XXXXXXXXX";
+    env["SBX_HELPER_PID"] = "XXXXXXXXXX";
+    env["SBX_MOZ_API_PRV"] = "X";
+  }
+
   char * const *envp = env.AsEnvp();
   if (!envp) {
     DLOG(ERROR) << "FAILED to duplicate environment for: " << argv_cstr[0];
@@ -251,27 +327,7 @@ bool LaunchApp(const std::vector<std::string>& argv,
 
   pid_t pid;
   if (privs == PRIVILEGES_ISOLATED) {
-    const int flags = CLONE_NEWPID | CLONE_NEWNET;
-    // Try this first; it works only if we're root.
-    pid = syscall(__NR_clone, SIGCHLD | flags, 0, 0, 0);
-    if (pid < 0) {
-      // Otherwise we're not really root, so skip SetCurrentProcessPrivileges.
-      privs = PRIVILEGES_INHERIT;
-      pid = syscall(__NR_clone, SIGCHLD | CLONE_NEWUSER | flags, 0, 0, 0);
-      if (pid < 0) {
-        const char* extrastring = "";
-        if (errno == EPERM) {
-          extrastring = "; try adding kernel.unprivileged_userns_clone=1"
-            " to /etc/sysctl.conf";
-        } else if (errno == EINVAL) {
-          extrastring = "; kernel too old or feature disabled";
-        }
-        DLOG(ERROR) << "failed to isolate child process: " << strerror(errno)
-                    << extrastring;
-        // Unfortunately, about 1/3 of Linux desktops wind up here...
-        pid = fork();
-      }
-    }
+    pid = ForkIsolated(envp);
   } else {
     pid = fork();
   }
@@ -332,6 +388,9 @@ bool LaunchApp(const CommandLine& cl,
 
 void SetCurrentProcessPrivileges(ChildPrivileges privs) {
   if (privs == PRIVILEGES_INHERIT) {
+    return;
+  }
+  if (privs == PRIVILEGES_ISOLATED && geteuid() != 0) {
     return;
   }
 
