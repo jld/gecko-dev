@@ -430,6 +430,7 @@ SysInfoMeasurement.prototype = Object.freeze({
     version: LAST_TEXT_FIELD,
     architecture: LAST_TEXT_FIELD,
     isWow64: LAST_NUMERIC_FIELD,
+    seccompBPF: LAST_NUMERIC_FIELD,
   },
 });
 
@@ -457,6 +458,7 @@ SysInfoProvider.prototype = Object.freeze({
     version: "version",
     arch: "architecture",
     isWow64: "isWow64",
+    hasSeccompBPF: "seccompBPF",
   },
 
   collectConstantData: function () {
@@ -498,6 +500,8 @@ SysInfoProvider.prototype = Object.freeze({
           case "isWow64":
             // Property is only present on Windows. hasKey() skipping from
             // above ensures undefined or null doesn't creep in here.
+	  case "hasSeccompBPF":
+	    // As above, but only present on Linux and B2G.
             value = value ? 1 : 0;
             method = "setLastNumeric";
             break;
