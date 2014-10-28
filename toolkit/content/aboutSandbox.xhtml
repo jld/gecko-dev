@@ -1,0 +1,29 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.1//EN" "http://www.w3.org/TR/xhtml11/DTD/xhtml11.dtd" [
+<!ENTITY % aboutSandboxDTD SYSTEM "chrome://global/locale/aboutSandbox.dtd" >
+%aboutSandboxDTD;
+<!ENTITY % globalDTD SYSTEM "chrome://global/locale/global.dtd">
+%globalDTD;
+]>
+
+<!-- This Source Code Form is subject to the terms of the Mozilla Public
+   - License, v. 2.0. If a copy of the MPL was not distributed with this
+   - file, You can obtain one at http://mozilla.org/MPL/2.0/. -->
+
+<html xmlns="http://www.w3.org/1999/xhtml">
+<head>
+  <title>&aboutSandbox.title;</title>
+  <link rel="stylesheet" href="chrome://global/skin/about.css" type="text/css"/>
+  <link rel="stylesheet" href="chrome://global/content/aboutSandbox.css" type="text/css"/>
+  <script type="application/javascript;version=1.7" src="chrome://global/content/aboutSandbox.js"/>
+</head>
+
+<body dir="&locale.dir;" onload="PopulateTable()">
+  <h1>&aboutSandbox.title;</h1>
+  <table id="sandboxFeatures">
+    <tr data-feature="hasSeccompBPF"><th>&aboutSandbox.featureName.hasSeccompBPF;</th></tr>
+    <tr data-feature="canSandboxContent"><th>&aboutSandbox.featureName.canSandboxContent;</th></tr>
+    <tr data-feature="canSandboxMedia"><th>&aboutSandbox.featureName.canSandboxMedia;</th></tr>
+  </table>
+</body>
+</html>
