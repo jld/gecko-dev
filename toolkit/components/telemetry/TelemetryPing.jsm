@@ -503,7 +503,9 @@ let Impl = {
                   "hasSSSE3", "hasSSE4A", "hasSSE4_1", "hasSSE4_2",
                   "hasEDSP", "hasARMv6", "hasARMv7", "hasNEON", "isWow64",
                   "profileHDDModel", "profileHDDRevision", "binHDDModel",
-                  "binHDDRevision", "winHDDModel", "winHDDRevision"];
+                  "binHDDRevision", "winHDDModel", "winHDDRevision",
+		  "hasSeccompBPF", "canSandboxContent", "canSandboxMedia",
+		 ];
     for each (let field in fields) {
       let value;
       try {
