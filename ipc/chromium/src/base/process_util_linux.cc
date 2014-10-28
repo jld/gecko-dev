@@ -219,10 +219,9 @@ IsLaunchingNuwa(const std::vector<std::string>& argv) {
 #endif // MOZ_B2G_LOADER
 
 static pid_t
-ForkIsolated(char * const *envp)
+ForkIsolated()
 {
   const int flags = CLONE_NEWPID | CLONE_NEWNET;
-  bool failed = false;
   pid_t pid;
 
   // Try this first; it works only if we're root.
@@ -241,51 +240,55 @@ ForkIsolated(char * const *envp)
       DLOG(ERROR) << "failed to isolate child process: " << strerror(errno)
                   << extrastring;
       // Unfortunately, about 1/3 of Linux desktops wind up here...
-      failed = true;
       pid = fork();
     }
   }
-  // Start chroot helper if applicable.  FIXME: factor this out or something.
-  if (!failed && pid == 0) {
-    int fd[2];
-    pid_t helper_pid;
+  return pid;
+}
 
-    if (pipe(fd) < 0) {
-      return pid;
-    }
+static void
+PrepareForExec(ChildPrivileges privs, char *const *envp) {
+  if (privs != PRIVILEGES_ISOLATED) {
+    return;
+  }
+  // FIXME: also bail if ForkIsolated had to decay to fork
+  // Start chroot helper if applicable.
+  int fd[2];
+  pid_t helper_pid;
 
-    helper_pid = syscall(__NR_clone, SIGCHLD | CLONE_FS);
-    if (helper_pid < 0) {
-      return pid;
+  if (socketpair(AF_UNIX, SOCK_STREAM, 0, fd) < 0) {
+    return;
+  }
+  helper_pid = syscall(__NR_clone, SIGCHLD | CLONE_FS);
+  if (helper_pid < 0) {
+    return;
+  }
+  if (helper_pid == 0) {
+    char req = 0;
+    close(fd[0]);
+    // FIXME errors, EINTR, etc.
+    read(fd[1], &req, 1);
+    if (req == 'C') {
+      chroot("/proc/self/fdinfo");
+      chdir("/");
+      req = 'O';
+      write(fd[1], &req, 1);
+      _exit(0);
     }
-    if (helper_pid == 0) {
-      char req;
-      close(fd[0]);
-      // FIXME errors, EINTR, etc.
-      read(fd[1], &req, 1);
-      if (req == 'C') {
-        chroot("/proc/self/fdinfo");
-        chdir("/");
-        req = 'O';
-        write(fd[1], &req, 1);
-        _exit(0);
-      }
-      _exit(1);
-    }
-    close(fd[1]);
-    for (char** mut_envp = const_cast<char**>(envp); *mut_envp; ++mut_envp) {
-      char *kv = *mut_envp;
-      if (strncmp(kv, "SBX_MOZ_API_PRV=", sizeof("SBX_MOZ_API_PRV")) == 0) {
-        kv[sizeof("SBX_MOZ_API_PRV")] = '0';
-      } else if (strncmp(kv, "SBX_D=", sizeof("SBX_D")) == 0) {
-        // FIXME: can this snprintf be avoided by using something else pre-fork?
-        snprintf(kv + sizeof("SBX_D"), 11, "%d", fd[0]);
-      } else if (strncmp(kv, "SBX_HELPER_PID=", sizeof("SBX_HELPER_PID")) == 0) {
-        snprintf(kv + sizeof("SBX_HELPER_PID"), 11, "%d", helper_pid);
-      }
+    _exit(1);
+  }
+  close(fd[1]);
+  for (char** mut_envp = const_cast<char**>(envp); *mut_envp; ++mut_envp) {
+    char *kv = *mut_envp;
+    if (strncmp(kv, "SBX_MOZ_API_PRV=", sizeof("SBX_MOZ_API_PRV")) == 0) {
+      kv[sizeof("SBX_MOZ_API_PRV")] = '1';
+    } else if (strncmp(kv, "SBX_D=", sizeof("SBX_D")) == 0) {
+      // FIXME: can this snprintf be avoided by using something else pre-fork?
+      snprintf(kv + sizeof("SBX_D"), 11, "%d", fd[0]);
+    } else if (strncmp(kv, "SBX_HELPER_PID=", sizeof("SBX_HELPER_PID")) == 0) {
+      snprintf(kv + sizeof("SBX_HELPER_PID"), 11, "%d", helper_pid);
     }
   }
-  return pid;
 }
 
 bool LaunchApp(const std::vector<std::string>& argv,
@@ -327,7 +330,7 @@ bool LaunchApp(const std::vector<std::string>& argv,
 
   pid_t pid;
   if (privs == PRIVILEGES_ISOLATED) {
-    pid = ForkIsolated(envp);
+    pid = ForkIsolated();
   } else {
     pid = fork();
   }
@@ -353,8 +356,10 @@ bool LaunchApp(const std::vector<std::string>& argv,
     SetCurrentProcessPrivileges(privs);
 
 #ifdef HAVE_PR_DUPLICATE_ENVIRONMENT
+    PrepareForExec(privs, envp);
     execve(argv_cstr[0], argv_cstr.get(), envp);
 #else
+    PrepareForExec(privs, 0); // FIXME
     for (environment_map::const_iterator it = env_vars_to_set.begin();
          it != env_vars_to_set.end(); ++it) {
       if (setenv(it->first.c_str(), it->second.c_str(), 1/*overwrite*/))

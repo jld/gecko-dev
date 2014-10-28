@@ -296,7 +296,7 @@ SandboxLogicalStart()
   __sanitizer_sandbox_on_notify(&asanArgs);
 #endif
 
-  const char *helperAPI = getenv("SBX_CHROME_API_PRV");
+  const char *helperAPI = getenv("SBX_MOZ_API_PRV");
   if (helperAPI && strcmp(helperAPI, "1") == 0) {
     int fd = atoi(getenv("SBX_D"));
     pid_t pid = atoi(getenv("SBX_HELPER_PID"));
