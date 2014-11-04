@@ -113,6 +113,26 @@ Reporter(int nr, siginfo_t *info, void *void_context)
   }
 #endif
 
+#ifdef MOZ_ASAN
+  // These have to be in the signal handler and not Deny() entries in
+  // the SandboxFilter.cpp so that the syscall proxy (bug 1088387) can
+  // intercept them between the real and logical sandbox start points.
+#ifdef __NR_stat64
+  const unsigned long nr_actual_stat = __NR_stat64;
+#else
+  const unsigned long nr_actual_stat = __NR_stat;
+#endif
+
+  // ASAN's error reporter, before compiler-rt r209773, will call
+  // readlink and use the cached value only if that fails; and if it
+  // found an external symbolizer, it will try to run it.  (See also
+  // bug 1081242 comment #7.)
+  if (syscall_nr == __NR_readlink || syscall_nr == nr_actual_stat) {
+    SECCOMP_RESULT(ctx) = -ENOENT;
+    return;
+  }
+#endif
+
 #ifdef MOZ_GMP_SANDBOX
   if (syscall_nr == __NR_open && gMediaPluginFilePath) {
     const char *path = reinterpret_cast<const char*>(args[0]);
