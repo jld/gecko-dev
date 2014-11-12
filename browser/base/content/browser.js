@@ -1736,7 +1736,7 @@ function HandleAppCommandEvent(evt) {
                      gBrowser.selectedBrowser);
     break;
   case "Save":
-    saveDocument(window.content.document);
+    saveDocument(gBrowser.selectedBrowser.contentDocumentAsCPOW);
     break;
   case "SendMail":
     MailIntegration.sendLinkForWindow(window.content);
