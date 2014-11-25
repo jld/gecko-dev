@@ -114,7 +114,8 @@ Reporter(int nr, siginfo_t *info, void *void_context)
   }
 #endif
 
-  // FIXME: comment
+  // If this is after SandboxEarlyInit but before SandboxLogicalStart,
+  // forward the syscall to the proxy thread.
   long proxyResult;
   if (gEarlySandboxProxy.Call(syscall_nr, args, &proxyResult)) {
     SECCOMP_RESULT(ctx) = proxyResult;
@@ -264,7 +265,7 @@ AssertSingleThreaded()
   if (sb.st_nlink != 3) {
     SANDBOX_LOG_ERROR("process must be single-threaded at this point.  "
                       "(%u threads)", static_cast<unsigned>(sb.st_nlink - 2));
-    MOZ_CRASH();
+    MOZ_CRASH("process is not single-threaded");
   }
 }
 
@@ -300,6 +301,8 @@ SandboxEarlyInit(GeckoProcessType aProcType)
   SetCurrentProcessSandbox(aBoxType);
 }
 
+// This is called when the sandbox should appear to start from the
+// perspective of the rest of the process.
 static void
 SandboxLogicalStart()
 {

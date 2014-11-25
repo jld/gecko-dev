@@ -11,7 +11,22 @@ namespace mozilla {
 
 class UnsafeSyscallProxyImpl;
 
-// FIXME: comments
+// This class creates a thread that executes system calls on behalf of
+// other threads in the process.  This is used in order to enable
+// sandboxing functionality when the process is single-threaded
+// (seccomp and most other security attributes are per-thread) but
+// still be able to use otherwise dangerous syscalls normally until
+// the process is ready to be sandboxed.
+//
+// Obviously, this can't work with syscalls that affect the calling
+// thread or otherwise care what thread they're run on, but typically
+// these are either allowed by the sandbox policy (and so don't need
+// to be proxied) or aren't used by the code being sandboxed.
+//
+// Also, because there's only one of these and multiple client
+// threads, beware of deadlocks from proxying synchronization
+// primitives.
+
 class UnsafeSyscallProxy {
   UnsafeSyscallProxyImpl *mImpl;
 public:

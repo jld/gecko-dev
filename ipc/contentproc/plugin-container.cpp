@@ -164,7 +164,7 @@ content_process_main(int argc, char* argv[])
     // Binder library is initialized; see also XRE_InitChildProcess().
     // Additional special handling is needed for Nuwa: the Nuwa process
     // itself needs to be unsandboxed, and the same single-threadedness
-    // condition applies; see also AfterNuwaFork().
+    // condition applies to its children; see also AfterNuwaFork().
 #ifdef MOZ_CONTENT_SANDBOX
     if (!isNuwa) {
         mozilla::SandboxEarlyInit(XRE_GetProcessType());

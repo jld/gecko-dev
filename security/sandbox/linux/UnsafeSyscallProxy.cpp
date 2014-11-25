@@ -20,7 +20,6 @@
 
 namespace mozilla {
 
-// FIXME: comments
 class UnsafeSyscallProxyImpl {
   pthread_t mThread;
   pthread_mutex_t mMutex;
@@ -156,7 +155,7 @@ UnsafeSyscallProxyImpl::IsProxiable(unsigned long aSyscall)
   // Notes for future reference on syscalls that can be proxied with
   // some fixups, if we need them:
   //
-  // * The schedular parameter calls -- if args[0] == 0, replace it
+  // * The scheduler parameter calls -- if args[0] == 0, replace it
   //   with the requesting thread's tid.
   //
   // * fork/vfork/(clone without CLONE_VM), by setjmp'ing in the

@@ -343,7 +343,7 @@ XRE_InitChildProcess(int aArgc,
 #if defined(XP_LINUX) && defined(MOZ_SANDBOX) && !defined(MOZ_WIDGET_GONK)
   // This needs to happen while we're still single-threaded.  In
   // particular, on B2G this needs to happen before the Android Binder
-  // library is started, and this is too late; it also needs
+  // library is started, which occurs before this point; it also needs
   // additional special handling for Nuwa.  See, respectively,
   // content_process_main() and AfterNuwaFork().
   mozilla::SandboxEarlyInit(XRE_GetProcessType());

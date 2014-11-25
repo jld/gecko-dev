@@ -23,7 +23,8 @@
 #endif
 
 namespace mozilla {
-// FIXME: comment
+// This must be called when the process is still single-threaded in
+// order to be able to start the sandbox on all threads later.
 MOZ_SANDBOX_EXPORT void SandboxEarlyInit(GeckoProcessType aProcType);
 
 #ifdef MOZ_CONTENT_SANDBOX
