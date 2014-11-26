@@ -20,7 +20,7 @@
 
 namespace mozilla {
 
-class UnsafeSyscallProxyImpl {
+class UnsafeSyscallProxyImpl MOZ_FINAL {
   pthread_t mThread;
   pthread_mutex_t mMutex;
   pthread_cond_t mReady, mAsked, mAnswered;
@@ -35,6 +35,32 @@ class UnsafeSyscallProxyImpl {
   long mResult;
 
   static bool IsProxiable(unsigned long aSyscall);
+
+  class AutoLockNoSignals MOZ_FINAL {
+    pthread_mutex_t* const mMutexPtr;
+    sigset_t mSigSet;
+    int mError;
+  public:
+    explicit AutoLockNoSignals(pthread_mutex_t* aMutexPtr)
+    : mMutexPtr(aMutexPtr) {
+      sigset_t allSigs;
+      sigfillset(&allSigs);
+      // If we block SIGSYS, a seccomp trap will unblock it and also
+      // reset its disposition; i.e., the process will be immediately
+      // killed instead of giving us a chance to report the error that
+      // resulted in the unexpected reentrancy.
+      sigdelset(&allSigs, SIGSYS);
+      sigprocmask(SIG_SETMASK, &allSigs, &mSigSet);
+      mError = pthread_mutex_lock(mMutexPtr);
+    }
+    ~AutoLockNoSignals() {
+      pthread_mutex_unlock(mMutexPtr);
+      sigprocmask(SIG_SETMASK, &mSigSet, nullptr);
+    }
+    operator bool() {
+      return mError == 0;
+    }
+  };
 
   void Main() {
     pthread_mutex_lock(&mMutex);
@@ -107,12 +133,13 @@ public:
       return false;
     }
 
-    if (pthread_mutex_lock(&mMutex) != 0) {
+    AutoLockNoSignals lock(&mMutex);
+    if (!lock) {
+      // FIXME: shouldn't reentrancy be impossible now?
       return false;
     }
     while (mState != READY) {
       if (mState == STOPPED) {
-	pthread_mutex_unlock(&mMutex);
 	return false;
       }
       pthread_cond_wait(&mReady, &mMutex);
@@ -128,23 +155,24 @@ public:
     *aResult = mResult;
     mState = READY;
     pthread_cond_broadcast(&mReady);
-    pthread_mutex_unlock(&mMutex);
     return true;
   }
 
   void Stop() {
-    pthread_mutex_lock(&mMutex);
-    while (mState != READY) {
-      MOZ_ASSERT(mState != STOPPED);
-      pthread_cond_wait(&mReady, &mMutex);
+    {
+      AutoLockNoSignals lock(&mMutex);
+      MOZ_ASSERT(lock);
+      while (mState != READY) {
+        MOZ_ASSERT(mState != STOPPED);
+        pthread_cond_wait(&mReady, &mMutex);
+      }
+      mSyscall = __NR_exit;
+      mState = ASKED;
+      pthread_cond_signal(&mAsked);
+      while (mState != STOPPED) {
+        pthread_cond_wait(&mReady, &mMutex);
+      }
     }
-    mSyscall = __NR_exit;
-    mState = ASKED;
-    pthread_cond_signal(&mAsked);
-    while (mState != STOPPED) {
-      pthread_cond_wait(&mReady, &mMutex);
-    }
-    pthread_mutex_unlock(&mMutex);
     pthread_join(mThread, nullptr);
   }
 };
