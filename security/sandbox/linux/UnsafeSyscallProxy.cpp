@@ -7,72 +7,51 @@
 #include "UnsafeSyscallProxy.h"
 
 #include <errno.h>
+#include <limits.h>
+#include <linux/futex.h>
 #include <pthread.h>
 #include <stdint.h>
 #include <string.h>
 #include <sys/syscall.h>
+#include <sys/time.h>
 
 #include "SandboxLogging.h"
 #include "linux_syscalls.h"
 #include "mozilla/Assertions.h"
+#include "mozilla/Atomics.h"
 #include "mozilla/NullPtr.h"
 #include "sandbox/linux/seccomp-bpf/syscall.h"
 
 namespace mozilla {
 
+static void AtomicWait(Atomic<int>& aInt, int aVal)
+{
+  static_assert(sizeof(Atomic<int>) == sizeof(int), "Atomic<int> != int");
+  int *uaddr = reinterpret_cast<int*>(&aInt);
+  sandbox::SandboxSyscall(__NR_futex, uaddr, FUTEX_WAIT, aVal);
+}
+static void AtomicWake(Atomic<int>& aInt, int aThreads = INT_MAX)
+{
+  int *uaddr = reinterpret_cast<int*>(&aInt);
+  sandbox::SandboxSyscall(__NR_futex, uaddr, FUTEX_WAKE, aThreads);
+}
+
 class UnsafeSyscallProxyImpl MOZ_FINAL {
-  pthread_t mThread;
-  pthread_mutex_t mMutex;
-  pthread_cond_t mReady, mAsked, mAnswered;
-  enum State {
-    READY,
-    ASKED,
-    ANSWERED,
-    STOPPED
-  };
-  State mState;
-  unsigned long mSyscall, mArgs[6];
-  long mResult;
-
-  static bool IsProxiable(unsigned long aSyscall);
-
-  class AutoLockNoSignals MOZ_FINAL {
-    pthread_mutex_t* const mMutexPtr;
-    sigset_t mSigSet;
-    int mError;
+  class Request {
+    mozilla::Atomic<int> mStatus;
+    enum Status { WAITING, DONE };
   public:
-    explicit AutoLockNoSignals(pthread_mutex_t* aMutexPtr)
-    : mMutexPtr(aMutexPtr) {
-      sigset_t allSigs;
-      sigfillset(&allSigs);
-      // If we block SIGSYS, a seccomp trap will unblock it and also
-      // reset its disposition; i.e., the process will be immediately
-      // killed instead of giving us a chance to report the error that
-      // resulted in the unexpected reentrancy.
-      sigdelset(&allSigs, SIGSYS);
-      sigprocmask(SIG_SETMASK, &allSigs, &mSigSet);
-      mError = pthread_mutex_lock(mMutexPtr);
-    }
-    ~AutoLockNoSignals() {
-      pthread_mutex_unlock(mMutexPtr);
-      sigprocmask(SIG_SETMASK, &mSigSet, nullptr);
-    }
-    operator bool() {
-      return mError == 0;
-    }
-  };
+    unsigned long mSyscall, mArgs[6];
+    long mResult;
 
-  void Main() {
-    pthread_mutex_lock(&mMutex);
-    while (true) {
-      while (mState != ASKED) {
-	pthread_cond_wait(&mAsked, &mMutex);
+    Request() : mStatus(WAITING) { }
+
+    void Wait() {
+      while (mStatus == WAITING) {
+        AtomicWait(mStatus, WAITING);
       }
-      if (mSyscall == __NR_exit) {
-	mState = STOPPED;
-	pthread_cond_broadcast(&mReady);
-	break;
-      }
+    }
+    void Perform() {
       static_assert(sizeof(long) == sizeof(intptr_t), "long != intptr_t");
       long result = sandbox::SandboxSyscall(mSyscall,
 					    mArgs[0],
@@ -82,10 +61,50 @@ class UnsafeSyscallProxyImpl MOZ_FINAL {
 					    mArgs[4],
 					    mArgs[5]);
       mResult = static_cast<long>(result);
-      mState = ANSWERED;
-      pthread_cond_signal(&mAnswered);
+      Done();
     }
-    pthread_mutex_unlock(&mMutex);
+    void Done() {
+      mStatus = DONE;
+      AtomicWake(mStatus);
+    }
+  };
+
+  pthread_t mThread;
+  // FIXME: could separate the client->server and server->client wakeups.
+  mozilla::Atomic<int> mStatus;
+  mozilla::Atomic<Request*> mRequest;
+
+  enum State {
+    READY,
+    ASKING,
+    WORKING,
+    STOPPED,
+  };
+
+  static bool IsProxiable(unsigned long aSyscall);
+
+  void Main() {
+    while (true) {
+      while (true) {
+        int status = mStatus;
+        MOZ_ASSERT(status != STOPPED);
+        if (status == WORKING) {
+          break;
+        }
+        AtomicWait(mStatus, status);
+      }
+      Request *request = mRequest.exchange(nullptr);
+      MOZ_ASSERT(request);
+      if (request->mSyscall == __NR_exit) {
+	mStatus = STOPPED;
+	AtomicWake(mStatus);
+        request->Done();
+	break;
+      }
+      mStatus = READY;
+      AtomicWake(mStatus);
+      request->Perform();
+    }
   }
 
   static void* ThreadStart(void *aPtr) {
@@ -93,87 +112,66 @@ class UnsafeSyscallProxyImpl MOZ_FINAL {
     return nullptr;
   }
 
-public:
-  UnsafeSyscallProxyImpl() {
-    mState = STOPPED;
-    pthread_mutexattr_t attr;
-    pthread_mutexattr_init(&attr);
-    pthread_mutexattr_settype(&attr, PTHREAD_MUTEX_ERRORCHECK);
-    pthread_mutex_init(&mMutex, &attr);
-    pthread_mutexattr_destroy(&attr);
-    pthread_cond_init(&mReady, nullptr);
-    pthread_cond_init(&mAsked, nullptr);
-    pthread_cond_init(&mAnswered, nullptr);
+  bool CallInternal(unsigned long aSyscall, const unsigned long aArgs[6],
+                    long *aResult) {
+    while (true) {
+      int status = mStatus;
+      if (status == STOPPED) {
+        return false;
+      }
+      if (status == READY) {
+        if (mStatus.compareExchange(READY, ASKING)) {
+          break;
+        }
+        continue;
+      }
+      AtomicWait(mStatus, status);
+    }
+
+    Request request;
+    request.mSyscall = aSyscall;
+    memcpy(request.mArgs, aArgs, sizeof(request.mArgs));
+    MOZ_ASSERT(!mRequest);
+    mRequest = &request;
+    mStatus = WORKING;
+    AtomicWake(mStatus);
+    request.Wait();
+    *aResult = request.mResult;
+    return true;
   }
 
+public:
+  UnsafeSyscallProxyImpl() : mStatus(STOPPED), mRequest(nullptr) { }
+
   ~UnsafeSyscallProxyImpl() {
-    MOZ_ASSERT(mState == STOPPED);
-    pthread_cond_destroy(&mReady);
-    pthread_cond_destroy(&mAsked);
-    pthread_cond_destroy(&mAnswered);
-    pthread_mutex_destroy(&mMutex);
+    MOZ_ASSERT(mStatus == STOPPED);
+    MOZ_ASSERT(mRequest == nullptr);
   }
 
   bool Start(void) {
-    MOZ_ASSERT(mState == STOPPED);
-    mState = READY;
+    MOZ_ASSERT(mStatus == STOPPED);
+    mStatus = READY;
     bool ok = pthread_create(&mThread, nullptr,
                              ThreadStart, static_cast<void*>(this)) == 0;
     if (!ok) {
-      mState = STOPPED;
+      mStatus = STOPPED;
     }
     return ok;
   }
 
   bool Call(unsigned long aSyscall, const unsigned long aArgs[6],
 	    long *aResult) {
-    if (!IsProxiable(aSyscall)) {
-      // NOTE: returning an error code is also possible, if there's a
-      // case that can't be dealt with any other way.
-      return false;
-    }
-
-    AutoLockNoSignals lock(&mMutex);
-    if (!lock) {
-      // FIXME: shouldn't reentrancy be impossible now?
-      return false;
-    }
-    while (mState != READY) {
-      if (mState == STOPPED) {
-	return false;
-      }
-      pthread_cond_wait(&mReady, &mMutex);
-    }
-    mSyscall = aSyscall;
-    memcpy(mArgs, aArgs, sizeof(mArgs));
-    mState = ASKED;
-    pthread_cond_signal(&mAsked);
-    while (mState == ASKED) {
-      pthread_cond_wait(&mAnswered, &mMutex);
-    }
-    MOZ_ASSERT(mState == ANSWERED);
-    *aResult = mResult;
-    mState = READY;
-    pthread_cond_broadcast(&mReady);
-    return true;
+    // Note: the IsProxiable test could be expanded to allow returning
+    // an error, if there's a case where that's the best fix.
+    return IsProxiable(aSyscall) && CallInternal(aSyscall, aArgs, aResult);
   }
 
   void Stop() {
-    {
-      AutoLockNoSignals lock(&mMutex);
-      MOZ_ASSERT(lock);
-      while (mState != READY) {
-        MOZ_ASSERT(mState != STOPPED);
-        pthread_cond_wait(&mReady, &mMutex);
-      }
-      mSyscall = __NR_exit;
-      mState = ASKED;
-      pthread_cond_signal(&mAsked);
-      while (mState != STOPPED) {
-        pthread_cond_wait(&mReady, &mMutex);
-      }
-    }
-    pthread_join(mThread, nullptr);
+    unsigned long args[6] = { 0, };
+    long result;
+    CallInternal(__NR_exit, args, &result);
+    MOZ_ASSERT(mStatus == STOPPED);
+    MOZ_ASSERT(mRequest == nullptr);
   }
 };
 
