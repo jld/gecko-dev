@@ -10,15 +10,18 @@
 #include <limits.h>
 #include <linux/futex.h>
 #include <pthread.h>
+#include <signal.h>
 #include <stdint.h>
 #include <string.h>
 #include <sys/syscall.h>
 #include <sys/time.h>
+#include <unistd.h>
 
 #include "SandboxLogging.h"
 #include "linux_syscalls.h"
 #include "mozilla/Assertions.h"
 #include "mozilla/Atomics.h"
+#include "mozilla/DebugOnly.h"
 #include "mozilla/NullPtr.h"
 #include "sandbox/linux/seccomp-bpf/syscall.h"
 
@@ -28,58 +31,85 @@ static void AtomicWait(Atomic<int>& aInt, int aVal)
 {
   static_assert(sizeof(Atomic<int>) == sizeof(int), "Atomic<int> != int");
   int *uaddr = reinterpret_cast<int*>(&aInt);
-  sandbox::SandboxSyscall(__NR_futex, uaddr, FUTEX_WAIT, aVal);
+  syscall(__NR_futex, uaddr, FUTEX_WAIT, aVal);
 }
 static void AtomicWake(Atomic<int>& aInt, int aThreads = INT_MAX)
 {
   int *uaddr = reinterpret_cast<int*>(&aInt);
-  sandbox::SandboxSyscall(__NR_futex, uaddr, FUTEX_WAKE, aThreads);
+  syscall(__NR_futex, uaddr, FUTEX_WAKE, aThreads);
 }
 
 class UnsafeSyscallProxyImpl MOZ_FINAL {
-  class Request {
-    mozilla::Atomic<int> mStatus;
-    enum Status { WAITING, DONE };
-  public:
-    unsigned long mSyscall, mArgs[6];
-    long mResult;
-
-    Request() : mStatus(WAITING) { }
-
-    void Wait() {
-      while (mStatus == WAITING) {
-        AtomicWait(mStatus, WAITING);
-      }
-    }
-    void Perform() {
-      static_assert(sizeof(long) == sizeof(intptr_t), "long != intptr_t");
-      long result = sandbox::SandboxSyscall(mSyscall,
-					    mArgs[0],
-					    mArgs[1],
-					    mArgs[2],
-					    mArgs[3],
-					    mArgs[4],
-					    mArgs[5]);
-      mResult = static_cast<long>(result);
-      Done();
-    }
-    void Done() {
-      mStatus = DONE;
-      AtomicWake(mStatus);
-    }
-  };
-
   pthread_t mThread;
-  // FIXME: could separate the client->server and server->client wakeups.
+  mozilla::Atomic<int> mCurrentClient;
   mozilla::Atomic<int> mStatus;
-  mozilla::Atomic<Request*> mRequest;
+  unsigned long mSyscall, mArgs[6];
+  long mResult;
 
-  enum State {
+  enum Status {
     READY,
-    ASKING,
     WORKING,
     STOPPED,
   };
+
+  class BlockSignals {
+    sigset_t mOldMask;
+  public:
+    BlockSignals() {
+      sigset_t newMask;
+      sigfillset(&newMask);
+      sigdelset(&newMask, SIGSYS);
+      sigprocmask(SIG_SETMASK, &newMask, &mOldMask);
+    }
+    ~BlockSignals() {
+      sigprocmask(SIG_SETMASK, &mOldMask, nullptr);
+    }
+  };
+
+  friend class CurrentClient;
+  class CurrentClient {
+    BlockSignals mBlock;
+    UnsafeSyscallProxyImpl* const mProxy;
+    bool locked;
+  public:
+    CurrentClient(UnsafeSyscallProxyImpl *aProxy) : mProxy(aProxy) {
+      static_assert(sizeof(pid_t) <= sizeof(int),
+                    "pid_t must be storable as int");
+      int self = syscall(__NR_gettid);
+      while (true) {
+        int other = mProxy->mCurrentClient;
+        if (other == self) {
+          // reentrancy; fail
+          locked = false;
+          return;
+        }
+        if (other == 0 && mProxy->mCurrentClient.compareExchange(0, self)) {
+          locked = true;
+          break;
+        }
+        AtomicWait(mProxy->mCurrentClient, other);
+      }
+    }
+    ~CurrentClient() {
+      if (locked) {
+        mProxy->mCurrentClient = 0;
+        AtomicWake(mProxy->mCurrentClient);
+      }
+    }
+    operator bool() const { return locked; }
+  };
+
+  void Perform() {
+    static_assert(sizeof(long) == sizeof(intptr_t), "long != intptr_t");
+    long result = sandbox::SandboxSyscall(mSyscall,
+                                          mArgs[0],
+                                          mArgs[1],
+                                          mArgs[2],
+                                          mArgs[3],
+                                          mArgs[4],
+                                          mArgs[5]);
+    mResult = static_cast<long>(result);
+  }
 
   static bool IsProxiable(unsigned long aSyscall);
 
@@ -93,17 +123,14 @@ class UnsafeSyscallProxyImpl MOZ_FINAL {
         }
         AtomicWait(mStatus, status);
       }
-      Request *request = mRequest.exchange(nullptr);
-      MOZ_ASSERT(request);
-      if (request->mSyscall == __NR_exit) {
+      if (mSyscall == __NR_exit) {
 	mStatus = STOPPED;
-	AtomicWake(mStatus);
-        request->Done();
+	AtomicWake(mStatus, 1);
 	break;
       }
+      Perform();
       mStatus = READY;
-      AtomicWake(mStatus);
-      request->Perform();
+      AtomicWake(mStatus, 1);
     }
   }
 
@@ -113,39 +140,41 @@ class UnsafeSyscallProxyImpl MOZ_FINAL {
   }
 
   bool CallInternal(unsigned long aSyscall, const unsigned long aArgs[6],
-                    long *aResult) {
+                    long *aResult, mozilla::DebugOnly<int> aExpected) {
+    if (mStatus == STOPPED) {
+      return false;
+    }
+    CurrentClient lock(this);
+    if (!lock) {
+      return false;
+    }
+    if (mStatus == STOPPED) {
+      return false;
+    }
+    MOZ_ASSERT(mStatus == READY);
+
+    mSyscall = aSyscall;
+    memcpy(mArgs, aArgs, sizeof(mArgs));
+    mStatus = WORKING;
+    AtomicWake(mStatus, 1);
     while (true) {
       int status = mStatus;
-      if (status == STOPPED) {
-        return false;
-      }
-      if (status == READY) {
-        if (mStatus.compareExchange(READY, ASKING)) {
-          break;
-        }
-        continue;
+      if (status != WORKING) {
+        MOZ_ASSERT(status == aExpected);
+        break;
       }
       AtomicWait(mStatus, status);
     }
+    *aResult = mResult;
 
-    Request request;
-    request.mSyscall = aSyscall;
-    memcpy(request.mArgs, aArgs, sizeof(request.mArgs));
-    MOZ_ASSERT(!mRequest);
-    mRequest = &request;
-    mStatus = WORKING;
-    AtomicWake(mStatus);
-    request.Wait();
-    *aResult = request.mResult;
     return true;
   }
 
 public:
-  UnsafeSyscallProxyImpl() : mStatus(STOPPED), mRequest(nullptr) { }
+  UnsafeSyscallProxyImpl() : mCurrentClient(0), mStatus(STOPPED) { }
 
   ~UnsafeSyscallProxyImpl() {
     MOZ_ASSERT(mStatus == STOPPED);
-    MOZ_ASSERT(mRequest == nullptr);
   }
 
   bool Start(void) {
@@ -163,15 +192,14 @@ public:
 	    long *aResult) {
     // Note: the IsProxiable test could be expanded to allow returning
     // an error, if there's a case where that's the best fix.
-    return IsProxiable(aSyscall) && CallInternal(aSyscall, aArgs, aResult);
+    return IsProxiable(aSyscall) &&
+      CallInternal(aSyscall, aArgs, aResult, READY);
   }
 
-  void Stop() {
+  bool Stop() {
     unsigned long args[6] = { 0, };
-    long result;
-    CallInternal(__NR_exit, args, &result);
-    MOZ_ASSERT(mStatus == STOPPED);
-    MOZ_ASSERT(mRequest == nullptr);
+    long result; // deliberately unused
+    return CallInternal(__NR_exit, args, &result, STOPPED);
   }
 };
 
@@ -256,12 +284,8 @@ UnsafeSyscallProxy::Start()
 bool
 UnsafeSyscallProxy::Stop()
 {
-  if (!mImpl) {
-    return false;
-  }
-  mImpl->Stop();
-  // Not freed, because Call() can still happen.
-  return true;
+  // mImpl isn't freed here; Call() can happen later, or concurrently.
+  return mImpl && mImpl->Stop();
 }
 
 bool
