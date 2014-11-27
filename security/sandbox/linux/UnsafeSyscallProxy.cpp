@@ -25,33 +25,83 @@
 #include "mozilla/NullPtr.h"
 #include "sandbox/linux/seccomp-bpf/syscall.h"
 
+// See UnsafeSyscallProxy.h for why this exists.
+
+// The client side of this module needs to be async signal safe,
+// because the syscall it's proxying could validly be taking place in
+// async signal context (e.g., open).  Since there's no reliable way
+// to check for async signal context, we have to handle it.
+//
+// In particular, this means that the pthread mutex/condvar facilities
+// cannot be used.  They can use global or thread-local state (and at
+// least glibc appears to so), which could be inconsistent if *any*
+// synchronization operation, even on an unrelated mutex, is
+// interrupted.
+//
+// Therefore, atomic integers are used, with the help of futex(2) to
+// allow blocking rather than just spin-waiting, and sigprocmask(2) to
+// manage reentrancy (so that this code doesn't have to be "NMI-safe").
+
 namespace mozilla {
 
+// Atomically test that aInt contains aVal and, if so, block.
 static void AtomicWait(Atomic<int>& aInt, int aVal)
 {
   static_assert(sizeof(Atomic<int>) == sizeof(int), "Atomic<int> != int");
   int *uaddr = reinterpret_cast<int*>(&aInt);
-  syscall(__NR_futex, uaddr, FUTEX_WAIT, aVal);
+  const struct timespec* timeout = nullptr;
+  syscall(__NR_futex, uaddr, FUTEX_WAIT, aVal, timeout);
 }
-static void AtomicWake(Atomic<int>& aInt, int aThreads = INT_MAX)
+
+// Unblock any threads calling AtomicWait on aInt.  The optional
+// argument aNumThreads allows limiting the number of threads woken up
+// to avoid "thundering herds"; this is probably not important here.
+static void AtomicWake(Atomic<int>& aInt, int aNumThreads = INT_MAX)
 {
   int *uaddr = reinterpret_cast<int*>(&aInt);
-  syscall(__NR_futex, uaddr, FUTEX_WAKE, aThreads);
+  syscall(__NR_futex, uaddr, FUTEX_WAKE, aNumThreads);
 }
 
 class UnsafeSyscallProxyImpl MOZ_FINAL {
   pthread_t mThread;
-  mozilla::Atomic<int> mCurrentClient;
-  mozilla::Atomic<int> mStatus;
+  // mCurrentClient contains the ID of the thread currently
+  // communicating with the proxy, or 0 if none.  This acts as a
+  // simple mutex which allows detecting reentrancy.
+  Atomic<int> mCurrentClient;
+  // mStatus holds a value from enum Status; see below.  Only the
+  // proxy thread and the current client should modify it.  (Any
+  // client may test if it is STOPPED.)
+  Atomic<int> mStatus;
+  // The state for the syscall currently being proxied.  If the status
+  // is READY, then the current client may access these fields; if the
+  // status is WORKING, then the proxy thread may access them.  As a
+  // special case, if mSyscall is __NR_exit (terminate current thread,
+  // which can't be proxied) then this is a request to the proxy
+  // thread to enter the STOPPED state and exit.
   unsigned long mSyscall, mArgs[6];
   long mResult;
 
   enum Status {
+    // READY: The proxy is ready to receive a syscall request; if a
+    // client is holding mCurrentClient, it may access the
+    // argument/result state.
     READY,
+    // WORKING: The proxy is performing a syscall request; it may
+    // access the argument/result state, and mCurrentClient must be
+    // nonzero.
     WORKING,
+    // STOPPED: The proxy thread is not running (or is in the process
+    // of exiting).
     STOPPED,
   };
 
+  // A RAII class to temporarily block most signals.  This does not
+  // block SIGSYS, because if we somehow caused a seccomp trap to
+  // occur in that state then the kernel would both unblock the signal
+  // and remove our handler before posting the signal, thus
+  // immediately killing the process.  It's better to leave it
+  // unblocked and detect the reentrant invocation of the syscall
+  // proxy client, so we have a chance to report the error.
   class BlockSignals {
     sigset_t mOldMask;
   public:
@@ -66,13 +116,22 @@ class UnsafeSyscallProxyImpl MOZ_FINAL {
     }
   };
 
+  // A RAII class to take the lock implemented by mCurrentClient; also
+  // blocks signals other than SIGSYS, so reentrancy is always an
+  // error.  Can fail if acquired recursively (see above re why SIGSYS
+  // is unblocked); this is indicated via operator bool.
   friend class CurrentClient;
   class CurrentClient {
+    // Note: ctor/dtor order matters.  If signals aren't blocked for
+    // the entire time mCurrentClient is held, then an async signal
+    // handler could try to use the proxy and fail due to reentrancy
+    // when it should have succeeded (due to not being handled until
+    // the outer invocation was finished).
     BlockSignals mBlock;
     UnsafeSyscallProxyImpl* const mProxy;
-    bool locked;
+    bool mLocked;
   public:
-    CurrentClient(UnsafeSyscallProxyImpl *aProxy) : mProxy(aProxy) {
+    explicit CurrentClient(UnsafeSyscallProxyImpl *aProxy) : mProxy(aProxy) {
       static_assert(sizeof(pid_t) <= sizeof(int),
                     "pid_t must be storable as int");
       int self = syscall(__NR_gettid);
@@ -80,25 +139,26 @@ class UnsafeSyscallProxyImpl MOZ_FINAL {
         int other = mProxy->mCurrentClient;
         if (other == self) {
           // reentrancy; fail
-          locked = false;
+          mLocked = false;
           return;
         }
         if (other == 0 && mProxy->mCurrentClient.compareExchange(0, self)) {
-          locked = true;
+          mLocked = true;
           break;
         }
         AtomicWait(mProxy->mCurrentClient, other);
       }
     }
     ~CurrentClient() {
-      if (locked) {
+      if (mLocked) {
         mProxy->mCurrentClient = 0;
-        AtomicWake(mProxy->mCurrentClient);
+        AtomicWake(mProxy->mCurrentClient, 1);
       }
     }
-    operator bool() const { return locked; }
+    operator bool() const { return mLocked; }
   };
 
+  // FIXME: could this just use the plain syscall()?
   void Perform() {
     static_assert(sizeof(long) == sizeof(intptr_t), "long != intptr_t");
     long result = sandbox::SandboxSyscall(mSyscall,
@@ -111,10 +171,10 @@ class UnsafeSyscallProxyImpl MOZ_FINAL {
     mResult = static_cast<long>(result);
   }
 
-  static bool IsProxiable(unsigned long aSyscall);
-
+  // The proxy thread.
   void Main() {
     while (true) {
+      // Wait until WORKING.
       while (true) {
         int status = mStatus;
         MOZ_ASSERT(status != STOPPED);
@@ -123,14 +183,15 @@ class UnsafeSyscallProxyImpl MOZ_FINAL {
         }
         AtomicWait(mStatus, status);
       }
+      // Handle request or exit, as appropriate.
       if (mSyscall == __NR_exit) {
 	mStatus = STOPPED;
-	AtomicWake(mStatus, 1);
+	AtomicWake(mStatus);
 	break;
       }
       Perform();
       mStatus = READY;
-      AtomicWake(mStatus, 1);
+      AtomicWake(mStatus);
     }
   }
 
@@ -139,8 +200,9 @@ class UnsafeSyscallProxyImpl MOZ_FINAL {
     return nullptr;
   }
 
+  // Shared between Call() and Stop(); see above re __NR_exit.
   bool CallInternal(unsigned long aSyscall, const unsigned long aArgs[6],
-                    long *aResult, mozilla::DebugOnly<int> aExpected) {
+                    long *aResult, DebugOnly<int> aExpected) {
     if (mStatus == STOPPED) {
       return false;
     }
@@ -156,7 +218,7 @@ class UnsafeSyscallProxyImpl MOZ_FINAL {
     mSyscall = aSyscall;
     memcpy(mArgs, aArgs, sizeof(mArgs));
     mStatus = WORKING;
-    AtomicWake(mStatus, 1);
+    AtomicWake(mStatus);
     while (true) {
       int status = mStatus;
       if (status != WORKING) {
@@ -169,6 +231,8 @@ class UnsafeSyscallProxyImpl MOZ_FINAL {
 
     return true;
   }
+
+  static bool IsProxiable(unsigned long aSyscall);
 
 public:
   UnsafeSyscallProxyImpl() : mCurrentClient(0), mStatus(STOPPED) { }
@@ -200,6 +264,11 @@ public:
     unsigned long args[6] = { 0, };
     long result; // deliberately unused
     return CallInternal(__NR_exit, args, &result, STOPPED);
+    // FIXME 1: use pthread_join; this shouldn't return until the
+    // thread is fully dead and can't be used for privesc.
+    //
+    // FIXME 2: pthread_join isn't enough on buggy systems like
+    // Android (before L).
   }
 };
 
