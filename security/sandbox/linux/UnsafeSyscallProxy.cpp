@@ -337,7 +337,7 @@ UnsafeSyscallProxyImpl::IsProxiable(unsigned long aSyscall)
   case __NR_capset:
   case __NR_gettid:
   case __NR_futex:
-#ifdef __NR_set_thread_area:
+#ifdef __NR_set_thread_area
   case __NR_set_thread_area:
   case __NR_get_thread_area:
 #endif
