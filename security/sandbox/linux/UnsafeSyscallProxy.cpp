@@ -157,7 +157,6 @@ class UnsafeSyscallProxyImpl MOZ_FINAL {
     operator bool() const { return mLocked; }
   };
 
-  // FIXME: could this just use the plain syscall()?
   void Perform() {
     static_assert(sizeof(long) == sizeof(intptr_t), "long != intptr_t");
     long result = syscall(mSyscall, mArgs[0], mArgs[1], mArgs[2], mArgs[3],
