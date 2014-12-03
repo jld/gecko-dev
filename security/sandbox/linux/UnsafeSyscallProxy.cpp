@@ -308,8 +308,10 @@ UnsafeSyscallProxyImpl::IsProxiable(unsigned long aSyscall)
   case __NR_sched_rr_get_interval:
   case __NR_sched_setaffinity:
   case __NR_sched_getaffinity:
+#ifdef __NR_sched_setattr
   case __NR_sched_setattr:
   case __NR_sched_getattr:
+#endif
   case __NR_clone:
   case __NR_fork:
   case __NR_vfork:
@@ -335,8 +337,10 @@ UnsafeSyscallProxyImpl::IsProxiable(unsigned long aSyscall)
   case __NR_capset:
   case __NR_gettid:
   case __NR_futex:
-  case __NR_get_thread_area:
+#ifdef __NR_set_thread_area:
   case __NR_set_thread_area:
+  case __NR_get_thread_area:
+#endif
   case __NR_set_tid_address:
   case __NR_get_robust_list:
   case __NR_set_robust_list:
