@@ -41,6 +41,10 @@
 // allow blocking rather than just spin-waiting, and sigprocmask(2) to
 // manage reentrancy (so that this code doesn't have to be "NMI-safe").
 
+#if defined(ANDROID) && ANDROID_VERSION < 21
+#define HAVE_BROKEN_PTHREAD_JOIN
+#endif
+
 namespace mozilla {
 
 // Atomically test that aInt contains aVal and, if so, block.
@@ -79,6 +83,9 @@ class UnsafeSyscallProxyImpl MOZ_FINAL {
   // thread to enter the STOPPED state and exit.
   unsigned long mSyscall, mArgs[6];
   long mResult;
+#ifdef HAVE_BROKEN_PTHREAD_JOIN
+  Atomic<int> mThreadID;
+#endif
 
   enum Status {
     // READY: The proxy is ready to receive a syscall request; if a
@@ -166,6 +173,13 @@ class UnsafeSyscallProxyImpl MOZ_FINAL {
 
   // The proxy thread.
   void Main() {
+#ifdef HAVE_BROKEN_PTHREAD_JOIN
+    mThreadID = syscall(__NR_set_tid_address,
+                        reinterpret_cast<int*>(&mThreadID));
+    if (mThreadID <= 0) {
+      MOZ_CRASH("set_tid_address failed");
+    }
+#endif
     while (true) {
       // Wait until WORKING.
       while (true) {
@@ -228,7 +242,13 @@ class UnsafeSyscallProxyImpl MOZ_FINAL {
   static bool IsProxiable(unsigned long aSyscall);
 
 public:
-  UnsafeSyscallProxyImpl() : mCurrentClient(0), mStatus(STOPPED) { }
+  UnsafeSyscallProxyImpl()
+  : mCurrentClient(0)
+  , mStatus(STOPPED)
+#ifdef HAVE_BROKEN_PTHREAD_JOIN
+  , mThreadID(0)
+#endif
+  { }
 
   ~UnsafeSyscallProxyImpl() {
     MOZ_ASSERT(mStatus == STOPPED);
@@ -264,8 +284,16 @@ public:
     if (pthread_join(mThread, nullptr) != 0) {
       return false;
     }
-    // FIXME: pthread_join isn't enough on buggy systems like
-    // Android (before L).
+#ifdef HAVE_BROKEN_PTHREAD_JOIN
+    pid_t tid;
+    while (true) {
+      tid = mThreadID;
+      if (tid == 0) {
+        break;
+      }
+      AtomicWait(mThreadID, tid);
+    }
+#endif
     return true;
   }
 };
