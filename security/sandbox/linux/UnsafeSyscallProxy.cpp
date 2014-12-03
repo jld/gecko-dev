@@ -263,12 +263,17 @@ public:
   bool Stop() {
     unsigned long args[6] = { 0, };
     long result; // deliberately unused
-    return CallInternal(__NR_exit, args, &result, STOPPED);
-    // FIXME 1: use pthread_join; this shouldn't return until the
-    // thread is fully dead and can't be used for privesc.
-    //
-    // FIXME 2: pthread_join isn't enough on buggy systems like
+    // FIXME: NS_WARN_IF or otherwise indicate what broke.
+    // Or just crash, if the failure is unexpected?
+    if (!CallInternal(__NR_exit, args, &result, STOPPED)) {
+      return false;
+    }
+    if (pthread_join(mThread, nullptr) != 0) {
+      return false;
+    }
+    // FIXME: pthread_join isn't enough on buggy systems like
     // Android (before L).
+    return true;
   }
 };
 
