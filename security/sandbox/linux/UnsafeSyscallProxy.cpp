@@ -23,7 +23,6 @@
 #include "mozilla/Atomics.h"
 #include "mozilla/DebugOnly.h"
 #include "mozilla/NullPtr.h"
-#include "sandbox/linux/seccomp-bpf/syscall.h"
 
 // See UnsafeSyscallProxy.h for why this exists.
 
@@ -161,13 +160,8 @@ class UnsafeSyscallProxyImpl MOZ_FINAL {
   // FIXME: could this just use the plain syscall()?
   void Perform() {
     static_assert(sizeof(long) == sizeof(intptr_t), "long != intptr_t");
-    long result = sandbox::SandboxSyscall(mSyscall,
-                                          mArgs[0],
-                                          mArgs[1],
-                                          mArgs[2],
-                                          mArgs[3],
-                                          mArgs[4],
-                                          mArgs[5]);
+    long result = syscall(mSyscall, mArgs[0], mArgs[1], mArgs[2], mArgs[3],
+                          mArgs[4], mArgs[5]);
     mResult = static_cast<long>(result);
   }
 
