@@ -12,12 +12,17 @@
 #include <errno.h>
 #include <fcntl.h>
 #include <pthread.h>
+#include <stdlib.h>
+#include <sched.h>
+#include <semaphore.h>
 #include <sys/stat.h>
 #include <sys/types.h>
+#include <time.h>
 #include <unistd.h>
 
 #include "mozilla/Atomics.h"
 #include "mozilla/NullPtr.h"
+#include "mozilla/PodOperations.h"
 #include "mozilla/UniquePtr.h"
 #include "mozilla/ipc/FileDescriptor.h"
 
@@ -274,5 +279,176 @@ void SandboxBrokerTest::MultiThreadStatWorker() {
       << "Loop " << i << "/" << kNumLoops;
   }
 }
+
+#if 0
+class SandboxBrokerSigStress : public SandboxBrokerTest
+{
+  int mSigNum;
+  struct sigaction mOldAction;
+  Atomic<void*> mVoidPtr;
+
+  static void SigHandler(int aSigNum, siginfo_t* aSigInfo, void *aCtx) {
+    ASSERT_EQ(SI_QUEUE, aSigInfo->si_code);
+    SandboxBrokerSigStress* that =
+      static_cast<SandboxBrokerSigStress*>(aSigInfo->si_value.sival_ptr);
+    ASSERT_EQ(that->mSigNum, aSigNum);
+    that->DoSomething();
+  }
+
+protected:
+  Atomic<int> mTestIter;
+  sem_t mSemaphore;
+
+  void SignalThread(pthread_t aThread) {
+    union sigval sv;
+    sv.sival_ptr = this;
+    ASSERT_NE(0, mSigNum);
+    ASSERT_EQ(0, pthread_sigqueue(aThread, mSigNum, sv));
+  }
+
+  virtual void SetUp() {
+    ASSERT_EQ(0, sem_init(&mSemaphore, 0, 0));
+    mVoidPtr = nullptr;
+    mSigNum = 0;
+    for (int sigNum = SIGRTMIN; sigNum < SIGRTMAX; ++sigNum) {
+      ASSERT_EQ(0, sigaction(sigNum, nullptr, &mOldAction));
+      if ((mOldAction.sa_flags & SA_SIGINFO) == 0 &&
+          mOldAction.sa_handler == SIG_DFL) {
+        struct sigaction newAction;
+        PodZero(&newAction);
+        newAction.sa_flags = SA_SIGINFO;
+        newAction.sa_sigaction = SigHandler;
+        ASSERT_EQ(0, sigaction(sigNum, &newAction, nullptr));
+        mSigNum = sigNum;
+        break;
+      }
+    }
+    ASSERT_NE(mSigNum, 0);
+
+    SandboxBrokerTest::SetUp();
+  }
+
+  virtual void TearDown() {
+    ASSERT_EQ(0, sem_destroy(&mSemaphore));
+    if (mSigNum != 0) {
+      ASSERT_EQ(0, sigaction(mSigNum, &mOldAction, nullptr));
+    }
+    if (mVoidPtr) {
+      free(mVoidPtr);
+    }
+  }
+
+  void DoSomething();
+
+public:
+  void MallocWorker();
+  void FreeWorker();
+};
+
+TEST_F(SandboxBrokerSigStress, StressTest)
+{
+  static const int kIters = 6250;
+  static const int kNsecPerIterPerIter = 4;
+  struct timespec delay = { 0, 0 };
+  pthread_t threads[2];
+
+  mTestIter = kIters;
+
+  StartThread<SandboxBrokerSigStress,
+              &SandboxBrokerSigStress::MallocWorker>(&threads[0]);
+  StartThread<SandboxBrokerSigStress,
+              &SandboxBrokerSigStress::FreeWorker>(&threads[1]);
+
+  for (int i = kIters; i > 0; --i) {
+    SignalThread(threads[i % 2]);
+    while (sem_wait(&mSemaphore) == -1 && errno == EINTR)
+      /* retry */;
+    ASSERT_EQ(i - 1, mTestIter);
+    delay.tv_nsec += kNsecPerIterPerIter;
+    struct timespec req = delay, rem;
+    while (nanosleep(&req, &rem) == -1 && errno == EINTR) {
+      req = rem;
+    }
+  }
+  void *retval;
+  ASSERT_EQ(0, pthread_join(threads[0], &retval));
+  ASSERT_EQ(nullptr, retval);
+  ASSERT_EQ(0, pthread_join(threads[1], &retval));
+  ASSERT_EQ(nullptr, retval);
+}
+
+void
+SandboxBrokerSigStress::MallocWorker()
+{
+  static const size_t kSize = 64;
+
+  void* mem = malloc(kSize);
+  while (mTestIter > 0) {
+    ASSERT_NE(mem, mVoidPtr);
+    mem = mVoidPtr.exchange(mem);
+    if (mem) {
+      sched_yield();
+    } else {
+      mem = malloc(kSize);
+    }
+  }
+  if (mem) {
+    free(mem);
+  }
+}
+
+void
+SandboxBrokerSigStress::FreeWorker()
+{
+  void *mem = nullptr;
+  while (mTestIter > 0) {
+    mem = mVoidPtr.exchange(mem);
+    if (mem) {
+      free(mem);
+      mem = nullptr;
+    } else {
+      sched_yield();
+    }
+  }
+}
+
+void
+SandboxBrokerSigStress::DoSomething()
+{
+  int fd;
+  char c;
+  struct stat st;
+
+  //fprintf(stderr, "Don't try this at home: %d\n", static_cast<int>(mTestIter));
+  switch (mTestIter % 5) {
+  case 0:
+    fd = Open("/dev/null", O_RDWR);
+    ASSERT_GE(fd, 0);
+    ASSERT_EQ(0, read(fd, &c, 1));
+    close(fd);
+    break;
+  case 1:
+    fd = Open("/dev/zero", O_RDONLY);
+    ASSERT_GE(fd, 0);
+    ASSERT_EQ(1, read(fd, &c, 1));
+    ASSERT_EQ('\0', c);
+    close(fd);
+    break;
+  case 2:
+    ASSERT_EQ(0, Access("/dev/null", W_OK));
+    break;
+  case 3:
+    ASSERT_EQ(0, Stat("/proc/self", &st));
+    ASSERT_TRUE(S_ISDIR(st.st_mode));
+    break;
+  case 4:
+    ASSERT_EQ(0, LStat("/proc/self", &st));
+    ASSERT_TRUE(S_ISLNK(st.st_mode));
+    break;
+  }
+  mTestIter--;
+  sem_post(&mSemaphore);
+}
+#endif
 
 } // namespace mozilla
