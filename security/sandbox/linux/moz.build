@@ -58,3 +58,8 @@ DIRS += [
     'common',
     'glue',
 ]
+
+if CONFIG['ENABLE_TESTS']:
+    DIRS += [
+        'gtest',
+    ]
