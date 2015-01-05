@@ -136,7 +136,7 @@ public:
     void CleanUpSandboxEnvironment();
 #endif
 
-    virtual bool RecvSetProcessSandbox() MOZ_OVERRIDE;
+    virtual bool RecvSetProcessSandbox(const MaybeFileDesc& aBroker) MOZ_OVERRIDE;
 
     PBackgroundChild*
     AllocPBackgroundChild(Transport* aTransport, ProcessId aOtherProcess)

@@ -1,0 +1,27 @@
+# -*- Mode: python; python-indent: 4; indent-tabs-mode: nil; tab-width: 40 -*-
+# vim: set filetype=python:
+# This Source Code Form is subject to the terms of the Mozilla Public
+# License, v. 2.0. If a copy of the MPL was not distributed with this
+# file, You can obtain one at http://mozilla.org/MPL/2.0/.
+
+FAIL_ON_WARNINGS = True
+
+EXPORTS.mozilla += [
+    'SandboxBroker.h',
+    'SandboxBrokerCommon.h',
+    'SandboxBrokerPolicy.h',
+]
+
+SOURCES += [
+    'SandboxBroker.cpp',
+    'SandboxBrokerCommon.cpp',
+    'SandboxBrokerPolicy.cpp',
+]
+
+LOCAL_INCLUDES += [
+    '/security/sandbox/linux/broker',
+]
+
+include('/ipc/chromium/chromium-config.mozbuild')
+
+FINAL_LIBRARY = 'xul'

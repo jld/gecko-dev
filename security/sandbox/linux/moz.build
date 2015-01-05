@@ -24,8 +24,10 @@ SOURCES += [
     '../chromium/sandbox/linux/seccomp-bpf/codegen.cc',
     '../chromium/sandbox/linux/seccomp-bpf/die.cc',
     '../chromium/sandbox/linux/seccomp-bpf/syscall.cc',
+    'broker/SandboxBrokerCommon.cpp',
     'Sandbox.cpp',
     'SandboxAssembler.cpp',
+    'SandboxBrokerClient.cpp',
     'SandboxFilter.cpp',
 ]
 
@@ -47,7 +49,12 @@ if CONFIG['OS_TARGET'] != 'Android':
         'rt',
     ]
 
+USE_LIBS += [
+    'mfbt',
+]
+
 DIRS += [
+    'broker',
     'common',
     'glue',
 ]

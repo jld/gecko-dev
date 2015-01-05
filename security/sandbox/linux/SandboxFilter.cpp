@@ -25,7 +25,7 @@ namespace mozilla {
 class SandboxFilterImpl : public SandboxAssembler
 {
 public:
-  virtual void Build() = 0;
+  virtual void Build(bool aHaveBroker) = 0;
   virtual ~SandboxFilterImpl() { }
   void AllowThreadClone();
 };
@@ -94,11 +94,11 @@ void SandboxFilterImpl::AllowThreadClone() {
 #ifdef MOZ_CONTENT_SANDBOX
 class SandboxFilterImplContent : public SandboxFilterImpl {
 protected:
-  virtual void Build() MOZ_OVERRIDE;
+  virtual void Build(bool aHaveBroker) MOZ_OVERRIDE;
 };
 
 void
-SandboxFilterImplContent::Build() {
+SandboxFilterImplContent::Build(bool aHaveBroker) {
   /* Most used system calls should be at the top of the whitelist
    * for performance reasons. The whitelist BPF filter exits after
    * processing any ALLOW_SYSCALL macro.
@@ -201,18 +201,24 @@ SandboxFilterImplContent::Build() {
   /* Must remove all of the following in the future, when no longer used */
   /* open() is for some legacy APIs such as font loading. */
   /* See bug 906996 for removing unlink(). */
-  Allow(SYSCALL_LARGEFILE(fstat, fstat64));
-  Allow(SYSCALL_LARGEFILE(stat, stat64));
-  Allow(SYSCALL_LARGEFILE(lstat, lstat64));
+  if (aHaveBroker) {
+    Deny(EINVAL, SYSCALL(readlink));
+    Deny(ENOENT, SYSCALL(unlink));
+  } else {
+    Allow(SYSCALL(open));
+    Allow(SYSCALL(openat)); // FIXME should restrict to AT_FDCWD, but 64-bit?
+    Allow(SYSCALL(access));
+    Allow(SYSCALL_LARGEFILE(stat, stat64));
+    Allow(SYSCALL_LARGEFILE(lstat, lstat64));
+    Allow(SYSCALL(unlink));
+    Allow(SYSCALL(readlink)); /* Workaround for bug 964455 */
+  }
   Allow(SOCKETCALL(socketpair, SOCKETPAIR));
   Deny(EACCES, SOCKETCALL(socket, SOCKET));
-  Allow(SYSCALL(open));
-  Allow(SYSCALL(readlink)); /* Workaround for bug 964455 */
-  Allow(SYSCALL(prctl));
-  Allow(SYSCALL(access));
-  Allow(SYSCALL(unlink));
+  Allow(SYSCALL_LARGEFILE(fstat, fstat64));
   Allow(SYSCALL(fsync));
   Allow(SYSCALL(msync));
+  Allow(SYSCALL(prctl));
 
 #if defined(ANDROID) && !defined(MOZ_MEMORY)
   // Android's libc's realloc uses mremap.
@@ -276,7 +282,6 @@ SandboxFilterImplContent::Build() {
 #else
   Allow(SYSCALL(mmap));
 #endif
-  Allow(SYSCALL(openat));
   Allow(SYSCALL(fcntl));
   Allow(SYSCALL(fstat));
   Allow(SYSCALL(readlink));
@@ -351,10 +356,11 @@ SandboxFilterImplContent::Build() {
 #ifdef MOZ_GMP_SANDBOX
 class SandboxFilterImplGMP : public SandboxFilterImpl {
 protected:
-  virtual void Build() MOZ_OVERRIDE;
+  virtual void Build(bool aHaveBroker) MOZ_OVERRIDE;
 };
 
-void SandboxFilterImplGMP::Build() {
+void SandboxFilterImplGMP::Build(bool aHaveBroker) {
+  MOZ_ASSERT(!aHaveBroker);
   // As for content processes, check the most common syscalls first.
 
   Allow(SYSCALL_WITH_ARG(clock_gettime, 0, CLOCK_MONOTONIC, CLOCK_REALTIME));
@@ -456,8 +462,12 @@ SandboxFilter::SandboxFilter(const sock_fprog** aStored, SandboxType aType,
   MOZ_ASSERT(*mStored == nullptr);
   std::vector<struct sock_filter> filterVec;
   SandboxFilterImpl *impl;
+  bool haveBroker = false;
 
   switch (aType) {
+  case kSandboxContentProcessWithBroker:
+    haveBroker = true;
+    // fallthrough
   case kSandboxContentProcess:
 #ifdef MOZ_CONTENT_SANDBOX
     impl = new SandboxFilterImplContent();
@@ -476,7 +486,7 @@ SandboxFilter::SandboxFilter(const sock_fprog** aStored, SandboxType aType,
   default:
     MOZ_CRASH("Nonexistent sandbox type!");
   }
-  impl->Build();
+  impl->Build(haveBroker);
   impl->Compile(&filterVec, aVerbose);
   delete impl;
 

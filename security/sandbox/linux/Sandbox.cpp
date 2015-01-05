@@ -5,29 +5,31 @@
  * You can obtain one at http://mozilla.org/MPL/2.0/. */
 
 #include "Sandbox.h"
+#include "SandboxBrokerClient.h"
 #include "SandboxFilter.h"
 #include "SandboxInternal.h"
 #include "SandboxLogging.h"
 
-#include <unistd.h>
-#include <stdio.h>
-#include <sys/ptrace.h>
-#include <sys/prctl.h>
-#include <sys/syscall.h>
-#include <signal.h>
-#include <string.h>
-#include <linux/futex.h>
-#include <sys/time.h>
 #include <dirent.h>
-#include <stdlib.h>
-#include <pthread.h>
 #include <errno.h>
 #include <fcntl.h>
+#include <linux/futex.h>
+#include <pthread.h>
+#include <signal.h>
+#include <stdio.h>
+#include <stdlib.h>
+#include <string.h>
+#include <sys/prctl.h>
+#include <sys/ptrace.h>
+#include <sys/syscall.h>
+#include <sys/time.h>
+#include <unistd.h>
 
 #include "mozilla/Atomics.h"
 #include "mozilla/SandboxInfo.h"
 #include "mozilla/unused.h"
 #include "sandbox/linux/seccomp-bpf/linux_seccomp.h"
+#include "sandbox/linux/services/linux_syscalls.h"
 #if defined(ANDROID)
 #include "sandbox/linux/services/android_ucontext.h"
 #endif
@@ -64,6 +66,10 @@ SandboxCrashFunc gSandboxCrashFunc;
 // open().
 static int gMediaPluginFileDesc = -1;
 static const char *gMediaPluginFilePath;
+#endif
+
+#ifdef MOZ_CONTENT_SANDBOX
+static SandboxBrokerClient* gFileBroker;
 #endif
 
 /**
@@ -129,6 +135,57 @@ Reporter(int nr, siginfo_t *info, void *void_context)
     } else {
       SECCOMP_RESULT(ctx) = gMediaPluginFileDesc;
       gMediaPluginFileDesc = -1;
+      return;
+    }
+  }
+#endif
+
+#ifdef MOZ_CONTENT_SANDBOX
+  SandboxBrokerClient* broker = gFileBroker;
+  if (broker) {
+    // This will look nicer once the Chromium sandbox compiler is merged.
+    bool brokered = true;
+    int rv;
+    switch(syscall_nr) {
+    case __NR_open:
+      rv = broker->Open(reinterpret_cast<const char*>(args[0]),
+                        static_cast<int>(args[1]));
+      break;
+    case __NR_openat:
+      if (static_cast<int>(args[0]) == AT_FDCWD) {
+        rv = broker->Open(reinterpret_cast<const char*>(args[1]),
+                          static_cast<int>(args[2]));
+      } else {
+        brokered = false;
+      }
+      break;
+    case __NR_access:
+      rv = broker->Access(reinterpret_cast<const char*>(args[0]),
+                          static_cast<int>(args[1]));
+      break;
+#ifdef __NR_stat64
+    case __NR_stat64:
+#endif
+    case __NR_stat:
+      rv = broker->Stat(reinterpret_cast<const char*>(args[0]),
+                        reinterpret_cast<struct stat*>(args[1]));
+      break;
+#ifdef __NR_lstat64
+    case __NR_lstat64:
+#endif
+    case __NR_lstat:
+      rv = broker->LStat(reinterpret_cast<const char*>(args[0]),
+                         reinterpret_cast<struct stat*>(args[1]));
+      break;
+    default:
+      brokered = false;
+    }
+    if (brokered) {
+      if (rv < 0) {
+        SECCOMP_RESULT(ctx) = -errno;
+      } else {
+        SECCOMP_RESULT(ctx) = rv;
+      }
       return;
     }
   }
@@ -429,13 +486,21 @@ SetCurrentProcessSandbox(SandboxType aType)
  * Will normally make the process exit on failure.
 */
 void
-SetContentProcessSandbox()
+SetContentProcessSandbox(int aBrokerFd)
 {
   if (!SandboxInfo::Get().Test(SandboxInfo::kEnabledForContent)) {
+    if (aBrokerFd >= 0) {
+      close(aBrokerFd);
+    }
     return;
   }
 
-  SetCurrentProcessSandbox(kSandboxContentProcess);
+  if (aBrokerFd >= 0) {
+    gFileBroker = new SandboxBrokerClient(aBrokerFd);
+    SetCurrentProcessSandbox(kSandboxContentProcessWithBroker);
+  } else {
+    SetCurrentProcessSandbox(kSandboxContentProcess);
+  }
 }
 #endif // MOZ_CONTENT_SANDBOX
 

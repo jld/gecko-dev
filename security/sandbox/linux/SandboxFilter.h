@@ -14,7 +14,8 @@ namespace mozilla {
 
 enum SandboxType {
   kSandboxContentProcess,
-  kSandboxMediaPlugin
+  kSandboxContentProcessWithBroker,
+  kSandboxMediaPlugin,
 };
 
 class SandboxFilter {

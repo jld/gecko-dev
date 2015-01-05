@@ -15,6 +15,7 @@
 #include "mozilla/HalTypes.h"
 #include "mozilla/LinkedList.h"
 #include "mozilla/StaticPtr.h"
+#include "mozilla/UniquePtr.h"
 
 #include "nsDataHashtable.h"
 #include "nsFrameMessageManager.h"
@@ -38,6 +39,10 @@ class ParentIdleListener;
 
 namespace mozilla {
 class PRemoteSpellcheckEngineParent;
+#if defined(XP_LINUX) && defined(MOZ_CONTENT_SANDBOX)
+class SandboxBroker;
+class SandboxBrokerPolicyFactory;
+#endif
 
 namespace ipc {
 class OptionalURIParams;
@@ -852,6 +857,12 @@ private:
 #endif
 
     PProcessHangMonitorParent* mHangMonitorActor;
+
+#if defined(XP_LINUX) && defined(MOZ_CONTENT_SANDBOX)
+    mozilla::UniquePtr<SandboxBroker> mSandboxBroker;
+    static mozilla::UniquePtr<SandboxBrokerPolicyFactory>
+        sSandboxBrokerPolicyFactory;
+#endif
 };
 
 } // namespace dom
