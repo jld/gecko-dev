@@ -10,6 +10,7 @@
 
 #include "mozilla/ArrayUtils.h"
 #include "mozilla/Attributes.h"
+#include "nsXULAppAPI.h"
 
 #include <sys/types.h>
 #include <sys/stat.h>
@@ -442,6 +443,10 @@ nsresult
 nsLocalFile::CreateAndKeepOpen(uint32_t aType, int aFlags,
                                uint32_t aPermissions, PRFileDesc** aResult)
 {
+  if (XRE_GetProcessType() == GeckoProcessType_Content) {
+    return NS_ERROR_UNEXPECTED;
+  }
+
   if (aType != NORMAL_FILE_TYPE && aType != DIRECTORY_TYPE) {
     return NS_ERROR_FILE_UNKNOWN_TYPE;
   }
