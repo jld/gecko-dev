@@ -1815,7 +1815,8 @@ HTMLInputElement::SetValue(const nsAString& aValue, ErrorResult& aRv)
   // OK and gives pages a way to clear a file input if necessary.
   if (mType == NS_FORM_INPUT_FILE) {
     if (!aValue.IsEmpty()) {
-      if (!nsContentUtils::IsCallerChrome()) {
+      if (!nsContentUtils::IsCallerChrome() ||
+          XRE_GetProcessType() == GeckoProcessType_Content) {
         // setting the value of a "FILE" input widget requires
         // chrome privilege
         aRv.Throw(NS_ERROR_DOM_SECURITY_ERR);
