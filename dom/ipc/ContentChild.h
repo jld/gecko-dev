@@ -22,6 +22,7 @@
 struct ChromePackage;
 class nsIDOMBlob;
 class nsIObserver;
+class nsIRunnable;
 struct ResourceMapping;
 struct OverrideMapping;
 
@@ -198,6 +199,15 @@ public:
                                          const bool& aDumpAllTraces,
                                          const FileDescriptor& aGCLog,
                                          const FileDescriptor& aCCLog) MOZ_OVERRIDE;
+
+    virtual POpenAnonymousTemporaryFileChild*
+    AllocPOpenAnonymousTemporaryFileChild() MOZ_OVERRIDE;
+    virtual bool
+    DeallocPOpenAnonymousTemporaryFileChild(POpenAnonymousTemporaryFileChild* aActor) MOZ_OVERRIDE;
+
+    nsresult
+    AsyncOpenAnonymousTemporaryFile(FileDescriptor* aFileDescPtr,
+                                    nsIRunnable* aContinuation);
 
     virtual bool
     RecvAudioChannelNotify() MOZ_OVERRIDE;

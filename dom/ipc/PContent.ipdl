@@ -28,6 +28,7 @@ include protocol PMobileConnection;
 include protocol PNecko;
 include protocol PPluginModule;
 include protocol PPrinting;
+include protocol POpenAnonymousTemporaryFile;
 include protocol POfflineCacheUpdate;
 include protocol PScreenManager;
 include protocol PSharedBufferManager;
@@ -369,6 +370,7 @@ prio(normal upto urgent) intr protocol PContent
     manages PMobileConnection;
     manages PNecko;
     manages POfflineCacheUpdate;
+    manages POpenAnonymousTemporaryFile;
     manages PPrinting;
     manages PScreenManager;
     manages PSms;
@@ -825,7 +827,9 @@ parent:
      */
     BackUpXResources(FileDescriptor aXSocketFd);
 
+    // See also NS_OpenAnonymousTemporaryFile.
     sync OpenAnonymousTemporaryFile() returns (FileDescriptor aFD);
+    async POpenAnonymousTemporaryFile();
 
     /**
      * Keygen requires us to call it after a <keygen> element is parsed and

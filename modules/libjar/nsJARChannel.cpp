@@ -21,6 +21,8 @@
 #include "nsIFileURL.h"
 
 #include "mozilla/Preferences.h"
+#include "mozilla/dom/ContentChild.h"
+#include "mozilla/dom/RemoteAnonymousTemporaryFile.h"
 #include "mozilla/net/RemoteOpenFileChild.h"
 #include "nsITabChild.h"
 #include "private/pprio.h"
@@ -861,41 +863,20 @@ nsJARChannel::AsyncOpen(nsIStreamListener *listener, nsISupports *ctx)
     mListenerContext = ctx;
     mIsPending = true;
 
-    nsCOMPtr<nsIChannel> channel;
-
     if (!mJarFile) {
         // Not a local file...
         // kick off an async download of the base URI...
-        rv = NS_NewDownloader(getter_AddRefs(mDownloader), this);
-        if (NS_SUCCEEDED(rv)) {
-            // Since we might not have a loadinfo on all channels yet
-            // we have to provide default arguments in case mLoadInfo is null;
-            uint32_t loadFlags =
-              mLoadFlags & ~(LOAD_DOCUMENT_URI | LOAD_CALL_CONTENT_SNIFFERS);
-            if (mLoadInfo) {
-              rv = NS_NewChannelInternal(getter_AddRefs(channel),
-                                         mJarBaseURI,
-                                         mLoadInfo,
-                                         mLoadGroup,
-                                         mCallbacks,
-                                         loadFlags);
-            } else {
-              rv = NS_NewChannel(getter_AddRefs(channel),
-                                 mJarBaseURI,
-                                 nsContentUtils::GetSystemPrincipal(),
-                                 nsILoadInfo::SEC_NORMAL,
-                                 nsIContentPolicy::TYPE_OTHER,
-                                 mLoadGroup,
-                                 mCallbacks,
-                                 loadFlags);
+        nsCOMPtr<nsIRunnable> next =
+            NS_NewRunnableMethod(this, &nsJARChannel::StartDownload);
+        if (auto contentChild = mozilla::dom::ContentChild::GetSingleton()) {
+            nsRefPtr<mozilla::dom::RemoteAnonymousTemporaryFile> jarFile =
+                new mozilla::dom::RemoteAnonymousTemporaryFile();
+            rv = jarFile->AsyncOpen(contentChild, next);
+            if (NS_SUCCEEDED(rv)) {
+                mJarFile = jarFile;
             }
-            if (NS_FAILED(rv)) {
-              mIsPending = false;
-              mListenerContext = nullptr;
-              mListener = nullptr;
-              return rv;
-            }
-            channel->AsyncOpen(mDownloader, nullptr);
+        } else {
+            rv = NS_DispatchToMainThread(next);
         }
     } else if (mOpeningRemote) {
         // nothing to do: already asked parent to open file.
@@ -910,11 +891,51 @@ nsJARChannel::AsyncOpen(nsIStreamListener *listener, nsISupports *ctx)
         return rv;
     }
 
-
     if (mLoadGroup)
         mLoadGroup->AddRequest(this, nullptr);
 
     mOpened = true;
+    return NS_OK;
+}
+
+nsresult
+nsJARChannel::StartDownload()
+{
+    nsresult rv = NS_NewDownloader(getter_AddRefs(mDownloader), this, mJarFile);
+    if (NS_FAILED(rv)) {
+        NotifyError(rv);
+        return rv;
+    }
+
+    nsCOMPtr<nsIChannel> channel;
+    uint32_t loadFlags =
+        mLoadFlags & ~(LOAD_DOCUMENT_URI | LOAD_CALL_CONTENT_SNIFFERS);
+
+    // Since we might not have a loadinfo on all channels yet
+    // we have to provide default arguments in case mLoadInfo is null;
+    if (mLoadInfo) {
+        rv = NS_NewChannelInternal(getter_AddRefs(channel),
+                                   mJarBaseURI,
+                                   mLoadInfo,
+                                   mLoadGroup,
+                                   mCallbacks,
+                                   loadFlags);
+    } else {
+        rv = NS_NewChannel(getter_AddRefs(channel),
+                           mJarBaseURI,
+                           nsContentUtils::GetSystemPrincipal(),
+                           nsILoadInfo::SEC_NORMAL,
+                           nsIContentPolicy::TYPE_OTHER,
+                           mLoadGroup,
+                           mCallbacks,
+                           loadFlags);
+    }
+    if (NS_FAILED(rv)) {
+        NotifyError(rv);
+        return rv;
+    }
+
+    channel->AsyncOpen(mDownloader, nullptr);
     return NS_OK;
 }
 

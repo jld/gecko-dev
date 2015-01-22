@@ -31,6 +31,7 @@
 #include "mozilla/dom/DOMStorageIPC.h"
 #include "mozilla/dom/ExternalHelperAppChild.h"
 #include "mozilla/dom/PCrashReporterChild.h"
+#include "mozilla/dom/POpenAnonymousTemporaryFileChild.h"
 #include "mozilla/dom/Promise.h"
 #include "mozilla/dom/asmjscache/AsmJSCache.h"
 #include "mozilla/dom/asmjscache/PAsmJSCacheEntryChild.h"
@@ -344,6 +345,30 @@ private:
 };
 
 NS_IMPL_ISUPPORTS(CycleCollectWithLogsChild, nsICycleCollectorLogSink);
+
+class OpenAnonymousTemporaryFileChild MOZ_FINAL : public POpenAnonymousTemporaryFileChild
+{
+public:
+    OpenAnonymousTemporaryFileChild(FileDescriptor* aFileDescPtr,
+                                    nsIRunnable* aContinuation)
+    : mFileDescPtr(aFileDescPtr), mContinuation(aContinuation)
+    {
+        MOZ_COUNT_CTOR(OpenAnonymousTemporaryFileChild);
+    }
+    virtual ~OpenAnonymousTemporaryFileChild()
+    {
+        MOZ_COUNT_DTOR(OpenAnonymousTemporaryFileChild);
+    }
+    virtual bool Recv__delete__(const FileDescriptor& aFileDesc)
+    {
+        *mFileDescPtr = aFileDesc;
+        mContinuation->Run();
+        return true;
+    }
+ private:
+    FileDescriptor *mFileDescPtr;
+    nsCOMPtr<nsIRunnable> mContinuation;
+};
 
 class AlertObserver
 {
@@ -875,6 +900,31 @@ NS_IMETHODIMP MemoryReportRequestChild::Run()
     bool sent = Send__delete__(this, mGeneration, reports);
     return sent ? NS_OK : NS_ERROR_FAILURE;
 }
+
+POpenAnonymousTemporaryFileChild*
+ContentChild::AllocPOpenAnonymousTemporaryFileChild()
+{
+    MOZ_CRASH("Don't use this; allocate OpenAnonymousTemporaryFileChild directly.");
+    return nullptr;
+}
+
+bool
+ContentChild::DeallocPOpenAnonymousTemporaryFileChild(POpenAnonymousTemporaryFileChild* aActor)
+{
+    delete aActor;
+    return true;
+}
+
+nsresult
+ContentChild::AsyncOpenAnonymousTemporaryFile(FileDescriptor* aFileDescPtr,
+                                              nsIRunnable* aContinuation)
+{
+    OpenAnonymousTemporaryFileChild *actor =
+        new OpenAnonymousTemporaryFileChild(aFileDescPtr, aContinuation);
+    bool ok = SendPOpenAnonymousTemporaryFileConstructor(actor);
+    return ok ? NS_OK : NS_ERROR_FAILURE;
+}
+
 
 bool
 ContentChild::RecvAudioChannelNotify()

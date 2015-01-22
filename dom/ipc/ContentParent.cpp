@@ -47,6 +47,7 @@
 #include "mozilla/dom/PCycleCollectWithLogsParent.h"
 #include "mozilla/dom/PFMRadioParent.h"
 #include "mozilla/dom/PMemoryReportRequestParent.h"
+#include "mozilla/dom/POpenAnonymousTemporaryFileParent.h"
 #include "mozilla/dom/asmjscache/AsmJSCache.h"
 #include "mozilla/dom/bluetooth/PBluetoothParent.h"
 #include "mozilla/dom/cellbroadcast/CellBroadcastParent.h"
@@ -566,6 +567,23 @@ ContentParentsMemoryReporter::CollectReports(nsIMemoryReporterCallback* cb,
 
     return NS_OK;
 }
+
+class OpenAnonymousTemporaryFileParent MOZ_FINAL : public POpenAnonymousTemporaryFileParent
+{
+public:
+    OpenAnonymousTemporaryFileParent()
+    {
+        MOZ_COUNT_CTOR(OpenAnonymousTemporaryFileParent);
+    }
+    virtual void ActorDestroy(ActorDestroyReason aWhy)
+    {
+        // Nothing to do here.
+    }
+    virtual ~OpenAnonymousTemporaryFileParent()
+    {
+        MOZ_COUNT_DTOR(OpenAnonymousTemporaryFileParent);
+    }
+};
 
 nsDataHashtable<nsStringHashKey, ContentParent*>* ContentParent::sAppContentParents;
 nsTArray<ContentParent*>* ContentParent::sNonAppContentParents;
@@ -3384,6 +3402,30 @@ ContentParent::CycleCollectWithLogs(bool aDumpAllTraces,
                                                                aCallback);
 }
 
+POpenAnonymousTemporaryFileParent*
+ContentParent::AllocPOpenAnonymousTemporaryFileParent()
+{
+    return new OpenAnonymousTemporaryFileParent();
+}
+
+bool
+ContentParent::RecvPOpenAnonymousTemporaryFileConstructor(POpenAnonymousTemporaryFileParent* aActor)
+{
+    FileDescriptor fd;
+    // This is just an async version of OpenAnonymousTemporaryFile, so
+    // reuse that code instead of duplicating it:
+    return RecvOpenAnonymousTemporaryFile(&fd)
+        && aActor->Send__delete__(aActor, fd);
+}
+
+bool
+ContentParent::DeallocPOpenAnonymousTemporaryFileParent(POpenAnonymousTemporaryFileParent* aActor)
+{
+    delete aActor;
+    return true;
+}
+
+
 PTestShellParent*
 ContentParent::AllocPTestShellParent()
 {
@@ -4414,6 +4456,7 @@ ContentParent::RecvBackUpXResources(const FileDescriptor& aXSocketFd)
 bool
 ContentParent::RecvOpenAnonymousTemporaryFile(FileDescriptor *aFD)
 {
+    // WARNING: this is also used to implement RecvPOpenAnonymousTemporaryFileConstructor
     PRFileDesc *prfd;
     nsresult rv = NS_OpenAnonymousTemporaryFile(&prfd);
     if (NS_WARN_IF(NS_FAILED(rv))) {

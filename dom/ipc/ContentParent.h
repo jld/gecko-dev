@@ -546,6 +546,13 @@ private:
     virtual bool
     DeallocPCycleCollectWithLogsParent(PCycleCollectWithLogsParent* aActor) MOZ_OVERRIDE;
 
+    virtual POpenAnonymousTemporaryFileParent*
+    AllocPOpenAnonymousTemporaryFileParent() MOZ_OVERRIDE;
+    virtual bool
+    RecvPOpenAnonymousTemporaryFileConstructor(POpenAnonymousTemporaryFileParent* aActor) MOZ_OVERRIDE;
+    virtual bool
+    DeallocPOpenAnonymousTemporaryFileParent(POpenAnonymousTemporaryFileParent* aActor) MOZ_OVERRIDE;
+
     virtual PTestShellParent* AllocPTestShellParent() MOZ_OVERRIDE;
     virtual bool DeallocPTestShellParent(PTestShellParent* shell) MOZ_OVERRIDE;
 

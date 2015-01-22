@@ -63,6 +63,7 @@ private:
     void NotifyError(nsresult aError);
     void FireOnProgress(uint64_t aProgress);
     nsresult SetRemoteNSPRFileDesc(PRFileDesc *fd);
+    nsresult StartDownload();
 
 #if defined(PR_LOGGING)
     nsCString                       mSpec;
