@@ -192,15 +192,23 @@ Reporter(int nr, siginfo_t *info, void *void_context)
 #endif
 
   SANDBOX_LOG_ERROR("seccomp sandbox violation: pid %d, syscall %lu,"
-                    " args %lu %lu %lu %lu %lu %lu.  Killing process.",
-                    pid, syscall_nr,
+                    " args %lu %lu %lu %lu %lu %lu."
+#ifdef ANDROID
+                    "  Killing process."
+#endif
+                    , pid, syscall_nr,
                     args[0], args[1], args[2], args[3], args[4], args[5]);
 
+#ifdef ANDROID
   // Bug 1017393: record syscall number somewhere useful.
   info->si_addr = reinterpret_cast<void*>(syscall_nr);
 
   gSandboxCrashFunc(nr, info, void_context);
   _exit(127);
+#else
+  gSandboxCrashFunc(0, nullptr, nullptr);
+  SECCOMP_RESULT(ctx) = -ENOSYS;
+#endif
 }
 
 /**

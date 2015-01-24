@@ -106,7 +106,9 @@ SandboxCrash(int nr, siginfo_t *info, void *void_context)
   bool dumped = false;
 
 #ifdef MOZ_CRASHREPORTER
-  dumped = CrashReporter::WriteMinidumpForSigInfo(nr, info, void_context);
+  if (nr != 0) {
+    dumped = CrashReporter::WriteMinidumpForSigInfo(nr, info, void_context);
+  }
 #endif
   if (!dumped) {
     SANDBOX_LOG_ERROR("crash reporter is disabled (or failed);"
@@ -117,6 +119,10 @@ SandboxCrash(int nr, siginfo_t *info, void *void_context)
   // Do this last, in case it crashes or deadlocks.
   SandboxLogJSStack();
 
+  if (nr == 0) {
+    return;
+  }
+  
   // Try to reraise, so the parent sees that this process crashed.
   // (If tgkill is forbidden, then seccomp will raise SIGSYS, which
   // also accomplishes that goal.)

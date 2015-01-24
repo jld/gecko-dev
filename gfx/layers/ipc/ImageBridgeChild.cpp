@@ -389,6 +389,7 @@ static void ReleaseTextureClientNow(TextureClient* aClient)
 // static
 void ImageBridgeChild::DispatchReleaseTextureClient(TextureClient* aClient)
 {
+  MOZ_ASSERT(aClient);
   if (!IsCreated()) {
     // TextureClient::Release should normally happen in the ImageBridgeChild
     // thread because it usually generate some IPDL messages.

@@ -170,7 +170,6 @@ SandboxFilterImplContent::Build(bool aHaveBroker) {
   Allow(SYSCALL(poll));
   Allow(SYSCALL(ppoll));
   Allow(SYSCALL(openat));
-  Allow(SYSCALL(faccessat));
   // select()'s arguments used to be passed by pointer as a struct.
 #if SYSCALL_EXISTS(_newselect)
   Allow(SYSCALL(_newselect));
@@ -208,13 +207,16 @@ SandboxFilterImplContent::Build(bool aHaveBroker) {
     Allow(SYSCALL(open));
     Allow(SYSCALL(openat)); // FIXME should restrict to AT_FDCWD, but 64-bit?
     Allow(SYSCALL(access));
+    Allow(SYSCALL(faccessat));
     Allow(SYSCALL_LARGEFILE(stat, stat64));
     Allow(SYSCALL_LARGEFILE(lstat, lstat64));
     Allow(SYSCALL(unlink));
     Allow(SYSCALL(readlink)); /* Workaround for bug 964455 */
   }
   Allow(SOCKETCALL(socketpair, SOCKETPAIR));
+#ifdef ANDROID
   Deny(EACCES, SOCKETCALL(socket, SOCKET));
+#endif
   Allow(SYSCALL_LARGEFILE(fstat, fstat64));
   Allow(SYSCALL(fsync));
   Allow(SYSCALL(msync));
@@ -274,75 +276,62 @@ SandboxFilterImplContent::Build(bool aHaveBroker) {
   /* linux desktop is not as performance critical as mobile */
   /* we can place desktop syscalls at the end */
 #ifndef ANDROID
-  Allow(SYSCALL(stat));
-  Allow(SYSCALL(getdents));
-  Allow(SYSCALL(lstat));
-#if SYSCALL_EXISTS(mmap2)
-  Allow(SYSCALL(mmap2));
-#else
-  Allow(SYSCALL(mmap));
-#endif
-  Allow(SYSCALL(fcntl));
-  Allow(SYSCALL(fstat));
-  Allow(SYSCALL(readlink));
-  Allow(SOCKETCALL(getsockname, GETSOCKNAME));
-  Allow(SYSCALL(getuid));
-  Allow(SYSCALL(geteuid));
-  Allow(SYSCALL(mkdir));
-  Allow(SYSCALL(getcwd));
   Allow(SYSCALL(readahead));
   Allow(SYSCALL(pread64));
-  Allow(SYSCALL(statfs));
 #if SYSCALL_EXISTS(ugetrlimit)
   Allow(SYSCALL(ugetrlimit));
 #else
   Allow(SYSCALL(getrlimit));
 #endif
+  Allow(SOCKETCALL(getsockname, GETSOCKNAME));
   Allow(SOCKETCALL(shutdown, SHUTDOWN));
   Allow(SOCKETCALL(getpeername, GETPEERNAME));
-  Allow(SYSCALL(eventfd2));
+  Allow(SOCKETCALL(setsockopt, SETSOCKOPT));
   Allow(SYSCALL(clock_getres));
   Allow(SYSCALL(sysinfo));
+  Allow(SYSCALL(getuid));
+  Allow(SYSCALL(geteuid));
   Allow(SYSCALL(getresuid));
-  Allow(SYSCALL(umask));
   Allow(SYSCALL(getresgid));
+  // Allow(SYSCALL(umask));
   Allow(SYSCALL(poll));
   Allow(SYSCALL(ppoll));
-  Allow(SYSCALL(openat));
-  Allow(SYSCALL(faccessat));
+  Allow(SYSCALL(eventfd2));
   Allow(SYSCALL(inotify_init1));
-  Allow(SYSCALL(wait4));
-  Allow(SYSVIPCCALL(shmctl, SHMCTL));
-  Allow(SYSCALL(set_robust_list));
-  Allow(SYSCALL(rmdir));
-  Allow(SOCKETCALL(recvfrom, RECVFROM));
-  Allow(SYSVIPCCALL(shmdt, SHMDT));
-  Allow(SYSCALL(pipe2));
-  Allow(SOCKETCALL(setsockopt, SETSOCKOPT));
-  Allow(SYSVIPCCALL(shmat, SHMAT));
-  Allow(SYSCALL(set_tid_address));
   Allow(SYSCALL(inotify_add_watch));
-  Allow(SYSCALL(rt_sigprocmask));
+  // Allow(SYSCALL(wait4));
+  Allow(SYSCALL(pipe2));
+  Allow(SYSCALL(set_robust_list));
+  Allow(SYSVIPCCALL(shmctl, SHMCTL));
+  Allow(SYSVIPCCALL(shmdt, SHMDT));
+  Allow(SYSVIPCCALL(shmat, SHMAT));
   Allow(SYSVIPCCALL(shmget, SHMGET));
-#if SYSCALL_EXISTS(utimes)
-  Allow(SYSCALL(utimes));
-#else
-  Allow(SYSCALL(utime));
-#endif
 #if SYSCALL_EXISTS(arch_prctl)
   Allow(SYSCALL(arch_prctl));
 #endif
   Allow(SYSCALL(sched_getaffinity));
   /* We should remove all of the following in the future (possibly even more) */
-  Allow(SOCKETCALL(socket, SOCKET));
-  Allow(SYSCALL(chmod));
-  Allow(SYSCALL(execve));
-  Allow(SYSCALL(rename));
-  Allow(SYSCALL(symlink));
-  Allow(SOCKETCALL(connect, CONNECT));
-  Allow(SYSCALL(quotactl));
-  Allow(SYSCALL(kill));
-  Allow(SOCKETCALL(sendto, SENDTO));
+  // Allow(SOCKETCALL(socket, SOCKET));
+  // Allow(SYSCALL(chmod));
+  // Allow(SYSCALL(execve));
+  // Allow(SYSCALL(rename));
+  // Allow(SYSCALL(symlink));
+  // Allow(SYSCALL(stat));
+  // Allow(SYSCALL(lstat));
+  // Allow(SYSCALL(readlink));
+  // Allow(SYSCALL(mkdir));
+  // Allow(SYSCALL(rmdir));
+  // Allow(SYSCALL(statfs));
+  Deny(EACCES, SYSCALL(statfs));
+  // Allow(SYSCALL(getcwd));
+  // Allow(SOCKETCALL(connect, CONNECT));
+  // Allow(SYSCALL(quotactl));
+  // Allow(SYSCALL(kill));
+#if SYSCALL_EXISTS(utimes)
+  // Allow(SYSCALL(utimes));
+#else
+  // Allow(SYSCALL(utime));
+#endif
 #endif
 
   /* nsSystemInfo uses uname (and we cache an instance, so */
