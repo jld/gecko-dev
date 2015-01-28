@@ -32,6 +32,10 @@
 #include "sandbox/linux/services/android_ucontext.h"
 #endif
 
+#ifndef ANDROID
+#define MOZ_SANDBOX_LENIENT
+#endif
+
 #ifdef MOZ_ASAN
 // Copy libsanitizer declarations to avoid depending on ASAN headers.
 // See also bug 1081242 comment #4.
@@ -135,15 +139,24 @@ Reporter(int nr, siginfo_t *info, void *void_context)
 #endif
 
   SANDBOX_LOG_ERROR("seccomp sandbox violation: pid %d, syscall %lu,"
-                    " args %lu %lu %lu %lu %lu %lu.  Killing process.",
+                    " args %lu %lu %lu %lu %lu %lu."
+#ifndef MOZ_SANDBOX_LENIENT
+                    "  Killing process."
+#endif
+                    ,
                     pid, syscall_nr,
                     args[0], args[1], args[2], args[3], args[4], args[5]);
 
+#ifdef MOZ_SANDBOX_LENIENT
   // Bug 1017393: record syscall number somewhere useful.
   info->si_addr = reinterpret_cast<void*>(syscall_nr);
 
   gSandboxCrashFunc(nr, info, void_context);
   _exit(127);
+#else
+  gSandboxCrashFunc(0, info, void_context);
+  SECCOMP_RESULT(ctx) = -ENOSYS;
+#endif
 }
 
 /**
