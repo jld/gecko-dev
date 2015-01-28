@@ -155,6 +155,7 @@ SandboxFilterImplContent::Build() {
   Allow(SYSCALL(mprotect));
   Allow(SYSCALL(writev));
   AllowThreadClone();
+
   Allow(SYSCALL(brk));
 #if SYSCALL_EXISTS(set_thread_area)
   Allow(SYSCALL(set_thread_area));
@@ -169,8 +170,6 @@ SandboxFilterImplContent::Build() {
   Allow(SYSCALL(nanosleep));
   Allow(SYSCALL(poll));
   Allow(SYSCALL(ppoll));
-  Allow(SYSCALL(openat));
-  Allow(SYSCALL(faccessat));
   // select()'s arguments used to be passed by pointer as a struct.
 #if SYSCALL_EXISTS(_newselect)
   Allow(SYSCALL(_newselect));
@@ -181,13 +180,17 @@ SandboxFilterImplContent::Build() {
 #if SYSCALL_EXISTS(getuid32)
   Allow(SYSCALL(getuid32));
   Allow(SYSCALL(geteuid32));
+  Allow(SYSCALL(getresuid32));
   Allow(SYSCALL(getgid32));
   Allow(SYSCALL(getegid32));
+  Allow(SYSCALL(getresgid32));
 #else
   Allow(SYSCALL(getuid));
   Allow(SYSCALL(geteuid));
+  Allow(SYSCALL(getresuid));
   Allow(SYSCALL(getgid));
   Allow(SYSCALL(getegid));
+  Allow(SYSCALL(getresgid));
 #endif
   // Some newer archs (e.g., x64 and x32) have only rt_sigreturn, but
   // ARM has and uses both syscalls -- rt_sigreturn for SA_SIGINFO
@@ -205,11 +208,16 @@ SandboxFilterImplContent::Build() {
   Allow(SYSCALL_LARGEFILE(stat, stat64));
   Allow(SYSCALL_LARGEFILE(lstat, lstat64));
   Allow(SOCKETCALL(socketpair, SOCKETPAIR));
+#ifdef ANDROID
+  // See desktop block, below.
   Deny(EACCES, SOCKETCALL(socket, SOCKET));
+#endif
   Allow(SYSCALL(open));
+  Allow(SYSCALL(openat));
   Allow(SYSCALL(readlink)); /* Workaround for bug 964455 */
   Allow(SYSCALL(prctl));
   Allow(SYSCALL(access));
+  Allow(SYSCALL(faccessat));
   Allow(SYSCALL(unlink));
   Allow(SYSCALL(fsync));
   Allow(SYSCALL(msync));
@@ -268,76 +276,82 @@ SandboxFilterImplContent::Build() {
   /* linux desktop is not as performance critical as mobile */
   /* we can place desktop syscalls at the end */
 #ifndef ANDROID
-  Allow(SYSCALL(stat));
-  Allow(SYSCALL(getdents));
-  Allow(SYSCALL(lstat));
-#if SYSCALL_EXISTS(mmap2)
-  Allow(SYSCALL(mmap2));
-#else
-  Allow(SYSCALL(mmap));
+#if SYSCALL_EXISTS(set_robust_list)
+  Allow(SYSCALL(set_robust_list));
 #endif
-  Allow(SYSCALL(openat));
-  Allow(SYSCALL(fcntl));
-  Allow(SYSCALL(fstat));
-  Allow(SYSCALL(readlink));
+  Deny(EPERM, SYSCALL(clone));
+  Allow(SYSCALL(time));
+#if SYSCALL_EXISTS(recv) || SYSCALL_EXISTS(socketcall)
+  Allow(SOCKETCALL(recv, RECV));
+  Allow(SOCKETCALL(send, SEND));
+#endif
+
   Allow(SOCKETCALL(getsockname, GETSOCKNAME));
-  Allow(SYSCALL(getuid));
-  Allow(SYSCALL(geteuid));
-  Allow(SYSCALL(mkdir));
-  Allow(SYSCALL(getcwd));
+  Allow(SOCKETCALL(getpeername, GETPEERNAME));
+  Allow(SOCKETCALL(getsockopt, GETSOCKOPT));
+  Allow(SOCKETCALL(setsockopt, SETSOCKOPT));
+  Allow(SOCKETCALL(shutdown, SHUTDOWN));
+
   Allow(SYSCALL(readahead));
   Allow(SYSCALL(pread64));
-  Allow(SYSCALL(statfs));
+
 #if SYSCALL_EXISTS(ugetrlimit)
   Allow(SYSCALL(ugetrlimit));
 #else
   Allow(SYSCALL(getrlimit));
 #endif
-  Allow(SOCKETCALL(shutdown, SHUTDOWN));
-  Allow(SOCKETCALL(getpeername, GETPEERNAME));
+
   Allow(SYSCALL(eventfd2));
-  Allow(SYSCALL(clock_getres));
-  Allow(SYSCALL(sysinfo));
-  Allow(SYSCALL(getresuid));
-  Allow(SYSCALL(umask));
-  Allow(SYSCALL(getresgid));
-  Allow(SYSCALL(poll));
-  Allow(SYSCALL(ppoll));
-  Allow(SYSCALL(openat));
-  Allow(SYSCALL(faccessat));
   Allow(SYSCALL(inotify_init1));
-  Allow(SYSCALL(wait4));
-  Allow(SYSVIPCCALL(shmctl, SHMCTL));
-  Allow(SYSCALL(set_robust_list));
-  Allow(SYSCALL(rmdir));
-  Allow(SOCKETCALL(recvfrom, RECVFROM));
-  Allow(SYSVIPCCALL(shmdt, SHMDT));
-  Allow(SYSCALL(pipe2));
-  Allow(SOCKETCALL(setsockopt, SETSOCKOPT));
-  Allow(SYSVIPCCALL(shmat, SHMAT));
-  Allow(SYSCALL(set_tid_address));
   Allow(SYSCALL(inotify_add_watch));
-  Allow(SYSCALL(rt_sigprocmask));
+  Allow(SYSCALL(pipe2));
+
+  Allow(SYSCALL(clock_getres));
+
+  Allow(SYSCALL(sysinfo));
+  Allow(SYSCALL(umask));
+
+  Allow(SYSVIPCCALL(shmctl, SHMCTL));
+  Allow(SYSVIPCCALL(shmdt, SHMDT));
+  Allow(SYSVIPCCALL(shmat, SHMAT));
   Allow(SYSVIPCCALL(shmget, SHMGET));
+
+#if SYSCALL_EXISTS(arch_prctl)
+  Allow(SYSCALL(arch_prctl));
+#endif
+
+  Allow(SYSCALL(sched_getaffinity));
+
+  /* We should remove all of the following in the future (possibly even more) */
+  Allow(SOCKETCALL(socket, SOCKET));
+  Allow(SOCKETCALL(connect, CONNECT));
+  Allow(SYSCALL(mkdir));
+  Allow(SYSCALL(rmdir));
+  Allow(SYSCALL_LARGEFILE(stat, stat64));
+  Allow(SYSCALL_LARGEFILE(lstat, lstat64));
+  Allow(SYSCALL_LARGEFILE(fcntl, fcntl64));
+  Allow(SYSCALL_LARGEFILE(statfs, statfs64));
+#if SYSCALL_EXISTS(statfs64)
+  Allow(SYSCALL(statfs)); // pulseaudio
+  Allow(SYSCALL(getdents)); // pulseaudio
+#endif
 #if SYSCALL_EXISTS(utimes)
   Allow(SYSCALL(utimes));
 #else
   Allow(SYSCALL(utime));
 #endif
-#if SYSCALL_EXISTS(arch_prctl)
-  Allow(SYSCALL(arch_prctl));
-#endif
-  Allow(SYSCALL(sched_getaffinity));
-  /* We should remove all of the following in the future (possibly even more) */
-  Allow(SOCKETCALL(socket, SOCKET));
   Allow(SYSCALL(chmod));
-  Allow(SYSCALL(execve));
+#if SYSCALL_EXISTS(fchown32)
+  Allow(SYSCALL(fchown32)); // pulseaudio
+#else
+  Allow(SYSCALL(fchown)); // pulseaudio
+#endif
+  Allow(SYSCALL(fchmod)); // pulseaudio
   Allow(SYSCALL(rename));
   Allow(SYSCALL(symlink));
-  Allow(SOCKETCALL(connect, CONNECT));
   Allow(SYSCALL(quotactl));
-  Allow(SYSCALL(kill));
-  Allow(SOCKETCALL(sendto, SENDTO));
+  Allow(SYSCALL(getcwd));
+  Allow(SYSCALL_WITH_ARG(kill, 1, 0)); // pulseaudio
 #endif
 
   /* nsSystemInfo uses uname (and we cache an instance, so */
