@@ -60,7 +60,7 @@ if CONFIG['MOZ_SANDBOX'] and CONFIG['OS_ARCH'] == 'WINNT':
         'sha256.c',
     ]
 
-if CONFIG['MOZ_SANDBOX'] and CONFIG['OS_TARGET'] in ('Linux', 'Android'):
+if CONFIG['MOZ_SANDBOX'] and CONFIG['OS_TARGET'] == 'Linux':
     USE_LIBS += [
         'mozsandbox',
     ]
@@ -70,6 +70,12 @@ if CONFIG['MOZ_SANDBOX'] and CONFIG['OS_TARGET'] in ('Linux', 'Android'):
     # forcing there to be only one partition.
     if '-flto' in CONFIG['OS_CXXFLAGS'] and not CONFIG['CLANG_CXX']:
 	LDFLAGS += ['--param lto-partitions=1']
+
+if CONFIG['MOZ_SANDBOX'] and CONFIG['OS_TARGET'] == 'Android':
+    # Need to call SandboxEarlyInit very early on Android, before entering libxul.
+    USE_LIBS += [
+        'mozsandbox',
+    ]
 
 if CONFIG['_MSC_VER']:
     # Always enter a Windows program through wmain, whether or not we're
