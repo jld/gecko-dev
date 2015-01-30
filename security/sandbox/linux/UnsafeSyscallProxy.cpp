@@ -42,6 +42,14 @@
 // manage reentrancy (so that this code doesn't have to be "NMI-safe").
 
 #if defined(ANDROID) && ANDROID_VERSION < 21
+// It is critically important that the syscall proxy thread has
+// exited, in the sense that it is no longer capable of executing
+// syscalls, before the process is exposed to potentially hostile
+// input.  Older versions of Android implement pthread_join by having
+// the exiting thread signal a condition variable before it actually
+// exits; this yields a small but nonzero race window.  The fix used
+// here, and what glibc and newer Android do, is to use Linux's "tid
+// address" facility for atomically signaling when a thread exits.
 #define HAVE_BROKEN_PTHREAD_JOIN
 #endif
 
@@ -174,6 +182,7 @@ class UnsafeSyscallProxyImpl MOZ_FINAL {
   // The proxy thread.
   void Main() {
 #ifdef HAVE_BROKEN_PTHREAD_JOIN
+    // See also the set_tid_address(2) man page.
     mThreadID = syscall(__NR_set_tid_address,
                         reinterpret_cast<int*>(&mThreadID));
     if (mThreadID <= 0) {
@@ -276,8 +285,6 @@ public:
   bool Stop() {
     unsigned long args[6] = { 0, };
     long result; // deliberately unused
-    // FIXME: NS_WARN_IF or otherwise indicate what broke.
-    // Or just crash, if the failure is unexpected?
     if (!CallInternal(__NR_exit, args, &result, STOPPED)) {
       return false;
     }
@@ -298,13 +305,20 @@ public:
   }
 };
 
+// Some system modify properties of the calling thread, or otherwise
+// can't safely be proxied to another thread like this.  If used, they
+// need to be allowed by the seccomp policy, or else denied by
+// returning a synthetic error.  This routine attempts to filter out
+// any mistakes along those lines, so that they will fail in a more
+// easily diagnosable way, but note that this is a blacklist and
+// potentially incomplete.
 bool
 UnsafeSyscallProxyImpl::IsProxiable(unsigned long aSyscall)
 {
   // Notes for future reference on syscalls that can be proxied with
   // some fixups, if we need them:
   //
-  // * The scheduler parameter calls -- if args[0] == 0, replace it
+  // * The scheduler parameter calls: if args[0] == 0, replace it
   //   with the requesting thread's tid.
   //
   // * fork/vfork/(clone without CLONE_VM), by setjmp'ing in the
