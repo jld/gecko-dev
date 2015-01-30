@@ -18,11 +18,11 @@
 #include <unistd.h>
 
 #include "SandboxLogging.h"
-#include "linux_syscalls.h"
 #include "mozilla/Assertions.h"
 #include "mozilla/Atomics.h"
 #include "mozilla/DebugOnly.h"
 #include "mozilla/NullPtr.h"
+#include "sandbox/linux/services/linux_syscalls.h"
 
 // See UnsafeSyscallProxy.h for why this exists.
 
