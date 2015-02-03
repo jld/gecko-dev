@@ -6,11 +6,16 @@
 
 #include "gtest/gtest.h"
 
+#include "mozilla/Atomics.h"
 #include "mozilla/Maybe.h"
+#include "mozilla/PodOperations.h"
 #include "UnsafeSyscallProxy.h"
 
 #include <errno.h>
 #include <fcntl.h>
+#include <pthread.h>
+#include <semaphore.h>
+#include <signal.h>
 #include <string.h>
 #include <sys/syscall.h>
 #include <sys/types.h>
@@ -19,7 +24,7 @@
 namespace mozilla {
 
 // Name begins with Sandbox for easier test globbing.
-class SandboxUnsafeSyscallProxyTest : public ::testing::Test
+class SandboxUnsafeProxyTest : public ::testing::Test
 {
   UnsafeSyscallProxy mProxy;
 protected:
@@ -29,6 +34,13 @@ protected:
   virtual void TearDown() MOZ_OVERRIDE {
     ASSERT_TRUE(mProxy.Stop());
   }
+
+  template<class C, void (C::* Main)()>
+  static void* ThreadMain(void* arg) {
+    (static_cast<C*>(arg)->*Main)();
+    return nullptr;
+  }
+
   template<typename A0 = unsigned long,
 	   typename A1 = unsigned long,
 	   typename A2 = unsigned long,
@@ -57,9 +69,36 @@ protected:
       return Nothing();
     }
   }
+
+  template<class C, void (C::* Main)()>
+  void StartThread(pthread_t *aThread) {
+    ASSERT_EQ(0, pthread_create(aThread, nullptr, ThreadMain<C, Main>,
+                                static_cast<C*>(this)));
+  }
+  void WaitForThread(pthread_t aThread) {
+    void* retval;
+    ASSERT_EQ(pthread_join(aThread, &retval), 0);
+    ASSERT_EQ(retval, static_cast<void*>(nullptr));
+  }
+
+  static const int kNumThreads = 5;
+  
+  template<class C, void (C::* Main)()>
+  void RunOnManyThreads() {
+    pthread_t threads[kNumThreads];
+    for (int i = 0; i < kNumThreads; ++i) {
+      StartThread<C, Main>(&threads[i]);
+    }
+    for (int i = 0; i < kNumThreads; ++i) {
+      WaitForThread(threads[i]);
+    }
+  }
+  void SimpleOpenTest();
+public:
+  void MultiThreadOpenWorker();
 };
 
-TEST_F(SandboxUnsafeSyscallProxyTest, OpenDevNull)
+TEST_F(SandboxUnsafeProxyTest, OpenDevNull)
 {
   auto fd = Syscall(__NR_openat, AT_FDCWD, "/dev/null", O_RDONLY);
   ASSERT_TRUE(fd);
@@ -69,7 +108,7 @@ TEST_F(SandboxUnsafeSyscallProxyTest, OpenDevNull)
   close(*fd);
 }
 
-TEST_F(SandboxUnsafeSyscallProxyTest, Rejections)
+TEST_F(SandboxUnsafeProxyTest, Rejections)
 {
   ASSERT_FALSE(Syscall(__NR_exit, 0));
   ASSERT_FALSE(Syscall(__NR_gettid));
@@ -80,13 +119,131 @@ TEST_F(SandboxUnsafeSyscallProxyTest, Rejections)
 // not the caller itself, so it can't be misused for an "is proxy on
 // other thread" test.
 
-TEST_F(SandboxUnsafeSyscallProxyTest, IsInSameProcess)
+TEST_F(SandboxUnsafeProxyTest, IsInSameProcess)
 {
   auto proxyPid = Syscall(__NR_getpid);
   ASSERT_TRUE(proxyPid);
   EXPECT_EQ(getpid(), *proxyPid);
   // Alternate approach: proxied faccessat on /proc/self/task/N where
   // N is the test's tid.
+}
+
+TEST_F(SandboxUnsafeProxyTest, MultiThreadOpen)
+{
+  RunOnManyThreads<SandboxUnsafeProxyTest,
+		   &SandboxUnsafeProxyTest::MultiThreadOpenWorker>();
+}
+void SandboxUnsafeProxyTest::MultiThreadOpenWorker() {
+  static const int kNumLoops = 10000;
+
+  for (int i = 1; i <= kNumLoops; ++i) {
+    SimpleOpenTest();
+  }
+}
+void SandboxUnsafeProxyTest::SimpleOpenTest() {
+  auto nullfd = Syscall(__NR_openat, AT_FDCWD, "/dev/null", O_RDONLY);
+  auto zerofd = Syscall(__NR_openat, AT_FDCWD, "/dev/zero", O_RDONLY);
+  ASSERT_TRUE(nullfd);
+  ASSERT_TRUE(zerofd);
+  ASSERT_GE(*nullfd, 0);
+  ASSERT_GE(*zerofd, 0);
+  char c;
+  ASSERT_EQ(0, read(*nullfd, &c, 1));
+  ASSERT_EQ(1, read(*zerofd, &c, 1));
+  ASSERT_EQ('\0', c);
+  close(*nullfd);
+  close(*zerofd);
+}
+
+class SandboxUnsafeProxyTestWithSignals
+  : public SandboxUnsafeProxyTest
+{
+  static SandboxUnsafeProxyTestWithSignals* sSingleton;
+  sem_t mSemaphore;
+  int mSigNum;
+  struct sigaction mOldHandler;
+
+  static void TestSignalHandler(int nr) {
+    auto pid = sSingleton->Syscall(__NR_getpid, 0xDEADBEEF, 0xDEADBEEF);
+    ASSERT_TRUE(pid);
+    ASSERT_EQ(getpid(), *pid);
+    ASSERT_EQ(0, sem_post(&sSingleton->mSemaphore));
+  }
+
+  static int GetSyscallNum()
+  {
+    for (int nr = SIGRTMIN; nr <= SIGRTMAX; ++nr) {
+      struct sigaction old;
+      if (0 != sigaction(nr, nullptr, &old)) {
+	MOZ_ASSERT(false);
+	continue;
+      }
+      if ((old.sa_flags & SA_SIGINFO) == 0 &&
+	  old.sa_handler == SIG_DFL) {
+	return nr;
+      }
+    }
+    return 0;
+  }
+protected:
+  Atomic<int> mDone;
+
+  virtual void SetUp() MOZ_OVERRIDE {
+    SandboxUnsafeProxyTest::SetUp();
+
+    ASSERT_FALSE(sSingleton);
+    sSingleton = this;
+    ASSERT_EQ(0, sem_init(&mSemaphore, 0, 0));
+
+    mSigNum = GetSyscallNum();
+    ASSERT_NE(0, mSigNum);
+    struct sigaction sa;
+    PodZero(&sa);
+    sa.sa_handler = TestSignalHandler;
+    ASSERT_EQ(0, sigaction(mSigNum, &sa, &mOldHandler));
+  }
+  virtual void TearDown() MOZ_OVERRIDE {
+    ASSERT_EQ(0, sigaction(mSigNum, &mOldHandler, nullptr));
+
+    ASSERT_EQ(0, sem_destroy(&mSemaphore));
+    ASSERT_TRUE(sSingleton);
+    sSingleton = nullptr;
+    mSigNum = 0;
+
+    SandboxUnsafeProxyTest::TearDown();
+  }
+
+  void SendSignalTo(pthread_t aThread) {
+    ASSERT_EQ(0, pthread_kill(aThread, mSigNum));
+    ASSERT_EQ(0, sem_wait(&mSemaphore));
+  }
+public:
+  void OpenUntilDoneWorker();
+};
+
+SandboxUnsafeProxyTestWithSignals* SandboxUnsafeProxyTestWithSignals::sSingleton(nullptr);
+
+TEST_F(SandboxUnsafeProxyTestWithSignals, TheTest)
+{
+  static const int kNumLoops = 3000;
+  pthread_t threads[kNumThreads];
+  mDone = 0;
+  for (int i = 0; i < kNumThreads; ++i) {
+    StartThread<SandboxUnsafeProxyTestWithSignals, &SandboxUnsafeProxyTestWithSignals::OpenUntilDoneWorker>(&threads[i]);
+  }
+  for (int i = 0; i < kNumLoops; ++i) {
+    SendSignalTo(threads[i % kNumThreads]);
+  }
+  mDone = 1;
+  for (int i = 0; i < kNumThreads; ++i) {
+    WaitForThread(threads[i]);
+  }
+}
+void SandboxUnsafeProxyTestWithSignals::OpenUntilDoneWorker()
+{
+  while (mDone == 0) {
+    SimpleOpenTest();
+  }
 }
 
 } // namespace mozilla
