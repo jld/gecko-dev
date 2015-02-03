@@ -14,7 +14,6 @@
 #include <errno.h>
 #include <fcntl.h>
 #include <pthread.h>
-#include <semaphore.h>
 #include <signal.h>
 #include <string.h>
 #include <sys/syscall.h>
@@ -81,10 +80,9 @@ protected:
     ASSERT_EQ(retval, static_cast<void*>(nullptr));
   }
 
-  static const int kNumThreads = 5;
-  
   template<class C, void (C::* Main)()>
   void RunOnManyThreads() {
+    static const int kNumThreads = 5;  
     pthread_t threads[kNumThreads];
     for (int i = 0; i < kNumThreads; ++i) {
       StartThread<C, Main>(&threads[i]);
@@ -93,6 +91,15 @@ protected:
       WaitForThread(threads[i]);
     }
   }
+
+  void CloseFd(int aFd) {
+    int rv = close(aFd);
+    if (rv < 0 && errno == EINTR) {
+      rv = 0;
+    }
+    ASSERT_EQ(0, rv) << "errno = " << errno;
+  }
+  
   void SimpleOpenTest();
 public:
   void MultiThreadOpenWorker();
@@ -105,7 +112,7 @@ TEST_F(SandboxUnsafeProxyTest, OpenDevNull)
   ASSERT_GE(*fd, 0);
   char c;
   EXPECT_EQ(0, read(*fd, &c, 1));
-  close(*fd);
+  CloseFd(*fd);
 }
 
 TEST_F(SandboxUnsafeProxyTest, Rejections)
@@ -151,15 +158,14 @@ void SandboxUnsafeProxyTest::SimpleOpenTest() {
   ASSERT_EQ(0, read(*nullfd, &c, 1));
   ASSERT_EQ(1, read(*zerofd, &c, 1));
   ASSERT_EQ('\0', c);
-  close(*nullfd);
-  close(*zerofd);
+  CloseFd(*nullfd);
+  CloseFd(*zerofd);
 }
 
 class SandboxUnsafeProxyTestWithSignals
   : public SandboxUnsafeProxyTest
 {
   static SandboxUnsafeProxyTestWithSignals* sSingleton;
-  sem_t mSemaphore;
   int mSigNum;
   struct sigaction mOldHandler;
 
@@ -167,7 +173,6 @@ class SandboxUnsafeProxyTestWithSignals
     auto pid = sSingleton->Syscall(__NR_getpid, 0xDEADBEEF, 0xDEADBEEF);
     ASSERT_TRUE(pid);
     ASSERT_EQ(getpid(), *pid);
-    ASSERT_EQ(0, sem_post(&sSingleton->mSemaphore));
   }
 
   static int GetSyscallNum()
@@ -193,7 +198,6 @@ protected:
 
     ASSERT_FALSE(sSingleton);
     sSingleton = this;
-    ASSERT_EQ(0, sem_init(&mSemaphore, 0, 0));
 
     mSigNum = GetSyscallNum();
     ASSERT_NE(0, mSigNum);
@@ -205,7 +209,6 @@ protected:
   virtual void TearDown() MOZ_OVERRIDE {
     ASSERT_EQ(0, sigaction(mSigNum, &mOldHandler, nullptr));
 
-    ASSERT_EQ(0, sem_destroy(&mSemaphore));
     ASSERT_TRUE(sSingleton);
     sSingleton = nullptr;
     mSigNum = 0;
@@ -215,7 +218,6 @@ protected:
 
   void SendSignalTo(pthread_t aThread) {
     ASSERT_EQ(0, pthread_kill(aThread, mSigNum));
-    ASSERT_EQ(0, sem_wait(&mSemaphore));
   }
 public:
   void OpenUntilDoneWorker();
@@ -225,13 +227,22 @@ SandboxUnsafeProxyTestWithSignals* SandboxUnsafeProxyTestWithSignals::sSingleton
 
 TEST_F(SandboxUnsafeProxyTestWithSignals, TheTest)
 {
-  static const int kNumLoops = 3000;
+  static const int kNumThreads = 5;
+  static const int kNumLoops = 60000;
   pthread_t threads[kNumThreads];
   mDone = 0;
   for (int i = 0; i < kNumThreads; ++i) {
     StartThread<SandboxUnsafeProxyTestWithSignals, &SandboxUnsafeProxyTestWithSignals::OpenUntilDoneWorker>(&threads[i]);
   }
   for (int i = 0; i < kNumLoops; ++i) {
+    if (i % (kNumThreads + 1) == 0) {
+      int fds[2];
+      auto rv = Syscall(__NR_pipe, fds);
+      ASSERT_TRUE(rv);
+      ASSERT_EQ(0, *rv);
+      CloseFd(fds[0]);
+      CloseFd(fds[1]);
+    }
     SendSignalTo(threads[i % kNumThreads]);
   }
   mDone = 1;
