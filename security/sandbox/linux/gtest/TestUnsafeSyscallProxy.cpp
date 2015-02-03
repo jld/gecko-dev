@@ -11,6 +11,7 @@
 
 #include <errno.h>
 #include <fcntl.h>
+#include <string.h>
 #include <sys/syscall.h>
 #include <sys/types.h>
 #include <unistd.h>
@@ -73,6 +74,19 @@ TEST_F(SandboxUnsafeSyscallProxyTest, Rejections)
   ASSERT_FALSE(Syscall(__NR_exit, 0));
   ASSERT_FALSE(Syscall(__NR_gettid));
   ASSERT_FALSE(Syscall(__NR_sigaltstack, nullptr, nullptr));
+}
+
+// Sadly, /proc/self is a link to the caller's thread group leader,
+// not the caller itself, so it can't be misused for an "is proxy on
+// other thread" test.
+
+TEST_F(SandboxUnsafeSyscallProxyTest, IsInSameProcess)
+{
+  auto proxyPid = Syscall(__NR_getpid);
+  ASSERT_TRUE(proxyPid);
+  EXPECT_EQ(getpid(), *proxyPid);
+  // Alternate approach: proxied faccessat on /proc/self/task/N where
+  // N is the test's tid.
 }
 
 } // namespace mozilla
