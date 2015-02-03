@@ -30,6 +30,7 @@ class UnsafeSyscallProxyImpl;
 class UnsafeSyscallProxy {
   UnsafeSyscallProxyImpl *mImpl;
 public:
+  UnsafeSyscallProxy() : mImpl() { }
   bool Start();
   bool Stop();
   bool Call(unsigned long aSyscall, const unsigned long aArgs[6],
