@@ -12,5 +12,10 @@ void SetThisProcessName(const char *aString)
   (void)aString;
 }
 
+base::ProcessId GetCurrentGlobalProcId()
+{
+  return base::GetCurrentGlobalProcId();
+}
+
 } // namespace ipc
 } // namespace mozilla

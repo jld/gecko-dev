@@ -5,7 +5,7 @@
  * file, You can obtain one at http://mozilla.org/MPL/2.0/. */
 
 // Chromium headers must come before Mozilla headers.
-#include "base/process_util.h"
+#include "mozilla/ipc/ProcessUtils.h"
 
 #include "mozilla/Atomics.h"
 
@@ -353,7 +353,7 @@ NS_DebugBreak(uint32_t aSeverity, const char* aStr, const char* aExpr,
   if (sMultiprocessDescription) {
     PrintToBuffer("%s ", sMultiprocessDescription);
   }
-  PrintToBuffer("%d] ", base::GetCurrentProcId());
+  PrintToBuffer("%d] ", mozilla::ipc::GetCurrentGlobalProcId());
 
   PrintToBuffer("%s: ", sevString);
 

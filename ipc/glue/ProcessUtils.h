@@ -7,9 +7,7 @@
 #ifndef mozilla_ipc_ProcessUtils_h
 #define mozilla_ipc_ProcessUtils_h
 
-#ifdef MOZ_B2G_LOADER
 #include "base/process_util.h"
-#endif
 
 namespace mozilla {
 namespace ipc {
@@ -28,6 +26,8 @@ bool ProcLoaderLoad(const char *aArgv[],
                     const base::ChildPrivileges aPrivs,
                     base::ProcessHandle *aProcessHandle);
 #endif /* MOZ_B2G_LOADER */
+
+base::ProcessId GetCurrentGlobalProcId();
 
 } // namespace ipc
 } // namespace mozilla

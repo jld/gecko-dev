@@ -101,6 +101,9 @@ GeckoChildProcessHost::GeckoChildProcessHost(GeckoProcessType aProcessType,
     mMoreStrictSandbox(false),
 #endif
     mChildProcessHandle(0)
+#ifdef XP_LINUX
+  , mImmediateChildProcessHandle(0)
+#endif
 #if defined(MOZ_WIDGET_COCOA)
   , mChildTask(MACH_PORT_NULL)
 #endif
@@ -115,12 +118,14 @@ GeckoChildProcessHost::~GeckoChildProcessHost()
 
   MOZ_COUNT_DTOR(GeckoChildProcessHost);
 
-  if (mChildProcessHandle > 0)
-    ProcessWatcher::EnsureProcessTerminated(mChildProcessHandle
+  ProcessHandle theChild = GetImmediateChildProcessHandle();
+  if (theChild > 0) {
+    ProcessWatcher::EnsureProcessTerminated(theChild
 #if defined(NS_BUILD_REFCNT_LOGGING)
                                             , false // don't "force"
 #endif
     );
+  }
 
 #if defined(MOZ_WIDGET_COCOA)
   if (mChildTask != MACH_PORT_NULL)
@@ -422,14 +427,15 @@ GeckoChildProcessHost::Join()
     return;
   }
 
-  // If this fails, there's nothing we can do.
-  base::KillProcess(mChildProcessHandle, 0, /*wait*/true);
+  // FIXME(jld): There is no right way to do this and everything is horrible.
+  base::KillProcess(GetImmediateChildProcessHandle(), 0, /*wait*/true);
   SetAlreadyDead();
 }
 
 void
 GeckoChildProcessHost::SetAlreadyDead()
 {
+  mImmediateChildProcessHandle = 0;
   mChildProcessHandle = 0;
 }
 
@@ -923,7 +929,21 @@ void
 GeckoChildProcessHost::OpenPrivilegedHandle(base::ProcessId aPid)
 {
   if (mChildProcessHandle) {
-#ifndef XP_LINUX
+#ifdef XP_LINUX
+    MOZ_ASSERT(aPid != 1);
+    if (mImmediateChildProcessHandle == 0) {
+      mImmediateChildProcessHandle = mChildProcessHandle;
+    } else {
+      printf_stderr("BEES BEES BEES BEES BEES BEES BEES BEES BEES BEES BEES BEES BEES BEES BEES BEES BEES BEES BEES BEES BEES BEES BEES BEES %d %d %d\n",
+                    mImmediateChildProcessHandle, mChildProcessHandle, aPid);
+    }
+    mChildProcessHandle = aPid;
+    if (mChildProcessHandle != mImmediateChildProcessHandle) {
+      static mozilla::EnvironmentLog gProcessLog("MOZ_PROCESS_LOG");
+      gProcessLog.print("==> process %d launched child process %d\n",
+                        mImmediateChildProcessHandle, mChildProcessHandle);
+    }
+#else
     MOZ_ASSERT(aPid == base::GetProcId(mChildProcessHandle));
 #endif
     return;

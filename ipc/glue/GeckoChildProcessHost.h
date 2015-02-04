@@ -106,6 +106,16 @@ public:
     return mChildProcessHandle;
   }
 
+  // FIXME comment
+  ProcessHandle GetImmediateChildProcessHandle() {
+#ifdef OS_LINUX
+    if (mImmediateChildProcessHandle > 0) {
+      return mImmediateChildProcessHandle;
+    }
+#endif
+    return GetChildProcessHandle();
+  }
+
   // Returns an "owned" handle to the child process - the handle returned
   // by this function must be closed by the caller.
   ProcessHandle GetOwnedChildProcessHandle() {
@@ -188,6 +198,9 @@ protected:
   base::WaitableEventWatcher::Delegate* mDelegate;
 
   ProcessHandle mChildProcessHandle;
+#if defined(OS_LINUX)
+  ProcessHandle mImmediateChildProcessHandle;
+#endif
 #if defined(OS_MACOSX)
   task_t mChildTask;
 #endif

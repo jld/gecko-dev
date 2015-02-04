@@ -26,6 +26,7 @@ EXPORTS.mozilla.ipc += [
     'MessageChannel.h',
     'MessageLink.h',
     'ProcessChild.h',
+    'ProcessUtils.h',
     'ProtocolUtils.h',
     'ScopedXREEmbed.h',
     'SharedMemory.h',

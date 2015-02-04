@@ -582,6 +582,35 @@ ProcLoaderServiceRun(pid_t aPeerPid, int aFd,
 
 #endif /* MOZ_B2G_LOADER */
 
+static base::ProcessId gGlobalProcId;
+
+static void
+RefreshGlobalProcId() {
+  gGlobalProcId = getpid(); // fallback in case of error
+  char buf[sizeof("2147483647")];
+  ssize_t numLen = readlink("/proc/self", buf, sizeof(buf));
+  MOZ_ASSERT(numLen > 0 && numLen < ssize_t(sizeof(buf)));
+  if (numLen <= 0 || numLen >= ssize_t(sizeof(buf))) {
+    return;
+  }
+  buf[numLen] = '\0';
+  base::ProcessId parsedPid = atoi(buf);
+  MOZ_ASSERT(parsedPid > 0);
+  if (parsedPid > 0) {
+    gGlobalProcId = parsedPid;
+  }
+}
+
+base::ProcessId GetCurrentGlobalProcId()
+{
+  // FIXME multithreading
+  if (gGlobalProcId == 0) {
+    RefreshGlobalProcId();
+    pthread_atfork(nullptr, nullptr, RefreshGlobalProcId);
+  }
+  return gGlobalProcId;
+}
+
 } // namespace ipc
 } // namespace mozilla
 

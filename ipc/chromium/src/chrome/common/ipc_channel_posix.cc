@@ -27,6 +27,7 @@
 #include "chrome/common/chrome_switches.h"
 #include "chrome/common/file_descriptor_set_posix.h"
 #include "chrome/common/ipc_message_utils.h"
+#include "mozilla/ipc/ProcessUtils.h"
 #include "mozilla/ipc/ProtocolUtils.h"
 #include "mozilla/UniquePtr.h"
 
@@ -373,7 +374,7 @@ bool Channel::ChannelImpl::EnqueueHelloMessage() {
   mozilla::UniquePtr<Message> msg(new Message(MSG_ROUTING_NONE,
                                               HELLO_MESSAGE_TYPE,
                                               IPC::Message::PRIORITY_NORMAL));
-  if (!msg->WriteInt(base::GetCurrentProcId())) {
+  if (!msg->WriteInt(mozilla::ipc::GetCurrentGlobalProcId())) {
     Close();
     return false;
   }

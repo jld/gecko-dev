@@ -16,5 +16,10 @@ void SetThisProcessName(const char *aName)
   mozilla::plugins::PluginUtilsOSX::SetProcessName(aName);
 }
 
+base::ProcessId GetCurrentGlobalProcId()
+{
+  return base::GetCurrentGlobalProcId();
+}
+
 } // namespace ipc
 } // namespace mozilla

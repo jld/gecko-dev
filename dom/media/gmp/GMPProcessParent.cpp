@@ -74,7 +74,10 @@ GMPProcessParent::Delete()
   MessageLoop* ioLoop = XRE_GetIOMessageLoop();
 
   if (currentLoop == ioLoop) {
+#if 0
+    // FIXME(jld): This isn't needed for normal shutdown.
     Join();
+#endif
     delete this;
     return;
   }
