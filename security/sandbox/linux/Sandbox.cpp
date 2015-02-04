@@ -253,6 +253,7 @@ SetCurrentProcessSandbox(SandboxType aType)
     SANDBOX_LOG_ERROR("install_syscall_reporter() failed\n");
   }
 
+  SANDBOX_LOG_ERROR("CHICKEN CHICKEN CHICKEN, CHICKEN CHICKEN");
   const sock_fprog* prog = nullptr;
   SandboxFilter filter(&prog, aType, getenv("MOZ_SANDBOX_VERBOSE"));
   InstallSyscallFilter(prog);
@@ -275,11 +276,15 @@ AssertSingleThreaded()
 void
 SandboxEarlyInit(GeckoProcessType aProcType)
 {
+  if (!SandboxInfo::Get().Test(SandboxInfo::kHasSeccompBPF)) {
+    return;
+  }
   SandboxType aBoxType;
   switch(aProcType) {
 #ifdef MOZ_CONTENT_SANDBOX
   case GeckoProcessType_Content:
-    if (!SandboxInfo::Get().CanSandboxContent()) {
+    SANDBOX_LOG_ERROR("UALUEALUEALEUALE");
+    if (!SandboxInfo::Get().Test(SandboxInfo::kEnabledForContent)) {
       return;
     }
     aBoxType = kSandboxContentProcess;
@@ -287,7 +292,7 @@ SandboxEarlyInit(GeckoProcessType aProcType)
 #endif
 #ifdef MOZ_GMP_SANDBOX
   case GeckoProcessType_GMPlugin:
-    if (!SandboxInfo::Get().CanSandboxMedia()) {
+    if (!SandboxInfo::Get().Test(SandboxInfo::kEnabledForMedia)) {
       return;
     }
     aBoxType = kSandboxMediaPlugin;
