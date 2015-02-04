@@ -401,8 +401,9 @@ void SandboxFilterImplGMP::Build() {
   // this but doesn't actually need it:
   Deny(ENOSYS, SYSCALL(sched_getaffinity));
 
-#ifdef MOZ_ASAN
   Allow(SYSCALL(sigaltstack));
+
+#ifdef MOZ_ASAN
   // ASAN's error reporter wants to know if stderr is a tty.
   Deny(ENOTTY, SYSCALL_WITH_ARG(ioctl, 0, STDERR_FILENO));
 #endif

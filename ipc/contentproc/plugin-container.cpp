@@ -54,7 +54,11 @@
        "Gecko:MozillaRntimeMain", __VA_ARGS__)) \
      : (void)0 )
 
-#endif
+# ifdef MOZ_CONTENT_SANDBOX
+# include "mozilla/Sandbox.h"
+# endif
+
+#endif // MOZ_WIDGET_GONK
 
 #ifdef MOZ_NUWA_PROCESS
 #include <binder/ProcessState.h>
@@ -156,6 +160,17 @@ content_process_main(int argc, char* argv[])
 #endif
 
 #ifdef MOZ_WIDGET_GONK
+    // This has to happen while we're still single-threaded, before the
+    // Binder library is initialized; see also XRE_InitChildProcess().
+    // Additional special handling is needed for Nuwa: the Nuwa process
+    // itself needs to be unsandboxed, and the same single-threadedness
+    // condition applies to its children; see also AfterNuwaFork().
+#ifdef MOZ_CONTENT_SANDBOX
+    if (!isNuwa) {
+        mozilla::SandboxEarlyInit(XRE_GetProcessType());
+    }
+#endif
+
     // This creates a ThreadPool for binder ipc. A ThreadPool is necessary to
     // receive binder calls, though not necessary to send binder calls.
     // ProcessState::Self() also needs to be called once on the main thread to
