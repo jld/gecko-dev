@@ -25,6 +25,7 @@
 #include <errno.h>
 #include <fcntl.h>
 
+#include "base/posix/eintr_wrapper.h"
 #include "mozilla/Atomics.h"
 #include "mozilla/SandboxInfo.h"
 #include "mozilla/unused.h"
@@ -303,10 +304,55 @@ SandboxEarlyInit(GeckoProcessType aProcType)
   SetCurrentProcessSandbox(aBoxType);
 }
 
+static bool
+UseSandboxHelper(bool aDoChroot)
+{
+  // FIXME: hoist these magic constants into a header.
+  // FIXME: these should be PR_GetEnv for thread-safety, sigh.
+  const char *helperAPI = getenv("SBX_CHROME_API_PRV");
+  if (!helperAPI) {
+    return false;
+  }
+  if (strcmp(helperAPI, "1") != 0) {
+    SANDBOX_LOG_ERROR("sandbox helper present but had version %s (expected 1)",
+                      helperAPI);
+    // FIXME: decide if this should just fail, or assert false, or what.
+    return false;
+  }
+  const char *fdStr = getenv("SBX_D");
+  const char *pidStr = getenv("SBX_HELPER_PID");
+  if (!fdStr || !pidStr) {
+    MOZ_CRASH("sandbox helper protocol violation: env vars not set");
+  }
+  int fd = atoi(fdStr);
+  pid_t pid = atoi(getenv("SBX_HELPER_PID"));
+  char resp;
+
+  if (IGNORE_EINTR(close(7)) != 0) {
+    MOZ_CRASH("failed to close dummy fd");
+  }
+  if (aDoChroot) {
+    if (HANDLE_EINTR(write(fd, "C", 1)) != 1) {
+      MOZ_CRASH("failed to send message to sandbox helper");
+    }
+    if (HANDLE_EINTR(read(fd, &resp, 1)) != 1 || resp != 'O') {
+      // FIXME: should this be a simple failure?
+      MOZ_CRASH("didn't get success message from sandbox helper");
+    }
+  }
+  if (IGNORE_EINTR(close(fd)) != 0) {
+    MOZ_CRASH("failed to close helper fd");
+  }
+  if (HANDLE_EINTR(waitpid(pid, nullptr, 0)) != pid) {
+    MOZ_CRASH("failed to wait for helper to exit");
+  }
+  return true;
+}
+
 // This is called when the sandbox should appear to start from the
 // perspective of the rest of the process.
 static void
-SandboxLogicalStart()
+SandboxLogicalStart(bool aDoChroot)
 {
 #ifdef MOZ_ASAN
   __sanitizer_sandbox_arguments asanArgs;
@@ -316,18 +362,9 @@ SandboxLogicalStart()
   __sanitizer_sandbox_on_notify(&asanArgs);
 #endif
 
-  const char *helperAPI = getenv("SBX_CHROME_API_PRV");
-  if (helperAPI && strcmp(helperAPI, "1") == 0) {
-    int fd = atoi(getenv("SBX_D"));
-    pid_t pid = atoi(getenv("SBX_HELPER_PID"));
-    char resp;
-
-    // OMG HAX.  Fix this.
-    close(7);
-    write(fd, "C", 1);
-    read(fd, &resp, 1);
-    waitpid(pid, nullptr, 0);
-    close(fd);
+  if (!UseSandboxHelper(aDoChroot)) {
+    SANDBOX_LOG_ERROR("sandbox helper not available");
+    // FIXME: allow requiring the helper and crashing otherwise.
   }
 
   if (!gEarlySandboxProxy.Stop()) {
@@ -349,7 +386,7 @@ SetContentProcessSandbox()
     return;
   }
 
-  SandboxLogicalStart();
+  SandboxLogicalStart(false);
 }
 #endif // MOZ_CONTENT_SANDBOX
 
@@ -382,7 +419,7 @@ SetMediaPluginSandbox(const char *aFilePath)
     }
   }
 
-  SandboxLogicalStart();
+  SandboxLogicalStart(true);
 }
 #endif // MOZ_GMP_SANDBOX
 
