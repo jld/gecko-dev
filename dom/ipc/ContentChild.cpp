@@ -40,6 +40,7 @@
 #include "mozilla/ipc/FileDescriptorSetChild.h"
 #include "mozilla/ipc/FileDescriptorUtils.h"
 #include "mozilla/ipc/GeckoChildProcessHost.h"
+#include "mozilla/ipc/ProcessUtils.h"
 #include "mozilla/ipc/TestShellChild.h"
 #include "mozilla/jsipc/CrossProcessObjectWrappers.h"
 #include "mozilla/layers/CompositorChild.h"
@@ -665,7 +666,7 @@ ContentChild::SetProcessName(const nsAString& aName, bool aDontOverride)
     if ((name = PR_GetEnv("MOZ_DEBUG_APP_PROCESS")) &&
         aName.EqualsASCII(name)) {
 #ifdef OS_POSIX
-        printf_stderr("\n\nCHILDCHILDCHILDCHILD\n  [%s] debug me @%d\n\n", name, getpid());
+        printf_stderr("\n\nCHILDCHILDCHILDCHILD\n  [%s] debug me @%d\n\n", name, mozilla::ipc::GetCurrentGlobalProcId());
         sleep(30);
 #elif defined(OS_WIN)
         // Windows has a decent JIT debugging story, so NS_DebugBreak does the
