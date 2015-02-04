@@ -8,23 +8,23 @@
 #include "SandboxFilter.h"
 #include "SandboxInternal.h"
 #include "SandboxLogging.h"
+#include "UnsafeSyscallProxy.h"
 
 #include <unistd.h>
 #include <stdio.h>
 #include <sys/ptrace.h>
 #include <sys/prctl.h>
+#include <sys/stat.h>
 #include <sys/syscall.h>
 #include <signal.h>
 #include <string.h>
-#include <linux/futex.h>
-#include <sys/time.h>
-#include <dirent.h>
 #include <stdlib.h>
 #include <pthread.h>
 #include <errno.h>
 #include <fcntl.h>
 
 #include "mozilla/Atomics.h"
+#include "mozilla/Maybe.h"
 #include "mozilla/SandboxInfo.h"
 #include "mozilla/unused.h"
 #include "sandbox/linux/seccomp-bpf/linux_seccomp.h"
@@ -65,6 +65,9 @@ SandboxCrashFunc gSandboxCrashFunc;
 static int gMediaPluginFileDesc = -1;
 static const char *gMediaPluginFilePath;
 #endif
+
+static Maybe<SandboxType> gSandboxType;
+static UnsafeSyscallProxy gEarlySandboxProxy;
 
 /**
  * This is the SIGSYS handler function. It is used to report to the user
@@ -112,6 +115,14 @@ Reporter(int nr, siginfo_t *info, void *void_context)
     return;
   }
 #endif
+
+  // If this is after SandboxEarlyInit but before SandboxLogicalStart,
+  // forward the syscall to the proxy thread.
+  long proxyResult;
+  if (gEarlySandboxProxy.Call(syscall_nr, args, &proxyResult)) {
+    SECCOMP_RESULT(ctx) = proxyResult;
+    return;
+  }
 
 #ifdef MOZ_ASAN
   // These have to be in the signal handler and not Deny() entries in
@@ -229,207 +240,76 @@ InstallSyscallFilter(const sock_fprog *prog)
   }
 }
 
-// Use signals for permissions that need to be set per-thread.
-// The communication channel from the signal handler back to the main thread.
-static mozilla::Atomic<int> sSetSandboxDone;
-// Pass the filter itself through a global.
-static const sock_fprog *sSetSandboxFilter;
-
-// We have to dynamically allocate the signal number; see bug 1038900.
-// This function returns the first realtime signal currently set to
-// default handling (i.e., not in use), or 0 if none could be found.
-//
-// WARNING: if this function or anything similar to it (including in
-// external libraries) is used on multiple threads concurrently, there
-// will be a race condition.
-static int
-FindFreeSignalNumber()
-{
-  for (int signum = SIGRTMIN; signum <= SIGRTMAX; ++signum) {
-    struct sigaction sa;
-
-    if (sigaction(signum, nullptr, &sa) == 0 &&
-        (sa.sa_flags & SA_SIGINFO) == 0 &&
-        sa.sa_handler == SIG_DFL) {
-      return signum;
-    }
-  }
-  return 0;
-}
-
-// Returns true if sandboxing was enabled, or false if sandboxing
-// already was enabled.  Crashes if sandboxing could not be enabled.
-static bool
-SetThreadSandbox()
-{
-  if (prctl(PR_GET_SECCOMP, 0, 0, 0, 0) == 0) {
-    InstallSyscallFilter(sSetSandboxFilter);
-    return true;
-  }
-  return false;
-}
-
-static void
-SetThreadSandboxHandler(int signum)
-{
-  // The non-zero number sent back to the main thread indicates
-  // whether action was taken.
-  if (SetThreadSandbox()) {
-    sSetSandboxDone = 2;
-  } else {
-    sSetSandboxDone = 1;
-  }
-  // Wake up the main thread.  See the FUTEX_WAIT call, below, for an
-  // explanation.
-  syscall(__NR_futex, reinterpret_cast<int*>(&sSetSandboxDone),
-          FUTEX_WAKE, 1);
-}
-
-static void
-BroadcastSetThreadSandbox(SandboxType aType)
-{
-  int signum;
-  pid_t pid, tid, myTid;
-  DIR *taskdp;
-  struct dirent *de;
-  SandboxFilter filter(&sSetSandboxFilter, aType,
-                       SandboxInfo::Get().Test(SandboxInfo::kVerbose));
-
-  static_assert(sizeof(mozilla::Atomic<int>) == sizeof(int),
-                "mozilla::Atomic<int> isn't represented by an int");
-  pid = getpid();
-  myTid = syscall(__NR_gettid);
-  taskdp = opendir("/proc/self/task");
-  if (taskdp == nullptr) {
-    SANDBOX_LOG_ERROR("opendir /proc/self/task: %s\n", strerror(errno));
-    MOZ_CRASH();
-  }
-  signum = FindFreeSignalNumber();
-  if (signum == 0) {
-    SANDBOX_LOG_ERROR("No available signal numbers!");
-    MOZ_CRASH();
-  }
-  void (*oldHandler)(int);
-  oldHandler = signal(signum, SetThreadSandboxHandler);
-  if (oldHandler != SIG_DFL) {
-    // See the comment on FindFreeSignalNumber about race conditions.
-    SANDBOX_LOG_ERROR("signal %d in use by handler %p!\n", signum, oldHandler);
-    MOZ_CRASH();
-  }
-
-  // In case this races with a not-yet-deprivileged thread cloning
-  // itself, repeat iterating over all threads until we find none
-  // that are still privileged.
-  bool sandboxProgress;
-  do {
-    sandboxProgress = false;
-    // For each thread...
-    while ((de = readdir(taskdp))) {
-      char *endptr;
-      tid = strtol(de->d_name, &endptr, 10);
-      if (*endptr != '\0' || tid <= 0) {
-        // Not a task ID.
-        continue;
-      }
-      if (tid == myTid) {
-        // Drop this thread's privileges last, below, so we can
-        // continue to signal other threads.
-        continue;
-      }
-      // Reset the futex cell and signal.
-      sSetSandboxDone = 0;
-      if (syscall(__NR_tgkill, pid, tid, signum) != 0) {
-        if (errno == ESRCH) {
-          SANDBOX_LOG_ERROR("Thread %d unexpectedly exited.", tid);
-          // Rescan threads, in case it forked before exiting.
-          sandboxProgress = true;
-          continue;
-        }
-        SANDBOX_LOG_ERROR("tgkill(%d,%d): %s\n", pid, tid, strerror(errno));
-        MOZ_CRASH();
-      }
-      // It's unlikely, but if the thread somehow manages to exit
-      // after receiving the signal but before entering the signal
-      // handler, we need to avoid blocking forever.
-      //
-      // Using futex directly lets the signal handler send the wakeup
-      // from an async signal handler (pthread mutex/condvar calls
-      // aren't allowed), and to use a relative timeout that isn't
-      // affected by changes to the system clock (not possible with
-      // POSIX semaphores).
-      //
-      // If a thread doesn't respond within a reasonable amount of
-      // time, but still exists, we crash -- the alternative is either
-      // blocking forever or silently losing security, and it
-      // shouldn't actually happen.
-      static const int crashDelay = 10; // seconds
-      struct timespec timeLimit;
-      clock_gettime(CLOCK_MONOTONIC, &timeLimit);
-      timeLimit.tv_sec += crashDelay;
-      while (true) {
-        static const struct timespec futexTimeout = { 0, 10*1000*1000 }; // 10ms
-        // Atomically: if sSetSandboxDone == 0, then sleep.
-        if (syscall(__NR_futex, reinterpret_cast<int*>(&sSetSandboxDone),
-                  FUTEX_WAIT, 0, &futexTimeout) != 0) {
-          if (errno != EWOULDBLOCK && errno != ETIMEDOUT && errno != EINTR) {
-            SANDBOX_LOG_ERROR("FUTEX_WAIT: %s\n", strerror(errno));
-            MOZ_CRASH();
-          }
-        }
-        // Did the handler finish?
-        if (sSetSandboxDone > 0) {
-          if (sSetSandboxDone == 2) {
-            sandboxProgress = true;
-          }
-          break;
-        }
-        // Has the thread ceased to exist?
-        if (syscall(__NR_tgkill, pid, tid, 0) != 0) {
-          if (errno == ESRCH) {
-            SANDBOX_LOG_ERROR("Thread %d unexpectedly exited.", tid);
-          }
-          // Rescan threads, in case it forked before exiting.
-          // Also, if it somehow failed in a way that wasn't ESRCH,
-          // and still exists, that will be handled on the next pass.
-          sandboxProgress = true;
-          break;
-        }
-        struct timespec now;
-        clock_gettime(CLOCK_MONOTONIC, &now);
-        if (now.tv_sec > timeLimit.tv_nsec ||
-            (now.tv_sec == timeLimit.tv_nsec &&
-             now.tv_nsec > timeLimit.tv_nsec)) {
-          SANDBOX_LOG_ERROR("Thread %d unresponsive for %d seconds."
-                            "  Killing process.",
-                            tid, crashDelay);
-          MOZ_CRASH();
-        }
-      }
-    }
-    rewinddir(taskdp);
-  } while (sandboxProgress);
-  oldHandler = signal(signum, SIG_DFL);
-  if (oldHandler != SetThreadSandboxHandler) {
-    // See the comment on FindFreeSignalNumber about race conditions.
-    SANDBOX_LOG_ERROR("handler for signal %d was changed to %p!",
-                      signum, oldHandler);
-    MOZ_CRASH();
-  }
-  unused << closedir(taskdp);
-  // And now, deprivilege the main thread:
-  SetThreadSandbox();
-}
 
 // Common code for sandbox startup.
 static void
 SetCurrentProcessSandbox(SandboxType aType)
 {
   MOZ_ASSERT(gSandboxCrashFunc);
+  MOZ_ASSERT(SandboxInfo::Get().Test(SandboxInfo::kHasSeccompBPF));
 
   if (InstallSyscallReporter()) {
     SANDBOX_LOG_ERROR("install_syscall_reporter() failed\n");
   }
 
+  const sock_fprog* prog = nullptr;
+  SandboxFilter filter(&prog, aType, getenv("MOZ_SANDBOX_VERBOSE"));
+  InstallSyscallFilter(prog);
+}
+
+static void
+AssertSingleThreaded()
+{
+  struct stat sb;
+  if (stat("/proc/self/task", &sb) < 0) {
+    MOZ_CRASH("Couldn't access /proc/self/task");
+  }
+  if (sb.st_nlink != 3) {
+    SANDBOX_LOG_ERROR("process must be single-threaded at this point.  "
+                      "(%u threads)", static_cast<unsigned>(sb.st_nlink - 2));
+    MOZ_CRASH("process is not single-threaded");
+  }
+}
+
+void
+SandboxEarlyInit(GeckoProcessType aProcType)
+{
+  if (!SandboxInfo::Get().Test(SandboxInfo::kHasSeccompBPF)) {
+    return;
+  }
+  switch(aProcType) {
+#ifdef MOZ_CONTENT_SANDBOX
+  case GeckoProcessType_Content:
+    if (!SandboxInfo::Get().Test(SandboxInfo::kEnabledForContent)) {
+      return;
+    }
+    gSandboxType = Some(kSandboxContentProcess);
+    break;
+#endif
+#ifdef MOZ_GMP_SANDBOX
+  case GeckoProcessType_GMPlugin:
+    if (!SandboxInfo::Get().Test(SandboxInfo::kEnabledForMedia)) {
+      return;
+    }
+    gSandboxType = Some(kSandboxMediaPlugin);
+    break;
+#endif
+  default:
+    return;
+  }
+  AssertSingleThreaded();
+  if (!gEarlySandboxProxy.Start()) {
+    SANDBOX_LOG_ERROR("Failed to start syscall proxy thread");
+    MOZ_CRASH();
+  }
+  SetCurrentProcessSandbox(*gSandboxType);
+}
+
+// This is called when the sandbox should appear to start from the
+// perspective of the rest of the process.
+static void
+SandboxLogicalStart()
+{
 #ifdef MOZ_ASAN
   __sanitizer_sandbox_arguments asanArgs;
   asanArgs.coverage_sandboxed = 1;
@@ -438,7 +318,9 @@ SetCurrentProcessSandbox(SandboxType aType)
   __sanitizer_sandbox_on_notify(&asanArgs);
 #endif
 
-  BroadcastSetThreadSandbox(aType);
+  if (!gEarlySandboxProxy.Stop()) {
+    MOZ_CRASH("SandboxEarlyInit() wasn't called!");
+  }
 }
 
 #ifdef MOZ_CONTENT_SANDBOX
@@ -454,8 +336,9 @@ SetContentProcessSandbox()
   if (!SandboxInfo::Get().Test(SandboxInfo::kEnabledForContent)) {
     return;
   }
+  MOZ_ASSERT(gSandboxType == Some(kSandboxContentProcess));
 
-  SetCurrentProcessSandbox(kSandboxContentProcess);
+  SandboxLogicalStart();
 }
 #endif // MOZ_CONTENT_SANDBOX
 
@@ -477,6 +360,7 @@ SetMediaPluginSandbox(const char *aFilePath)
   if (!SandboxInfo::Get().Test(SandboxInfo::kEnabledForMedia)) {
     return;
   }
+  MOZ_ASSERT(gSandboxType == Some(kSandboxMediaPlugin));
 
   if (aFilePath) {
     gMediaPluginFilePath = strdup(aFilePath);
@@ -487,8 +371,8 @@ SetMediaPluginSandbox(const char *aFilePath)
       MOZ_CRASH();
     }
   }
-  // Finally, start the sandbox.
-  SetCurrentProcessSandbox(kSandboxMediaPlugin);
+
+  SandboxLogicalStart();
 }
 #endif // MOZ_GMP_SANDBOX
 

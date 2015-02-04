@@ -80,6 +80,10 @@
 #include "mozilla/sandboxing/loggingCallbacks.h"
 #endif
 
+#if defined(XP_LINUX) && defined(MOZ_SANDBOX)
+#include "mozilla/Sandbox.h"
+#endif
+
 #ifdef MOZ_IPDL_TESTS
 #include "mozilla/_ipdltest/IPDLUnitTests.h"
 #include "mozilla/_ipdltest/IPDLUnitTestProcessChild.h"
@@ -334,6 +338,15 @@ XRE_InitChildProcess(int aArgc,
     if (_fileno(stdin) == -1 || _get_osfhandle(fileno(stdin)) == -1)
         freopen("CONIN$", "r", stdin);
   }
+#endif
+
+#if defined(XP_LINUX) && defined(MOZ_SANDBOX) && !defined(MOZ_WIDGET_GONK)
+  // This needs to happen while we're still single-threaded.  In
+  // particular, on B2G this needs to happen before the Android Binder
+  // library is started, which occurs before this point; it also needs
+  // additional special handling for Nuwa.  See, respectively,
+  // content_process_main() and AfterNuwaFork().
+  mozilla::SandboxEarlyInit(XRE_GetProcessType());
 #endif
 
   char aLocal;
