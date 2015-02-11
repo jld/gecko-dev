@@ -284,6 +284,53 @@ ChrootToEmptyDir()
   return true;
 }
 
+static bool
+DropAllCapabilities()
+{
+  __user_cap_header_struct capHdr = {
+    _LINUX_CAPABILITY_VERSION_3,
+    0
+  };
+  __user_cap_data_struct capData[_LINUX_CAPABILITY_U32S_3];
+  PodArrayZero(capData);
+  return syscall(__NR_capset, &capHdr, &capData) == 0;
+}
+
+static bool
+WriteStringToFile(const char* aPath, const char* aStr, const size_t aLen)
+{
+  int fd = open(aPath, O_WRONLY);
+  if (fd < 0) {
+    return false;
+  }
+  ssize_t written = write(fd, aStr, aLen);
+  if (close(fd) != 0 || written != ssize_t(aLen)) {
+    return false;
+  }
+  return true;
+}
+
+static bool
+UnshareUserNamespace()
+{
+  uid_t uid = getuid();
+  gid_t gid = getgid();
+  char buf[80];
+  size_t len;
+
+  if (unshare(CLONE_NEWUSER) != 0) {
+    return false;
+  }
+  len = size_t(snprintf(buf, sizeof(buf), "%u %u 1\n", uid, uid));
+  MOZ_ASSERT(len < sizeof(buf));
+  WriteStringToFile("/proc/self/uid_map", buf, len);
+  len = size_t(snprintf(buf, sizeof(buf), "%u %u 1\n", gid, gid));
+  MOZ_ASSERT(len < sizeof(buf));
+  WriteStringToFile("/proc/self/gid_map", buf, len);
+  // FIXME: check errors and do the setgroups thing
+  return true;
+}
+
 static void
 AssertSingleThreaded()
 {
@@ -328,9 +375,8 @@ SandboxEarlyInit(GeckoProcessType aProcType)
   }
   AssertSingleThreaded();
 
-  if (tryChroot && unshare(CLONE_NEWUSER) == 0) {
+  if (tryChroot && UnshareUserNamespace()) {
     gUsingChroot = true;
-    // FIXME: set up uid/gid maps
   }
 
   if (!gEarlySandboxProxy.Start()) {
@@ -339,13 +385,11 @@ SandboxEarlyInit(GeckoProcessType aProcType)
   }
 
   if (gUsingChroot) {
-    __user_cap_header_struct capHdr = {
-      _LINUX_CAPABILITY_VERSION_3,
-      0
-    };
-    __user_cap_data_struct capData[_LINUX_CAPABILITY_U32S_3];
-    PodArrayZero(capData);
-    if (syscall(__NR_capset, &capHdr, &capData) != 0) {
+    if (unshare(CLONE_NEWNET) != 0) {
+      SANDBOX_LOG_ERROR("unshare network namespace: %s", strerror(errno));
+    }
+
+    if (!DropAllCapabilities()) {
       MOZ_CRASH("Failed to drop capabilites!");
     }
   }
