@@ -12,6 +12,7 @@
 
 #include <unistd.h>
 #include <stdio.h>
+#include <linux/capability.h>
 #include <sys/ptrace.h>
 #include <sys/prctl.h>
 #include <sys/stat.h>
@@ -25,6 +26,7 @@
 
 #include "mozilla/Atomics.h"
 #include "mozilla/Maybe.h"
+#include "mozilla/PodOperations.h"
 #include "mozilla/SandboxInfo.h"
 #include "mozilla/unused.h"
 #include "sandbox/linux/seccomp-bpf/linux_seccomp.h"
@@ -271,12 +273,16 @@ AssertSingleThreaded()
   }
 }
 
+// FIXME: move this
+static bool gUsingChroot = false;
+
 void
 SandboxEarlyInit(GeckoProcessType aProcType)
 {
   if (!SandboxInfo::Get().Test(SandboxInfo::kHasSeccompBPF)) {
     return;
   }
+  bool tryChroot = false;
   switch(aProcType) {
 #ifdef MOZ_CONTENT_SANDBOX
   case GeckoProcessType_Content:
@@ -292,16 +298,36 @@ SandboxEarlyInit(GeckoProcessType aProcType)
       return;
     }
     gSandboxType = Some(kSandboxMediaPlugin);
+    tryChroot = true;
     break;
 #endif
   default:
     return;
   }
   AssertSingleThreaded();
+
+  if (tryChroot && unshare(CLONE_NEWUSER) == 0) {
+    gUsingChroot = true;
+    // FIXME: set up uid/gid maps
+  }
+
   if (!gEarlySandboxProxy.Start()) {
     SANDBOX_LOG_ERROR("Failed to start syscall proxy thread");
     MOZ_CRASH();
   }
+
+  if (gUsingChroot) {
+    __user_cap_header_struct capHdr = {
+      _LINUX_CAPABILITY_VERSION_3,
+      0
+    };
+    __user_cap_data_struct capData[_LINUX_CAPABILITY_U32S_3];
+    PodArrayZero(capData);
+    if (syscall(__NR_capset, &capHdr, &capData) != 0) {
+      MOZ_CRASH("Failed to drop capabilites!");
+    }
+  }
+
   SetCurrentProcessSandbox(*gSandboxType);
 }
 
@@ -317,6 +343,12 @@ SandboxLogicalStart()
   asanArgs.coverage_max_block_size = 0;
   __sanitizer_sandbox_on_notify(&asanArgs);
 #endif
+
+  if (gUsingChroot) {
+    if (chroot("/proc/self/fdinfo" /* FIXME FIXME FIXME */) != 0) {
+      SANDBOX_LOG_ERROR("chroot: %s", strerror(errno));
+    }
+  }
 
   if (!gEarlySandboxProxy.Stop()) {
     MOZ_CRASH("SandboxEarlyInit() wasn't called!");
