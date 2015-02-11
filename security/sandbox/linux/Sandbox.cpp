@@ -70,6 +70,7 @@ static const char *gMediaPluginFilePath;
 
 static Maybe<SandboxType> gSandboxType;
 static UnsafeSyscallProxy gEarlySandboxProxy;
+static bool gUsingChroot = false;
 
 /**
  * This is the SIGSYS handler function. It is used to report to the user
@@ -259,6 +260,30 @@ SetCurrentProcessSandbox(SandboxType aType)
   InstallSyscallFilter(prog);
 }
 
+static bool
+ChrootToEmptyDir()
+{
+  char path[] = "/tmp/mozsandbox.XXXXXX";
+  if (!mkdtemp(path)) {
+    SANDBOX_LOG_ERROR("mkdtemp: %s", strerror(errno));
+    return false;
+  }
+  if (chdir(path) != 0) {
+    SANDBOX_LOG_ERROR("chdir %s: %s", path, strerror(errno));
+    rmdir(path);
+    return false;
+  }
+  if (rmdir(path) != 0) {
+    SANDBOX_LOG_ERROR("rmdir %s: %s", path, strerror(errno));
+    return false;
+  }
+  if (chroot(".") != 0) {
+    SANDBOX_LOG_ERROR("chroot: %s", strerror(errno));
+    return false;
+  }
+  return true;
+}
+
 static void
 AssertSingleThreaded()
 {
@@ -272,9 +297,6 @@ AssertSingleThreaded()
     MOZ_CRASH("process is not single-threaded");
   }
 }
-
-// FIXME: move this
-static bool gUsingChroot = false;
 
 void
 SandboxEarlyInit(GeckoProcessType aProcType)
@@ -345,8 +367,8 @@ SandboxLogicalStart()
 #endif
 
   if (gUsingChroot) {
-    if (chroot("/proc/self/fdinfo" /* FIXME FIXME FIXME */) != 0) {
-      SANDBOX_LOG_ERROR("chroot: %s", strerror(errno));
+    if (!ChrootToEmptyDir()) {
+      MOZ_CRASH("ChrootToEmptyDir failed");
     }
   }
 
