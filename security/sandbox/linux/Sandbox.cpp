@@ -13,6 +13,7 @@
 #include <unistd.h>
 #include <stdio.h>
 #include <linux/capability.h>
+#include <linux/sched.h>
 #include <sys/ptrace.h>
 #include <sys/prctl.h>
 #include <sys/stat.h>
@@ -32,6 +33,16 @@
 #include "sandbox/linux/seccomp-bpf/linux_seccomp.h"
 #if defined(ANDROID)
 #include "sandbox/linux/services/android_ucontext.h"
+#endif
+
+#ifndef CLONE_NEWUSER
+#define CLONE_NEWUSER 0x10000000
+#endif
+#ifndef CLONE_NEWPID
+#define CLONE_NEWPID  0x20000000
+#endif
+#ifndef CLONE_NEWNET
+#define CLONE_NEWNET  0x40000000
 #endif
 
 #ifdef MOZ_ASAN
@@ -287,10 +298,7 @@ ChrootToEmptyDir()
 static bool
 DropAllCapabilities()
 {
-  __user_cap_header_struct capHdr = {
-    _LINUX_CAPABILITY_VERSION_3,
-    0
-  };
+  __user_cap_header_struct capHdr = { _LINUX_CAPABILITY_VERSION_3, 0 };
   __user_cap_data_struct capData[_LINUX_CAPABILITY_U32S_3];
   PodArrayZero(capData);
   return syscall(__NR_capset, &capHdr, &capData) == 0;
@@ -318,16 +326,19 @@ UnshareUserNamespace()
   char buf[80];
   size_t len;
 
+  MOZ_ASSERT(getpid() == syscall(__NR_gettid));
   if (unshare(CLONE_NEWUSER) != 0) {
     return false;
   }
   len = size_t(snprintf(buf, sizeof(buf), "%u %u 1\n", uid, uid));
   MOZ_ASSERT(len < sizeof(buf));
-  WriteStringToFile("/proc/self/uid_map", buf, len);
+  MOZ_ALWAYS_TRUE(WriteStringToFile("/proc/self/uid_map", buf, len));
+
+  WriteStringToFile("/proc/self/setgroups", "deny", 4);
+
   len = size_t(snprintf(buf, sizeof(buf), "%u %u 1\n", gid, gid));
   MOZ_ASSERT(len < sizeof(buf));
-  WriteStringToFile("/proc/self/gid_map", buf, len);
-  // FIXME: check errors and do the setgroups thing
+  MOZ_ALWAYS_TRUE(WriteStringToFile("/proc/self/gid_map", buf, len));
   return true;
 }
 
