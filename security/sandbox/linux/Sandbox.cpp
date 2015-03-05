@@ -5,10 +5,14 @@
  * You can obtain one at http://mozilla.org/MPL/2.0/. */
 
 #include "Sandbox.h"
+
+#include "LinuxCapabilities.h"
+#include "SandboxChroot.h"
 #include "SandboxFilter.h"
 #include "SandboxInternal.h"
 #include "SandboxLogging.h"
 #include "SandboxUtil.h"
+#include "common/LinuxSched.h"
 
 #include <dirent.h>
 #include <errno.h>
@@ -27,6 +31,7 @@
 
 #include "mozilla/Atomics.h"
 #include "mozilla/SandboxInfo.h"
+#include "mozilla/UniquePtr.h"
 #include "mozilla/unused.h"
 #include "sandbox/linux/seccomp-bpf/linux_seccomp.h"
 #if defined(ANDROID)
@@ -66,6 +71,8 @@ SandboxCrashFunc gSandboxCrashFunc;
 static int gMediaPluginFileDesc = -1;
 static const char *gMediaPluginFilePath;
 #endif
+
+static UniquePtr<SandboxChroot> gChrootHelper;
 
 /**
  * This is the SIGSYS handler function. It is used to report to the user
@@ -285,6 +292,12 @@ BroadcastSetThreadSandbox(SandboxType aType)
     SANDBOX_LOG_ERROR("opendir /proc/self/task: %s\n", strerror(errno));
     MOZ_CRASH();
   }
+
+  if (gChrootHelper) {
+    gChrootHelper->Invoke();
+    gChrootHelper = nullptr;
+  }
+
   signum = FindFreeSignalNumber();
   if (signum == 0) {
     SANDBOX_LOG_ERROR("No available signal numbers!");
@@ -422,10 +435,134 @@ SetCurrentProcessSandbox(SandboxType aType)
   BroadcastSetThreadSandbox(aType);
 }
 
+static bool
+WriteStringToFile(const char* aPath, const char* aStr, const size_t aLen)
+{
+  int fd = open(aPath, O_WRONLY);
+  if (fd < 0) {
+    return false;
+  }
+  ssize_t written = write(fd, aStr, aLen);
+  if (close(fd) != 0 || written != ssize_t(aLen)) {
+    return false;
+  }
+  return true;
+}
+
+static bool
+UnshareUserNamespace()
+{
+  // These variables need to be initialized before the unshare; see
+  // below.
+  uid_t uid = getuid();
+  gid_t gid = getgid();
+  char buf[80];
+  size_t len;
+
+  if (unshare(CLONE_NEWUSER) != 0) {
+    return false;
+  }
+
+  // In addition to unsharing the user namespace, this function also
+  // sets up uid and gid mappings so that the process's subjective
+  // uid/gid are the same as they were in the outer namespace.  This
+  // is necessary in order to nest user namespaces (we'll need this in
+  // the future, for pid namespace support), and generally follows the
+  // principle of least astonishment.
+  //
+  // In recent kernels (3.19, 3.18.2, 3.17.8), for security reasons,
+  // establishing gid mappings will fail unless the process first
+  // revokes its ability to call setgroups() by using a /proc node
+  // added in the same set of patches.
+  //
+  // Note that /proc/self points to the thread group leader, not the
+  // current thread.  However, CLONE_NEWUSER can be unshared only in a
+  // single-threaded process, so those are equivalent if we reach this
+  // point.
+  len = size_t(snprintf(buf, sizeof(buf), "%u %u 1\n", uid, uid));
+  MOZ_ASSERT(len < sizeof(buf));
+  // FIXME: DIAGNOSTIC_ASSERT these.
+  MOZ_ALWAYS_TRUE(WriteStringToFile("/proc/self/uid_map", buf, len));
+
+  unused << WriteStringToFile("/proc/self/setgroups", "deny", 4);
+
+  len = size_t(snprintf(buf, sizeof(buf), "%u %u 1\n", gid, gid));
+  MOZ_ASSERT(len < sizeof(buf));
+  MOZ_ALWAYS_TRUE(WriteStringToFile("/proc/self/gid_map", buf, len));
+  return true;
+}
+
 void
 SandboxEarlyInit(GeckoProcessType aType, bool aIsNuwa)
 {
   MOZ_RELEASE_ASSERT(IsSingleThreaded());
+
+  // Which kinds of resource isolation (of those that need to be set
+  // up at this point) can be used by this process?
+  bool canChroot = false;
+  bool canUnshareNet = false;
+  bool canUnshareIPC = false;
+
+  switch (aType) {
+  case GeckoProcessType_Default:
+    MOZ_ASSERT(false, "SandboxEarlyInit in parent process");
+    return;
+#ifdef MOZ_GMP_SANDBOX
+  case GeckoProcessType_GMPlugin:
+    canUnshareNet = true;
+    canUnshareIPC = true;
+    canChroot = true;
+    break;
+#endif
+    // In the future, content processes will be able to use some of
+    // these.
+  default:
+    // Other cases intentionally left blank.
+    break;
+  }
+
+  // If there's nothing to do, then we're done.
+  if (!canChroot && !canUnshareNet && !canUnshareIPC) {
+    return;
+  }
+
+  // If capabilities can't be gained, then nothing can be done.
+  const SandboxInfo info = SandboxInfo::Get();
+  if (!info.Test(SandboxInfo::kHasUserNamespaces)) {
+    return;
+  }
+
+  if (!UnshareUserNamespace()) {
+    // TODO: explain why non-debug release builds are allowed to ignore errors.
+    SANDBOX_LOG_ERROR("unshare(CLONE_NEWUSER): %s", strerror(errno));
+    MOZ_DIAGNOSTIC_ASSERT(false, "unshare(CLONE_NEWUSER)");
+  }
+  // No early returns after this point!  We need to drop the
+  // capabilities that were gained by unsharing the user namesapce.
+
+  if (canUnshareIPC && unshare(CLONE_NEWIPC) != 0) {
+    SANDBOX_LOG_ERROR("unshare(CLONE_NEWIPC): %s", strerror(errno));
+    MOZ_DIAGNOSTIC_ASSERT(false, "unshare(CLONE_NEWIPC)");
+  }
+
+  if (canUnshareNet && unshare(CLONE_NEWNET) != 0) {
+    SANDBOX_LOG_ERROR("unshare(CLONE_NEWNET): %s", strerror(errno));
+    MOZ_DIAGNOSTIC_ASSERT(false, "unshare(CLONE_NEWNET)");
+  }
+
+  if (canChroot) {
+    gChrootHelper = MakeUnique<SandboxChroot>();
+    if (!gChrootHelper->Prepare()) {
+      SANDBOX_LOG_ERROR("failed to set up chroot helper");
+      MOZ_DIAGNOSTIC_ASSERT(false, "SandboxChroot::Prepare");
+      gChrootHelper = nullptr;
+    }
+  }
+
+  if (!LinuxCapabilities().SetCurrent()) {
+    SANDBOX_LOG_ERROR("dropping capabilities: %s", strerror(errno));
+    MOZ_CRASH("can't drop capabilities");
+  }
 }
 
 #ifdef MOZ_CONTENT_SANDBOX
