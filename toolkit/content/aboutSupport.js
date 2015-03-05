@@ -20,6 +20,8 @@ window.addEventListener("load", function onload(event) {
   Troubleshoot.snapshot(function (snapshot) {
     for (let prop in snapshotFormatters)
       snapshotFormatters[prop](snapshot[prop]);
+    if (location.hash != "")
+      location.hash = location.hash;
   });
   populateActionBox();
   setupEventListeners();
