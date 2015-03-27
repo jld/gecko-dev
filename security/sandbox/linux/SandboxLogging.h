@@ -7,6 +7,12 @@
 #ifndef mozilla_SandboxLogging_h
 #define mozilla_SandboxLogging_h
 
+#ifdef MOZ_SANDBOX_LOG_UNSAFE
+
+// This is async signal unsafe, but we can't get to Chromium's
+// SafeSPrintf everywhere.  See after the #else for the default
+// implementation.
+
 #if defined(ANDROID)
 #include <android/log.h>
 #else
@@ -18,5 +24,21 @@
 #else
 #define SANDBOX_LOG_ERROR(fmt, args...) fprintf(stderr, "Sandbox: " fmt "\n", ## args)
 #endif
+
+#else // MOZ_SANDBOX_LOG_UNSAFE
+
+#include "base/strings/safe_sprintf.h"
+
+namespace mozilla {
+void SandboxLogError(const char* aMessage);
+}
+
+#define SANDBOX_LOG_ERROR(fmt, args...) do {                          \
+  char _sandboxLogBuf[256];                                           \
+  ::base::strings::SafeSPrintf(_sandboxLogBuf, fmt, ## args);         \
+  ::mozilla::SandboxLogError(_sandboxLogBuf);                         \
+} while(0)
+
+#endif // MOZ_SANDBOX_LOG_UNSAFE
 
 #endif // mozilla_SandboxLogging_h

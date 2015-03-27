@@ -5,6 +5,11 @@
  * You can obtain one at http://mozilla.org/MPL/2.0/. */
 
 #include "Sandbox.h"
+
+#ifdef MOZ_SANDBOX_LOG_UNSAFE
+#error "Something went wrong in a moz.build file somewhere...."
+#endif
+
 #include "SandboxFilter.h"
 #include "SandboxInternal.h"
 #include "SandboxLogging.h"

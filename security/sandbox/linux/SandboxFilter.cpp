@@ -384,6 +384,7 @@ void SandboxFilterImplGMP::Build() {
 
   Allow(SYSCALL(getpid));
   Allow(SYSCALL(gettid));
+  Allow(SYSCALL(writev)); // see SandboxLogging.cpp
 
   AllowThreadClone();
 
