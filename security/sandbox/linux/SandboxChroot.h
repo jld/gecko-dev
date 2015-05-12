@@ -31,8 +31,8 @@
 // Prepare() can fail (return false); for example, if it doesn't have
 // CAP_SYS_CHROOT or if it can't create a directory to chroot into.
 //
-// The root directory will be empty and deleted, so the process will
-// not be able to create new entries in it regardless of permissions.
+// The root directory will be empty and the process will not be able
+// to create new entries in it regardless of permissions.
 
 namespace mozilla {
 
@@ -54,7 +54,6 @@ private:
   pthread_mutex_t mMutex;
   pthread_cond_t mWakeup;
   Command mCommand;
-  int mFd;
 
   void ThreadMain();
   static void* StaticThreadMain(void* aVoidPtr);

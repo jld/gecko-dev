@@ -11,14 +11,17 @@
 
 #include <errno.h>
 #include <fcntl.h>
+#include <sched.h>
 #include <stdlib.h>
 #include <string.h>
+#include <sys/syscall.h>
 #include <unistd.h>
 
 #include "base/posix/eintr_wrapper.h"
 #include "mozilla/Assertions.h"
 #include "mozilla/DebugOnly.h"
 #include "mozilla/NullPtr.h"
+#include "sandbox/linux/services/linux_syscalls.h"
 
 #define MOZ_ALWAYS_ZERO(e) MOZ_ALWAYS_TRUE((e) == 0)
 
@@ -62,43 +65,6 @@ SandboxChroot::SendCommand(Command aComm)
   return true;
 }
 
-static void
-AlwaysClose(int fd)
-{
-  if (IGNORE_EINTR(close(fd)) != 0) {
-    SANDBOX_LOG_ERROR("close: %s", strerror(errno));
-    MOZ_CRASH("failed to close()");
-  }
-}
-
-static int
-OpenDeletedDirectory()
-{
-  // We don't need this directory to persist between invocations of
-  // the program (nor need it to be cleaned up if something goes wrong
-  // here, because mkdtemp will choose a fresh name), so /tmp as
-  // specified by FHS is adequate.
-  char path[] = "/tmp/mozsandbox.XXXXXX";
-  if (!mkdtemp(path)) {
-    SANDBOX_LOG_ERROR("mkdtemp: %s", strerror(errno));
-    return -1;
-  }
-  int fd = HANDLE_EINTR(open(path, O_RDONLY | O_DIRECTORY));
-  if (fd < 0) {
-    SANDBOX_LOG_ERROR("open %s: %s", path, strerror(errno));
-    // Try to clean up.  Shouldn't fail, but livable if it does.
-    DebugOnly<bool> ok = HANDLE_EINTR(rmdir(path)) == 0;
-    MOZ_ASSERT(ok);
-    return -1;
-  }
-  if (HANDLE_EINTR(rmdir(path)) != 0) {
-    SANDBOX_LOG_ERROR("rmdir %s: %s", path, strerror(errno));
-    AlwaysClose(fd);
-    return -1;
-  }
-  return fd;
-}
-
 bool
 SandboxChroot::Prepare()
 {
@@ -107,11 +73,7 @@ SandboxChroot::Prepare()
     SANDBOX_LOG_ERROR("don't have permission to chroot");
     return false;
   }
-  mFd = OpenDeletedDirectory();
-  if (mFd < 0) {
-    SANDBOX_LOG_ERROR("failed to create empty directory for chroot");
-    return false;
-  }
+  // Start the thread...
   MOZ_ALWAYS_ZERO(pthread_mutex_lock(&mMutex));
   MOZ_ASSERT(mCommand == NO_THREAD);
   if (pthread_create(&mThread, nullptr, StaticThreadMain, this) != 0) {
@@ -119,6 +81,7 @@ SandboxChroot::Prepare()
     SANDBOX_LOG_ERROR("pthread_create: %s", strerror(errno));
     return false;
   }
+  // ... and wait for it to be ready.
   while (mCommand != NO_COMMAND) {
     MOZ_ASSERT(mCommand == NO_THREAD);
     MOZ_ALWAYS_ZERO(pthread_cond_wait(&mWakeup, &mMutex));
@@ -131,19 +94,45 @@ void
 SandboxChroot::Invoke()
 {
   MOZ_ALWAYS_TRUE(SendCommand(DO_CHROOT));
+  // Double-check that it worked:
+  MOZ_RELEASE_ASSERT(access("/proc", F_OK) == -1);
+  // Wait until the directory is empty -- in addition to the
+  // pthread_join quality-of-implementation issues mentioned in
+  // SandboxChroot.h, the thread is still reachable from the procfs
+  // inode for a short time after the kernel indicates that the thread
+  // exited (see set_tid_address(2)).
+  while (access("/0", F_OK) == 0) {
+    sched_yield();
+  }
 }
 
+// This chroot()s and chdir()s to the /proc/<pid>/fdinfo directory of
+// the calling thread.  When the thread exits the directory will
+// become empty, none of the usual methods of creating new entries are
+// allowed either before or after that point, and the inode is not
+// reused even if another process/thread is later assigned the same
+// pid.  This technique is due to Chromium (which uses a child process
+// instead).
 static bool
-ChrootToFileDesc(int fd)
+ChrootToThreadFdInfoDir()
 {
-  if (fchdir(fd) != 0) {
-    SANDBOX_LOG_ERROR("fchdir: %s", strerror(errno));
-    return false;
-  }
-  if (chroot(".") != 0) {
+  int tid = syscall(__NR_gettid);
+  char path[32]; // "/proc/2147483647/fdinfo" is 24 including '\0'.
+  DebugOnly<size_t> len;
+
+  len = size_t(snprintf(path, sizeof(path), "/proc/%d/fdinfo", tid));
+  MOZ_ASSERT(len < sizeof(path));
+
+  if (chroot(path) != 0) {
     SANDBOX_LOG_ERROR("chroot: %s", strerror(errno));
     return false;
   }
+  if (chdir("/") != 0) {
+    SANDBOX_LOG_ERROR("chdir(\"/\"): %s", strerror(errno));
+    // This shouldn't ever happen.
+    MOZ_CRASH("chdir to / failed");
+  }
+
   return true;
 }
 
@@ -175,16 +164,11 @@ SandboxChroot::ThreadMain()
     MOZ_ALWAYS_ZERO(pthread_cond_wait(&mWakeup, &mMutex));
   }
   if (mCommand == DO_CHROOT) {
-    MOZ_ASSERT(mFd >= 0);
-    if (!ChrootToFileDesc(mFd)) {
+    if (!ChrootToThreadFdInfoDir()) {
       MOZ_CRASH("Failed to chroot");
     }
   } else {
     MOZ_ASSERT(mCommand == JUST_EXIT);
-  }
-  if (mFd >= 0) {
-    AlwaysClose(mFd);
-    mFd = -1;
   }
   mCommand = NO_THREAD;
   MOZ_ALWAYS_ZERO(pthread_mutex_unlock(&mMutex));
