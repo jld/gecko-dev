@@ -13,6 +13,7 @@ interface nsIWebProgressListener;
 interface nsIFile;
 interface nsIChannel;
 interface nsILoadContext;
+interface nsIWebBrowserPersistDocument;
 
 /**
  * Interface for persisting DOM documents and URIs to local or remote storage.
@@ -280,4 +281,7 @@ interface nsIWebBrowserPersist : nsICancelable
    * cancel with an argument of NS_BINDING_ABORTED.
    */
   void cancelSave();
+
+  // Hang this here for now because everything is made of bees.
+  nsIWebBrowserPersistDocument startPersistence(in nsISupports aDocumentish);
 };

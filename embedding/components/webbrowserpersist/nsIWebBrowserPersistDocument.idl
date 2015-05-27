@@ -42,9 +42,3 @@ interface nsIWebBrowserPersistResourceVisitor : nsISupports
                      in AUTF8String name); // ???
   void endVisit();
 };
-
-[scriptable, uuid(9e2d647a-a079-4d9a-90b2-565996cbd828)]
-interface nsIWebBrowserPersistable : nsISupports
-{
-  nsIWebBrowserPersistDocument startPersistence();
-};
