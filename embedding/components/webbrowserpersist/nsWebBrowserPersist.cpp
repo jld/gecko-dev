@@ -83,6 +83,7 @@
 #include "nsIProtocolHandler.h"
 
 #include "nsWebBrowserPersist.h"
+#include "nsWebBrowserPersistLocalDocument.h"
 
 #include "nsIContent.h"
 #include "nsIMIMEInfo.h"
@@ -3839,6 +3840,19 @@ void nsWebBrowserPersist::SetApplyConversionIfNeeded(nsIChannel *aChannel)
         }
     }
 }
+
+NS_IMETHODIMP
+nsWebBrowserPersist::StartPersistence(nsISupports* aDocumentish,
+                                      nsIWebBrowserPersistDocument** aRet)
+{
+    nsCOMPtr<nsIDocument> doc = do_QueryInterface(aDocumentish);
+    if (!doc) {
+        return NS_ERROR_UNEXPECTED;
+    }
+    NS_ADDREF(*aRet = new nsWebBrowserPersistLocalDocument(doc));
+    return NS_OK;
+}
+
 
 ///////////////////////////////////////////////////////////////////////////////
 
