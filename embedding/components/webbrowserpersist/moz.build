@@ -14,6 +14,11 @@ XPIDL_MODULE = 'webbrowserpersist'
 
 SOURCES += [
     'nsWebBrowserPersist.cpp',
+    'nsWebBrowserPersistLocalDocument.cpp',
+]
+
+EXPORTS += [
+    'nsWebBrowserPersistLocalDocument.h',
 ]
 
 FAIL_ON_WARNINGS = True
