@@ -40,5 +40,6 @@ interface nsIWebBrowserPersistResourceVisitor : nsISupports
                 in AUTF8String aURI);
   void visitDocument(in nsIWebBrowserPersistDocument aDocument,
                      in nsIWebBrowserPersistDocument aSubDocument);
-  void endVisit(in nsresult aStatus);
+  void endVisit(in nsIWebBrowserPersistDocument aDocument,
+                in nsresult aStatus);
 };

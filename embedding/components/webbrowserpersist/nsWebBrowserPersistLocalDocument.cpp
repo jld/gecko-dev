@@ -143,7 +143,7 @@ nsWebBrowserPersistLocalDocument::ReadResources(nsIWebBrowserPersistResourceVisi
     mCurrentBaseURI = nullptr;
     mPersistFlags = 0;
     visitor.swap(mVisitor);
-    visitor->EndVisit(rv);
+    visitor->EndVisit(this, rv);
     return rv;
 }
 
