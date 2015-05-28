@@ -12,12 +12,27 @@
 #include "nsIURI.h"
 #include "nsIWebBrowserPersistDocument.h"
 
+class nsIDOMNode;
+
 class nsWebBrowserPersistLocalDocument final
     : public nsIWebBrowserPersistDocument
 {
 private:
     virtual ~nsWebBrowserPersistLocalDocument();
     nsCOMPtr<nsIDocument> mDocument; // Reference cycles?
+    nsCOMPtr<nsIWebBrowserPersistResourceVisitor> mVisitor;
+    nsCOMPtr<nsIURI> mCurrentBaseURI;
+    uint32_t mPersistFlags;
+
+    nsresult OnWalkDOMNode(nsIDOMNode* aNode);
+    nsresult OnWalkURI(const nsACString& aURISpec);
+    nsresult OnWalkURI(nsIURI* aURI);
+    nsresult OnWalkAttribute(nsIDOMNode* aNode,
+                             const char* aAttribute,
+                             const char* aNamespaceURI = "");
+    nsresult OnWalkSubframe(nsIDOMNode*     aNode,
+                            nsIDOMDocument* aMaybeContent);
+    
 public:
     nsWebBrowserPersistLocalDocument(nsIDocument* aDocument);
 

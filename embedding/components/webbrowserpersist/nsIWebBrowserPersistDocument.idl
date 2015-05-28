@@ -26,7 +26,8 @@ interface nsIWebBrowserPersistDocument : nsISupports
   readonly attribute AUTF8String baseURI;
   readonly attribute ACString contentType;
   readonly attribute ACString charSet;
-  void readResources(in nsIWebBrowserPersistResourceVisitor aVisitor);
+  void readResources(in nsIWebBrowserPersistResourceVisitor aVisitor,
+                     in unsigned long persistFlags);
   // Is this right? Size estimates? Completion?
   void writeContent(in nsIOutputStream aStream,
                     in nsIWebBrowserPersistMap aURIMap);
@@ -36,9 +37,8 @@ interface nsIWebBrowserPersistDocument : nsISupports
 interface nsIWebBrowserPersistResourceVisitor : nsISupports
 {
   void visitURI(in nsIWebBrowserPersistDocument aDocument,
-                in AUTF8String aURI, in AUTF8String aContentType); // ???
+                in AUTF8String aURI);
   void visitDocument(in nsIWebBrowserPersistDocument aDocument,
-                     in nsIWebBrowserPersistDocument aSubDocument,
-                     in AUTF8String name); // ???
-  void endVisit();
+                     in nsIWebBrowserPersistDocument aSubDocument);
+  void endVisit(in nsresult aStatus);
 };
