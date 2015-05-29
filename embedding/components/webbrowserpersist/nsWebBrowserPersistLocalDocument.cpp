@@ -5,7 +5,10 @@
 
 #include "nsWebBrowserPersistLocalDocument.h"
 
+#include "nsComponentManagerUtils.h"
 #include "nsContentUtils.h"
+#include "nsContentCID.h"
+#include "nsIComponentRegistrar.h"
 #include "nsIContent.h"
 #include "nsIDOMAttr.h"
 #include "nsIDOMDocument.h"
@@ -34,6 +37,7 @@
 #include "nsIDOMProcessingInstruction.h"
 #include "nsIDOMTreeWalker.h"
 #include "nsIDocument.h"
+#include "nsIDocumentEncoder.h"
 #include "nsILoadContext.h"
 #include "nsIProtocolHandler.h"
 #include "nsIWebBrowserPersist.h"
@@ -446,12 +450,152 @@ nsWebBrowserPersistLocalDocument::OnWalkDOMNode(nsIDOMNode* aNode)
     return NS_OK;
 }
 
-NS_IMETHODIMP
-nsWebBrowserPersistLocalDocument::WriteContent(nsIOutputStream* aStream,
-                                               nsIWebBrowserPersistMap *aMap,
-                                               const nsACString& aContentType,
-                                               uint32_t aWrapColumn)
+static uint32_t
+PersistFlagsToEncoderFlags(uint32_t aPersistFlags)
 {
-    MOZ_CRASH("FINISH WRITING ME");
+    uint32_t encoderFlags = 0;
+
+    if (aPersistFlags & nsIWebBrowserPersist::ENCODE_FLAGS_SELECTION_ONLY)
+        encoderFlags |= nsIDocumentEncoder::OutputSelectionOnly;
+    if (aPersistFlags & nsIWebBrowserPersist::ENCODE_FLAGS_FORMATTED)
+        encoderFlags |= nsIDocumentEncoder::OutputFormatted;
+    if (aPersistFlags & nsIWebBrowserPersist::ENCODE_FLAGS_RAW)
+        encoderFlags |= nsIDocumentEncoder::OutputRaw;
+    if (aPersistFlags & nsIWebBrowserPersist::ENCODE_FLAGS_BODY_ONLY)
+        encoderFlags |= nsIDocumentEncoder::OutputBodyOnly;
+    if (aPersistFlags & nsIWebBrowserPersist::ENCODE_FLAGS_PREFORMATTED)
+        encoderFlags |= nsIDocumentEncoder::OutputPreformatted;
+    if (aPersistFlags & nsIWebBrowserPersist::ENCODE_FLAGS_WRAP)
+        encoderFlags |= nsIDocumentEncoder::OutputWrap;
+    if (aPersistFlags & nsIWebBrowserPersist::ENCODE_FLAGS_FORMAT_FLOWED)
+        encoderFlags |= nsIDocumentEncoder::OutputFormatFlowed;
+    if (aPersistFlags & nsIWebBrowserPersist::ENCODE_FLAGS_ABSOLUTE_LINKS)
+        encoderFlags |= nsIDocumentEncoder::OutputAbsoluteLinks;
+    if (aPersistFlags & nsIWebBrowserPersist::ENCODE_FLAGS_ENCODE_BASIC_ENTITIES)
+        encoderFlags |= nsIDocumentEncoder::OutputEncodeBasicEntities;
+    if (aPersistFlags & nsIWebBrowserPersist::ENCODE_FLAGS_ENCODE_LATIN1_ENTITIES)
+        encoderFlags |= nsIDocumentEncoder::OutputEncodeLatin1Entities;
+    if (aPersistFlags & nsIWebBrowserPersist::ENCODE_FLAGS_ENCODE_HTML_ENTITIES)
+        encoderFlags |= nsIDocumentEncoder::OutputEncodeHTMLEntities;
+    if (aPersistFlags & nsIWebBrowserPersist::ENCODE_FLAGS_ENCODE_W3C_ENTITIES)
+        encoderFlags |= nsIDocumentEncoder::OutputEncodeW3CEntities;
+    if (aPersistFlags & nsIWebBrowserPersist::ENCODE_FLAGS_CR_LINEBREAKS)
+        encoderFlags |= nsIDocumentEncoder::OutputCRLineBreak;
+    if (aPersistFlags & nsIWebBrowserPersist::ENCODE_FLAGS_LF_LINEBREAKS)
+        encoderFlags |= nsIDocumentEncoder::OutputLFLineBreak;
+    if (aPersistFlags & nsIWebBrowserPersist::ENCODE_FLAGS_NOSCRIPT_CONTENT)
+        encoderFlags |= nsIDocumentEncoder::OutputNoScriptContent;
+    if (aPersistFlags & nsIWebBrowserPersist::ENCODE_FLAGS_NOFRAMES_CONTENT)
+        encoderFlags |= nsIDocumentEncoder::OutputNoFramesContent;
+
+    return encoderFlags;
+}
+
+static bool
+ContentTypeEncoderExists(const nsACString& aType)
+{
+    nsAutoCString contractID(NS_DOC_ENCODER_CONTRACTID_BASE);
+    contractID.Append(aType);
+
+    nsCOMPtr<nsIComponentRegistrar> registrar;
+    nsresult rv = NS_GetComponentRegistrar(getter_AddRefs(registrar));
+    MOZ_ASSERT(NS_SUCCEEDED(rv));
+    if (NS_SUCCEEDED(rv) && registrar) {
+        bool result;
+        rv = registrar->IsContractIDRegistered(contractID.get(), &result);
+        MOZ_ASSERT(NS_SUCCEEDED(rv));
+        return NS_SUCCEEDED(rv) && result;
+    }
+    return false;
+}
+
+#ifdef notyet
+namespace {
+
+class PersistNodeFixup final : nsIDocumentEncoderNodeFixup {
+    virtual ~PersistNodeFixup() { }
+    // STUFF GOES HERE
+public:
+    explicit PersistNodeFixup(nsIWebBrowserPersistMap* aMap);
+
+    NS_DECL_ISUPPORTS
+    NS_DECL_NSIDOCUMENTENCODERNODEFIXUP
+};
+
+} // unnamed namespace
+#endif // notyet
+
+void
+nsWebBrowserPersistLocalDocument::DecideContentType(nsACString& aContentType)
+{
+    if (aContentType.IsEmpty()) {
+        if (NS_WARN_IF(NS_FAILED(GetContentType(aContentType)))) {
+            aContentType.Truncate();
+        }
+    }
+    if (!aContentType.IsEmpty() &&
+        !ContentTypeEncoderExists(aContentType)) {
+        aContentType.Truncate();
+    }
+    if (aContentType.IsEmpty()) {
+        aContentType.AssignLiteral("text/html");
+    }
+}
+
+nsresult
+nsWebBrowserPersistLocalDocument::GetDocEncoder(const nsACString& aContentType,
+                                                nsIDocumentEncoder** aEncoder)
+{
+    nsresult rv;
+    nsAutoCString contractID(NS_DOC_ENCODER_CONTRACTID_BASE);
+    contractID.Append(aContentType);
+    nsCOMPtr<nsIDocumentEncoder> encoder =
+        do_CreateInstance(contractID.get(), &rv);
+    NS_ENSURE_SUCCESS(rv, NS_ERROR_FAILURE);
+
+    rv = encoder->NativeInit(mDocument,
+                             NS_ConvertASCIItoUTF16(aContentType),
+                             PersistFlagsToEncoderFlags(mPersistFlags));
+    NS_ENSURE_SUCCESS(rv, NS_ERROR_FAILURE);
+
+    nsAutoCString charSet;
+    rv = GetCharSet(charSet);
+    NS_ENSURE_SUCCESS(rv, NS_ERROR_FAILURE);
+    rv = encoder->SetCharset(charSet);
+    NS_ENSURE_SUCCESS(rv, NS_ERROR_FAILURE);
+
+    encoder.forget(aEncoder);
+    return NS_OK;
+}
+
+
+NS_IMETHODIMP
+nsWebBrowserPersistLocalDocument::WriteContent(
+    nsIOutputStream* aStream,
+    nsIWebBrowserPersistMap* aMap,
+    const nsACString& aRequestedContentType,
+    uint32_t aWrapColumn,
+    nsIWebBrowserPersistWriteCompletion* aCompletion)
+{
+    nsAutoCString contentType(aRequestedContentType);
+    DecideContentType(contentType);
+
+    nsCOMPtr<nsIDocumentEncoder> encoder;
+    nsresult rv = GetDocEncoder(contentType, getter_AddRefs(encoder));
+    NS_ENSURE_SUCCESS(rv, rv);
+
+    if (aWrapColumn != 0 && (mPersistFlags &
+                             nsIWebBrowserPersist::ENCODE_FLAGS_WRAP))
+        encoder->SetWrapColumn(aWrapColumn);
+
+#ifdef notyet
+    rv = encoder->SetNodeFixup(new PersistNodeFixup(aMap));
+    NS_ENSURE_SUCCESS(rv, NS_ERROR_FAILURE);
+#endif
+
+    rv = encoder->EncodeToStream(aStream);
+    NS_ENSURE_SUCCESS(rv, NS_ERROR_FAILURE);
+
+    aCompletion->OnFinish(this, aStream, contentType);
     return NS_OK;
 }

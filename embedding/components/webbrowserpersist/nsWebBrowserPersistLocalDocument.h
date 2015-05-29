@@ -33,6 +33,9 @@ private:
     nsresult OnWalkSubframe(nsIDOMNode*     aNode,
                             nsIDOMDocument* aMaybeContent);
 
+    void DecideContentType(nsACString& aContentType);
+    nsresult GetDocEncoder(const nsACString& aContentType,
+                           nsIDocumentEncoder** aEncoder);
 public:
     explicit nsWebBrowserPersistLocalDocument(nsIDocument* aDocument);
 
