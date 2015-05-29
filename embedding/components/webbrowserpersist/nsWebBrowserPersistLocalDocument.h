@@ -32,9 +32,9 @@ private:
                              const char* aNamespaceURI = "");
     nsresult OnWalkSubframe(nsIDOMNode*     aNode,
                             nsIDOMDocument* aMaybeContent);
-    
+
 public:
-    nsWebBrowserPersistLocalDocument(nsIDocument* aDocument);
+    explicit nsWebBrowserPersistLocalDocument(nsIDocument* aDocument);
 
     NS_DECL_ISUPPORTS
     NS_DECL_NSIWEBBROWSERPERSISTDOCUMENT

@@ -26,11 +26,13 @@ interface nsIWebBrowserPersistDocument : nsISupports
   readonly attribute AUTF8String baseURI;
   readonly attribute ACString contentType;
   readonly attribute ACString charSet;
-  void readResources(in nsIWebBrowserPersistResourceVisitor aVisitor,
-                     in unsigned long persistFlags);
+  attribute unsigned long persistFlags;
+  void readResources(in nsIWebBrowserPersistResourceVisitor aVisitor);
   // Is this right? Size estimates? Completion?
   void writeContent(in nsIOutputStream aStream,
-                    in nsIWebBrowserPersistMap aURIMap);
+                    in nsIWebBrowserPersistMap aURIMap,
+                    in ACString aContentType,
+                    in unsigned long aWrapColumn);
 };
 
 [scriptable, uuid(8ce37706-b7d3-481a-be68-54f174fc0d0a)]

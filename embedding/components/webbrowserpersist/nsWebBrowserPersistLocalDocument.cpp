@@ -43,12 +43,27 @@ NS_IMPL_ISUPPORTS(nsWebBrowserPersistLocalDocument, nsIWebBrowserPersistDocument
 
 nsWebBrowserPersistLocalDocument::nsWebBrowserPersistLocalDocument(nsIDocument* aDocument)
 : mDocument(aDocument)
+, mPersistFlags(0)
 {
     MOZ_ASSERT(mDocument);
 }
 
 nsWebBrowserPersistLocalDocument::~nsWebBrowserPersistLocalDocument()
 {
+}
+
+NS_IMETHODIMP
+nsWebBrowserPersistLocalDocument::SetPersistFlags(uint32_t aFlags)
+{
+    mPersistFlags = aFlags;
+    return NS_OK;
+}
+
+NS_IMETHODIMP
+nsWebBrowserPersistLocalDocument::GetPersistFlags(uint32_t* aFlags)
+{
+    *aFlags = mPersistFlags;
+    return NS_OK;
 }
 
 NS_IMETHODIMP
@@ -99,8 +114,7 @@ nsWebBrowserPersistLocalDocument::GetCharSet(nsACString& aCharSet)
 }
 
 NS_IMETHODIMP
-nsWebBrowserPersistLocalDocument::ReadResources(nsIWebBrowserPersistResourceVisitor* aVisitor,
-                                                uint32_t aPersistFlags)
+nsWebBrowserPersistLocalDocument::ReadResources(nsIWebBrowserPersistResourceVisitor* aVisitor)
 {
     nsresult rv = NS_OK;
     nsCOMPtr<nsIWebBrowserPersistResourceVisitor> visitor = aVisitor;
@@ -125,7 +139,6 @@ nsWebBrowserPersistLocalDocument::ReadResources(nsIWebBrowserPersistResourceVisi
     NS_ENSURE_TRUE(mCurrentBaseURI, NS_ERROR_UNEXPECTED);
     mVisitor.swap(visitor);
     // Don't early return or ENSURE after this point.
-    mPersistFlags = aPersistFlags;
 
     nsCOMPtr<nsIDOMNode> currentNode;
     walker->GetCurrentNode(getter_AddRefs(currentNode));
@@ -141,7 +154,6 @@ nsWebBrowserPersistLocalDocument::ReadResources(nsIWebBrowserPersistResourceVisi
     }
 
     mCurrentBaseURI = nullptr;
-    mPersistFlags = 0;
     visitor.swap(mVisitor);
     visitor->EndVisit(this, rv);
     return rv;
@@ -436,7 +448,9 @@ nsWebBrowserPersistLocalDocument::OnWalkDOMNode(nsIDOMNode* aNode)
 
 NS_IMETHODIMP
 nsWebBrowserPersistLocalDocument::WriteContent(nsIOutputStream* aStream,
-                                               nsIWebBrowserPersistMap *aMap)
+                                               nsIWebBrowserPersistMap *aMap,
+                                               const nsACString& aContentType,
+                                               uint32_t aWrapColumn)
 {
     MOZ_CRASH("FINISH WRITING ME");
     return NS_OK;
