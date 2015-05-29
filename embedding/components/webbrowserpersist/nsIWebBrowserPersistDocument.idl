@@ -8,6 +8,7 @@
 
 interface nsIOutputStream;
 interface nsIWebBrowserPersistResourceVisitor;
+interface nsIWebBrowserPersistWriteCompletion;
 
 [scriptable, uuid(d52e8b93-2771-45e8-a5b0-6e12b667046b)]
 interface nsIWebBrowserPersistMap : nsISupports
@@ -28,11 +29,11 @@ interface nsIWebBrowserPersistDocument : nsISupports
   readonly attribute ACString charSet;
   attribute unsigned long persistFlags;
   void readResources(in nsIWebBrowserPersistResourceVisitor aVisitor);
-  // Is this right? Size estimates? Completion?
   void writeContent(in nsIOutputStream aStream,
                     in nsIWebBrowserPersistMap aURIMap,
-                    in ACString aContentType,
-                    in unsigned long aWrapColumn);
+                    in ACString aRequestedContentType,
+                    in unsigned long aWrapColumn,
+                    in nsIWebBrowserPersistWriteCompletion aCompletion);
 };
 
 [scriptable, uuid(8ce37706-b7d3-481a-be68-54f174fc0d0a)]
@@ -44,4 +45,13 @@ interface nsIWebBrowserPersistResourceVisitor : nsISupports
                      in nsIWebBrowserPersistDocument aSubDocument);
   void endVisit(in nsIWebBrowserPersistDocument aDocument,
                 in nsresult aStatus);
+};
+
+[scriptable, function, uuid(a07e6892-38ae-4207-8340-7fa6ec446ed6)]
+interface nsIWebBrowserPersistWriteCompletion : nsISupports
+{
+  void onFinish(in nsIWebBrowserPersistDocument aDocument,
+                in nsIOutputStream aStream,
+                // commentme:
+                in ACString aContentType);
 };
