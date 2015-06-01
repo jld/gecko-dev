@@ -5,12 +5,14 @@
 
 #include "nsWebBrowserPersistLocalDocument.h"
 
+#include "mozilla/dom/HTMLSharedElement.h"
 #include "nsComponentManagerUtils.h"
 #include "nsContentUtils.h"
 #include "nsContentCID.h"
 #include "nsIComponentRegistrar.h"
 #include "nsIContent.h"
 #include "nsIDOMAttr.h"
+#include "nsIDOMComment.h"
 #include "nsIDOMDocument.h"
 #include "nsIDOMHTMLAnchorElement.h"
 #include "nsIDOMHTMLAppletElement.h"
@@ -42,6 +44,9 @@
 #include "nsIProtocolHandler.h"
 #include "nsIWebBrowserPersist.h"
 #include "nsNetUtil.h"
+
+using mozilla::dom::HTMLSharedElement;
+
 
 NS_IMPL_ISUPPORTS(nsWebBrowserPersistLocalDocument, nsIWebBrowserPersistDocument)
 
@@ -91,7 +96,7 @@ nsWebBrowserPersistLocalDocument::GetDocumentURI(nsACString& aURISpec)
 NS_IMETHODIMP
 nsWebBrowserPersistLocalDocument::GetBaseURI(nsACString& aURISpec)
 {
-    nsCOMPtr<nsIURI> uri = mDocument->GetBaseURI();
+    nsCOMPtr<nsIURI> uri = GetBaseURI();
     if (!uri) {
         return NS_ERROR_UNEXPECTED;
     }
@@ -113,58 +118,72 @@ nsWebBrowserPersistLocalDocument::GetContentType(nsACString& aContentType)
 NS_IMETHODIMP
 nsWebBrowserPersistLocalDocument::GetCharSet(nsACString& aCharSet)
 {
-    aCharSet = mDocument->GetDocumentCharacterSet();
+    aCharSet = GetCharSet();
     return NS_OK;
 }
 
-NS_IMETHODIMP
-nsWebBrowserPersistLocalDocument::ReadResources(nsIWebBrowserPersistResourceVisitor* aVisitor)
+const nsCString&
+nsWebBrowserPersistLocalDocument::GetCharSet() const
 {
-    nsresult rv = NS_OK;
-    nsCOMPtr<nsIWebBrowserPersistResourceVisitor> visitor = aVisitor;
+    return mDocument->GetDocumentCharacterSet();
+}
 
-    nsCOMPtr<nsIDOMNode> docAsNode = do_QueryInterface(mDocument);
-    NS_ENSURE_TRUE(docAsNode, NS_ERROR_FAILURE);
 
-    nsCOMPtr<nsIDOMTreeWalker> walker;
-    nsCOMPtr<nsIDOMDocument> oldStyleDoc = do_QueryInterface(mDocument);
-    MOZ_ASSERT(oldStyleDoc);
-    rv = oldStyleDoc->CreateTreeWalker(docAsNode,
-            nsIDOMNodeFilter::SHOW_ELEMENT |
-                nsIDOMNodeFilter::SHOW_DOCUMENT |
-                nsIDOMNodeFilter::SHOW_PROCESSING_INSTRUCTION,
-            nullptr, 1, getter_AddRefs(walker));
-    NS_ENSURE_SUCCESS(rv, NS_ERROR_FAILURE);
-    MOZ_ASSERT(walker);
+uint32_t
+nsWebBrowserPersistLocalDocument::GetPersistFlags() const
+{
+    return mPersistFlags;
+}
 
-    MOZ_ASSERT(!mVisitor);
-    NS_ENSURE_FALSE(mVisitor, NS_ERROR_UNEXPECTED);
-    mCurrentBaseURI = mDocument->GetBaseURI();
-    NS_ENSURE_TRUE(mCurrentBaseURI, NS_ERROR_UNEXPECTED);
-    mVisitor.swap(visitor);
-    // Don't early return or ENSURE after this point.
 
-    nsCOMPtr<nsIDOMNode> currentNode;
-    walker->GetCurrentNode(getter_AddRefs(currentNode));
-    while (currentNode) {
-        rv = OnWalkDOMNode(currentNode);
-        if (NS_WARN_IF(NS_FAILED(rv))) {
-            break;
-        }
-        rv = walker->NextNode(getter_AddRefs(currentNode));
-        if (NS_WARN_IF(NS_FAILED(rv))) {
-            break;
-        }
+already_AddRefed<nsIURI>
+nsWebBrowserPersistLocalDocument::GetBaseURI() const
+{
+    return mDocument->GetBaseURI();
+}
+
+
+namespace {
+
+class ResourceReader final {
+public:
+    ResourceReader(nsWebBrowserPersistLocalDocument* aParent,
+                   nsIWebBrowserPersistResourceVisitor* aVisitor);
+    nsresult OnWalkDOMNode(nsIDOMNode* aNode);
+
+private:
+    nsRefPtr<nsWebBrowserPersistLocalDocument> mParent;
+    nsCOMPtr<nsIWebBrowserPersistResourceVisitor> mVisitor;
+    nsCOMPtr<nsIURI> mCurrentBaseURI;
+    uint32_t mPersistFlags;
+
+    nsresult OnWalkURI(const nsACString& aURISpec);
+    nsresult OnWalkURI(nsIURI* aURI);
+    nsresult OnWalkAttribute(nsIDOMNode* aNode,
+                             const char* aAttribute,
+                             const char* aNamespaceURI = "");
+    nsresult OnWalkSubframe(nsIDOMNode*     aNode,
+                            nsIDOMDocument* aMaybeContent);
+
+    bool IsFlagSet(uint32_t aFlag) const {
+        return mParent->GetPersistFlags() & aFlag;
     }
 
-    mCurrentBaseURI = nullptr;
-    visitor.swap(mVisitor);
-    visitor->EndVisit(this, rv);
-    return rv;
+    using IWBP = nsIWebBrowserPersist;
+};
+
+ResourceReader::ResourceReader(nsWebBrowserPersistLocalDocument* aParent,
+                               nsIWebBrowserPersistResourceVisitor* aVisitor)
+: mParent(aParent)
+, mVisitor(aVisitor)
+, mCurrentBaseURI(aParent->GetBaseURI())
+, mPersistFlags(aParent->GetPersistFlags())
+{
+    MOZ_ASSERT(mCurrentBaseURI);
 }
 
 nsresult
-nsWebBrowserPersistLocalDocument::OnWalkURI(nsIURI* aURI)
+ResourceReader::OnWalkURI(nsIURI* aURI)
 {
     // Test if this URI should be persisted. By default
     // we should assume the URI  is persistable.
@@ -179,18 +198,18 @@ nsWebBrowserPersistLocalDocument::OnWalkURI(nsIURI* aURI)
     nsAutoCString stringURI;
     rv = aURI->GetSpec(stringURI);
     NS_ENSURE_SUCCESS(rv, rv);
-    return mVisitor->VisitURI(this, stringURI);
+    return mVisitor->VisitURI(mParent, stringURI);
 }
 
 nsresult
-nsWebBrowserPersistLocalDocument::OnWalkURI(const nsACString& aURISpec)
+ResourceReader::OnWalkURI(const nsACString& aURISpec)
 {
     nsresult rv;
     nsCOMPtr<nsIURI> uri;
 
     rv = NS_NewURI(getter_AddRefs(uri),
                    aURISpec,
-                   /* charset: */ nullptr,
+                   mParent->GetCharSet().get(),
                    mCurrentBaseURI);
     NS_ENSURE_SUCCESS(rv, rv);
     return OnWalkURI(uri);
@@ -229,9 +248,9 @@ ExtractAttribute(nsIDOMNode* aNode,
 }
 
 nsresult
-nsWebBrowserPersistLocalDocument::OnWalkAttribute(nsIDOMNode* aNode,
-                                                  const char* aAttribute,
-                                                  const char* aNamespaceURI)
+ResourceReader::OnWalkAttribute(nsIDOMNode* aNode,
+                                const char* aAttribute,
+                                const char* aNamespaceURI)
 {
     nsAutoCString uriSpec;
     nsresult rv = ExtractAttribute(aNode, aAttribute, aNamespaceURI, uriSpec);
@@ -243,8 +262,8 @@ nsWebBrowserPersistLocalDocument::OnWalkAttribute(nsIDOMNode* aNode,
 }
 
 nsresult
-nsWebBrowserPersistLocalDocument::OnWalkSubframe(nsIDOMNode*     aNode,
-                                                 nsIDOMDocument* aMaybeContent)
+ResourceReader::OnWalkSubframe(nsIDOMNode*     aNode,
+                               nsIDOMDocument* aMaybeContent)
 {
     if (!aMaybeContent) {
         return NS_OK;
@@ -253,7 +272,7 @@ nsWebBrowserPersistLocalDocument::OnWalkSubframe(nsIDOMNode*     aNode,
     NS_ENSURE_STATE(contentDoc);
     nsRefPtr<nsWebBrowserPersistLocalDocument> subPersist =
         new nsWebBrowserPersistLocalDocument(contentDoc);
-    return mVisitor->VisitDocument(this, subPersist);
+    return mVisitor->VisitDocument(mParent, subPersist);
 }
 
 
@@ -270,7 +289,7 @@ GetXMLStyleSheetLink(nsIDOMProcessingInstruction *aPI, nsAString &aHref)
 }
 
 nsresult
-nsWebBrowserPersistLocalDocument::OnWalkDOMNode(nsIDOMNode* aNode)
+ResourceReader::OnWalkDOMNode(nsIDOMNode* aNode)
 {
     nsresult rv;
     
@@ -360,7 +379,7 @@ nsWebBrowserPersistLocalDocument::OnWalkDOMNode(nsIDOMNode* aNode)
         if (!codebase.IsEmpty()) {
             nsCOMPtr<nsIURI> baseURI;
             rv = NS_NewURI(getter_AddRefs(baseURI), codebase,
-                           /* charset: */ nullptr, mCurrentBaseURI);
+                           mParent->GetCharSet().get(), mCurrentBaseURI);
             NS_ENSURE_SUCCESS(rv, rv);
             if (baseURI) {
                 mCurrentBaseURI = baseURI;
@@ -435,7 +454,7 @@ nsWebBrowserPersistLocalDocument::OnWalkDOMNode(nsIDOMNode* aNode)
 
     nsCOMPtr<nsIDOMHTMLIFrameElement> nodeAsIFrame = do_QueryInterface(aNode);
     if (nodeAsIFrame && !(mPersistFlags &
-                          nsIWebBrowserPersist::PERSIST_FLAGS_IGNORE_IFRAMES)) {
+                          IWBP::PERSIST_FLAGS_IGNORE_IFRAMES)) {
         nsCOMPtr<nsIDOMDocument> content;
         rv = nodeAsIFrame->GetContentDocument(getter_AddRefs(content));
         NS_ENSURE_SUCCESS(rv, rv);
@@ -448,6 +467,312 @@ nsWebBrowserPersistLocalDocument::OnWalkDOMNode(nsIDOMNode* aNode)
     }
 
     return NS_OK;
+}
+
+class PersistNodeFixup final : public nsIDocumentEncoderNodeFixup {
+public:
+    PersistNodeFixup(nsWebBrowserPersistLocalDocument* aParent,
+                     nsIWebBrowserPersistMap* aMap,
+                     nsIURI* aTargetURI);
+
+    NS_DECL_ISUPPORTS
+    NS_DECL_NSIDOCUMENTENCODERNODEFIXUP
+private:
+    virtual ~PersistNodeFixup() { }
+    nsRefPtr<nsWebBrowserPersistLocalDocument> mParent;
+    nsClassHashtable<nsCStringHashKey, nsCString> mMap;
+    nsCOMPtr<nsIURI> mCurrentBaseURI;
+    nsCOMPtr<nsIURI> mTargetBaseURI;
+
+    bool IsFlagSet(uint32_t aFlag) const {
+        return mParent->GetPersistFlags() & aFlag;
+    }
+
+    nsresult GetNodeToFixup(nsIDOMNode* aNodeIn, nsIDOMNode** aNodeOut);
+    nsresult FixupURI(nsAString& aURI);
+    nsresult FixupAttribute(nsIDOMNode* aNode,
+                            const char* aAttribute,
+                            const char* aNamespaceURI = "");
+    nsresult FixupAnchor(nsIDOMNode* aNode);
+
+    using IWBP = nsIWebBrowserPersist;
+};
+
+NS_IMPL_ISUPPORTS(PersistNodeFixup, nsIDocumentEncoderNodeFixup)
+
+PersistNodeFixup::PersistNodeFixup(nsWebBrowserPersistLocalDocument* aParent,
+                                   nsIWebBrowserPersistMap* aMap,
+                                   nsIURI* aTargetURI)
+: mParent(aParent)
+, mCurrentBaseURI(aParent->GetBaseURI())
+, mTargetBaseURI(aTargetURI)
+{
+    uint32_t mapSize;
+    nsresult rv = aMap->GetNumMappedURIs(&mapSize);
+    MOZ_ASSERT(NS_SUCCEEDED(rv));
+    NS_ENSURE_SUCCESS_VOID(rv);
+    for (uint32_t i = 0; i < mapSize; ++i) {
+        nsAutoCString urlFrom;
+        nsCString* urlTo = new nsCString();
+
+        rv = aMap->GetURIMapping(i, urlFrom, *urlTo);
+        MOZ_ASSERT(NS_SUCCEEDED(rv));
+        if (NS_SUCCEEDED(rv)) {
+            mMap.Put(urlFrom, urlTo);
+        }
+    }
+}
+
+nsresult
+PersistNodeFixup::GetNodeToFixup(nsIDOMNode *aNodeIn, nsIDOMNode **aNodeOut)
+{
+    // Avoid mixups in FixupNode that could leak objects; this goes
+    // against the usual out parameter convention, but it's a private
+    // method so shouldn't be a problem.
+    MOZ_ASSERT(!*aNodeOut);
+
+    if (!IsFlagSet(IWBP::PERSIST_FLAGS_FIXUP_ORIGINAL_DOM)) {
+        nsresult rv = aNodeIn->CloneNode(false, 1, aNodeOut);
+        NS_ENSURE_SUCCESS(rv, rv);
+    } else {
+        NS_ADDREF(*aNodeOut = aNodeIn);
+    }
+    nsCOMPtr<nsIDOMHTMLElement> element(do_QueryInterface(*aNodeOut));
+    if (element) {
+        // Make sure this is not XHTML
+        nsAutoString namespaceURI;
+        element->GetNamespaceURI(namespaceURI);
+        if (namespaceURI.IsEmpty()) {
+            // This is a tag-soup node.  It may have a _base_href attribute
+            // stuck on it by the parser, but since we're fixing up all URIs
+            // relative to the overall document base that will screw us up.
+            // Just remove the _base_href.
+            element->RemoveAttribute(NS_LITERAL_STRING("_base_href"));
+        }
+    }
+    return NS_OK;
+}
+
+nsresult
+PersistNodeFixup::FixupURI(nsAString &aURI)
+{
+    // get the current location of the file (absolutized)
+    nsCOMPtr<nsIURI> uri;
+    nsresult rv = NS_NewURI(getter_AddRefs(uri), aURI,
+                            mParent->GetCharSet().get(), mCurrentBaseURI);
+    NS_ENSURE_SUCCESS(rv, rv);
+    nsAutoCString spec;
+    rv = uri->GetSpec(spec);
+    NS_ENSURE_SUCCESS(rv, rv);
+
+    const nsCString* replacement = mMap.Get(spec);
+    if (!replacement) {
+        // FIXME: should this be less fatal now that things are async?
+        return NS_ERROR_FAILURE;
+    }
+    if (!replacement->IsEmpty()) {
+        aURI = NS_ConvertUTF8toUTF16(*replacement);
+    }
+    return NS_OK;
+}
+
+nsresult
+PersistNodeFixup::FixupAttribute(nsIDOMNode* aNode,
+                                 const char* aAttribute,
+                                 const char* aNamespaceURI)
+{
+    nsCOMPtr<nsIDOMElement> element = do_QueryInterface(aNode);
+    MOZ_ASSERT(element);
+
+    nsCOMPtr<nsIDOMMozNamedAttrMap> attrMap;
+    nsresult rv = element->GetAttributes(getter_AddRefs(attrMap));
+    NS_ENSURE_SUCCESS(rv, NS_ERROR_FAILURE);
+
+    NS_ConvertASCIItoUTF16 attribute(aAttribute);
+    NS_ConvertASCIItoUTF16 namespaceURI(aNamespaceURI);
+    nsCOMPtr<nsIDOMAttr> attr;
+    rv = attrMap->GetNamedItemNS(namespaceURI, attribute, getter_AddRefs(attr));
+    if (attr) {
+        nsString uri;
+        attr->GetValue(uri);
+        rv = FixupURI(uri);
+        if (NS_SUCCEEDED(rv)) {
+            attr->SetValue(uri);
+        }
+    }
+
+    return rv;
+}
+
+nsresult
+PersistNodeFixup::FixupAnchor(nsIDOMNode *aNode)
+{
+    if (IsFlagSet(IWBP::PERSIST_FLAGS_DONT_FIXUP_LINKS)) {
+        return NS_OK;
+    }
+
+    nsCOMPtr<nsIDOMElement> element = do_QueryInterface(aNode);
+    MOZ_ASSERT(element);
+
+    nsCOMPtr<nsIDOMMozNamedAttrMap> attrMap;
+    nsresult rv = element->GetAttributes(getter_AddRefs(attrMap));
+    NS_ENSURE_SUCCESS(rv, NS_ERROR_FAILURE);
+
+    // Make all anchor links absolute so they point off onto the Internet
+    nsString attribute(NS_LITERAL_STRING("href"));
+    nsCOMPtr<nsIDOMAttr> attr;
+    rv = attrMap->GetNamedItem(attribute, getter_AddRefs(attr));
+    if (attr) {
+        nsString oldValue;
+        attr->GetValue(oldValue);
+        NS_ConvertUTF16toUTF8 oldCValue(oldValue);
+
+        // Skip empty values and self-referencing bookmarks
+        if (oldCValue.IsEmpty() || oldCValue.CharAt(0) == '#') {
+            return NS_OK;
+        }
+
+        // if saving file to same location, we don't need to do any fixup
+        bool isEqual;
+        if (mTargetBaseURI &&
+            NS_SUCCEEDED(mCurrentBaseURI->Equals(mTargetBaseURI, &isEqual)) &&
+            isEqual) {
+            return NS_OK;
+        }
+
+        nsCOMPtr<nsIURI> relativeURI;
+        relativeURI = IsFlagSet(IWBP::PERSIST_FLAGS_FIXUP_LINKS_TO_DESTINATION)
+                      ? mTargetBaseURI : mCurrentBaseURI;
+        // Make a new URI to replace the current one
+        nsCOMPtr<nsIURI> newURI;
+        rv = NS_NewURI(getter_AddRefs(newURI), oldCValue,
+                       mParent->GetCharSet().get(), relativeURI);
+        if (NS_SUCCEEDED(rv) && newURI)
+        {
+            newURI->SetUserPass(EmptyCString());
+            nsAutoCString uriSpec;
+            newURI->GetSpec(uriSpec);
+            attr->SetValue(NS_ConvertUTF8toUTF16(uriSpec));
+        }
+    }
+
+    return NS_OK;
+}
+
+
+NS_IMETHODIMP
+PersistNodeFixup::FixupNode(nsIDOMNode *aNodeIn,
+                            bool *aSerializeCloneKids,
+                            nsIDOMNode **aNodeOut)
+{
+    *aNodeOut = nullptr;
+    *aSerializeCloneKids = false;
+
+    uint16_t type;
+    nsresult rv = aNodeIn->GetNodeType(&type);
+    NS_ENSURE_SUCCESS(rv, rv);
+    if (type != nsIDOMNode::ELEMENT_NODE &&
+        type != nsIDOMNode::PROCESSING_INSTRUCTION_NODE) {
+        return NS_OK;
+    }
+
+    // Fixup xml-stylesheet processing instructions
+    nsCOMPtr<nsIDOMProcessingInstruction> nodeAsPI = do_QueryInterface(aNodeIn);
+    if (nodeAsPI) {
+        nsAutoString target;
+        nodeAsPI->GetTarget(target);
+        if (target.EqualsLiteral("xml-stylesheet"))
+        {
+            rv = GetNodeToFixup(aNodeIn, aNodeOut);
+            if (NS_SUCCEEDED(rv) && *aNodeOut) {
+                nsCOMPtr<nsIDOMProcessingInstruction> outNode =
+                    do_QueryInterface(*aNodeOut);
+                nsAutoString href;
+                GetXMLStyleSheetLink(nodeAsPI, href);
+                if (!href.IsEmpty()) {
+                    FixupURI(href);
+                    FixupXMLStyleSheetLink(outNode, href);
+                }
+            }
+        }
+        return NS_OK;
+    }
+
+    // BASE elements are replaced by a comment so relative links are not hosed.
+    if (!IsFlagSet(IWBP::PERSIST_FLAGS_NO_BASE_TAG_MODIFICATIONS)) {
+        nsCOMPtr<nsIDOMHTMLBaseElement> nodeAsBase = do_QueryInterface(aNodeIn);
+        if (nodeAsBase) {
+            nsCOMPtr<nsIDOMDocument> ownerDocument;
+            HTMLSharedElement* base =
+                static_cast<HTMLSharedElement*>(nodeAsBase.get());
+            base->GetOwnerDocument(getter_AddRefs(ownerDocument));
+            if (ownerDocument) {
+                nsAutoString href;
+                base->GetHref(href); // Doesn't matter if this fails
+                nsCOMPtr<nsIDOMComment> comment;
+                nsAutoString commentText;
+                commentText.AssignLiteral(" base ");
+                if (!href.IsEmpty()) {
+                    commentText += NS_LITERAL_STRING("href=\"") + href
+                                   + NS_LITERAL_STRING("\" ");
+                }
+                rv = ownerDocument->CreateComment(commentText,
+                                                  getter_AddRefs(comment));
+                if (comment) {
+                    return CallQueryInterface(comment, aNodeOut);
+                }
+            }
+            return NS_OK;
+        }
+    }
+
+    nsCOMPtr<nsIContent> content = do_QueryInterface(aNodeIn);
+    if (!content) {
+        return NS_OK;
+    }
+
+    // MORE STUFF GOES HERE
+    return NS_OK;
+}
+
+} // unnamed namespace
+
+NS_IMETHODIMP
+nsWebBrowserPersistLocalDocument::ReadResources(nsIWebBrowserPersistResourceVisitor* aVisitor)
+{
+    nsresult rv = NS_OK;
+    nsCOMPtr<nsIWebBrowserPersistResourceVisitor> visitor = aVisitor;
+
+    nsCOMPtr<nsIDOMNode> docAsNode = do_QueryInterface(mDocument);
+    NS_ENSURE_TRUE(docAsNode, NS_ERROR_FAILURE);
+
+    nsCOMPtr<nsIDOMTreeWalker> walker;
+    nsCOMPtr<nsIDOMDocument> oldStyleDoc = do_QueryInterface(mDocument);
+    MOZ_ASSERT(oldStyleDoc);
+    rv = oldStyleDoc->CreateTreeWalker(docAsNode,
+            nsIDOMNodeFilter::SHOW_ELEMENT |
+                nsIDOMNodeFilter::SHOW_DOCUMENT |
+                nsIDOMNodeFilter::SHOW_PROCESSING_INSTRUCTION,
+            nullptr, 1, getter_AddRefs(walker));
+    NS_ENSURE_SUCCESS(rv, NS_ERROR_FAILURE);
+    MOZ_ASSERT(walker);
+
+    ResourceReader reader(this, aVisitor);
+    nsCOMPtr<nsIDOMNode> currentNode;
+    walker->GetCurrentNode(getter_AddRefs(currentNode));
+    while (currentNode) {
+        rv = reader.OnWalkDOMNode(currentNode);
+        if (NS_WARN_IF(NS_FAILED(rv))) {
+            break;
+        }
+        rv = walker->NextNode(getter_AddRefs(currentNode));
+        if (NS_WARN_IF(NS_FAILED(rv))) {
+            break;
+        }
+    }
+
+    aVisitor->EndVisit(this, rv);
+    return rv;
 }
 
 static uint32_t
@@ -509,22 +834,6 @@ ContentTypeEncoderExists(const nsACString& aType)
     return false;
 }
 
-#ifdef notyet
-namespace {
-
-class PersistNodeFixup final : nsIDocumentEncoderNodeFixup {
-    virtual ~PersistNodeFixup() { }
-    // STUFF GOES HERE
-public:
-    explicit PersistNodeFixup(nsIWebBrowserPersistMap* aMap);
-
-    NS_DECL_ISUPPORTS
-    NS_DECL_NSIDOCUMENTENCODERNODEFIXUP
-};
-
-} // unnamed namespace
-#endif // notyet
-
 void
 nsWebBrowserPersistLocalDocument::DecideContentType(nsACString& aContentType)
 {
@@ -577,6 +886,8 @@ nsWebBrowserPersistLocalDocument::WriteContent(
     uint32_t aWrapColumn,
     nsIWebBrowserPersistWriteCompletion* aCompletion)
 {
+    NS_ENSURE_ARG_POINTER(aStream);
+    NS_ENSURE_ARG_POINTER(aCompletion);
     nsAutoCString contentType(aRequestedContentType);
     DecideContentType(contentType);
 
@@ -584,14 +895,26 @@ nsWebBrowserPersistLocalDocument::WriteContent(
     nsresult rv = GetDocEncoder(contentType, getter_AddRefs(encoder));
     NS_ENSURE_SUCCESS(rv, rv);
 
-    if (aWrapColumn != 0 && (mPersistFlags &
-                             nsIWebBrowserPersist::ENCODE_FLAGS_WRAP))
+    if (aWrapColumn != 0 && (mPersistFlags
+                             & nsIWebBrowserPersist::ENCODE_FLAGS_WRAP)) {
         encoder->SetWrapColumn(aWrapColumn);
+    }
 
-#ifdef notyet
-    rv = encoder->SetNodeFixup(new PersistNodeFixup(aMap));
-    NS_ENSURE_SUCCESS(rv, NS_ERROR_FAILURE);
-#endif
+    if (aMap) {
+        nsCOMPtr<nsIURI> targetURI;
+        nsAutoCString targetURISpec;
+        rv = aMap->GetTargetBaseURI(targetURISpec);
+        if (NS_SUCCEEDED(rv) && !targetURISpec.IsEmpty()) {
+            rv = NS_NewURI(getter_AddRefs(targetURI), targetURISpec,
+                           /* charset: */ nullptr, /* base: */ nullptr);
+            NS_ENSURE_SUCCESS(rv, NS_ERROR_UNEXPECTED);
+        } else if (mPersistFlags & nsIWebBrowserPersist::PERSIST_FLAGS_FIXUP_LINKS_TO_DESTINATION) {
+            return NS_ERROR_UNEXPECTED;
+        }
+
+        rv = encoder->SetNodeFixup(new PersistNodeFixup(this, aMap, targetURI));
+        NS_ENSURE_SUCCESS(rv, NS_ERROR_FAILURE);
+    }
 
     rv = encoder->EncodeToStream(aStream);
     NS_ENSURE_SUCCESS(rv, NS_ERROR_FAILURE);

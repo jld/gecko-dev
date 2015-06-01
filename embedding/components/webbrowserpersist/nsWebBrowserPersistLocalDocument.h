@@ -17,30 +17,24 @@ class nsIDOMNode;
 class nsWebBrowserPersistLocalDocument final
     : public nsIWebBrowserPersistDocument
 {
+public:
+    explicit nsWebBrowserPersistLocalDocument(nsIDocument* aDocument);
+    
+    const nsCString& GetCharSet() const;
+    uint32_t GetPersistFlags() const;
+    already_AddRefed<nsIURI> GetBaseURI() const;
+    
+    NS_DECL_ISUPPORTS
+    NS_DECL_NSIWEBBROWSERPERSISTDOCUMENT
+
 private:
     virtual ~nsWebBrowserPersistLocalDocument();
     nsCOMPtr<nsIDocument> mDocument; // Reference cycles?
-    nsCOMPtr<nsIWebBrowserPersistResourceVisitor> mVisitor;
-    nsCOMPtr<nsIURI> mCurrentBaseURI;
     uint32_t mPersistFlags;
-
-    nsresult OnWalkDOMNode(nsIDOMNode* aNode);
-    nsresult OnWalkURI(const nsACString& aURISpec);
-    nsresult OnWalkURI(nsIURI* aURI);
-    nsresult OnWalkAttribute(nsIDOMNode* aNode,
-                             const char* aAttribute,
-                             const char* aNamespaceURI = "");
-    nsresult OnWalkSubframe(nsIDOMNode*     aNode,
-                            nsIDOMDocument* aMaybeContent);
 
     void DecideContentType(nsACString& aContentType);
     nsresult GetDocEncoder(const nsACString& aContentType,
                            nsIDocumentEncoder** aEncoder);
-public:
-    explicit nsWebBrowserPersistLocalDocument(nsIDocument* aDocument);
-
-    NS_DECL_ISUPPORTS
-    NS_DECL_NSIWEBBROWSERPERSISTDOCUMENT
 };
 
 #endif // nsWebBrowserPersistLocalDocument_h__
