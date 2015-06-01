@@ -17,6 +17,7 @@ interface nsIWebBrowserPersistMap : nsISupports
   void getURIMapping(in unsigned long aIndex,
                      out AUTF8String aMapFrom,
                      out AUTF8String aMapTo);
+  readonly attribute AUTF8String targetBaseURI;
 };
 
 [scriptable, uuid(74aa4918-5d15-46b6-9ccf-74f9696d721d)]
