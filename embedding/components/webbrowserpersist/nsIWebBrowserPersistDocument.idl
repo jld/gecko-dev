@@ -53,6 +53,6 @@ interface nsIWebBrowserPersistWriteCompletion : nsISupports
 {
   void onFinish(in nsIWebBrowserPersistDocument aDocument,
                 in nsIOutputStream aStream,
-                // commentme:
-                in ACString aContentType);
+                in ACString aContentType,
+                in nsresult Status);
 };

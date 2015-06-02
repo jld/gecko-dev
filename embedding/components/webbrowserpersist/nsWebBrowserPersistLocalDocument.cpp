@@ -1296,8 +1296,6 @@ nsWebBrowserPersistLocalDocument::WriteContent(
     }
 
     rv = encoder->EncodeToStream(aStream);
-    NS_ENSURE_SUCCESS(rv, NS_ERROR_FAILURE);
-
-    aCompletion->OnFinish(this, aStream, contentType);
+    aCompletion->OnFinish(this, aStream, contentType, rv);
     return NS_OK;
 }
