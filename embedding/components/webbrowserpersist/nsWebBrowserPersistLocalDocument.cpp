@@ -5,7 +5,9 @@
 
 #include "nsWebBrowserPersistLocalDocument.h"
 
+#include "mozilla/dom/HTMLInputElement.h"
 #include "mozilla/dom/HTMLSharedElement.h"
+#include "mozilla/dom/HTMLSharedObjectElement.h"
 #include "nsComponentManagerUtils.h"
 #include "nsContentUtils.h"
 #include "nsContentCID.h"
@@ -45,8 +47,9 @@
 #include "nsIWebBrowserPersist.h"
 #include "nsNetUtil.h"
 
+using mozilla::dom::HTMLInputElement;
 using mozilla::dom::HTMLSharedElement;
-
+using mozilla::dom::HTMLSharedObjectElement;
 
 NS_IMPL_ISUPPORTS(nsWebBrowserPersistLocalDocument, nsIWebBrowserPersistDocument)
 
@@ -494,6 +497,8 @@ private:
                             const char* aAttribute,
                             const char* aNamespaceURI = "");
     nsresult FixupAnchor(nsIDOMNode* aNode);
+    nsresult FixupXMLStyleSheetLink(nsIDOMProcessingInstruction* aPI,
+                                    const nsAString& aHref);
 
     using IWBP = nsIWebBrowserPersist;
 };
@@ -568,6 +573,8 @@ PersistNodeFixup::FixupURI(nsAString &aURI)
     const nsCString* replacement = mMap.Get(spec);
     if (!replacement) {
         // FIXME: should this be less fatal now that things are async?
+        // But see also "Perhaps this link is..." in FixupNode.
+        // (Also all the Fixup* callers that drop the rv....)
         return NS_ERROR_FAILURE;
     }
     if (!replacement->IsEmpty()) {
@@ -659,6 +666,99 @@ PersistNodeFixup::FixupAnchor(nsIDOMNode *aNode)
     return NS_OK;
 }
 
+static void
+AppendXMLAttr(const nsAString& key, const nsAString& aValue, nsAString& aBuffer)
+{
+    if (!aBuffer.IsEmpty()) {
+        aBuffer.Append(' ');
+    }
+    aBuffer.Append(key);
+    aBuffer.AppendLiteral("=\"");
+    for (size_t i = 0; i < aValue.Length(); ++i) {
+        switch (aValue[i]) {
+            case '&':
+                aBuffer.AppendLiteral("&amp;");
+                break;
+            case '<':
+                aBuffer.AppendLiteral("&lt;");
+                break;
+            case '>':
+                aBuffer.AppendLiteral("&gt;");
+                break;
+            case '"':
+                aBuffer.AppendLiteral("&quot;");
+                break;
+            default:
+                aBuffer.Append(aValue[i]);
+                break;
+        }
+    }
+    aBuffer.Append('"');
+}
+
+nsresult
+PersistNodeFixup::FixupXMLStyleSheetLink(nsIDOMProcessingInstruction* aPI,
+                                         const nsAString& aHref)
+{
+    NS_ENSURE_ARG_POINTER(aPI);
+    nsresult rv = NS_OK;
+
+    nsAutoString data;
+    rv = aPI->GetData(data);
+    NS_ENSURE_SUCCESS(rv, NS_ERROR_FAILURE);
+
+    nsAutoString href;
+    nsContentUtils::GetPseudoAttributeValue(data,
+                                            nsGkAtoms::href,
+                                            href);
+
+    // Construct and set a new data value for the xml-stylesheet
+    if (!aHref.IsEmpty() && !href.IsEmpty())
+    {
+        nsAutoString alternate;
+        nsAutoString charset;
+        nsAutoString title;
+        nsAutoString type;
+        nsAutoString media;
+
+        nsContentUtils::GetPseudoAttributeValue(data,
+                                                nsGkAtoms::alternate,
+                                                alternate);
+        nsContentUtils::GetPseudoAttributeValue(data,
+                                                nsGkAtoms::charset,
+                                                charset);
+        nsContentUtils::GetPseudoAttributeValue(data,
+                                                nsGkAtoms::title,
+                                                title);
+        nsContentUtils::GetPseudoAttributeValue(data,
+                                                nsGkAtoms::type,
+                                                type);
+        nsContentUtils::GetPseudoAttributeValue(data,
+                                                nsGkAtoms::media,
+                                                media);
+
+        nsAutoString newData;
+        AppendXMLAttr(NS_LITERAL_STRING("href"), aHref, newData);
+        if (!title.IsEmpty()) {
+            AppendXMLAttr(NS_LITERAL_STRING("title"), title, newData);
+        }
+        if (!media.IsEmpty()) {
+            AppendXMLAttr(NS_LITERAL_STRING("media"), media, newData);
+        }
+        if (!type.IsEmpty()) {
+            AppendXMLAttr(NS_LITERAL_STRING("type"), type, newData);
+        }
+        if (!charset.IsEmpty()) {
+            AppendXMLAttr(NS_LITERAL_STRING("charset"), charset, newData);
+        }
+        if (!alternate.IsEmpty()) {
+            AppendXMLAttr(NS_LITERAL_STRING("alternate"), alternate, newData);
+        }
+        aPI->SetData(newData);
+    }
+
+    return rv;
+}
 
 NS_IMETHODIMP
 PersistNodeFixup::FixupNode(nsIDOMNode *aNodeIn,
@@ -731,7 +831,286 @@ PersistNodeFixup::FixupNode(nsIDOMNode *aNodeIn,
         return NS_OK;
     }
 
-    // MORE STUFF GOES HERE
+    // Fix up href and file links in the elements
+    nsCOMPtr<nsIDOMHTMLAnchorElement> nodeAsAnchor = do_QueryInterface(aNodeIn);
+    if (nodeAsAnchor) {
+        rv = GetNodeToFixup(aNodeIn, aNodeOut);
+        if (NS_SUCCEEDED(rv) && *aNodeOut) {
+            FixupAnchor(*aNodeOut);
+        }
+        return rv;
+    }
+
+    nsCOMPtr<nsIDOMHTMLAreaElement> nodeAsArea = do_QueryInterface(aNodeIn);
+    if (nodeAsArea) {
+        rv = GetNodeToFixup(aNodeIn, aNodeOut);
+        if (NS_SUCCEEDED(rv) && *aNodeOut) {
+            FixupAnchor(*aNodeOut);
+        }
+        return rv;
+    }
+
+    if (content->IsHTMLElement(nsGkAtoms::body)) {
+        rv = GetNodeToFixup(aNodeIn, aNodeOut);
+        if (NS_SUCCEEDED(rv) && *aNodeOut) {
+            FixupAttribute(*aNodeOut, "background");
+        }
+        return rv;
+    }
+
+    if (content->IsHTMLElement(nsGkAtoms::table)) {
+        rv = GetNodeToFixup(aNodeIn, aNodeOut);
+        if (NS_SUCCEEDED(rv) && *aNodeOut) {
+            FixupAttribute(*aNodeOut, "background");
+        }
+        return rv;
+    }
+
+    if (content->IsHTMLElement(nsGkAtoms::tr)) {
+        rv = GetNodeToFixup(aNodeIn, aNodeOut);
+        if (NS_SUCCEEDED(rv) && *aNodeOut) {
+            FixupAttribute(*aNodeOut, "background");
+        }
+        return rv;
+    }
+
+    if (content->IsAnyOfHTMLElements(nsGkAtoms::td, nsGkAtoms::th)) {
+        rv = GetNodeToFixup(aNodeIn, aNodeOut);
+        if (NS_SUCCEEDED(rv) && *aNodeOut) {
+            FixupAttribute(*aNodeOut, "background");
+        }
+        return rv;
+    }
+
+    nsCOMPtr<nsIDOMHTMLImageElement> nodeAsImage = do_QueryInterface(aNodeIn);
+    if (nodeAsImage) {
+        rv = GetNodeToFixup(aNodeIn, aNodeOut);
+        if (NS_SUCCEEDED(rv) && *aNodeOut) {
+            // Disable image loads
+            nsCOMPtr<nsIImageLoadingContent> imgCon =
+                do_QueryInterface(*aNodeOut);
+            if (imgCon) {
+                imgCon->SetLoadingEnabled(false);
+            }
+            FixupAnchor(*aNodeOut);
+            FixupAttribute(*aNodeOut, "src");
+        }
+        return rv;
+    }
+
+    nsCOMPtr<nsIDOMHTMLMediaElement> nodeAsMedia = do_QueryInterface(aNodeIn);
+    if (nodeAsMedia) {
+        rv = GetNodeToFixup(aNodeIn, aNodeOut);
+        if (NS_SUCCEEDED(rv) && *aNodeOut) {
+            FixupAttribute(*aNodeOut, "src");
+        }
+        return rv;
+    }
+
+    nsCOMPtr<nsIDOMHTMLSourceElement> nodeAsSource = do_QueryInterface(aNodeIn);
+    if (nodeAsSource) {
+        rv = GetNodeToFixup(aNodeIn, aNodeOut);
+        if (NS_SUCCEEDED(rv) && *aNodeOut) {
+            FixupAttribute(*aNodeOut, "src");
+        }
+        return rv;
+    }
+
+    if (content->IsSVGElement(nsGkAtoms::img)) {
+        rv = GetNodeToFixup(aNodeIn, aNodeOut);
+        if (NS_SUCCEEDED(rv) && *aNodeOut) {
+            // Disable image loads
+            nsCOMPtr<nsIImageLoadingContent> imgCon =
+                do_QueryInterface(*aNodeOut);
+            if (imgCon)
+                imgCon->SetLoadingEnabled(false);
+
+            // FixupAnchor(*aNodeOut);  // XXXjwatt: is this line needed?
+            // FIXME(jld): Should this be FixupAnchor with an extra param?
+            FixupAttribute(*aNodeOut, "href", "http://www.w3.org/1999/xlink");
+        }
+        return rv;
+    }
+
+    nsCOMPtr<nsIDOMHTMLScriptElement> nodeAsScript = do_QueryInterface(aNodeIn);
+    if (nodeAsScript) {
+        rv = GetNodeToFixup(aNodeIn, aNodeOut);
+        if (NS_SUCCEEDED(rv) && *aNodeOut) {
+            FixupAttribute(*aNodeOut, "src");
+        }
+        return rv;
+    }
+
+    if (content->IsSVGElement(nsGkAtoms::script)) {
+        rv = GetNodeToFixup(aNodeIn, aNodeOut);
+        if (NS_SUCCEEDED(rv) && *aNodeOut) {
+            // FIXME(jld): see above.
+            FixupAttribute(*aNodeOut, "href", "http://www.w3.org/1999/xlink");
+        }
+        return rv;
+    }
+
+        nsCOMPtr<nsIDOMHTMLEmbedElement> nodeAsEmbed = do_QueryInterface(aNodeIn);
+    if (nodeAsEmbed) {
+        rv = GetNodeToFixup(aNodeIn, aNodeOut);
+        if (NS_SUCCEEDED(rv) && *aNodeOut) {
+            FixupAttribute(*aNodeOut, "src");
+        }
+        return rv;
+    }
+
+    nsCOMPtr<nsIDOMHTMLObjectElement> nodeAsObject = do_QueryInterface(aNodeIn);
+    if (nodeAsObject) {
+        rv = GetNodeToFixup(aNodeIn, aNodeOut);
+        if (NS_SUCCEEDED(rv) && *aNodeOut) {
+            FixupAttribute(*aNodeOut, "data");
+        }
+        return rv;
+    }
+
+    nsCOMPtr<nsIDOMHTMLAppletElement> nodeAsApplet = do_QueryInterface(aNodeIn);
+    if (nodeAsApplet) {
+        rv = GetNodeToFixup(aNodeIn, aNodeOut);
+        if (NS_SUCCEEDED(rv) && *aNodeOut) {
+            nsCOMPtr<nsIDOMHTMLAppletElement> newApplet =
+                do_QueryInterface(*aNodeOut);
+            // For an applet, relative URIs are resolved relative to the
+            // codebase (which is resolved relative to the base URI).
+            nsCOMPtr<nsIURI> oldBase = mCurrentBaseURI;
+            nsAutoString codebase;
+            nodeAsApplet->GetCodeBase(codebase);
+            if (!codebase.IsEmpty()) {
+                nsCOMPtr<nsIURI> baseURI;
+                NS_NewURI(getter_AddRefs(baseURI), codebase,
+                          mParent->GetCharSet().get(), mCurrentBaseURI);
+                if (baseURI) {
+                    mCurrentBaseURI = baseURI;
+                }
+            }
+            // Unset the codebase too, since we'll correctly relativize the
+            // code and archive paths.
+            static_cast<HTMLSharedObjectElement*>(newApplet.get())->
+              RemoveAttribute(NS_LITERAL_STRING("codebase"));
+            FixupAttribute(*aNodeOut, "code");
+            FixupAttribute(*aNodeOut, "archive");
+            // restore the base URI we really want to have
+            mCurrentBaseURI = oldBase;
+        }
+        return rv;
+    }
+
+    nsCOMPtr<nsIDOMHTMLLinkElement> nodeAsLink = do_QueryInterface(aNodeIn);
+    if (nodeAsLink) {
+        rv = GetNodeToFixup(aNodeIn, aNodeOut);
+        if (NS_SUCCEEDED(rv) && *aNodeOut) {
+            // First see if the link represents linked content
+            rv = FixupAttribute(*aNodeOut, "href");
+            if (NS_FAILED(rv)) {
+                // Perhaps this link is actually an anchor to related content
+                FixupAnchor(*aNodeOut);
+            }
+            // TODO if "type" attribute == "text/css"
+            //        fixup stylesheet
+        }
+        return rv;
+    }
+
+    nsCOMPtr<nsIDOMHTMLFrameElement> nodeAsFrame = do_QueryInterface(aNodeIn);
+    if (nodeAsFrame) {
+        rv = GetNodeToFixup(aNodeIn, aNodeOut);
+        if (NS_SUCCEEDED(rv) && *aNodeOut) {
+            FixupAttribute(*aNodeOut, "src");
+        }
+        return rv;
+    }
+
+    nsCOMPtr<nsIDOMHTMLIFrameElement> nodeAsIFrame = do_QueryInterface(aNodeIn);
+    if (nodeAsIFrame) {
+        rv = GetNodeToFixup(aNodeIn, aNodeOut);
+        if (NS_SUCCEEDED(rv) && *aNodeOut) {
+            FixupAttribute(*aNodeOut, "src");
+        }
+        return rv;
+    }
+
+        nsCOMPtr<nsIDOMHTMLInputElement> nodeAsInput = do_QueryInterface(aNodeIn);
+    if (nodeAsInput) {
+        rv = GetNodeToFixup(aNodeIn, aNodeOut);
+        if (NS_SUCCEEDED(rv) && *aNodeOut) {
+            // Disable image loads
+            nsCOMPtr<nsIImageLoadingContent> imgCon =
+                do_QueryInterface(*aNodeOut);
+            if (imgCon) {
+                imgCon->SetLoadingEnabled(false);
+            }
+
+            FixupAttribute(*aNodeOut, "src");
+
+            nsAutoString valueStr;
+            NS_NAMED_LITERAL_STRING(valueAttr, "value");
+            // Update element node attributes with user-entered form state
+            nsCOMPtr<nsIContent> content = do_QueryInterface(*aNodeOut);
+            nsRefPtr<HTMLInputElement> outElt =
+              HTMLInputElement::FromContentOrNull(content);
+            nsCOMPtr<nsIFormControl> formControl = do_QueryInterface(*aNodeOut);
+            switch (formControl->GetType()) {
+                case NS_FORM_INPUT_EMAIL:
+                case NS_FORM_INPUT_SEARCH:
+                case NS_FORM_INPUT_TEXT:
+                case NS_FORM_INPUT_TEL:
+                case NS_FORM_INPUT_URL:
+                case NS_FORM_INPUT_NUMBER:
+                case NS_FORM_INPUT_RANGE:
+                case NS_FORM_INPUT_DATE:
+                case NS_FORM_INPUT_TIME:
+                case NS_FORM_INPUT_COLOR:
+                    nodeAsInput->GetValue(valueStr);
+                    // Avoid superfluous value="" serialization
+                    if (valueStr.IsEmpty())
+                      outElt->RemoveAttribute(valueAttr);
+                    else
+                      outElt->SetAttribute(valueAttr, valueStr);
+                    break;
+                case NS_FORM_INPUT_CHECKBOX:
+                case NS_FORM_INPUT_RADIO:
+                    bool checked;
+                    nodeAsInput->GetChecked(&checked);
+                    outElt->SetDefaultChecked(checked);
+                    break;
+                default:
+                    break;
+            }
+        }
+        return rv;
+    }
+
+    nsCOMPtr<nsIDOMHTMLTextAreaElement> nodeAsTextArea = do_QueryInterface(aNodeIn);
+    if (nodeAsTextArea) {
+        rv = GetNodeToFixup(aNodeIn, aNodeOut);
+        if (NS_SUCCEEDED(rv) && *aNodeOut) {
+            // Tell the document encoder to serialize the text child we create below
+            *aSerializeCloneKids = true;
+
+            nsAutoString valueStr;
+            nodeAsTextArea->GetValue(valueStr);
+
+            (*aNodeOut)->SetTextContent(valueStr);
+        }
+        return rv;
+    }
+
+    nsCOMPtr<nsIDOMHTMLOptionElement> nodeAsOption = do_QueryInterface(aNodeIn);
+    if (nodeAsOption) {
+        rv = GetNodeToFixup(aNodeIn, aNodeOut);
+        if (NS_SUCCEEDED(rv) && *aNodeOut) {
+            nsCOMPtr<nsIDOMHTMLOptionElement> outElt = do_QueryInterface(*aNodeOut);
+            bool selected;
+            nodeAsOption->GetSelected(&selected);
+            outElt->SetDefaultSelected(selected);
+        }
+        return rv;
+    }
+
     return NS_OK;
 }
 
