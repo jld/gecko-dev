@@ -51,6 +51,19 @@ using mozilla::dom::HTMLInputElement;
 using mozilla::dom::HTMLSharedElement;
 using mozilla::dom::HTMLSharedObjectElement;
 
+/* static */ nsresult
+nsWebBrowserPersistDocument::Create(nsISupports* aDocumentish,
+                                    nsIWebBrowserPersistDocumentReceiver* aContinuation)
+{
+    if (nsCOMPtr<nsIDocument> doc = do_QueryInterface(aDocumentish)) {
+        nsCOMPtr<nsIWebBrowserPersistDocument> pDoc =
+            new nsWebBrowserPersistDocument(doc);
+        aContinuation->OnDocumentReady(pDoc);
+        return NS_OK;
+    }
+    return NS_ERROR_NO_INTERFACE;
+}
+
 NS_IMPL_ISUPPORTS(nsWebBrowserPersistDocument, nsIWebBrowserPersistDocument)
 
 nsWebBrowserPersistDocument::nsWebBrowserPersistDocument(nsIDocument* aDocument)

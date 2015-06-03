@@ -1,0 +1,58 @@
+/* -*- Mode: IDL; tab-width: 8; indent-tabs-mode: nil; c-basic-offset: 2 -*- */
+/* This Source Code Form is subject to the terms of the Mozilla Public
+ * License, v. 2.0. If a copy of the MPL was not distributed with this
+ * file, You can obtain one at http://mozilla.org/MPL/2.0/. */
+
+include protocol PBrowser;
+include protocol PWebBrowserPersistDocumentRead;
+include protocol PWebBrowserPersistDocumentWrite;
+
+namespace mozilla {
+
+struct WebBrowserPersistDocumentAttrs {
+  bool isPrivate;
+  nsCString documentURI;
+  nsCString baseURI;
+  nsCString contentType;
+  nsCString charSet;
+  uint32_t persistFlags;
+};
+
+// == nsIWebBrowserPersistMap
+struct WebBrowserPersistMap {
+  nsCString[] mapURIsFrom;
+  nsCString[] mapURIsTo;
+  nsCString targetBaseURI;
+};
+
+// == nsIWebBrowserPersistDocument
+protocol PWebBrowserPersistDocument {
+  manager PBrowser;
+  manages PWebBrowserPersistDocumentRead;
+  manages PWebBrowserPersistDocumentWrite;
+
+parent:
+  Attributes(WebBrowserPersistDocumentAttrs aAttrs);
+  InitFailure(nsresult aStatus);
+
+child:
+  PWebBrowserPersistDocumentRead();
+  PWebBrowserPersistDocumentWrite(WebBrowserPersistMap aMap,
+                                  nsCString aRequestedContentType,
+                                  uint32_t aWrapColumn);
+  __delete__();
+
+state START:
+  recv Attributes goto MAIN;
+  recv InitFailure goto FAILED;
+
+state MAIN:
+  send PWebBrowserPersistDocumentRead goto MAIN;
+  send PWebBrowserPersistDocumentWrite goto MAIN;
+  send __delete__;
+
+state FAILED:
+  send __delete__;
+};
+
+} // namespace mozilla

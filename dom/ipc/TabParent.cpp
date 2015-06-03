@@ -3275,6 +3275,21 @@ TabParent::AsyncPanZoomEnabled() const
   return widget && widget->AsyncPanZoomEnabled();
 }
 
+PWebBrowserPersistDocumentParent*
+TabParent::AllocPWebBrowserPersistDocumentParent()
+{
+  // return new nsWebBrowserPersistDocumentChild();
+  MOZ_CRASH("not implemented yet");
+}
+
+bool
+TabParent::DeallocPWebBrowserPersistDocumentParent(PWebBrowserPersistDocumentParent* aActor)
+{
+  // static_cast<nsWebBrowserPersistDocumentParent*>(aActor)->Release();
+  MOZ_CRASH("not implemented yet");
+  return true;
+}
+
 NS_IMETHODIMP
 FakeChannel::OnAuthAvailable(nsISupports *aContext, nsIAuthInformation *aAuthInfo)
 {

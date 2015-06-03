@@ -13,7 +13,7 @@ interface nsIWebProgressListener;
 interface nsIFile;
 interface nsIChannel;
 interface nsILoadContext;
-interface nsIWebBrowserPersistDocument;
+interface nsIWebBrowserPersistDocumentReceiver;
 
 /**
  * Interface for persisting DOM documents and URIs to local or remote storage.
@@ -283,5 +283,6 @@ interface nsIWebBrowserPersist : nsICancelable
   void cancelSave();
 
   // Hang this here for now because everything is made of bees.
-  nsIWebBrowserPersistDocument startPersistence(in nsISupports aDocumentish);
+  void startPersistence(in nsISupports aDocumentish,
+                        in nsIWebBrowserPersistDocumentReceiver aContinuation);
 };

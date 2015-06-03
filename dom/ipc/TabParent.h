@@ -428,6 +428,10 @@ public:
     void TakeDragVisualization(RefPtr<mozilla::gfx::SourceSurface>& aSurface,
                                int32_t& aDragAreaX, int32_t& aDragAreaY);
     layout::RenderFrameParent* GetRenderFrame();
+
+    virtual PWebBrowserPersistDocumentParent* AllocPWebBrowserPersistDocumentParent() override;
+    virtual bool DeallocPWebBrowserPersistDocumentParent(PWebBrowserPersistDocumentParent* aActor) override;
+
 protected:
     bool ReceiveMessage(const nsString& aMessage,
                         bool aSync,

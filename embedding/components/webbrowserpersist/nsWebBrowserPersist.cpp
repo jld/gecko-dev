@@ -4071,14 +4071,9 @@ void nsWebBrowserPersist::SetApplyConversionIfNeeded(nsIChannel *aChannel)
 
 NS_IMETHODIMP
 nsWebBrowserPersist::StartPersistence(nsISupports* aDocumentish,
-                                      nsIWebBrowserPersistDocument** aRet)
+                                      nsIWebBrowserPersistDocumentReceiver* k)
 {
-    nsCOMPtr<nsIDocument> doc = do_QueryInterface(aDocumentish);
-    if (!doc) {
-        return NS_ERROR_UNEXPECTED;
-    }
-    NS_ADDREF(*aRet = new nsWebBrowserPersistDocument(doc));
-    return NS_OK;
+    return nsWebBrowserPersistDocument::Create(aDocumentish, k);
 }
 
 

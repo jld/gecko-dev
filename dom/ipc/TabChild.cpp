@@ -30,6 +30,7 @@
 #include "mozilla/layers/ShadowLayers.h"
 #include "mozilla/layout/RenderFrameChild.h"
 #include "mozilla/MouseEvents.h"
+#include "mozilla/PWebBrowserPersistDocumentChild.h"
 #include "mozilla/Services.h"
 #include "mozilla/StaticPtr.h"
 #include "mozilla/TextEvents.h"
@@ -3450,3 +3451,23 @@ TabChildGlobal::GetGlobalJSObject()
   return ref->GetJSObject();
 }
 
+PWebBrowserPersistDocumentChild*
+TabChild::AllocPWebBrowserPersistDocumentChild()
+{
+  // return new nsWebBrowserPersistDocumentChild();
+  MOZ_CRASH("not implemented yet");
+}
+
+bool
+TabChild::RecvPWebBrowserPersistDocumentConstructor(PWebBrowserPersistDocumentChild *aActor)
+{
+  nsCOMPtr<nsIDocument> doc = GetDocument();
+  // return static_cast<nsWebBrowserPersistDocumentChild*>(aActor)->Start(doc);
+}
+
+bool
+TabChild::DeallocPWebBrowserPersistDocumentChild(PWebBrowserPersistDocumentChild* aActor)
+{
+  delete aActor;
+  return true;
+}
