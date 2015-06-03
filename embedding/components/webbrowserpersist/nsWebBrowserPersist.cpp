@@ -83,7 +83,7 @@
 #include "nsIProtocolHandler.h"
 
 #include "nsWebBrowserPersist.h"
-#include "nsWebBrowserPersistLocalDocument.h"
+#include "nsWebBrowserPersistDocument.h"
 
 #include "nsIContent.h"
 #include "nsIMIMEInfo.h"
@@ -3849,7 +3849,7 @@ nsWebBrowserPersist::StartPersistence(nsISupports* aDocumentish,
     if (!doc) {
         return NS_ERROR_UNEXPECTED;
     }
-    NS_ADDREF(*aRet = new nsWebBrowserPersistLocalDocument(doc));
+    NS_ADDREF(*aRet = new nsWebBrowserPersistDocument(doc));
     return NS_OK;
 }
 
