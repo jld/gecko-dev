@@ -12,6 +12,12 @@ XPIDL_SOURCES += [
 
 XPIDL_MODULE = 'webbrowserpersist'
 
+IPDL_SOURCES += [
+    'PWebBrowserPersistDocument.ipdl',
+    'PWebBrowserPersistDocumentRead.ipdl',
+    'PWebBrowserPersistDocumentWrite.ipdl',
+]
+
 SOURCES += [
     'nsWebBrowserPersist.cpp',
     'nsWebBrowserPersistDocument.cpp',

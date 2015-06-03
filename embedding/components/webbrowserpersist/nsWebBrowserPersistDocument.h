@@ -23,6 +23,9 @@ public:
     const nsCString& GetCharSet() const;
     uint32_t GetPersistFlags() const;
     already_AddRefed<nsIURI> GetBaseURI() const;
+
+    static nsresult Create(nsISupports* aDocumentish,
+                           nsIWebBrowserPersistDocumentReceiver* aContinuation);
     
     NS_DECL_ISUPPORTS
     NS_DECL_NSIWEBBROWSERPERSISTDOCUMENT

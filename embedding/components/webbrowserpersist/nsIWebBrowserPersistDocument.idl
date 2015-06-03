@@ -6,7 +6,9 @@
 
 #include "nsISupports.idl"
 
+interface nsIDOMDocument;
 interface nsIOutputStream;
+interface nsITabParent;
 interface nsIWebBrowserPersistResourceVisitor;
 interface nsIWebBrowserPersistWriteCompletion;
 
@@ -54,5 +56,11 @@ interface nsIWebBrowserPersistWriteCompletion : nsISupports
   void onFinish(in nsIWebBrowserPersistDocument aDocument,
                 in nsIOutputStream aStream,
                 in ACString aContentType,
-                in nsresult Status);
+                in nsresult aStatus);
+};
+
+[scriptable, function, uuid(321e3174-594f-4036-b7be-791b821bd376)]
+interface nsIWebBrowserPersistDocumentReceiver : nsISupports
+{
+  void onDocumentReady(in nsIWebBrowserPersistDocument aDocument);
 };
