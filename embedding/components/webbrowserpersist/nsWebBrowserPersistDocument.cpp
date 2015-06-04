@@ -4,10 +4,12 @@
  * file, You can obtain one at http://mozilla.org/MPL/2.0/. */
 
 #include "nsWebBrowserPersistDocument.h"
+#include "nsWebBrowserPersistDocumentParent.h"
 
 #include "mozilla/dom/HTMLInputElement.h"
 #include "mozilla/dom/HTMLSharedElement.h"
 #include "mozilla/dom/HTMLSharedObjectElement.h"
+#include "mozilla/dom/TabParent.h"
 #include "nsComponentManagerUtils.h"
 #include "nsContentUtils.h"
 #include "nsContentCID.h"
@@ -40,10 +42,13 @@
 #include "nsIDOMNodeList.h"
 #include "nsIDOMProcessingInstruction.h"
 #include "nsIDOMTreeWalker.h"
+#include "nsIDocShell.h"
 #include "nsIDocument.h"
 #include "nsIDocumentEncoder.h"
+#include "nsIFrameLoader.h"
 #include "nsILoadContext.h"
 #include "nsIProtocolHandler.h"
+#include "nsITabParent.h"
 #include "nsIWebBrowserPersist.h"
 #include "nsNetUtil.h"
 
@@ -55,12 +60,44 @@ using mozilla::dom::HTMLSharedObjectElement;
 nsWebBrowserPersistDocument::Create(nsISupports* aDocumentish,
                                     nsIWebBrowserPersistDocumentReceiver* aContinuation)
 {
+    nsresult rv;
+
     if (nsCOMPtr<nsIDocument> doc = do_QueryInterface(aDocumentish)) {
         nsCOMPtr<nsIWebBrowserPersistDocument> pDoc =
             new nsWebBrowserPersistDocument(doc);
         aContinuation->OnDocumentReady(pDoc);
         return NS_OK;
     }
+    if (nsCOMPtr<nsIFrameLoaderOwner> flo = do_QueryInterface(aDocumentish)) {
+        // Local: flo.frameLoader.docShell.getInterface(Ci.nsIDocument)
+        // Remote: flo.frameLoader.tabParent (cross-cast to PBrowserParent)
+        nsCOMPtr<nsIFrameLoader> fl;
+        rv = flo->GetFrameLoader(getter_AddRefs(fl));
+        NS_ENSURE_SUCCESS(rv, rv);
+        nsCOMPtr<nsIDocShell> ds;
+        rv = fl->GetDocShell(getter_AddRefs(ds));
+        NS_ENSURE_SUCCESS(rv, rv);
+        if (ds) {
+            nsCOMPtr<nsIDocument> doc = do_GetInterface(ds);
+            if (!doc) {
+                return NS_ERROR_UNEXPECTED;
+            }
+            return Create(doc, aContinuation);
+        }
+        nsCOMPtr<nsITabParent> tp;
+        rv = fl->GetTabParent(getter_AddRefs(tp));
+        if (tp) {
+            auto* tpp = mozilla::dom::TabParent::GetFrom(tp);
+            if (!tpp) {
+                return NS_ERROR_UNEXPECTED;
+            }
+            auto* actor = new nsWebBrowserPersistDocumentParent();
+            actor->SetOnReady(aContinuation);
+            return tpp->SendPWebBrowserPersistDocumentConstructor(actor)
+                ? NS_OK : NS_ERROR_FAILURE;
+        }
+    }
+
     return NS_ERROR_NO_INTERFACE;
 }
 

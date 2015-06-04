@@ -22,7 +22,7 @@ public:
     using Attrs = WebBrowserPersistDocumentAttrs;
 
     void SetOnReady(nsIWebBrowserPersistDocumentReceiver* aOnReady);
-    void DropExtraRef(); // FIXME: explain this especially
+    void DropExtraRef(); // FIXME: explain this especially -- or rename it
 
     virtual bool
     RecvAttributes(const Attrs& aAttrs) override;
@@ -58,7 +58,6 @@ private:
     bool WaitingForAttrs();
     nsresult AccessAttrs();
     void FireOnReady();
-
 
     virtual ~nsWebBrowserPersistDocumentParent();
 };
