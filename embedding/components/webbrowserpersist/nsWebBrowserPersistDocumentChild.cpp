@@ -5,11 +5,11 @@
  * file, You can obtain one at http://mozilla.org/MPL/2.0/. */
 
 #include "nsWebBrowserPersistDocumentChild.h"
-#include "nsWebBrowserPersistDocument.h"
 
-#include "mozilla/PWebBrowserPersistDocumentReadChild.h"
 #include "mozilla/PWebBrowserPersistDocumentWriteChild.h"
 #include "nsIDocument.h"
+#include "nsWebBrowserPersistDocument.h"
+#include "nsWebBrowserPersistDocumentReadChild.h"
 
 nsWebBrowserPersistDocumentChild::nsWebBrowserPersistDocumentChild()
 {
@@ -63,22 +63,31 @@ nsWebBrowserPersistDocumentChild::RecvSetPersistFlags(const uint32_t& aNewFlags)
 mozilla::PWebBrowserPersistDocumentReadChild*
 nsWebBrowserPersistDocumentChild::AllocPWebBrowserPersistDocumentReadChild()
 {
-    MOZ_CRASH("not implemented yet");
-    return nullptr;
+    nsWebBrowserPersistDocumentReadChild* actor =
+        new nsWebBrowserPersistDocumentReadChild();
+    NS_ADDREF(actor);
+    return actor;
 }
 
 bool
 nsWebBrowserPersistDocumentChild::RecvPWebBrowserPersistDocumentReadConstructor(PWebBrowserPersistDocumentReadChild* aActor)
 {
-    MOZ_CRASH("not implemented yet");
-    return false;
+    nsRefPtr<nsWebBrowserPersistDocumentReadChild> visitor = 
+        static_cast<nsWebBrowserPersistDocumentReadChild*>(aActor);
+    nsresult rv = mDocument->ReadResources(visitor);
+    if (NS_FAILED(rv)) {
+        visitor->EndVisit(mDocument, rv);
+    }
+    return true;
 }
 
 bool
 nsWebBrowserPersistDocumentChild::DeallocPWebBrowserPersistDocumentReadChild(PWebBrowserPersistDocumentReadChild* aActor)
 {
-    MOZ_CRASH("not implemented yet");
-    return false;
+    auto* castActor =
+        static_cast<nsWebBrowserPersistDocumentReadChild*>(aActor);
+    NS_RELEASE(castActor);
+    return true;
 }
 
 mozilla::PWebBrowserPersistDocumentWriteChild*

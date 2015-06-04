@@ -6,9 +6,9 @@
 
 #include "nsWebBrowserPersistDocumentParent.h"
 
-#include "mozilla/PWebBrowserPersistDocumentReadParent.h"
 #include "mozilla/PWebBrowserPersistDocumentWriteParent.h"
 #include "nsThreadUtils.h"
+#include "nsWebBrowserPersistDocumentReadParent.h"
 
 NS_IMPL_ISUPPORTS(nsWebBrowserPersistDocumentParent,
 		  nsIWebBrowserPersistDocument)
@@ -209,16 +209,40 @@ nsWebBrowserPersistDocumentParent::SetPersistFlags(uint32_t aFlags)
     return rv;
 }
 
+mozilla::PWebBrowserPersistDocumentReadParent*
+nsWebBrowserPersistDocumentParent::AllocPWebBrowserPersistDocumentReadParent()
+{
+    MOZ_CRASH("Don't use this; construct the actor directly and AddRef.");
+    return nullptr;
+}
+
 NS_IMETHODIMP
 nsWebBrowserPersistDocumentParent::ReadResources(nsIWebBrowserPersistResourceVisitor* aVisitor)
 {
-    MOZ_CRASH("not implemented yet");
-    return NS_ERROR_NOT_IMPLEMENTED;
-#if 0
-    auto subActor = new nsWebBrowserPersistDocumentReadParent(aVisitor);
+    auto* subActor = new nsWebBrowserPersistDocumentReadParent(this, aVisitor);
+    NS_ADDREF(subActor);
     return SendPWebBrowserPersistDocumentReadConstructor(subActor)
         ? NS_OK : NS_ERROR_FAILURE;
-#endif
+}
+
+bool
+nsWebBrowserPersistDocumentParent::DeallocPWebBrowserPersistDocumentReadParent(PWebBrowserPersistDocumentReadParent* aActor)
+{
+    auto* castActor =
+        static_cast<nsWebBrowserPersistDocumentReadParent*>(aActor);
+    NS_RELEASE(castActor);
+    return true;
+}
+
+mozilla::PWebBrowserPersistDocumentWriteParent*
+nsWebBrowserPersistDocumentParent::AllocPWebBrowserPersistDocumentWriteParent(
+// What am I even supposed to do with this indentation.
+        const WebBrowserPersistMap& aMap,
+        const nsCString& aRequestedContentType,
+        const uint32_t& aWrapColumn)
+{
+    MOZ_CRASH("Don't use this; construct the actor directly.");
+    return nullptr;
 }
 
 NS_IMETHODIMP
@@ -256,32 +280,9 @@ nsWebBrowserPersistDocumentParent::WriteContent(
 #endif
 }
 
-mozilla::PWebBrowserPersistDocumentReadParent*
-nsWebBrowserPersistDocumentParent::AllocPWebBrowserPersistDocumentReadParent()
-{
-    MOZ_CRASH("Don't use this; construct the actor directly.");
-    return nullptr;
-}
-
-bool
-nsWebBrowserPersistDocumentParent::DeallocPWebBrowserPersistDocumentReadParent(PWebBrowserPersistDocumentReadParent* aActor)
-{
-    delete aActor;
-}
-
-mozilla::PWebBrowserPersistDocumentWriteParent*
-nsWebBrowserPersistDocumentParent::AllocPWebBrowserPersistDocumentWriteParent(
-// What am I even supposed to do with this indentation.
-        const WebBrowserPersistMap& aMap,
-        const nsCString& aRequestedContentType,
-        const uint32_t& aWrapColumn)
-{
-    MOZ_CRASH("Don't use this; construct the actor directly.");
-    return nullptr;
-}
-
 bool
 nsWebBrowserPersistDocumentParent::DeallocPWebBrowserPersistDocumentWriteParent(PWebBrowserPersistDocumentWriteParent* aActor)
 {
     delete aActor;
+    return true;
 }
