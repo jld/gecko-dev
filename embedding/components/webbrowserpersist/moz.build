@@ -21,11 +21,13 @@ IPDL_SOURCES += [
 SOURCES += [
     'nsWebBrowserPersist.cpp',
     'nsWebBrowserPersistDocument.cpp',
+    'nsWebBrowserPersistDocumentChild.cpp',
     'nsWebBrowserPersistDocumentParent.cpp',
 ]
 
 EXPORTS += [
     'nsWebBrowserPersistDocument.h',
+    'nsWebBrowserPersistDocumentChild.h',
     'nsWebBrowserPersistDocumentParent.h',
 ]
 
