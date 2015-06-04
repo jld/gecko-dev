@@ -94,6 +94,7 @@
 #include "nsIScriptError.h"
 #include "mozilla/EventForwards.h"
 #include "nsDeviceContext.h"
+#include "nsWebBrowserPersistDocumentChild.h"
 
 #define BROWSER_ELEMENT_CHILD_SCRIPT \
     NS_LITERAL_STRING("chrome://global/content/BrowserElementChild.js")
@@ -3454,7 +3455,7 @@ TabChildGlobal::GetGlobalJSObject()
 PWebBrowserPersistDocumentChild*
 TabChild::AllocPWebBrowserPersistDocumentChild()
 {
-  // return new nsWebBrowserPersistDocumentChild();
+  return new nsWebBrowserPersistDocumentChild();
   MOZ_CRASH("not implemented yet");
 }
 
@@ -3462,9 +3463,8 @@ bool
 TabChild::RecvPWebBrowserPersistDocumentConstructor(PWebBrowserPersistDocumentChild *aActor)
 {
   nsCOMPtr<nsIDocument> doc = GetDocument();
-  // return static_cast<nsWebBrowserPersistDocumentChild*>(aActor)->Start(doc);
-  MOZ_CRASH("not implemented yet");
-  return false;
+  static_cast<nsWebBrowserPersistDocumentChild*>(aActor)->Start(doc);
+  return true;
 }
 
 bool
