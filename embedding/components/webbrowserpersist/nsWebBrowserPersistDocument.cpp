@@ -198,32 +198,41 @@ nsWebBrowserPersistDocument::GetBaseURI() const
 
 namespace {
 
-class ResourceReader final {
+class ResourceReader final : public nsIWebBrowserPersistDocumentReceiver {
 public:
     ResourceReader(nsWebBrowserPersistDocument* aParent,
                    nsIWebBrowserPersistResourceVisitor* aVisitor);
     nsresult OnWalkDOMNode(nsIDOMNode* aNode);
+    void DocumentDone(nsresult aStatus);
+
+    NS_DECL_NSIWEBBROWSERPERSISTDOCUMENTRECEIVER
+    NS_DECL_ISUPPORTS
 
 private:
     nsRefPtr<nsWebBrowserPersistDocument> mParent;
     nsCOMPtr<nsIWebBrowserPersistResourceVisitor> mVisitor;
     nsCOMPtr<nsIURI> mCurrentBaseURI;
     uint32_t mPersistFlags;
+    size_t mOutstandingDocuments;
+    nsresult mEndStatus;
 
     nsresult OnWalkURI(const nsACString& aURISpec);
     nsresult OnWalkURI(nsIURI* aURI);
     nsresult OnWalkAttribute(nsIDOMNode* aNode,
                              const char* aAttribute,
                              const char* aNamespaceURI = "");
-    nsresult OnWalkSubframe(nsIDOMNode*     aNode,
-                            nsIDOMDocument* aMaybeContent);
+    nsresult OnWalkSubframe(nsIDOMNode* aNode);
 
     bool IsFlagSet(uint32_t aFlag) const {
         return mParent->GetPersistFlags() & aFlag;
     }
 
+    ~ResourceReader();
+
     using IWBP = nsIWebBrowserPersist;
 };
+
+NS_IMPL_ISUPPORTS(ResourceReader, nsIWebBrowserPersistDocumentReceiver)
 
 ResourceReader::ResourceReader(nsWebBrowserPersistDocument* aParent,
                                nsIWebBrowserPersistResourceVisitor* aVisitor)
@@ -231,8 +240,50 @@ ResourceReader::ResourceReader(nsWebBrowserPersistDocument* aParent,
 , mVisitor(aVisitor)
 , mCurrentBaseURI(aParent->GetBaseURI())
 , mPersistFlags(aParent->GetPersistFlags())
+, mOutstandingDocuments(1)
+, mEndStatus(NS_OK)
 {
     MOZ_ASSERT(mCurrentBaseURI);
+}
+
+ResourceReader::~ResourceReader()
+{
+    MOZ_ASSERT(mOutstandingDocuments == 0);
+}
+
+void
+ResourceReader::DocumentDone(nsresult aStatus)
+{
+    MOZ_ASSERT(mOutstandingDocuments > 0);
+    if (NS_SUCCEEDED(mEndStatus)) {
+        mEndStatus = aStatus;
+    }
+    if (--mOutstandingDocuments == 0) {
+        mVisitor->EndVisit(mParent, mEndStatus);
+    }
+}
+
+nsresult
+ResourceReader::OnWalkSubframe(nsIDOMNode* aNode)
+{
+    ++mOutstandingDocuments;
+    nsresult rv = nsWebBrowserPersistDocument::Create(aNode, this);
+    if (NS_FAILED(rv)) {
+        DocumentDone(rv);
+    }
+    return rv;
+}
+
+NS_IMETHODIMP
+ResourceReader::OnDocumentReady(nsIWebBrowserPersistDocument* aDocument)
+{
+    if (aDocument) {
+        mVisitor->VisitDocument(mParent, aDocument);
+        DocumentDone(NS_OK);
+    } else {
+        DocumentDone(NS_ERROR_FAILURE);
+    }
+    return NS_OK;
 }
 
 nsresult
@@ -313,21 +364,6 @@ ResourceReader::OnWalkAttribute(nsIDOMNode* aNode,
     }
     return OnWalkURI(uriSpec);
 }
-
-nsresult
-ResourceReader::OnWalkSubframe(nsIDOMNode*     aNode,
-                               nsIDOMDocument* aMaybeContent)
-{
-    if (!aMaybeContent) {
-        return NS_OK;
-    }
-    nsCOMPtr<nsIDocument> contentDoc = do_QueryInterface(aMaybeContent);
-    NS_ENSURE_STATE(contentDoc);
-    nsRefPtr<nsWebBrowserPersistDocument> subPersist =
-        new nsWebBrowserPersistDocument(contentDoc);
-    return mVisitor->VisitDocument(mParent, subPersist);
-}
-
 
 static nsresult
 GetXMLStyleSheetLink(nsIDOMProcessingInstruction *aPI, nsAString &aHref)
@@ -499,19 +535,13 @@ ResourceReader::OnWalkDOMNode(nsIDOMNode* aNode)
 
     nsCOMPtr<nsIDOMHTMLFrameElement> nodeAsFrame = do_QueryInterface(aNode);
     if (nodeAsFrame) {
-        nsCOMPtr<nsIDOMDocument> content;
-        rv = nodeAsFrame->GetContentDocument(getter_AddRefs(content));
-        NS_ENSURE_SUCCESS(rv, rv);
-        return OnWalkSubframe(aNode, content);
+        return OnWalkSubframe(aNode);
     }
 
     nsCOMPtr<nsIDOMHTMLIFrameElement> nodeAsIFrame = do_QueryInterface(aNode);
     if (nodeAsIFrame && !(mPersistFlags &
                           IWBP::PERSIST_FLAGS_IGNORE_IFRAMES)) {
-        nsCOMPtr<nsIDOMDocument> content;
-        rv = nodeAsIFrame->GetContentDocument(getter_AddRefs(content));
-        NS_ENSURE_SUCCESS(rv, rv);
-        return OnWalkSubframe(aNode, content);
+        return OnWalkSubframe(aNode);
     }
 
     nsCOMPtr<nsIDOMHTMLInputElement> nodeAsInput = do_QueryInterface(aNode);
@@ -1186,11 +1216,11 @@ nsWebBrowserPersistDocument::ReadResources(nsIWebBrowserPersistResourceVisitor* 
     NS_ENSURE_SUCCESS(rv, NS_ERROR_FAILURE);
     MOZ_ASSERT(walker);
 
-    ResourceReader reader(this, aVisitor);
+    nsRefPtr<ResourceReader> reader = new ResourceReader(this, aVisitor);
     nsCOMPtr<nsIDOMNode> currentNode;
     walker->GetCurrentNode(getter_AddRefs(currentNode));
     while (currentNode) {
-        rv = reader.OnWalkDOMNode(currentNode);
+        rv = reader->OnWalkDOMNode(currentNode);
         if (NS_WARN_IF(NS_FAILED(rv))) {
             break;
         }
@@ -1199,8 +1229,7 @@ nsWebBrowserPersistDocument::ReadResources(nsIWebBrowserPersistResourceVisitor* 
             break;
         }
     }
-
-    aVisitor->EndVisit(this, rv);
+    reader->DocumentDone(rv);
     return rv;
 }
 
