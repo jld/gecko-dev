@@ -12,7 +12,7 @@
 #include "nsCOMPtr.h"
 #include "nsIWebBrowserPersistDocument.h"
 
-class nsWebBrowserPersistDocumentParent
+class nsWebBrowserPersistDocumentParent final
     : public mozilla::PWebBrowserPersistDocumentParent
     , public nsIWebBrowserPersistDocument
 {
@@ -51,6 +51,7 @@ private:
     mozilla::Maybe<Attrs> mAttrs;
     nsCOMPtr<nsIWebBrowserPersistDocumentReceiver> mOnReady;
     bool mHoldingExtraRef;
+    bool mShouldSendDelete;
 
     void DropExtraRef();
     void ReallyDropExtraRef();

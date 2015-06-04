@@ -16,6 +16,7 @@ NS_IMPL_ISUPPORTS(nsWebBrowserPersistDocumentParent,
 nsWebBrowserPersistDocumentParent::nsWebBrowserPersistDocumentParent()
 : mFailure(NS_OK)
 , mHoldingExtraRef(true)
+, mShouldSendDelete(true)
 {
     NS_ADDREF_THIS();
 }
@@ -74,6 +75,7 @@ nsWebBrowserPersistDocumentParent::ReallyDropExtraRef()
 void
 nsWebBrowserPersistDocumentParent::ActorDestroy(ActorDestroyReason aWhy)
 {
+    mShouldSendDelete = false;
     if (aWhy == Deletion) {
         MOZ_ASSERT(!WaitingForAttrs());
         MOZ_ASSERT(!mOnReady);
@@ -93,7 +95,9 @@ nsWebBrowserPersistDocumentParent::ActorDestroy(ActorDestroyReason aWhy)
 nsWebBrowserPersistDocumentParent::~nsWebBrowserPersistDocumentParent()
 {
     MOZ_ASSERT(!mHoldingExtraRef);
-    NS_WARN_IF(!Send__delete__(this));
+    if (mShouldSendDelete) {
+        NS_WARN_IF(!Send__delete__(this));
+    }
 }
 
 bool
