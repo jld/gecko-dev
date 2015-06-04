@@ -23,6 +23,8 @@ SOURCES += [
     'nsWebBrowserPersistDocument.cpp',
     'nsWebBrowserPersistDocumentChild.cpp',
     'nsWebBrowserPersistDocumentParent.cpp',
+    'nsWebBrowserPersistDocumentReadChild.cpp',
+    'nsWebBrowserPersistDocumentReadParent.cpp',
 ]
 
 EXPORTS += [
