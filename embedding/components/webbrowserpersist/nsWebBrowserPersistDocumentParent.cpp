@@ -29,46 +29,46 @@ nsWebBrowserPersistDocumentParent::WaitingForAttrs()
 void
 nsWebBrowserPersistDocumentParent::SetOnReady(nsIWebBrowserPersistDocumentReceiver* aOnReady)
 {
+    MOZ_ASSERT(aOnReady);
     MOZ_ASSERT(!mOnReady);
     MOZ_ASSERT(WaitingForAttrs());
-    // We'll probably just hang if those assertions would have failed.
+    MOZ_ASSERT(mHoldingExtraRef);
     mOnReady = aOnReady;
 }
 
-void
+bool
 nsWebBrowserPersistDocumentParent::FireOnReady()
 {
     MOZ_ASSERT(!WaitingForAttrs());
-    MOZ_ASSERT(mHoldingExtraRef); // FIXME THIS IS BEES
+    MOZ_ASSERT(mHoldingExtraRef);
+    MOZ_ASSERT(mOnReady);
     if (!mOnReady) {
-        // Something else (i.e. the parent document's actor) will handle this.
-        return;
+        return false;
     }
     mOnReady->OnDocumentReady(this);
     mOnReady = nullptr;
     DropExtraRef();
-}
-
-void
-nsWebBrowserPersistDocumentParent::ReallyDropExtraRef()
-{
-    MOZ_ASSERT(!WaitingForAttrs());
-    MOZ_ASSERT(mHoldingExtraRef);
-    // Test even if no assertions; better to leak than use-after-free.
-    if (!mHoldingExtraRef) {
-        return;
-    }
-    mHoldingExtraRef = false;
-    NS_RELEASE_THIS(); // This can call dtor -> IPC -> all the things.
+    return true;
 }
 
 void
 nsWebBrowserPersistDocumentParent::DropExtraRef()
 {
-    MOZ_ASSERT(!WaitingForAttrs());
+    MOZ_ASSERT(NS_IsMainThread());
     MOZ_ASSERT(mHoldingExtraRef);
+    if (!mHoldingExtraRef) {
+        return;
+    }
+    mHoldingExtraRef = false;
     NS_DispatchToCurrentThread(NS_NewNonOwningRunnableMethod(this,
         &nsWebBrowserPersistDocumentParent::ReallyDropExtraRef));
+}
+
+void
+nsWebBrowserPersistDocumentParent::ReallyDropExtraRef()
+{
+    MOZ_ASSERT(!mHoldingExtraRef);
+    NS_RELEASE_THIS(); // This can call dtor -> IPC -> all the things.
 }
 
 void
@@ -84,10 +84,8 @@ nsWebBrowserPersistDocumentParent::ActorDestroy(ActorDestroyReason aWhy)
         // FIXME: is this actually a horrible idea because reentrancy?
         mFailure = NS_ERROR_FAILURE;
         FireOnReady();
-    } else if (mHoldingExtraRef) {
-        // That reference can't be claimed normally now, so drop it.
-        // But not *right* now, because that can `delete this` while
-        // IPDL stuff for `this` is on the stack.
+    }
+    if (mHoldingExtraRef) {
         DropExtraRef();
     }
 }
@@ -108,8 +106,7 @@ nsWebBrowserPersistDocumentParent::RecvAttributes(const Attrs& aAttrs)
         return false;
     }
     mAttrs.emplace(aAttrs);
-    FireOnReady();
-    return true;
+    return FireOnReady();
 }
 
 bool
@@ -120,8 +117,8 @@ nsWebBrowserPersistDocumentParent::RecvInitFailure(const nsresult& aFailure)
     if (!WaitingForAttrs() || NS_SUCCEEDED(aFailure)) {
         return false;
     }
-    FireOnReady();
-    return true;
+    mFailure = aFailure;
+    return FireOnReady();
 }
 
 nsresult

@@ -18,11 +18,9 @@ class nsWebBrowserPersistDocumentParent
 {
 public:
     nsWebBrowserPersistDocumentParent();
+    void SetOnReady(nsIWebBrowserPersistDocumentReceiver* aOnReady);
 
     using Attrs = WebBrowserPersistDocumentAttrs;
-
-    void SetOnReady(nsIWebBrowserPersistDocumentReceiver* aOnReady);
-    void DropExtraRef(); // FIXME: explain this especially -- or rename it
 
     virtual bool
     RecvAttributes(const Attrs& aAttrs) override;
@@ -54,10 +52,11 @@ private:
     nsCOMPtr<nsIWebBrowserPersistDocumentReceiver> mOnReady;
     bool mHoldingExtraRef;
 
+    void DropExtraRef();
     void ReallyDropExtraRef();
     bool WaitingForAttrs();
     nsresult AccessAttrs();
-    void FireOnReady();
+    bool FireOnReady();
 
     virtual ~nsWebBrowserPersistDocumentParent();
 };

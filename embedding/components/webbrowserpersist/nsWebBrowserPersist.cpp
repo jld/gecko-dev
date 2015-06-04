@@ -3845,6 +3845,7 @@ NS_IMETHODIMP
 nsWebBrowserPersist::StartPersistence(nsISupports* aDocumentish,
                                       nsIWebBrowserPersistDocumentReceiver* k)
 {
+    NS_ENSURE_ARG_POINTER(k);
     return nsWebBrowserPersistDocument::Create(aDocumentish, k);
 }
 
