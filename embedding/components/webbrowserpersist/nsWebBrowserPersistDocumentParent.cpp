@@ -39,7 +39,7 @@ void
 nsWebBrowserPersistDocumentParent::FireOnReady()
 {
     MOZ_ASSERT(!WaitingForAttrs());
-    MOZ_ASSERT(mHoldingExtraRef);
+    MOZ_ASSERT(mHoldingExtraRef); // FIXME THIS IS BEES
     if (!mOnReady) {
         // Something else (i.e. the parent document's actor) will handle this.
         return;
@@ -84,8 +84,7 @@ nsWebBrowserPersistDocumentParent::ActorDestroy(ActorDestroyReason aWhy)
         // FIXME: is this actually a horrible idea because reentrancy?
         mFailure = NS_ERROR_FAILURE;
         FireOnReady();
-    }
-    if (mHoldingExtraRef) {
+    } else if (mHoldingExtraRef) {
         // That reference can't be claimed normally now, so drop it.
         // But not *right* now, because that can `delete this` while
         // IPDL stuff for `this` is on the stack.
