@@ -3119,6 +3119,8 @@ TabChild::RecvPWebBrowserPersistDocumentConstructor(PWebBrowserPersistDocumentCh
 {
   nsCOMPtr<nsIDocument> doc = GetDocument();
   // return static_cast<nsWebBrowserPersistDocumentChild*>(aActor)->Start(doc);
+  MOZ_CRASH("not implemented yet");
+  return false;
 }
 
 bool

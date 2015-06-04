@@ -31,13 +31,14 @@ public:
     NS_DECL_NSIWEBBROWSERPERSISTDOCUMENT
 
 private:
-    virtual ~nsWebBrowserPersistDocument();
     nsCOMPtr<nsIDocument> mDocument; // Reference cycles?
     uint32_t mPersistFlags;
 
     void DecideContentType(nsACString& aContentType);
     nsresult GetDocEncoder(const nsACString& aContentType,
                            nsIDocumentEncoder** aEncoder);
+
+    virtual ~nsWebBrowserPersistDocument();
 };
 
 #endif // nsWebBrowserPersistDocument_h__

@@ -36,6 +36,7 @@ parent:
   InitFailure(nsresult aStatus);
 
 child:
+  SetPersistFlags(uint32_t aNewFlags);
   PWebBrowserPersistDocumentRead();
   PWebBrowserPersistDocumentWrite(WebBrowserPersistMap aMap,
                                   nsCString aRequestedContentType,
@@ -47,6 +48,7 @@ state START:
   recv InitFailure goto FAILED;
 
 state MAIN:
+  send SetPersistFlags goto MAIN;
   send PWebBrowserPersistDocumentRead goto MAIN;
   send PWebBrowserPersistDocumentWrite goto MAIN;
   send __delete__;
