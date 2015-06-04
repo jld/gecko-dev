@@ -21,13 +21,17 @@ IPDL_SOURCES += [
 SOURCES += [
     'nsWebBrowserPersist.cpp',
     'nsWebBrowserPersistDocument.cpp',
+    'nsWebBrowserPersistDocumentParent.cpp',
 ]
 
 EXPORTS += [
     'nsWebBrowserPersistDocument.h',
+    'nsWebBrowserPersistDocumentParent.h',
 ]
 
 FAIL_ON_WARNINGS = True
+
+include('/ipc/chromium/chromium-config.mozbuild')
 
 FINAL_LIBRARY = 'xul'
 LOCAL_INCLUDES += [

@@ -93,6 +93,7 @@
 #include "ImageOps.h"
 #include "UnitTransforms.h"
 #include <algorithm>
+#include "nsWebBrowserPersistDocumentParent.h"
 
 using namespace mozilla::dom;
 using namespace mozilla::ipc;
@@ -3278,15 +3279,14 @@ TabParent::AsyncPanZoomEnabled() const
 PWebBrowserPersistDocumentParent*
 TabParent::AllocPWebBrowserPersistDocumentParent()
 {
-  // return new nsWebBrowserPersistDocumentChild();
-  MOZ_CRASH("not implemented yet");
+  return new nsWebBrowserPersistDocumentParent();
 }
 
 bool
 TabParent::DeallocPWebBrowserPersistDocumentParent(PWebBrowserPersistDocumentParent* aActor)
 {
-  // static_cast<nsWebBrowserPersistDocumentParent*>(aActor)->Release();
-  MOZ_CRASH("not implemented yet");
+  // Lifetime is controlled by XPCOM refcount, and this is called from
+  // the destructor; nothing to do here.
   return true;
 }
 

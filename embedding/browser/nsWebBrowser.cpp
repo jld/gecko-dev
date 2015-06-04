@@ -1111,13 +1111,13 @@ nsWebBrowser::SaveDocument(nsIDOMDocument* aDocument,
 // FIXME
 NS_IMETHODIMP
 nsWebBrowser::StartPersistence(nsISupports* aDocumentish,
-                               nsIWebBrowserPersistDocument** aRet)
+                               nsIWebBrowserPersistDocumentReceiver* k)
 {
   nsresult rv;
   nsCOMPtr<nsIWebBrowserPersist> persist =
     do_CreateInstance(NS_WEBBROWSERPERSIST_CONTRACTID, &rv);
   NS_ENSURE_SUCCESS(rv, rv);
-  return persist->StartPersistence(aDocumentish, aRet);
+  return persist->StartPersistence(aDocumentish, k);
 }
 
 
