@@ -6,9 +6,9 @@
 
 #include "nsWebBrowserPersistDocumentParent.h"
 
-#include "mozilla/PWebBrowserPersistDocumentWriteParent.h"
 #include "nsThreadUtils.h"
 #include "nsWebBrowserPersistDocumentReadParent.h"
+#include "nsWebBrowserPersistDocumentWriteParent.h"
 
 NS_IMPL_ISUPPORTS(nsWebBrowserPersistDocumentParent,
 		  nsIWebBrowserPersistDocument)
@@ -236,7 +236,6 @@ nsWebBrowserPersistDocumentParent::DeallocPWebBrowserPersistDocumentReadParent(P
 
 mozilla::PWebBrowserPersistDocumentWriteParent*
 nsWebBrowserPersistDocumentParent::AllocPWebBrowserPersistDocumentWriteParent(
-// What am I even supposed to do with this indentation.
         const WebBrowserPersistMap& aMap,
         const nsCString& aRequestedContentType,
         const uint32_t& aWrapColumn)
@@ -267,17 +266,15 @@ nsWebBrowserPersistDocumentParent::WriteContent(
         NS_ENSURE_SUCCESS(rv, rv);
     }
 
-    MOZ_CRASH("not implemented yet");
-    return NS_ERROR_NOT_IMPLEMENTED;
-#if 0
-    auto subActor = new nsWebBrowserPersistDocumentWriteParent(aStream,
+    auto subActor = new nsWebBrowserPersistDocumentWriteParent(this,
+                                                               aStream,
                                                                aCompletion);
+    nsCString requestedContentType(aRequestedContentType); // Sigh.
     return SendPWebBrowserPersistDocumentWriteConstructor(subActor,
                                                           map,
-                                                          aRequestedContentType,
+                                                          requestedContentType,
                                                           aWrapColumn)
         ? NS_OK : NS_ERROR_FAILURE;
-#endif
 }
 
 bool

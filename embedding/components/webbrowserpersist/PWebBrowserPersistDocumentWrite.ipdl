@@ -13,7 +13,7 @@ protocol PWebBrowserPersistDocumentWrite {
 
 parent:
   // FIXME: do I need congestion windows?
-  WriteData(nsCString aData);
+  WriteData(uint8_t[] aData);
   __delete__(nsCString aContentType,
              nsresult aStatus);
 };
