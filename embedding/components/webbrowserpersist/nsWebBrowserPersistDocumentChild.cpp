@@ -6,10 +6,10 @@
 
 #include "nsWebBrowserPersistDocumentChild.h"
 
-#include "mozilla/PWebBrowserPersistDocumentWriteChild.h"
 #include "nsIDocument.h"
 #include "nsWebBrowserPersistDocument.h"
 #include "nsWebBrowserPersistDocumentReadChild.h"
+#include "nsWebBrowserPersistDocumentWriteChild.h"
 
 nsWebBrowserPersistDocumentChild::nsWebBrowserPersistDocumentChild()
 {
@@ -63,8 +63,7 @@ nsWebBrowserPersistDocumentChild::RecvSetPersistFlags(const uint32_t& aNewFlags)
 mozilla::PWebBrowserPersistDocumentReadChild*
 nsWebBrowserPersistDocumentChild::AllocPWebBrowserPersistDocumentReadChild()
 {
-    nsWebBrowserPersistDocumentReadChild* actor =
-        new nsWebBrowserPersistDocumentReadChild();
+    auto* actor = new nsWebBrowserPersistDocumentReadChild();
     NS_ADDREF(actor);
     return actor;
 }
@@ -96,8 +95,9 @@ nsWebBrowserPersistDocumentChild::AllocPWebBrowserPersistDocumentWriteChild(
             const nsCString& aRequestedContentType,
             const uint32_t& aWrapColumn)
 {
-    MOZ_CRASH("not implemented yet");
-    return nullptr;
+    auto* actor = new nsWebBrowserPersistDocumentWriteChild(aMap);
+    NS_ADDREF(actor);
+    return actor;
 }
 
 bool
@@ -107,13 +107,24 @@ nsWebBrowserPersistDocumentChild::RecvPWebBrowserPersistDocumentWriteConstructor
             const nsCString& aRequestedContentType,
             const uint32_t& aWrapColumn)
 {
-    MOZ_CRASH("not implemented yet");
-    return false;
+    auto* castActor =
+        static_cast<nsWebBrowserPersistDocumentWriteChild*>(aActor);
+    nsresult rv = mDocument->WriteContent(castActor,
+                                          castActor,
+                                          aRequestedContentType,
+                                          aWrapColumn,
+                                          castActor);
+    if (NS_FAILED(rv)) {
+        castActor->OnFinish(mDocument, castActor, aRequestedContentType, rv);
+    }
+    return true;
 }
 
 bool
 nsWebBrowserPersistDocumentChild::DeallocPWebBrowserPersistDocumentWriteChild(PWebBrowserPersistDocumentWriteChild* aActor)
 {
-    MOZ_CRASH("not implemented yet");
-    return false;
+    auto* castActor =
+        static_cast<nsWebBrowserPersistDocumentWriteChild*>(aActor);
+    NS_RELEASE(castActor);
+    return true;
 }
