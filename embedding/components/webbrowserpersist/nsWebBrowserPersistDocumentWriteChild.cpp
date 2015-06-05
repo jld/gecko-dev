@@ -86,7 +86,7 @@ nsWebBrowserPersistDocumentWriteChild::Write(const char* aBuf, uint32_t aCount,
     static const uint32_t kMaxWrite = 4096;
     
     MOZ_ASSERT(NS_IsMainThread());
-    uint32_t toWrite = std::max(kMaxWrite, aCount);
+    uint32_t toWrite = std::min(kMaxWrite, aCount);
     nsTArray<uint8_t> buf;
     buf.AppendElements(aBuf, toWrite);
     SendWriteData(mozilla::Move(buf));
