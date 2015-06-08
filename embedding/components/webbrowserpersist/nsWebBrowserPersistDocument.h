@@ -36,6 +36,7 @@ private:
 
     void DecideContentType(nsACString& aContentType);
     nsresult GetDocEncoder(const nsACString& aContentType,
+                           uint32_t aEncoderFlags,
                            nsIDocumentEncoder** aEncoder);
 
     virtual ~nsWebBrowserPersistDocument();

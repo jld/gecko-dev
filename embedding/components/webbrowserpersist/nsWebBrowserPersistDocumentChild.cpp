@@ -93,6 +93,7 @@ mozilla::PWebBrowserPersistDocumentWriteChild*
 nsWebBrowserPersistDocumentChild::AllocPWebBrowserPersistDocumentWriteChild(
             const WebBrowserPersistMap& aMap,
             const nsCString& aRequestedContentType,
+            const uint32_t& aEncoderFlags,
             const uint32_t& aWrapColumn)
 {
     auto* actor = new nsWebBrowserPersistDocumentWriteChild(aMap);
@@ -105,6 +106,7 @@ nsWebBrowserPersistDocumentChild::RecvPWebBrowserPersistDocumentWriteConstructor
             PWebBrowserPersistDocumentWriteChild* aActor,
             const WebBrowserPersistMap& aMap,
             const nsCString& aRequestedContentType,
+            const uint32_t& aEncoderFlags,
             const uint32_t& aWrapColumn)
 {
     auto* castActor =
@@ -112,6 +114,7 @@ nsWebBrowserPersistDocumentChild::RecvPWebBrowserPersistDocumentWriteConstructor
     nsresult rv = mDocument->WriteContent(castActor,
                                           castActor,
                                           aRequestedContentType,
+                                          aEncoderFlags,
                                           aWrapColumn,
                                           castActor);
     if (NS_FAILED(rv)) {

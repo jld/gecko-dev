@@ -36,6 +36,7 @@ public:
     AllocPWebBrowserPersistDocumentWriteParent(
             const WebBrowserPersistMap& aMap,
             const nsCString& aRequestedContentType,
+            const uint32_t& aEncoderFlags,
             const uint32_t& aWrapColumn) override;
     virtual bool
     DeallocPWebBrowserPersistDocumentWriteParent(PWebBrowserPersistDocumentWriteParent* aActor) override;
