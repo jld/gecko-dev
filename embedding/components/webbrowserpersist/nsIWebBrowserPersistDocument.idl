@@ -37,6 +37,7 @@ interface nsIWebBrowserPersistDocument : nsISupports
                     in ACString aRequestedContentType,
                     in unsigned long aWrapColumn,
                     in nsIWebBrowserPersistWriteCompletion aCompletion);
+  void forceBaseElement();
 };
 
 [scriptable, uuid(8ce37706-b7d3-481a-be68-54f174fc0d0a)]

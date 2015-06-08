@@ -60,6 +60,13 @@ nsWebBrowserPersistDocumentChild::RecvSetPersistFlags(const uint32_t& aNewFlags)
     return true;
 }
 
+bool
+nsWebBrowserPersistDocumentChild::RecvForceBaseElement()
+{
+    mDocument->ForceBaseElement();
+    return true;
+}
+
 mozilla::PWebBrowserPersistDocumentReadChild*
 nsWebBrowserPersistDocumentChild::AllocPWebBrowserPersistDocumentReadChild()
 {

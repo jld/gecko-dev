@@ -209,6 +209,12 @@ nsWebBrowserPersistDocumentParent::SetPersistFlags(uint32_t aFlags)
     return rv;
 }
 
+NS_IMETHODIMP
+nsWebBrowserPersistDocumentParent::ForceBaseElement()
+{
+    return SendForceBaseElement() ? NS_OK : NS_ERROR_FAILURE;
+}
+
 mozilla::PWebBrowserPersistDocumentReadParent*
 nsWebBrowserPersistDocumentParent::AllocPWebBrowserPersistDocumentReadParent()
 {

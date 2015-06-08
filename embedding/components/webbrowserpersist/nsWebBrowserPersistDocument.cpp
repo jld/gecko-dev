@@ -6,6 +6,7 @@
 #include "nsWebBrowserPersistDocument.h"
 #include "nsWebBrowserPersistDocumentParent.h"
 
+#include "mozilla/ArrayUtils.h"
 #include "mozilla/dom/HTMLInputElement.h"
 #include "mozilla/dom/HTMLSharedElement.h"
 #include "mozilla/dom/HTMLSharedObjectElement.h"
@@ -42,6 +43,7 @@
 #include "nsIDOMNodeList.h"
 #include "nsIDOMProcessingInstruction.h"
 #include "nsIDOMTreeWalker.h"
+#include "nsIDOMXMLDocument.h"
 #include "nsIDocShell.h"
 #include "nsIDocument.h"
 #include "nsIDocumentEncoder.h"
@@ -193,6 +195,204 @@ already_AddRefed<nsIURI>
 nsWebBrowserPersistDocument::GetBaseURI() const
 {
     return mDocument->GetBaseURI();
+}
+
+// Ordered so that typical documents work fastest.
+//                                    strlen("blockquote")==10
+static const char kSpecialXHTMLTags[][11] = {
+    "body",
+    "head",
+    "img",
+    "script",
+    "a",
+    "area",
+    "link",
+    "input",
+    "frame",
+    "iframe",
+    "object",
+    "applet",
+    "form",
+    "blockquote",
+    "q",
+    "del",
+    "ins"
+};
+
+static bool IsSpecialXHTMLTag(nsIDOMNode *aNode)
+{
+    nsAutoString tmp;
+    aNode->GetNamespaceURI(tmp);
+    if (!tmp.EqualsLiteral("http://www.w3.org/1999/xhtml")) {
+        return false;
+    }
+
+    aNode->GetLocalName(tmp);
+    for (uint32_t i = 0; i < mozilla::ArrayLength(kSpecialXHTMLTags); i++) {
+        if (tmp.EqualsASCII(kSpecialXHTMLTags[i])) {
+            // XXX This element MAY have URI attributes, but
+            //     we are not actually checking if they are present.
+            //     That would slow us down further, and I am not so sure
+            //     how important that would be.
+            return true;
+        }
+    }
+
+    return false;
+}
+
+static bool HasSpecialXHTMLTags(nsIDOMNode *aParent)
+{
+    if (IsSpecialXHTMLTag(aParent)) {
+        return true;
+    }
+
+    nsCOMPtr<nsIDOMNodeList> list;
+    aParent->GetChildNodes(getter_AddRefs(list));
+    if (list) {
+        uint32_t count;
+        list->GetLength(&count);
+        uint32_t i;
+        for (i = 0; i < count; i++) {
+            nsCOMPtr<nsIDOMNode> node;
+            list->Item(i, getter_AddRefs(node));
+            if (!node) {
+                break;
+            }
+            uint16_t nodeType;
+            node->GetNodeType(&nodeType);
+            if (nodeType == nsIDOMNode::ELEMENT_NODE) {
+                return HasSpecialXHTMLTags(node);
+            }
+        }
+    }
+
+    return false;
+}
+
+static bool NeedXHTMLBaseTag(nsIDOMDocument *aDocument)
+{
+    nsCOMPtr<nsIDOMElement> docElement;
+    aDocument->GetDocumentElement(getter_AddRefs(docElement));
+
+    nsCOMPtr<nsIDOMNode> node(do_QueryInterface(docElement));
+    if (node) {
+        return HasSpecialXHTMLTags(node);
+    }
+
+    return false;
+}
+
+// Set document base. This could create an invalid XML document (still well-formed).
+NS_IMETHODIMP
+nsWebBrowserPersistDocument::ForceBaseElement()
+{
+    if (mPersistFlags
+        & nsIWebBrowserPersist::PERSIST_FLAGS_NO_BASE_TAG_MODIFICATIONS) {
+        return NS_OK;
+    }
+
+    nsAutoCString uriSpec;
+    nsresult rv = GetBaseURI(uriSpec);
+    NS_ENSURE_SUCCESS(rv, rv);
+
+    nsCOMPtr<nsIDOMDocument> domDoc = do_QueryInterface(mDocument);
+    NS_ENSURE_TRUE(domDoc, NS_ERROR_UNEXPECTED);
+    nsCOMPtr<nsIDOMXMLDocument> xmlDoc;
+    nsCOMPtr<nsIDOMHTMLDocument> htmlDoc = do_QueryInterface(domDoc);
+    if (!htmlDoc) {
+        xmlDoc = do_QueryInterface(domDoc);
+        if (!xmlDoc) {
+            return NS_ERROR_FAILURE;
+        }
+    }
+
+    NS_NAMED_LITERAL_STRING(kXHTMLNS, "http://www.w3.org/1999/xhtml");
+    NS_NAMED_LITERAL_STRING(kHead, "head");
+
+    // Find the head element
+    nsCOMPtr<nsIDOMElement> headElement;
+    nsCOMPtr<nsIDOMNodeList> headList;
+    if (xmlDoc) {
+        // First see if there is XHTML content that needs base
+        // tags.
+        if (!NeedXHTMLBaseTag(domDoc)) {
+            return NS_OK;
+        }
+
+        domDoc->GetElementsByTagNameNS(
+            kXHTMLNS,
+            kHead, getter_AddRefs(headList));
+    } else {
+        domDoc->GetElementsByTagName(
+            kHead, getter_AddRefs(headList));
+    }
+    if (headList) {
+        nsCOMPtr<nsIDOMNode> headNode;
+        headList->Item(0, getter_AddRefs(headNode));
+        headElement = do_QueryInterface(headNode);
+    }
+    if (!headElement) {
+        // Create head and insert as first element
+        nsCOMPtr<nsIDOMNode> firstChildNode;
+        nsCOMPtr<nsIDOMNode> newNode;
+        if (xmlDoc) {
+            domDoc->CreateElementNS(
+                kXHTMLNS,
+                kHead, getter_AddRefs(headElement));
+        } else {
+            domDoc->CreateElement(
+                kHead, getter_AddRefs(headElement));
+        }
+        nsCOMPtr<nsIDOMElement> documentElement;
+        domDoc->GetDocumentElement(getter_AddRefs(documentElement));
+        if (documentElement) {
+            documentElement->GetFirstChild(getter_AddRefs(firstChildNode));
+            documentElement->InsertBefore(headElement, firstChildNode, getter_AddRefs(newNode));
+        }
+    }
+    if (!headElement) {
+        return NS_ERROR_FAILURE;
+    }
+
+    // Find or create the BASE element
+    NS_NAMED_LITERAL_STRING(kBase, "base");
+    nsCOMPtr<nsIDOMElement> baseElement;
+    nsCOMPtr<nsIDOMHTMLCollection> baseList;
+    if (xmlDoc) {
+        headElement->GetElementsByTagNameNS(
+            kXHTMLNS,
+            kBase, getter_AddRefs(baseList));
+    } else {
+        headElement->GetElementsByTagName(
+            kBase, getter_AddRefs(baseList));
+    }
+    if (baseList) {
+        nsCOMPtr<nsIDOMNode> baseNode;
+        baseList->Item(0, getter_AddRefs(baseNode));
+        baseElement = do_QueryInterface(baseNode);
+    }
+
+    // Add the BASE element
+    if (!baseElement) {
+      nsCOMPtr<nsIDOMNode> newNode;
+      if (xmlDoc) {
+          domDoc->CreateElementNS(
+              kXHTMLNS,
+              kBase, getter_AddRefs(baseElement));
+      } else {
+          domDoc->CreateElement(
+              kBase, getter_AddRefs(baseElement));
+      }
+      headElement->AppendChild(baseElement, getter_AddRefs(newNode));
+    }
+    if (!baseElement) {
+        return NS_ERROR_FAILURE;
+    }
+    NS_ConvertUTF8toUTF16 href(uriSpec);
+    baseElement->SetAttribute(NS_LITERAL_STRING("href"), href);
+
+    return NS_OK;
 }
 
 

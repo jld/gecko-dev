@@ -25,6 +25,8 @@ public:
 
     virtual bool
     RecvSetPersistFlags(const uint32_t& aNewFlags) override;
+    virtual bool
+    RecvForceBaseElement() override;
 
     virtual PWebBrowserPersistDocumentReadChild*
     AllocPWebBrowserPersistDocumentReadChild() override;

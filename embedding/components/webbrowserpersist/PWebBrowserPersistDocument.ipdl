@@ -41,6 +41,7 @@ child:
   PWebBrowserPersistDocumentWrite(WebBrowserPersistMap aMap,
                                   nsCString aRequestedContentType,
                                   uint32_t aWrapColumn);
+  ForceBaseElement();
   __delete__();
 
 state START:
