@@ -40,6 +40,7 @@ child:
   PWebBrowserPersistDocumentRead();
   PWebBrowserPersistDocumentWrite(WebBrowserPersistMap aMap,
                                   nsCString aRequestedContentType,
+                                  uint32_t aEncoderFlags,
                                   uint32_t aWrapColumn);
   ForceBaseElement();
   __delete__();

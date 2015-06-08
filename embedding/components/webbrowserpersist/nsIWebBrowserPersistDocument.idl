@@ -35,6 +35,7 @@ interface nsIWebBrowserPersistDocument : nsISupports
   void writeContent(in nsIOutputStream aStream,
                     in nsIWebBrowserPersistMap aURIMap,
                     in ACString aRequestedContentType,
+                    in unsigned long aEncoderFlags,
                     in unsigned long aWrapColumn,
                     in nsIWebBrowserPersistWriteCompletion aCompletion);
   void forceBaseElement();

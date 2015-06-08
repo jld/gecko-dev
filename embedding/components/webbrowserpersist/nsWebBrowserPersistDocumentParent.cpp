@@ -244,6 +244,7 @@ mozilla::PWebBrowserPersistDocumentWriteParent*
 nsWebBrowserPersistDocumentParent::AllocPWebBrowserPersistDocumentWriteParent(
         const WebBrowserPersistMap& aMap,
         const nsCString& aRequestedContentType,
+        const uint32_t& aEncoderFlags,
         const uint32_t& aWrapColumn)
 {
     MOZ_CRASH("Don't use this; construct the actor directly.");
@@ -255,6 +256,7 @@ nsWebBrowserPersistDocumentParent::WriteContent(
     nsIOutputStream* aStream,
     nsIWebBrowserPersistMap* aMap,
     const nsACString& aRequestedContentType,
+    uint32_t aEncoderFlags,
     uint32_t aWrapColumn,
     nsIWebBrowserPersistWriteCompletion* aCompletion)
 {
@@ -279,6 +281,7 @@ nsWebBrowserPersistDocumentParent::WriteContent(
     return SendPWebBrowserPersistDocumentWriteConstructor(subActor,
                                                           map,
                                                           requestedContentType,
+                                                          aEncoderFlags,
                                                           aWrapColumn)
         ? NS_OK : NS_ERROR_FAILURE;
 }
