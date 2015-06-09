@@ -456,9 +456,9 @@ NS_IMETHODIMP nsWebBrowserPersist::SaveDocument(
 
     rv = SaveDocumentInternal(aDocument, fileAsURI, datapathAsURI);
 
-    // Now save the URIs that have been gathered
+    // Now save the URIs and documents that have been gathered
 
-    if (NS_SUCCEEDED(rv) && datapathAsURI)
+    if (NS_SUCCEEDED(rv))
     {
         rv = SaveGatheredURIs(fileAsURI);
     }
@@ -1675,25 +1675,15 @@ nsresult nsWebBrowserPersist::SaveDocumentInternal(
         // Set the document base to ensure relative links still work
         SetDocumentBase(aDocument, mCurrentBaseURI);
 
-        // Get the content type to save with
-        nsXPIDLString realContentType;
-        GetDocEncoderContentType(aDocument,
-            !mContentType.IsEmpty() ? mContentType.get() : nullptr,
-            getter_Copies(realContentType));
-
-        nsAutoCString contentType; contentType.AssignWithConversion(realContentType);
-        nsAutoCString charType; // Empty
-
-        // Save the document
-        rv = SaveDocumentWithFixup(
-            aDocument,
-            nullptr,  // no dom fixup
-            aFile,
-            mReplaceExisting,
-            contentType,
-            charType,
-            mEncodingFlags);
-        NS_ENSURE_SUCCESS(rv, NS_ERROR_FAILURE);
+        DocData *docData = new DocData;
+        docData->mBaseURI = mCurrentBaseURI;
+        docData->mCharset = mCurrentCharset;
+        docData->mDocument = aDocument;
+        docData->mFile = aFile;
+        docData->mRelativePathToData = nullptr;
+        docData->mDataPath = nullptr;
+        docData->mDataPathIsRelative = nullptr;
+        mDocList.AppendElement(docData);
     }
 
     mCurrentBaseURI = oldBaseURI;
@@ -1727,9 +1717,14 @@ nsresult nsWebBrowserPersist::SaveDocuments()
         // Save the document, fixing it up with the new URIs as we do
 
         nsEncoderNodeFixup *nodeFixup;
-        nodeFixup = new nsEncoderNodeFixup;
-        if (nodeFixup)
-            nodeFixup->mWebBrowserPersist = this;
+        if (docData->mDataPath) {
+            nodeFixup = new nsEncoderNodeFixup;
+            if (nodeFixup) {
+                nodeFixup->mWebBrowserPersist = this;
+            }
+        } else {
+            nodeFixup = nullptr;
+        }
 
         // Get the content type
         nsXPIDLString realContentType;
