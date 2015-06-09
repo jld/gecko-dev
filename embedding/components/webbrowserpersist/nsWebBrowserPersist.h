@@ -32,12 +32,6 @@
 class nsEncoderNodeFixup;
 class nsIStorageStream;
 
-struct CleanupData;
-struct DocData;
-struct OutputData;
-struct UploadData;
-struct URIData;
-
 class nsWebBrowserPersist : public nsIInterfaceRequestor,
                             public nsIWebBrowserPersist,
                             public nsIStreamListener,
@@ -79,6 +73,12 @@ protected:
     nsresult GetExtensionForContentType(
         const char16_t *aContentType, char16_t **aExt);
     nsresult GetDocumentExtension(nsIDOMDocument *aDocument, char16_t **aExt);
+
+    struct CleanupData;
+    struct DocData;
+    struct OutputData;
+    struct UploadData;
+    struct URIData;
 
 // Private members
 private:
