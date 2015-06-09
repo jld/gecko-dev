@@ -454,9 +454,9 @@ NS_IMETHODIMP nsWebBrowserPersist::SaveDocument(
 
     rv = SaveDocumentInternal(aDocument, fileAsURI, datapathAsURI);
 
-    // Now save the URIs that have been gathered
+    // Now save the URIs and documents that have been gathered
 
-    if (NS_SUCCEEDED(rv) && datapathAsURI)
+    if (NS_SUCCEEDED(rv))
     {
         rv = SaveGatheredURIs(fileAsURI);
     }
@@ -1668,24 +1668,15 @@ nsresult nsWebBrowserPersist::SaveDocumentInternal(
     }
     else
     {
-        // Get the content type to save with
-        nsXPIDLString realContentType;
-        GetDocEncoderContentType(aDocument,
-            !mContentType.IsEmpty() ? mContentType.get() : nullptr,
-            getter_Copies(realContentType));
-
-        nsAutoCString contentType; contentType.AssignWithConversion(realContentType);
-        nsAutoCString charType; // Empty
-
-        // Save the document
-        rv = SaveDocumentWithFixup(
-            aDocument,
-            aFile,
-            mReplaceExisting,
-            contentType,
-            charType,
-            mEncodingFlags);
-        NS_ENSURE_SUCCESS(rv, NS_ERROR_FAILURE);
+        DocData *docData = new DocData;
+        docData->mBaseURI = mCurrentBaseURI;
+        docData->mCharset = mCurrentCharset;
+        docData->mDocument = aDocument;
+        docData->mFile = aFile;
+        docData->mRelativePathToData = nullptr;
+        docData->mDataPath = nullptr;
+        docData->mDataPathIsRelative = nullptr;
+        mDocList.AppendElement(docData);
     }
 
     mCurrentBaseURI = oldBaseURI;
