@@ -98,7 +98,7 @@ using namespace mozilla::dom;
 #define BUFFERED_OUTPUT_SIZE (1024 * 32)
 
 // Information about a DOM document
-struct DocData
+struct nsWebBrowserPersist::DocData
 {
     nsCOMPtr<nsIURI> mBaseURI;
     nsCOMPtr<nsIDOMDocument> mDocument;
@@ -110,7 +110,7 @@ struct DocData
 };
 
 // Information about a URI
-struct URIData
+struct nsWebBrowserPersist::URIData
 {
     bool mNeedsPersisting;
     bool mSaved;
@@ -126,7 +126,7 @@ struct URIData
 };
 
 // Information about the output stream
-struct OutputData
+struct nsWebBrowserPersist::OutputData
 {
     nsCOMPtr<nsIURI> mFile;
     nsCOMPtr<nsIURI> mOriginalLocation;
@@ -152,7 +152,7 @@ struct OutputData
     }
 };
 
-struct UploadData
+struct nsWebBrowserPersist::UploadData
 {
     nsCOMPtr<nsIURI> mFile;
     int64_t mSelfProgress;
@@ -166,7 +166,7 @@ struct UploadData
     }
 };
 
-struct CleanupData
+struct nsWebBrowserPersist::CleanupData
 {
     nsCOMPtr<nsIFile> mFile;
     // Snapshot of what the file actually is at the time of creation so that if
