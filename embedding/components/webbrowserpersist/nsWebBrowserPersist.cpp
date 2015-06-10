@@ -127,6 +127,8 @@ struct nsWebBrowserPersist::URIData
     nsCOMPtr<nsIURI> mDataPath;
     nsCString mRelativePathToData;
     nsCString mCharset;
+
+    nsresult GetLocalURI(nsCString& aSpec);
 };
 
 // Information about the output stream
@@ -1146,7 +1148,8 @@ nsresult nsWebBrowserPersist::GetLocalFileFromURI(nsIURI *aURI, nsIFile **aLocal
     return NS_OK;
 }
 
-nsresult nsWebBrowserPersist::AppendPathToURI(nsIURI *aURI, const nsAString & aPath) const
+/* static */ nsresult
+nsWebBrowserPersist::AppendPathToURI(nsIURI *aURI, const nsAString & aPath)
 {
     NS_ENSURE_ARG_POINTER(aURI);
 
@@ -3390,58 +3393,60 @@ nsWebBrowserPersist::FixupURI(nsAString &aURI)
         return NS_ERROR_FAILURE;
     }
     URIData *data = mURIMap.Get(spec);
-    if (!data->mNeedsFixup)
-    {
+    nsAutoCString newSpec;
+    rv = data->GetLocalURI(newSpec);
+    if (NS_FAILED(rv) || newSpec.IsVoid()) {
+        return rv;
+    }
+    aURI = NS_ConvertUTF8toUTF16(newSpec);
+    return NS_OK;
+}
+
+nsresult
+nsWebBrowserPersist::URIData::GetLocalURI(nsCString& aSpecOut)
+{
+    aSpecOut.SetIsVoid(true);
+    if (!mNeedsFixup) {
         return NS_OK;
     }
+    nsresult rv;
     nsCOMPtr<nsIURI> fileAsURI;
-    if (data->mFile)
-    {
-        rv = data->mFile->Clone(getter_AddRefs(fileAsURI));
+    if (mFile) {
+        rv = mFile->Clone(getter_AddRefs(fileAsURI));
+        NS_ENSURE_SUCCESS(rv, rv);
+    } else {
+        rv = mDataPath->Clone(getter_AddRefs(fileAsURI));
+        NS_ENSURE_SUCCESS(rv, rv);
+        rv = AppendPathToURI(fileAsURI, mFilename);
         NS_ENSURE_SUCCESS(rv, rv);
     }
-    else
-    {
-        rv = data->mDataPath->Clone(getter_AddRefs(fileAsURI));
-        NS_ENSURE_SUCCESS(rv, rv);
-        rv = AppendPathToURI(fileAsURI, data->mFilename);
-        NS_ENSURE_SUCCESS(rv, rv);
-    }
-    nsAutoString newValue;
 
     // remove username/password if present
     fileAsURI->SetUserPass(EmptyCString());
 
     // reset node attribute
     // Use relative or absolute links
-    if (data->mDataPathIsRelative)
-    {
+    if (mDataPathIsRelative) {
         nsCOMPtr<nsIURL> url(do_QueryInterface(fileAsURI));
-        if (!url)
-          return NS_ERROR_FAILURE;
+        if (!url) {
+            return NS_ERROR_FAILURE;
+        }
 
         nsAutoCString filename;
         url->GetFileName(filename);
 
-        nsAutoCString rawPathURL(data->mRelativePathToData);
+        nsAutoCString rawPathURL(mRelativePathToData);
         rawPathURL.Append(filename);
 
         nsAutoCString buf;
-        AppendUTF8toUTF16(NS_EscapeURL(rawPathURL, esc_FilePath, buf),
-                          newValue);
+        aSpecOut = NS_EscapeURL(rawPathURL, esc_FilePath, buf);
+    } else {
+        fileAsURI->GetSpec(aSpecOut);
     }
-    else
-    {
-        nsAutoCString fileurl;
-        fileAsURI->GetSpec(fileurl);
-        AppendUTF8toUTF16(fileurl, newValue);
-    }
-    if (data->mIsSubFrame)
-    {
-        newValue.Append(data->mSubFrameExt);
+    if (mIsSubFrame) {
+        AppendUTF16toUTF8(mSubFrameExt, aSpecOut);
     }
 
-    aURI = newValue;
     return NS_OK;
 }
 

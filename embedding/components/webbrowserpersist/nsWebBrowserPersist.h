@@ -88,7 +88,7 @@ private:
     void CleanupLocalFiles();
     nsresult GetValidURIFromObject(nsISupports *aObject, nsIURI **aURI) const;
     nsresult GetLocalFileFromURI(nsIURI *aURI, nsIFile **aLocalFile) const;
-    nsresult AppendPathToURI(nsIURI *aURI, const nsAString & aPath) const;
+    static nsresult AppendPathToURI(nsIURI *aURI, const nsAString & aPath);
     nsresult MakeAndStoreLocalFilenameInURIMap(
         nsIURI *aURI, bool aNeedsPersisting, URIData **aData);
     nsresult MakeOutputStream(
