@@ -94,6 +94,13 @@ using namespace mozilla::dom;
 // Buffer file writes in 32kb chunks
 #define BUFFERED_OUTPUT_SIZE (1024 * 32)
 
+struct nsWebBrowserPersist::WalkData
+{
+    nsCOMPtr<nsIDOMDocument> mDocument;
+    nsCOMPtr<nsIURI> mFile;
+    nsCOMPtr<nsIURI> mDataPath;
+};
+
 // Information about a DOM document
 struct nsWebBrowserPersist::DocData
 {
@@ -455,6 +462,12 @@ NS_IMETHODIMP nsWebBrowserPersist::SaveDocument(
     }
 
     rv = SaveDocumentInternal(aDocument, fileAsURI, datapathAsURI);
+    while (NS_SUCCEEDED(rv) && mWalkStack.Length() > 0) {
+        mozilla::UniquePtr<WalkData> toWalk;
+        mWalkStack.LastElement().swap(toWalk);
+        mWalkStack.TruncateLength(mWalkStack.Length() - 1);
+        rv = SaveDocumentInternal(toWalk->mDocument, toWalk->mFile, toWalk->mDataPath);
+    }
 
     // Now save the URIs and documents that have been gathered
 
@@ -3631,7 +3644,11 @@ nsWebBrowserPersist::SaveSubframeContent(
     // of frames that are not documents, e.g. images.
     if (DocumentEncoderExists(contentType.get()))
     {
-        rv = SaveDocumentInternal(aFrameContent, frameURI, frameDataURI);
+        auto toWalk = mozilla::MakeUnique<WalkData>();
+        toWalk->mDocument = aFrameContent;
+        toWalk->mFile = frameURI;
+        toWalk->mDataPath = frameDataURI;
+        mWalkStack.AppendElement(mozilla::Move(toWalk));
     }
     else
     {

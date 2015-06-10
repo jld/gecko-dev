@@ -23,6 +23,7 @@
 #include "nsIFile.h"
 #include "nsIWebProgressListener2.h"
 
+#include "mozilla/UniquePtr.h"
 #include "nsClassHashtable.h"
 #include "nsHashKeys.h"
 #include "nsTArray.h"
@@ -79,6 +80,7 @@ protected:
     struct OutputData;
     struct UploadData;
     struct URIData;
+    struct WalkData;
 
 // Private members
 private:
@@ -194,6 +196,7 @@ private:
     nsClassHashtable<nsISupportsHashKey, OutputData> mOutputMap;
     nsClassHashtable<nsISupportsHashKey, UploadData> mUploadList;
     nsClassHashtable<nsCStringHashKey, URIData> mURIMap;
+    nsTArray<mozilla::UniquePtr<WalkData>> mWalkStack;
     nsTArray<DocData*>        mDocList;
     nsTArray<CleanupData*>    mCleanupList;
     nsTArray<nsCString>       mFilenameList;
