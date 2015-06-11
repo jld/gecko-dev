@@ -30,7 +30,6 @@
 
 #include "nsCWebBrowserPersist.h"
 
-class nsEncoderNodeFixup;
 class nsIStorageStream;
 class nsIWebBrowserPersistDocument;
 
@@ -58,8 +57,6 @@ public:
 // FIXME: rethink all the privacy stuff
 protected:
     virtual ~nsWebBrowserPersist();
-    nsresult CloneNodeWithFixedUpAttributes(
-        nsIDOMNode *aNodeIn, bool *aSerializeCloneKids, nsIDOMNode **aNodeOut);
     nsresult SaveURIInternal(
         nsIURI *aURI, nsISupports *aCacheKey, nsIURI *aReferrer,
         uint32_t aReferrerPolicy, nsIInputStream *aPostData,
@@ -74,12 +71,8 @@ protected:
     nsresult SaveDocuments();
     void FinishSaveDocumentInternal(nsIURI* aFIle, nsIFile* aDataPath);
     void FinishSaveDocument();
-    nsresult GetDocEncoderContentType(
-        nsIDOMDocument *aDocument, const char16_t *aContentType,
-        char16_t **aRealContentType);
     nsresult GetExtensionForContentType(
         const char16_t *aContentType, char16_t **aExt);
-    nsresult GetDocumentExtension(nsIDOMDocument *aDocument, char16_t **aExt);
 
     struct CleanupData;
     struct DocData;
@@ -129,36 +122,12 @@ private:
         nsIURI *aURI,
         bool aNeedsPersisting = true,
         URIData **aData = nullptr);
-    nsresult StoreURIAttributeNS(
-        nsIDOMNode *aNode, const char *aNamespaceURI, const char *aAttribute,
-        bool aNeedsPersisting = true,
-        URIData **aData = nullptr);
-    nsresult StoreURIAttribute(
-        nsIDOMNode *aNode, const char *aAttribute,
-        bool aNeedsPersisting = true,
-        URIData **aData = nullptr)
-    {
-        return StoreURIAttributeNS(aNode, "", aAttribute, aNeedsPersisting, aData);
-    }
     bool DocumentEncoderExists(const char *aContentType);
 
-    nsresult GetNodeToFixup(nsIDOMNode *aNodeIn, nsIDOMNode **aNodeOut);
-    nsresult FixupURI(nsAString &aURI);
-    nsresult FixupNodeAttributeNS(nsIDOMNode *aNode, const char *aNamespaceURI, const char *aAttribute);
-    nsresult FixupNodeAttribute(nsIDOMNode *aNode, const char *aAttribute)
-    {
-        return FixupNodeAttributeNS(aNode, "", aAttribute);
-    }
-    nsresult FixupAnchor(nsIDOMNode *aNode);
-    nsresult FixupXMLStyleSheetLink(nsIDOMProcessingInstruction *aPI, const nsAString &aHref);
-    nsresult GetXMLStyleSheetLink(nsIDOMProcessingInstruction *aPI, nsAString &aHref);
-
-    nsresult StoreAndFixupStyleSheet(nsIStyleSheet *aStyleSheet);
     nsresult SaveSubframeContent(
         nsIWebBrowserPersistDocument *aFrameContent,
         const nsCString& aURISpec,
         URIData *aData);
-    nsresult SetDocumentBase(nsIDOMDocument *aDocument, nsIURI *aBaseURI);
     nsresult SendErrorStatusChange(
         bool aIsReadError, nsresult aResult, nsIRequest *aRequest, nsIURI *aURI);
 
@@ -228,21 +197,6 @@ private:
     int16_t                   mWrapColumn;
     uint32_t                  mEncodingFlags;
     nsString                  mContentType;
-};
-
-// Helper class does node fixup during persistence
-class nsEncoderNodeFixup : public nsIDocumentEncoderNodeFixup
-{
-public:
-    nsEncoderNodeFixup();
-
-    NS_DECL_ISUPPORTS
-    NS_IMETHOD FixupNode(nsIDOMNode *aNode, bool *aSerializeCloneKids, nsIDOMNode **aOutNode) override;
-
-    nsWebBrowserPersist *mWebBrowserPersist;
-
-protected:
-    virtual ~nsEncoderNodeFixup();
 };
 
 #endif
