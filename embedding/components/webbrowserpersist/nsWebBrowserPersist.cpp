@@ -692,15 +692,18 @@ nsWebBrowserPersist::SerializeNextFile()
 
     mCurrentBaseURI = docData->mBaseURI;
     mCurrentCharset = docData->mCharset;
+    mTargetBaseURI = docData->mFile;
 
     // Save the document, fixing it up with the new URIs as we do
 
     // FIXME: this map thing should be cacheable, no?
     nsAutoCString targetBaseSpec;
-    rv = mTargetBaseURI->GetSpec(targetBaseSpec);
-    if (NS_FAILED(rv)) {
-        EndDownload(rv);
-        return;
+    if (mTargetBaseURI) {
+        rv = mTargetBaseURI->GetSpec(targetBaseSpec);
+        if (NS_FAILED(rv)) {
+            EndDownload(rv);
+            return;
+        }
     }
     nsRefPtr<FlatMap> flatMap = new FlatMap(targetBaseSpec);
     mURIMap.EnumerateRead(EnumCopyURIsToFlatMap, flatMap);
