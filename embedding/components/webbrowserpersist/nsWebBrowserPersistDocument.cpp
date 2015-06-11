@@ -64,6 +64,11 @@ nsWebBrowserPersistDocument::Create(nsISupports* aDocumentish,
 {
     nsresult rv;
 
+    if (nsCOMPtr<nsIWebBrowserPersistDocument> pDoc =
+        do_QueryInterface(aDocumentish)) {
+        aContinuation->OnDocumentReady(pDoc);
+        return NS_OK;
+    }
     if (nsCOMPtr<nsIDocument> doc = do_QueryInterface(aDocumentish)) {
         nsCOMPtr<nsIWebBrowserPersistDocument> pDoc =
             new nsWebBrowserPersistDocument(doc);

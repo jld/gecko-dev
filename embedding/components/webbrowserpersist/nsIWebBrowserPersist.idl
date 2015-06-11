@@ -270,7 +270,7 @@ interface nsIWebBrowserPersist : nsICancelable
    *
    * @throws NS_ERROR_INVALID_ARG One or more arguments was invalid.
    */
-  void saveDocument(in nsIDOMDocument aDocument,
+  void saveDocument(in nsISupports aDocumentish,
      in nsISupports aFile, in nsISupports aDataPath,
      in string aOutputContentType, in unsigned long aEncodingFlags,
      in unsigned long aWrapColumn);

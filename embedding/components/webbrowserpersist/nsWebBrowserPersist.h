@@ -32,6 +32,7 @@
 
 class nsEncoderNodeFixup;
 class nsIStorageStream;
+class nsIWebBrowserPersistDocument;
 
 class nsWebBrowserPersist : public nsIInterfaceRequestor,
                             public nsIWebBrowserPersist,
@@ -54,6 +55,7 @@ public:
     NS_DECL_NSIPROGRESSEVENTSINK
 
 // Protected members
+// FIXME: rethink all the privacy stuff
 protected:
     virtual ~nsWebBrowserPersist();
     nsresult CloneNodeWithFixedUpAttributes(
@@ -66,8 +68,12 @@ protected:
     nsresult SaveChannelInternal(
         nsIChannel *aChannel, nsIURI *aFile, bool aCalcFileExt);
     nsresult SaveDocumentInternal(
-        nsIDOMDocument *aDocument, nsIURI *aFile, nsIURI *aDataPath);
+        nsIWebBrowserPersistDocument *aDocument,
+        nsIURI *aFile,
+        nsIURI *aDataPath);
     nsresult SaveDocuments();
+    void FinishSaveDocumentInternal(nsIURI* aFIle, nsIFile* aDataPath);
+    void FinishSaveDocument();
     nsresult GetDocEncoderContentType(
         nsIDOMDocument *aDocument, const char16_t *aContentType,
         char16_t **aRealContentType);
@@ -82,8 +88,17 @@ protected:
     struct URIData;
     struct WalkData;
 
+    class OnStart;
+    class OnWalk;
+    class OnWrite;
+    class FlatMap;
+    friend class OnStart;
+    friend class OnWalk;
+    friend class OnWrite;
+
 // Private members
 private:
+    nsresult SaveDocumentDeferred(mozilla::UniquePtr<WalkData>&& aData);
     void Cleanup();
     void CleanupLocalFiles();
     nsresult GetValidURIFromObject(nsISupports *aObject, nsIURI **aURI) const;
@@ -125,7 +140,7 @@ private:
     {
         return StoreURIAttributeNS(aNode, "", aAttribute, aNeedsPersisting, aData);
     }
-    bool DocumentEncoderExists(const char16_t *aContentType);
+    bool DocumentEncoderExists(const char *aContentType);
 
     nsresult GetNodeToFixup(nsIDOMNode *aNodeIn, nsIDOMNode **aNodeOut);
     nsresult FixupURI(nsAString &aURI);
@@ -139,22 +154,18 @@ private:
     nsresult GetXMLStyleSheetLink(nsIDOMProcessingInstruction *aPI, nsAString &aHref);
 
     nsresult StoreAndFixupStyleSheet(nsIStyleSheet *aStyleSheet);
-    nsresult SaveDocumentWithFixup(
-        nsIDOMDocument *pDocument, nsIDocumentEncoderNodeFixup *pFixup,
-        nsIURI *aFile, bool aReplaceExisting, const nsACString &aFormatType,
-        const nsCString &aSaveCharset, uint32_t  aFlags);
     nsresult SaveSubframeContent(
-        nsIDOMDocument *aFrameContent, URIData *aData);
+        nsIWebBrowserPersistDocument *aFrameContent,
+        const nsCString& aURISpec,
+        URIData *aData);
     nsresult SetDocumentBase(nsIDOMDocument *aDocument, nsIURI *aBaseURI);
     nsresult SendErrorStatusChange(
         bool aIsReadError, nsresult aResult, nsIRequest *aRequest, nsIURI *aURI);
-    nsresult OnWalkDOMNode(nsIDOMNode *aNode);
 
     nsresult FixRedirectedChannelEntry(nsIChannel *aNewChannel);
 
     void EndDownload(nsresult aResult = NS_OK);
-    nsresult SaveGatheredURIs(nsIURI *aFileAsURI);
-    bool SerializeNextFile();
+    void SerializeNextFile();
     void CalcTotalProgress();
 
     void SetApplyConversionIfNeeded(nsIChannel *aChannel);
@@ -173,6 +184,8 @@ private:
     static PLDHashOperator EnumFixRedirect(
         nsISupports *aKey, OutputData *aData, void* aClosure);
     static PLDHashOperator EnumCountURIsToPersist(
+        const nsACString &aKey, URIData *aData, void* aClosure);
+    static PLDHashOperator EnumCopyURIsToFlatMap(
         const nsACString &aKey, URIData *aData, void* aClosure);
 
     nsCOMPtr<nsIURI>          mCurrentDataPath;
