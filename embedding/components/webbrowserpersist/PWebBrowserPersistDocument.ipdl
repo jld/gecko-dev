@@ -50,8 +50,10 @@ state START:
   recv InitFailure goto FAILED;
 
 state MAIN:
+  send SetPersistFlags goto MAIN;
   send PWebBrowserPersistDocumentRead goto MAIN;
   send PWebBrowserPersistDocumentWrite goto MAIN;
+  send ForceBaseElement goto MAIN;
   send __delete__;
 
 state FAILED:
