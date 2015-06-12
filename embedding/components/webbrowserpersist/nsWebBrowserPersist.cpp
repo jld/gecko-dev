@@ -1538,9 +1538,12 @@ nsresult nsWebBrowserPersist::SaveDocumentInternal(
     NS_ENSURE_ARG_POINTER(aDocument);
     NS_ENSURE_ARG_POINTER(aFile);
 
+    nsresult rv = aDocument->SetPersistFlags(mPersistFlags);
+    NS_ENSURE_SUCCESS(rv, rv);
+
     // See if we can get the local file representation of this URI
     nsCOMPtr<nsIFile> localFile;
-    nsresult rv = GetLocalFileFromURI(aFile, getter_AddRefs(localFile));
+    rv = GetLocalFileFromURI(aFile, getter_AddRefs(localFile));
 
     nsCOMPtr<nsIFile> localDataPath;
     if (NS_SUCCEEDED(rv) && aDataPath)
