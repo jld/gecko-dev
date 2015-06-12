@@ -536,6 +536,13 @@ NS_IMETHODIMP nsWebBrowserPersist::SaveDocument(
         mContentType.AssignASCII(aOutputContentType);
     }
 
+    // State start notification
+    if (mProgressListener) {
+        mProgressListener->OnStateChange(nullptr, nullptr,
+            nsIWebProgressListener::STATE_START
+            | nsIWebProgressListener::STATE_IS_NETWORK, NS_OK);
+    }
+
     nsCOMPtr<nsIWebBrowserPersistDocumentReceiver> start =
         new OnStart(this, fileAsURI, datapathAsURI);
     return StartPersistence(aDocumentish, start);
@@ -561,6 +568,14 @@ nsWebBrowserPersist::OnStart::OnDocumentReady(nsIWebBrowserPersistDocument* aDoc
 
 void
 nsWebBrowserPersist::FinishSaveDocument() {
+    // State stop notification
+    if (mProgressListener) {
+        mProgressListener->OnStateChange(nullptr, nullptr,
+            nsIWebProgressListener::STATE_STOP
+            | nsIWebProgressListener::STATE_IS_NETWORK, mPersistResult);
+    }
+    // FIXME: what about all the other places that call into EndDownload()?
+    // Should they actually be calling this thing?
     EndDownload();
     mProgressListener = nullptr;
     mProgressListener2 = nullptr;
@@ -654,16 +669,6 @@ nsWebBrowserPersist::SerializeNextFile()
         if (mUploadList.Count() > 0) {
             return;
         }
-        // State stop notification
-        // FIXME: is this even remotely the right place and/or flags?
-        if (mProgressListener) {
-            uint32_t addToStateFlags = 0;
-            if (mJustStartedLoading) {
-                addToStateFlags |= nsIWebProgressListener::STATE_IS_NETWORK;
-            }
-            mProgressListener->OnStateChange(nullptr, nullptr,
-                nsIWebProgressListener::STATE_STOP | addToStateFlags, rv);
-        }
         // Finish and clean things up.
         // FIXME does this need to be deferred?
         NS_DispatchToCurrentThread(NS_NewRunnableMethod(this,
@@ -678,16 +683,6 @@ nsWebBrowserPersist::SerializeNextFile()
     if (!docData) {
         EndDownload(NS_ERROR_FAILURE);
         return;
-    }
-
-    // State start notification (FIXME: should this be only once?)
-    if (mProgressListener) {
-        uint32_t addToStateFlags = 0;
-        if (mJustStartedLoading) {
-            addToStateFlags |= nsIWebProgressListener::STATE_IS_NETWORK;
-        }
-        mProgressListener->OnStateChange(nullptr, nullptr,
-             nsIWebProgressListener::STATE_START | addToStateFlags, NS_OK);
     }
 
     mCurrentBaseURI = docData->mBaseURI;
@@ -890,9 +885,6 @@ NS_IMETHODIMP nsWebBrowserPersist::OnStopRequest(
     if (mProgressListener) {
         uint32_t stateFlags = nsIWebProgressListener::STATE_STOP |
                               nsIWebProgressListener::STATE_IS_REQUEST;
-        if (0) { // FIXME!  Seriously what even is this.
-            stateFlags |= nsIWebProgressListener::STATE_IS_NETWORK;
-        }
         mProgressListener->OnStateChange(nullptr, request, stateFlags, status);
     }
 
