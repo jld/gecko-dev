@@ -126,22 +126,29 @@ function saveImageURL(aURL, aFileName, aFilePickerTitleKey, aShouldBypassCache,
                aDoc, aSkipPrompt, null);
 }
 
+function saveFrame(aFrame, aSkipPrompt)
+{
+  if (!aFrame) {
+    throw "Must have a frame when calling saveFrame";
+  }
+  //// dump("saveFrame " + aFrame.tagName + "\n");
+  aFrame.QueryInterface(Ci.nsIFrameLoaderOwner)
+        .frameLoader
+        .QueryInterface(Ci.nsIWebBrowserPersistable)
+        .startPersistence(function (document) {
+    saveDocument(document, aSkipPrompt);
+  });
+}
+
 function saveDocument(aDocument, aSkipPrompt)
 {
   if (!aDocument)
     throw "Must have a document when calling saveDocument";
 
-  if (aDocument instanceof Ci.nsIFrameLoader) {
-    aDocument.QueryInterface(Ci.nsIWebBrowserPersistable)
-             .startPersistence(function (document) {
-      saveDocument(document, aSkipPrompt);
-    });
-    return;
-  }
-
   let contentDisposition = null;
   let cacheKey = null;
 
+  //// dump("saveDocument (" + (aDocument instanceof Document ? Components.utils.isCrossProcessWrapper(aDocument) ? "cpow" : "real" : "fake") + ")\n");
   if ("defaultView" in aDocument) {
     // We want to use cached data because the document is currently visible.
     var ifreq =
