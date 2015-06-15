@@ -131,41 +131,52 @@ function saveDocument(aDocument, aSkipPrompt)
   if (!aDocument)
     throw "Must have a document when calling saveDocument";
 
-  // We want to use cached data because the document is currently visible.
-  var ifreq =
-    aDocument.defaultView
-             .QueryInterface(Components.interfaces.nsIInterfaceRequestor);
-
-  var contentDisposition = null;
-  try {
-    contentDisposition =
-      ifreq.getInterface(Components.interfaces.nsIDOMWindowUtils)
-           .getDocumentMetadata("content-disposition");
-  } catch (ex) {
-    // Failure to get a content-disposition is ok
+  if (aDocument instanceof Ci.nsIFrameLoader) {
+    aDocument.QueryInterface(Ci.nsIWebBrowserPersistable)
+             .startPersistence(function (document) {
+      saveDocument(document, aSkipPrompt);
+    });
+    return;
   }
 
+  let contentDisposition = null;
   let cacheKey = null;
-  try {
-    let shEntry =
-      ifreq.getInterface(Components.interfaces.nsIWebNavigation)
-           .QueryInterface(Components.interfaces.nsIWebPageDescriptor)
-           .currentDescriptor
-           .QueryInterface(Components.interfaces.nsISHEntry);
 
-    shEntry.cacheKey.QueryInterface(Components.interfaces.nsISupportsPRUint32);
+  if ("defaultView" in aDocument) {
+    // We want to use cached data because the document is currently visible.
+    var ifreq =
+      aDocument.defaultView
+               .QueryInterface(Components.interfaces.nsIInterfaceRequestor);
 
-    // In the event that the cacheKey is a CPOW, we cannot pass it to
-    // nsIWebBrowserPersist, so we create a new one and copy the value
-    // over. This is a workaround until bug 1101100 is fixed.
-    cacheKey = Cc["@mozilla.org/supports-PRUint32;1"]
-                 .createInstance(Ci.nsISupportsPRUint32);
-    cacheKey.data = shEntry.cacheKey.data;
-  } catch (ex) {
-    // We might not find it in the cache.  Oh, well.
+    try {
+      contentDisposition =
+        ifreq.getInterface(Components.interfaces.nsIDOMWindowUtils)
+             .getDocumentMetadata("content-disposition");
+    } catch (ex) {
+      // Failure to get a content-disposition is ok
+    }
+
+    try {
+      let shEntry =
+        ifreq.getInterface(Components.interfaces.nsIWebNavigation)
+             .QueryInterface(Components.interfaces.nsIWebPageDescriptor)
+             .currentDescriptor
+             .QueryInterface(Components.interfaces.nsISHEntry);
+
+      shEntry.cacheKey.QueryInterface(Components.interfaces.nsISupportsPRUint32);
+
+      // In the event that the cacheKey is a CPOW, we cannot pass it to
+      // nsIWebBrowserPersist, so we create a new one and copy the value
+      // over. This is a workaround until bug 1101100 is fixed.
+      cacheKey = Cc["@mozilla.org/supports-PRUint32;1"]
+                   .createInstance(Ci.nsISupportsPRUint32);
+      cacheKey.data = shEntry.cacheKey.data;
+    } catch (ex) {
+      // We might not find it in the cache.  Oh, well.
+    }
   }
 
-  internalSave(aDocument.location.href, aDocument, null, contentDisposition,
+  internalSave(aDocument.documentURI, aDocument, null, contentDisposition,
                aDocument.contentType, false, null, null,
                aDocument.referrer ? makeURI(aDocument.referrer) : null,
                aDocument, aSkipPrompt, cacheKey);
@@ -348,6 +359,10 @@ function internalSave(aURL, aDocument, aDefaultFileName, aContentDisposition,
     let nonCPOWDocument =
       aDocument && !Components.utils.isCrossProcessWrapper(aDocument);
 
+    let isPrivate = "defaultView" in aInitiatingDocument
+      ? PrivateBrowsingUtils.isContentWindowPrivate(aInitiatingDocument.defaultView)
+      : aInitiatingDocument.isPrivate;
+
     var persistArgs = {
       sourceURI         : sourceURI,
       sourceReferrer    : aReferrer,
@@ -357,7 +372,7 @@ function internalSave(aURL, aDocument, aDefaultFileName, aContentDisposition,
       sourceCacheKey    : aCacheKey,
       sourcePostData    : nonCPOWDocument ? getPostData(aDocument) : null,
       bypassCache       : aShouldBypassCache,
-      initiatingWindow  : aInitiatingDocument.defaultView
+      isPrivate         : isPrivate,
     };
 
     // Start the actual save process
@@ -414,12 +429,10 @@ function internalPersist(persistArgs)
   // Find the URI associated with the target file
   var targetFileURL = makeFileURI(persistArgs.targetFile);
 
-  let isPrivate = PrivateBrowsingUtils.isContentWindowPrivate(persistArgs.initiatingWindow);
-
   // Create download and initiate it (below)
   var tr = Components.classes["@mozilla.org/transfer;1"].createInstance(Components.interfaces.nsITransfer);
   tr.init(persistArgs.sourceURI,
-          targetFileURL, "", null, null, null, persist, isPrivate);
+          targetFileURL, "", null, null, null, persist, persistArgs.isPrivate);
   persist.progressListener = new DownloadListener(window, tr);
 
   if (persistArgs.sourceDocument) {
@@ -458,7 +471,7 @@ function internalPersist(persistArgs)
                                 persistArgs.sourcePostData,
                                 null,
                                 targetFileURL,
-                                isPrivate);
+                                persistArgs.isPrivate);
   }
 }
 
@@ -923,7 +936,7 @@ function getDefaultFileName(aDefaultFileName, aURI, aDocument,
   }
 
   let docTitle;
-  if (aDocument) {
+  if (aDocument && aDocument.title) {
     // If the document looks like HTML or XML, try to use its original title.
     docTitle = validateFileName(aDocument.title).trim();
     if (docTitle) {
