@@ -46,7 +46,7 @@ nsWebBrowserPersistDocumentChild::Start(nsIWebBrowserPersistDocument* aDocument)
     ENSURE(aDocument->GetDocumentURI(attrs.documentURI()));
     ENSURE(aDocument->GetBaseURI(attrs.baseURI()));
     ENSURE(aDocument->GetContentType(attrs.contentType()));
-    ENSURE(aDocument->GetCharSet(attrs.charSet()));
+    ENSURE(aDocument->GetCharacterSet(attrs.characterSet()));
     ENSURE(aDocument->GetPersistFlags(&(attrs.persistFlags())));
 #undef ENSURE
     mDocument = aDocument;

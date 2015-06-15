@@ -1562,7 +1562,7 @@ nsresult nsWebBrowserPersist::SaveDocumentInternal(
     }
 
     // Persist the main document
-    rv = aDocument->GetCharSet(mCurrentCharset);
+    rv = aDocument->GetCharacterSet(mCurrentCharset);
     NS_ENSURE_SUCCESS(rv, rv);
     nsAutoCString uriSpec;
     rv = aDocument->GetDocumentURI(uriSpec);

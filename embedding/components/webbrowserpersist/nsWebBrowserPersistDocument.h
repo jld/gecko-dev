@@ -22,7 +22,7 @@ class nsWebBrowserPersistDocument final
 public:
     explicit nsWebBrowserPersistDocument(nsIDocument* aDocument);
     
-    const nsCString& GetCharSet() const;
+    const nsCString& GetCharacterSet() const;
     uint32_t GetPersistFlags() const;
     already_AddRefed<nsIURI> GetBaseURI() const;
 
