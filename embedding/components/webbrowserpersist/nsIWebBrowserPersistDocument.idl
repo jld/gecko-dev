@@ -29,7 +29,7 @@ interface nsIWebBrowserPersistDocument : nsISupports
   readonly attribute AUTF8String documentURI;
   readonly attribute AUTF8String baseURI;
   readonly attribute ACString contentType;
-  readonly attribute ACString charSet;
+  readonly attribute ACString characterSet;
   attribute unsigned long persistFlags;
   void readResources(in nsIWebBrowserPersistResourceVisitor aVisitor);
   void writeContent(in nsIOutputStream aStream,

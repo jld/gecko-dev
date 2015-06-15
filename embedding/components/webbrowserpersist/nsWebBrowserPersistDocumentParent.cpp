@@ -176,11 +176,11 @@ nsWebBrowserPersistDocumentParent::GetContentType(nsACString& aContentType)
 }
 
 NS_IMETHODIMP
-nsWebBrowserPersistDocumentParent::GetCharSet(nsACString& aCharSet)
+nsWebBrowserPersistDocumentParent::GetCharacterSet(nsACString& aCharSet)
 {
     nsresult rv = AccessAttrs();
     if (NS_SUCCEEDED(rv)) {
-        aCharSet = mAttrs->charSet();
+        aCharSet = mAttrs->characterSet();
     }
     return rv;
 }

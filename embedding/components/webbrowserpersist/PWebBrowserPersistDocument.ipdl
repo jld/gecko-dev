@@ -14,7 +14,7 @@ struct WebBrowserPersistDocumentAttrs {
   nsCString documentURI;
   nsCString baseURI;
   nsCString contentType;
-  nsCString charSet;
+  nsCString characterSet;
   uint32_t persistFlags;
 };
 
