@@ -507,13 +507,13 @@ NS_IMETHODIMP nsWebBrowserPersist::SaveChannel(
 
 
 NS_IMETHODIMP nsWebBrowserPersist::SaveDocument(
-    nsISupports *aDocumentish, nsISupports *aFile, nsISupports *aDataPath,
+    nsISupports *aDocument, nsISupports *aFile, nsISupports *aDataPath,
     const char *aOutputContentType, uint32_t aEncodingFlags, uint32_t aWrapColumn)
 {
     NS_ENSURE_TRUE(mFirstAndOnlyUse, NS_ERROR_FAILURE);
     mFirstAndOnlyUse = false; // Stop people from reusing this object!
 
-    NS_ENSURE_ARG_POINTER(aDocumentish);
+    NS_ENSURE_ARG_POINTER(aDocument);
     NS_ENSURE_ARG_POINTER(aFile);
 
     nsCOMPtr<nsIURI> fileAsURI;
@@ -545,7 +545,15 @@ NS_IMETHODIMP nsWebBrowserPersist::SaveDocument(
 
     nsCOMPtr<nsIWebBrowserPersistDocumentReceiver> start =
         new OnStart(this, fileAsURI, datapathAsURI);
-    return StartPersistence(aDocumentish, start);
+    nsCOMPtr<nsIWebBrowserPersistDocument> doc = do_QueryInterface(aDocument);
+    if (doc) {
+        return start->OnDocumentReady(doc);
+    }
+    nsCOMPtr<nsIWebBrowserPersistable> pdoc = do_QueryInterface(aDocument);
+    if (pdoc) {
+        return pdoc->StartPersistence(start);
+    }
+    return NS_ERROR_NO_INTERFACE;
 }
 
 NS_IMETHODIMP
@@ -2861,12 +2869,4 @@ void nsWebBrowserPersist::SetApplyConversionIfNeeded(nsIChannel *aChannel)
                 encChannel->SetApplyConversion(applyConversion);
         }
     }
-}
-
-NS_IMETHODIMP
-nsWebBrowserPersist::StartPersistence(nsISupports* aDocumentish,
-                                      nsIWebBrowserPersistDocumentReceiver* k)
-{
-    NS_ENSURE_ARG_POINTER(k);
-    return nsWebBrowserPersistDocument::Create(aDocumentish, k);
 }

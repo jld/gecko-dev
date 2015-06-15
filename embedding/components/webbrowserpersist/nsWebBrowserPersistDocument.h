@@ -13,6 +13,8 @@
 #include "nsIWebBrowserPersistDocument.h"
 
 class nsIDOMNode;
+class nsIDocumentEncoder;
+class nsIFrameLoader;
 
 class nsWebBrowserPersistDocument final
     : public nsIWebBrowserPersistDocument
@@ -24,9 +26,9 @@ public:
     uint32_t GetPersistFlags() const;
     already_AddRefed<nsIURI> GetBaseURI() const;
 
-    static nsresult Create(nsISupports* aDocumentish,
-                           nsIWebBrowserPersistDocumentReceiver* aContinuation);
-    
+    static nsresult Create(nsIFrameLoader* aLoader,
+                           nsIWebBrowserPersistDocumentReceiver* aRecv);
+
     NS_DECL_ISUPPORTS
     NS_DECL_NSIWEBBROWSERPERSISTDOCUMENT
 

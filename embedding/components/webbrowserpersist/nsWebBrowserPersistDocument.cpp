@@ -59,53 +59,34 @@ using mozilla::dom::HTMLSharedElement;
 using mozilla::dom::HTMLSharedObjectElement;
 
 /* static */ nsresult
-nsWebBrowserPersistDocument::Create(nsISupports* aDocumentish,
-                                    nsIWebBrowserPersistDocumentReceiver* aContinuation)
+nsWebBrowserPersistDocument::Create(nsIFrameLoader* aLoader,
+                                    nsIWebBrowserPersistDocumentReceiver* aRecv)
 {
     nsresult rv;
 
-    if (nsCOMPtr<nsIWebBrowserPersistDocument> pDoc =
-        do_QueryInterface(aDocumentish)) {
-        aContinuation->OnDocumentReady(pDoc);
-        return NS_OK;
+    nsCOMPtr<nsIDocShell> ds;
+    rv = aLoader->GetDocShell(getter_AddRefs(ds));
+    NS_ENSURE_SUCCESS(rv, rv);
+    if (ds) {
+        nsCOMPtr<nsIDocument> doc = do_GetInterface(ds);
+        NS_ENSURE_STATE(doc);
+        nsCOMPtr<nsIWebBrowserPersistable> pdoc = do_QueryInterface(doc);
+        NS_ENSURE_STATE(pdoc);
+        return pdoc->StartPersistence(aRecv);
     }
-    if (nsCOMPtr<nsIDocument> doc = do_QueryInterface(aDocumentish)) {
-        nsCOMPtr<nsIWebBrowserPersistDocument> pDoc =
-            new nsWebBrowserPersistDocument(doc);
-        aContinuation->OnDocumentReady(pDoc);
-        return NS_OK;
-    }
-    if (nsCOMPtr<nsIFrameLoaderOwner> flo = do_QueryInterface(aDocumentish)) {
-        // Local: flo.frameLoader.docShell.getInterface(Ci.nsIDocument)
-        // Remote: flo.frameLoader.tabParent (cross-cast to PBrowserParent)
-        nsCOMPtr<nsIFrameLoader> fl;
-        rv = flo->GetFrameLoader(getter_AddRefs(fl));
-        NS_ENSURE_SUCCESS(rv, rv);
-        nsCOMPtr<nsIDocShell> ds;
-        rv = fl->GetDocShell(getter_AddRefs(ds));
-        NS_ENSURE_SUCCESS(rv, rv);
-        if (ds) {
-            nsCOMPtr<nsIDocument> doc = do_GetInterface(ds);
-            if (!doc) {
-                return NS_ERROR_UNEXPECTED;
-            }
-            return Create(doc, aContinuation);
-        }
-        nsCOMPtr<nsITabParent> tp;
-        rv = fl->GetTabParent(getter_AddRefs(tp));
-        if (tp) {
-            auto* tpp = mozilla::dom::TabParent::GetFrom(tp);
-            if (!tpp) {
-                return NS_ERROR_UNEXPECTED;
-            }
-            auto* actor = new nsWebBrowserPersistDocumentParent();
-            actor->SetOnReady(aContinuation);
-            return tpp->SendPWebBrowserPersistDocumentConstructor(actor)
-                ? NS_OK : NS_ERROR_FAILURE;
-        }
+    nsCOMPtr<nsITabParent> tp;
+    rv = aLoader->GetTabParent(getter_AddRefs(tp));
+    NS_ENSURE_SUCCESS(rv, rv);
+    if (tp) {
+        auto* tpp = mozilla::dom::TabParent::GetFrom(tp);
+        NS_ENSURE_STATE(tpp);
+        auto* actor = new nsWebBrowserPersistDocumentParent();
+        actor->SetOnReady(aRecv);
+        return tpp->SendPWebBrowserPersistDocumentConstructor(actor)
+            ? NS_OK : NS_ERROR_FAILURE;
     }
 
-    return NS_ERROR_NO_INTERFACE;
+    return NS_ERROR_NO_CONTENT;
 }
 
 NS_IMPL_ISUPPORTS(nsWebBrowserPersistDocument, nsIWebBrowserPersistDocument)
@@ -472,8 +453,15 @@ nsresult
 ResourceReader::OnWalkSubframe(nsIDOMNode* aNode)
 {
     ++mOutstandingDocuments;
-    nsresult rv = nsWebBrowserPersistDocument::Create(aNode, this);
+    nsCOMPtr<nsIFrameLoaderOwner> loaderOwner = do_QueryInterface(aNode);
+    NS_ENSURE_STATE(loaderOwner);
+    nsCOMPtr<nsIFrameLoader> loader;
+    nsresult rv = loaderOwner->GetFrameLoader(getter_AddRefs(loader));
+    NS_ENSURE_SUCCESS(rv, rv);
+    NS_ENSURE_STATE(loader);
+    rv = nsWebBrowserPersistDocument::Create(loader, this);
     if (NS_FAILED(rv)) {
+        // FIXME: should NS_ERROR_NO_CONTENT be ignored?
         DocumentDone(rv);
     }
     return rv;

@@ -66,3 +66,9 @@ interface nsIWebBrowserPersistDocumentReceiver : nsISupports
 {
   void onDocumentReady(in nsIWebBrowserPersistDocument aDocument);
 };
+
+[scriptable, function, uuid(24d0dc9e-b970-4cca-898f-cbba03abaa73)]
+interface nsIWebBrowserPersistable : nsISupports
+{
+  void startPersistence(in nsIWebBrowserPersistDocumentReceiver aRecv);
+};

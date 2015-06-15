@@ -13,7 +13,7 @@ interface nsIWebProgressListener;
 interface nsIFile;
 interface nsIChannel;
 interface nsILoadContext;
-interface nsIWebBrowserPersistDocumentReceiver;
+interface nsIWebBrowserPersistable;
 
 /**
  * Interface for persisting DOM documents and URIs to local or remote storage.
@@ -270,7 +270,7 @@ interface nsIWebBrowserPersist : nsICancelable
    *
    * @throws NS_ERROR_INVALID_ARG One or more arguments was invalid.
    */
-  void saveDocument(in nsISupports aDocumentish,
+  void saveDocument(in nsISupports aDocument,
      in nsISupports aFile, in nsISupports aDataPath,
      in string aOutputContentType, in unsigned long aEncodingFlags,
      in unsigned long aWrapColumn);
@@ -281,8 +281,4 @@ interface nsIWebBrowserPersist : nsICancelable
    * cancel with an argument of NS_BINDING_ABORTED.
    */
   void cancelSave();
-
-  // Hang this here for now because everything is made of bees.
-  void startPersistence(in nsISupports aDocumentish,
-                        in nsIWebBrowserPersistDocumentReceiver aContinuation);
 };

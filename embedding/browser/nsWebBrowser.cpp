@@ -1110,19 +1110,6 @@ nsWebBrowser::SaveDocument(nsISupports* aDocumentish,
   return rv;
 }
 
-// FIXME
-NS_IMETHODIMP
-nsWebBrowser::StartPersistence(nsISupports* aDocumentish,
-                               nsIWebBrowserPersistDocumentReceiver* k)
-{
-  nsresult rv;
-  nsCOMPtr<nsIWebBrowserPersist> persist =
-    do_CreateInstance(NS_WEBBROWSERPERSIST_CONTRACTID, &rv);
-  NS_ENSURE_SUCCESS(rv, rv);
-  return persist->StartPersistence(aDocumentish, k);
-}
-
-
 NS_IMETHODIMP
 nsWebBrowser::CancelSave()
 {

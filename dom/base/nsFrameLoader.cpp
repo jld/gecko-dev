@@ -93,6 +93,7 @@
 #include "mozilla/layers/CompositorChild.h"
 
 #include "mozilla/dom/StructuredCloneUtils.h"
+#include "nsWebBrowserPersistDocument.h"
 
 #ifdef MOZ_XUL
 #include "nsXULPopupManager.h"
@@ -130,6 +131,7 @@ NS_IMPL_CYCLE_COLLECTING_RELEASE(nsFrameLoader)
 NS_INTERFACE_MAP_BEGIN_CYCLE_COLLECTION(nsFrameLoader)
   NS_INTERFACE_MAP_ENTRY(nsIFrameLoader)
   NS_INTERFACE_MAP_ENTRY_AMBIGUOUS(nsISupports, nsIFrameLoader)
+  NS_INTERFACE_MAP_ENTRY(nsIWebBrowserPersistable)
 NS_INTERFACE_MAP_END
 
 nsFrameLoader::nsFrameLoader(Element* aOwner, bool aNetworkCreated)
@@ -2812,4 +2814,10 @@ nsFrameLoader::InitializeBrowserAPI()
   if (browserFrame) {
     browserFrame->InitializeBrowserAPI();
   }
+}
+
+NS_IMETHODIMP
+nsFrameLoader::StartPersistence(nsIWebBrowserPersistDocumentReceiver* aRecv)
+{
+  return nsWebBrowserPersistDocument::Create(this, aRecv);
 }

@@ -24,6 +24,7 @@
 #include "mozilla/Attributes.h"
 #include "nsStubMutationObserver.h"
 #include "Units.h"
+#include "nsIWebBrowserPersistDocument.h"
 
 class nsIURI;
 class nsSubDocumentFrame;
@@ -54,7 +55,8 @@ typedef struct _GtkWidget GtkWidget;
 
 class nsFrameLoader final : public nsIFrameLoader,
                             public nsStubMutationObserver,
-                            public mozilla::dom::ipc::MessageManagerCallback
+                            public mozilla::dom::ipc::MessageManagerCallback,
+                            public nsIWebBrowserPersistable
 {
   friend class AutoResetInShow;
   typedef mozilla::dom::PBrowserParent PBrowserParent;
@@ -69,6 +71,7 @@ public:
   NS_DECL_CYCLE_COLLECTION_CLASS_AMBIGUOUS(nsFrameLoader, nsIFrameLoader)
   NS_DECL_NSIFRAMELOADER
   NS_DECL_NSIMUTATIONOBSERVER_ATTRIBUTECHANGED
+  NS_DECL_NSIWEBBROWSERPERSISTABLE
   nsresult CheckForRecursiveLoad(nsIURI* aURI);
   nsresult ReallyStartLoading();
   void StartDestroy();
