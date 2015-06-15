@@ -263,15 +263,17 @@ nsWebBrowserPersistDocumentParent::WriteContent(
     nsresult rv;
     WebBrowserPersistMap map;
     uint32_t numMappedURIs;
-    rv = aMap->GetTargetBaseURI(map.targetBaseURI());
-    NS_ENSURE_SUCCESS(rv, rv);
-    rv = aMap->GetNumMappedURIs(&numMappedURIs);
-    NS_ENSURE_SUCCESS(rv, rv);
-    for (uint32_t i = 0; i < numMappedURIs; ++i) {
-        rv = aMap->GetURIMapping(i,
-                                 *(map.mapURIsFrom().AppendElement()),
-                                 *(map.mapURIsTo().AppendElement()));
+    if (aMap) {
+        rv = aMap->GetTargetBaseURI(map.targetBaseURI());
         NS_ENSURE_SUCCESS(rv, rv);
+        rv = aMap->GetNumMappedURIs(&numMappedURIs);
+        NS_ENSURE_SUCCESS(rv, rv);
+        for (uint32_t i = 0; i < numMappedURIs; ++i) {
+            rv = aMap->GetURIMapping(i,
+                                     *(map.mapURIsFrom().AppendElement()),
+                                     *(map.mapURIsTo().AppendElement()));
+            NS_ENSURE_SUCCESS(rv, rv);
+        }
     }
 
     auto subActor = new nsWebBrowserPersistDocumentWriteParent(this,
