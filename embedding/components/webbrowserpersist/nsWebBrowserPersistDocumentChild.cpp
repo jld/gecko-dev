@@ -111,6 +111,7 @@ nsWebBrowserPersistDocumentChild::RecvPWebBrowserPersistDocumentWriteConstructor
 {
     auto* castActor =
         static_cast<nsWebBrowserPersistDocumentWriteChild*>(aActor);
+    // This actor performs the roles of: completion, URI map, and output stream.
     nsresult rv = mDocument->WriteContent(castActor,
                                           castActor,
                                           aRequestedContentType,
