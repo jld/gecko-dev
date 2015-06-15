@@ -1669,7 +1669,11 @@ nsContextMenu.prototype = {
   },
 
   savePageAs: function CM_savePageAs() {
-    saveDocument(this.browser.contentDocumentAsCPOW);
+    if (this.browser.contentDocument) {
+      saveDocument(this.browser.contentDocument);
+    } else {
+      saveFrame(this.browser);
+    }
   },
 
   saveLinkToPocket: function CM_saveLinkToPocket() {

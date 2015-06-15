@@ -316,7 +316,11 @@ const CustomizableWidgets = [
                 aEvent.target.ownerDocument &&
                 aEvent.target.ownerDocument.defaultView;
       if (win && typeof win.saveDocument == "function") {
-        win.saveDocument(win.gBrowser.selectedBrowser.contentDocumentAsCPOW);
+        if (win.content) {
+          win.saveDocument(win.content.document);
+        } else {
+          win.saveFrame(win.gBrowser.selectedBrowser);
+        }
       }
     }
   }, {
