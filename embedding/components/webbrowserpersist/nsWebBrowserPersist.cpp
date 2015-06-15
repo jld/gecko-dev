@@ -566,7 +566,7 @@ nsWebBrowserPersist::OnStart::OnDocumentReady(nsIWebBrowserPersistDocument* aDoc
     } else {
         rv = NS_ERROR_FAILURE;
     }
-    if (NS_FAILED(rv)) {
+    if (NS_WARN_IF(NS_FAILED(rv))) {
         mParent->EndDownload(rv);
     }
     return rv;
@@ -685,7 +685,7 @@ nsWebBrowserPersist::SerializeNextFile()
     mStartSaving = true;
     mozilla::UniquePtr<DocData> docData(mDocList.ElementAt(0));
     mDocList.RemoveElementAt(0); // O(n^2) but probably doesn't matter.
-    if (!docData) {
+    if (NS_WARN_IF(!docData)) {
         EndDownload(NS_ERROR_FAILURE);
         return;
     }
@@ -718,7 +718,7 @@ nsWebBrowserPersist::SerializeNextFile()
         if (NS_SUCCEEDED(rv) && !mReplaceExisting && fileExists) {
             rv = NS_ERROR_FILE_ALREADY_EXISTS;
         }
-        if (NS_FAILED(rv)) {
+        if (NS_WARN_IF(NS_FAILED(rv))) {
             EndDownload(rv);
             return;
         }
@@ -728,7 +728,7 @@ nsWebBrowserPersist::SerializeNextFile()
     if (NS_SUCCEEDED(rv) && !outputStream) {
         rv = NS_ERROR_FAILURE;
     }
-    if (NS_FAILED(rv)) {
+    if (NS_WARN_IF(NS_FAILED(rv))) {
         // FIXME: WTF is this?
         SendErrorStatusChange(false, rv, nullptr, docData->mFile);
         EndDownload(rv);
@@ -742,7 +742,7 @@ nsWebBrowserPersist::SerializeNextFile()
                                           mEncodingFlags,
                                           mWrapColumn,
                                           finish);
-    if (NS_FAILED(rv)) {
+    if (NS_WARN_IF(NS_FAILED(rv))) {
         EndDownload(rv);
     }
 }
@@ -755,7 +755,7 @@ nsWebBrowserPersist::OnWrite::OnFinish(nsIWebBrowserPersistDocument* aDoc,
 {
     nsresult rv = aStatus;
 
-    if (NS_FAILED(rv)) {
+    if (NS_WARN_IF(NS_FAILED(rv))) {
         mParent->EndDownload(rv);
         return NS_OK;
     }
@@ -764,7 +764,7 @@ nsWebBrowserPersist::OnWrite::OnFinish(nsIWebBrowserPersistDocument* aDoc,
         if (storStream) {
             aStream->Close();
             rv = mParent->StartUpload(storStream, mFile, aContentType);
-            if (NS_FAILED(rv)) {
+            if (NS_WARN_IF(NS_FAILED(rv))) {
                 mParent->EndDownload(rv);
             }
             // Either we failed and we're done, or we're uploading and
@@ -1354,7 +1354,7 @@ nsresult nsWebBrowserPersist::SaveURIInternal(
         pbChannel->SetPrivate(aIsPrivate);
     }
 
-    if (NS_FAILED(rv) || inputChannel == nullptr)
+    if (NS_WARN_IF(NS_FAILED(rv)) || NS_WARN_IF(inputChannel == nullptr))
     {
         EndDownload(NS_ERROR_FAILURE);
         return NS_ERROR_FAILURE;
@@ -1437,7 +1437,7 @@ nsresult nsWebBrowserPersist::SaveURIInternal(
                 headerValue.Trim(kWhitespace);
                 // Add the header (merging if required)
                 rv = httpChannel->SetRequestHeader(headerName, headerValue, true);
-                if (NS_FAILED(rv))
+                if (NS_WARN_IF(NS_FAILED(rv)))
                 {
                     EndDownload(NS_ERROR_FAILURE);
                     return NS_ERROR_FAILURE;
@@ -1485,7 +1485,7 @@ nsresult nsWebBrowserPersist::SaveChannelInternal(
     if (NS_FAILED(rv))
     {
         // Opening failed, but do we care?
-        if (mPersistFlags & PERSIST_FLAGS_FAIL_ON_BROKEN_LINKS)
+        if (NS_WARN_IF(mPersistFlags & PERSIST_FLAGS_FAIL_ON_BROKEN_LINKS))
         {
             SendErrorStatusChange(true, rv, aChannel, aFile);
             EndDownload(NS_ERROR_FAILURE);
@@ -1534,7 +1534,10 @@ nsWebBrowserPersist::GetExtensionForContentType(const char16_t *aContentType, ch
 nsresult
 nsWebBrowserPersist::SaveDocumentDeferred(mozilla::UniquePtr<WalkData>&& aData)
 {
-    return SaveDocumentInternal(aData->mDocument, aData->mFile, aData->mDataPath);
+    nsresult rv =
+        SaveDocumentInternal(aData->mDocument, aData->mFile, aData->mDataPath);
+    NS_WARN_IF(NS_FAILED(rv));
+    return rv;
 }
 
 nsresult nsWebBrowserPersist::SaveDocumentInternal(
@@ -1709,7 +1712,7 @@ NS_IMETHODIMP
 nsWebBrowserPersist::OnWalk::EndVisit(nsIWebBrowserPersistDocument* aDoc,
                                       nsresult aStatus)
 {
-    if (NS_FAILED(aStatus)) {
+    if (NS_WARN_IF(NS_FAILED(aStatus))) {
         mParent->EndDownload(aStatus);
         return aStatus;
     }
@@ -1740,7 +1743,7 @@ nsWebBrowserPersist::FinishSaveDocumentInternal(nsIURI* aFile,
                     SendErrorStatusChange(false, rv, nullptr, aFile);
                 }
             }
-            if (!haveDir) {
+            if (NS_WARN_IF(!haveDir)) {
                 EndDownload(NS_ERROR_FAILURE);
                 return;
             }
