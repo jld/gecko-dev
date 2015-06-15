@@ -68,6 +68,7 @@
 #include "jsfriendapi.h"
 #include "ImportManager.h"
 #include "mozilla/LinkedList.h"
+#include "nsIWebBrowserPersistDocument.h"
 
 #define XML_DECLARATION_BITS_DECLARATION_EXISTS   (1 << 0)
 #define XML_DECLARATION_BITS_ENCODING_EXISTS      (1 << 1)
@@ -701,7 +702,8 @@ class nsDocument : public nsIDocument,
                    public nsIApplicationCacheContainer,
                    public nsStubMutationObserver,
                    public nsIObserver,
-                   public nsIDOMXPathEvaluator
+                   public nsIDOMXPathEvaluator,
+                   public nsIWebBrowserPersistable
 {
   friend class nsIDocument;
 
@@ -1008,6 +1010,8 @@ public:
   NS_DECL_NSIOBSERVER
 
   NS_DECL_NSIDOMXPATHEVALUATOR
+
+  NS_DECL_NSIWEBBROWSERPERSISTABLE
 
   virtual nsresult Init();
 

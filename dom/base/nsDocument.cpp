@@ -235,6 +235,7 @@
 #include "gfxPrefs.h"
 
 #include "nsISpeculativeConnect.h"
+#include "nsWebBrowserPersistDocument.h"
 
 #ifdef MOZ_MEDIA_NAVIGATOR
 #include "mozilla/MediaManager.h"
@@ -1750,6 +1751,7 @@ NS_INTERFACE_TABLE_HEAD(nsDocument)
     NS_INTERFACE_TABLE_ENTRY(nsDocument, nsIApplicationCacheContainer)
     NS_INTERFACE_TABLE_ENTRY(nsDocument, nsIObserver)
     NS_INTERFACE_TABLE_ENTRY(nsDocument, nsIDOMXPathEvaluator)
+    NS_INTERFACE_TABLE_ENTRY(nsDocument, nsIWebBrowserPersistable)
   NS_INTERFACE_TABLE_END
   NS_INTERFACE_TABLE_TO_MAP_SEGUE_CYCLE_COLLECTION(nsDocument)
 NS_INTERFACE_MAP_END
@@ -12986,4 +12988,12 @@ nsIDocument::Fonts()
     GetUserFontSet();  // this will cause the user font set to be created/updated
   }
   return mFontFaceSet;
+}
+
+NS_IMETHODIMP
+nsDocument::StartPersistence(nsIWebBrowserPersistDocumentReceiver* aRecv)
+{
+  nsCOMPtr<nsIWebBrowserPersistDocument> doc =
+    new nsWebBrowserPersistDocument(this);
+  return aRecv->OnDocumentReady(doc);
 }
