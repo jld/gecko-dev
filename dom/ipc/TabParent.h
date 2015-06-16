@@ -22,6 +22,7 @@
 #include "nsIDOMEventListener.h"
 #include "nsISecureBrowserUI.h"
 #include "nsITabParent.h"
+#include "nsIWebBrowserPersistDocument.h"
 #include "nsIXULBrowserWindow.h"
 #include "nsRefreshDriver.h"
 #include "nsWeakReference.h"
@@ -76,6 +77,7 @@ class TabParent final : public PBrowserParent
                       , public nsSupportsWeakReference
                       , public TabContext
                       , public nsAPostRefreshObserver
+                      , public nsIWebBrowserPersistable
 {
     typedef mozilla::dom::ClonedMessageData ClonedMessageData;
     typedef mozilla::OwningSerializedStructuredCloneBuffer OwningSerializedStructuredCloneBuffer;
@@ -368,6 +370,7 @@ public:
     NS_DECL_ISUPPORTS
     NS_DECL_NSIAUTHPROMPTPROVIDER
     NS_DECL_NSISECUREBROWSERUI
+    NS_DECL_NSIWEBBROWSERPERSISTABLE
 
     bool HandleQueryContentEvent(mozilla::WidgetQueryContentEvent& aEvent);
     bool SendCompositionEvent(mozilla::WidgetCompositionEvent& event);
