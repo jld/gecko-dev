@@ -2819,5 +2819,15 @@ nsFrameLoader::InitializeBrowserAPI()
 NS_IMETHODIMP
 nsFrameLoader::StartPersistence(nsIWebBrowserPersistDocumentReceiver* aRecv)
 {
-  return nsWebBrowserPersistDocument::Create(this, aRecv);
+  if (mRemoteBrowser) {
+    return mRemoteBrowser->StartPersistence(aRecv);
+  }
+  if (mDocShell) {
+    nsCOMPtr<nsIDocument> doc = do_GetInterface(mDocShell);
+    NS_ENSURE_STATE(doc);
+    nsCOMPtr<nsIWebBrowserPersistable> delegate = do_QueryInterface(doc);
+    NS_ENSURE_STATE(delegate);
+    return delegate->StartPersistence(aRecv);
+  }
+  return NS_ERROR_NO_CONTENT;
 }

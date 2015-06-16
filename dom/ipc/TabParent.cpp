@@ -256,7 +256,8 @@ NS_IMPL_ISUPPORTS(TabParent,
                   nsITabParent,
                   nsIAuthPromptProvider,
                   nsISecureBrowserUI,
-                  nsISupportsWeakReference)
+                  nsISupportsWeakReference,
+                  nsIWebBrowserPersistable)
 
 TabParent::TabParent(nsIContentParent* aManager,
                      const TabId& aTabId,
@@ -3288,6 +3289,15 @@ TabParent::DeallocPWebBrowserPersistDocumentParent(PWebBrowserPersistDocumentPar
   // Lifetime is controlled by XPCOM refcount, and this is called from
   // the destructor; nothing to do here.
   return true;
+}
+
+NS_IMETHODIMP
+TabParent::StartPersistence(nsIWebBrowserPersistDocumentReceiver* aRecv)
+{
+  auto* actor = new nsWebBrowserPersistDocumentParent();
+  actor->SetOnReady(aRecv);
+  return SendPWebBrowserPersistDocumentConstructor(actor)
+    ? NS_OK : NS_ERROR_FAILURE;
 }
 
 NS_IMETHODIMP

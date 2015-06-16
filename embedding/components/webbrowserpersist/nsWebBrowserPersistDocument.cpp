@@ -14,6 +14,7 @@
 #include "nsComponentManagerUtils.h"
 #include "nsContentUtils.h"
 #include "nsContentCID.h"
+#include "nsFrameLoader.h"
 #include "nsIComponentRegistrar.h"
 #include "nsIContent.h"
 #include "nsIDOMAttr.h"
@@ -47,7 +48,6 @@
 #include "nsIDocShell.h"
 #include "nsIDocument.h"
 #include "nsIDocumentEncoder.h"
-#include "nsIFrameLoader.h"
 #include "nsILoadContext.h"
 #include "nsIProtocolHandler.h"
 #include "nsITabParent.h"
@@ -57,37 +57,6 @@
 using mozilla::dom::HTMLInputElement;
 using mozilla::dom::HTMLSharedElement;
 using mozilla::dom::HTMLSharedObjectElement;
-
-/* static */ nsresult
-nsWebBrowserPersistDocument::Create(nsIFrameLoader* aLoader,
-                                    nsIWebBrowserPersistDocumentReceiver* aRecv)
-{
-    nsresult rv;
-
-    nsCOMPtr<nsIDocShell> ds;
-    rv = aLoader->GetDocShell(getter_AddRefs(ds));
-    NS_ENSURE_SUCCESS(rv, rv);
-    if (ds) {
-        nsCOMPtr<nsIDocument> doc = do_GetInterface(ds);
-        NS_ENSURE_STATE(doc);
-        nsCOMPtr<nsIWebBrowserPersistable> pdoc = do_QueryInterface(doc);
-        NS_ENSURE_STATE(pdoc);
-        return pdoc->StartPersistence(aRecv);
-    }
-    nsCOMPtr<nsITabParent> tp;
-    rv = aLoader->GetTabParent(getter_AddRefs(tp));
-    NS_ENSURE_SUCCESS(rv, rv);
-    if (tp) {
-        auto* tpp = mozilla::dom::TabParent::GetFrom(tp);
-        NS_ENSURE_STATE(tpp);
-        auto* actor = new nsWebBrowserPersistDocumentParent();
-        actor->SetOnReady(aRecv);
-        return tpp->SendPWebBrowserPersistDocumentConstructor(actor)
-            ? NS_OK : NS_ERROR_FAILURE;
-    }
-
-    return NS_ERROR_NO_CONTENT;
-}
 
 NS_IMPL_ISUPPORTS(nsWebBrowserPersistDocument, nsIWebBrowserPersistDocument)
 
@@ -455,11 +424,9 @@ ResourceReader::OnWalkSubframe(nsIDOMNode* aNode)
     ++mOutstandingDocuments;
     nsCOMPtr<nsIFrameLoaderOwner> loaderOwner = do_QueryInterface(aNode);
     NS_ENSURE_STATE(loaderOwner);
-    nsCOMPtr<nsIFrameLoader> loader;
-    nsresult rv = loaderOwner->GetFrameLoader(getter_AddRefs(loader));
-    NS_ENSURE_SUCCESS(rv, rv);
+    nsRefPtr<nsFrameLoader> loader = loaderOwner->GetFrameLoader();
     NS_ENSURE_STATE(loader);
-    rv = nsWebBrowserPersistDocument::Create(loader, this);
+    nsresult rv = loader->StartPersistence(this);
     if (NS_FAILED(rv)) {
         // FIXME: should NS_ERROR_NO_CONTENT be ignored?
         DocumentDone(rv);
