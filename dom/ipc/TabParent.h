@@ -22,7 +22,7 @@
 #include "nsIDOMEventListener.h"
 #include "nsISecureBrowserUI.h"
 #include "nsITabParent.h"
-#include "nsIWebBrowserPersistDocument.h"
+#include "nsIWebBrowserPersistable.h"
 #include "nsIXULBrowserWindow.h"
 #include "nsRefreshDriver.h"
 #include "nsWeakReference.h"

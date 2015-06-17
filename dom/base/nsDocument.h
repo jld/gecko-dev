@@ -69,6 +69,7 @@
 #include "ImportManager.h"
 #include "mozilla/LinkedList.h"
 #include "nsIWebBrowserPersistDocument.h"
+#include "nsIWebBrowserPersistable.h"
 
 #define XML_DECLARATION_BITS_DECLARATION_EXISTS   (1 << 0)
 #define XML_DECLARATION_BITS_ENCODING_EXISTS      (1 << 1)

@@ -13,7 +13,6 @@ interface nsIWebProgressListener;
 interface nsIFile;
 interface nsIChannel;
 interface nsILoadContext;
-interface nsIWebBrowserPersistable;
 
 /**
  * Interface for persisting DOM documents and URIs to local or remote storage.

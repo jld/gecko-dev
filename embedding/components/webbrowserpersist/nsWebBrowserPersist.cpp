@@ -52,6 +52,7 @@
 #include "nsIStringBundle.h"
 #include "nsIProtocolHandler.h"
 
+#include "nsIWebBrowserPersistable.h"
 #include "nsWebBrowserPersist.h"
 #include "nsWebBrowserPersistDocument.h"
 
