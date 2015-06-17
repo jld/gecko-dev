@@ -1796,11 +1796,7 @@ function HandleAppCommandEvent(evt) {
                            gBrowser.selectedBrowser);
     break;
   case "Save":
-    if (content) {
-      saveDocument(content.document);
-    } else {
-      saveFrame(gBrowser.selectedBrowser);
-    }
+    saveFrame(gBrowser.selectedBrowser);
     break;
   case "SendMail":
     MailIntegration.sendLinkForBrowser(gBrowser.selectedBrowser);
