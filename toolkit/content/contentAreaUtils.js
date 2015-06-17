@@ -131,7 +131,6 @@ function saveFrame(aFrame, aSkipPrompt)
   if (!aFrame) {
     throw "Must have a frame when calling saveFrame";
   }
-  //// dump("saveFrame " + aFrame.tagName + "\n");
   aFrame.QueryInterface(Ci.nsIFrameLoaderOwner)
         .frameLoader
         .QueryInterface(Ci.nsIWebBrowserPersistable)
@@ -146,10 +145,14 @@ function saveDocument(aDocument, aSkipPrompt)
     throw "Must have a document when calling saveDocument";
 
   let contentDisposition = null;
-  let cacheKey = null;
+  let cacheKeyInt = null;
 
-  //// dump("saveDocument (" + (aDocument instanceof Document ? Components.utils.isCrossProcessWrapper(aDocument) ? "cpow" : "real" : "fake") + ")\n");
-  if ("defaultView" in aDocument) {
+  if ("contentDisposition" in aDocument && "cacheKey" in aDocument) {
+    // nsIWebBrowserPersistDocument exposes these directly.
+    contentDisposition = aDocument.contentDisposition;
+    cacheKeyInt = aDocument.cacheKey;
+  } else if ("defaultView" in aDocument) {
+    // Otherwise it's an actual nsDocument (and possibly a CPOW).
     // We want to use cached data because the document is currently visible.
     var ifreq =
       aDocument.defaultView
@@ -170,17 +173,23 @@ function saveDocument(aDocument, aSkipPrompt)
              .currentDescriptor
              .QueryInterface(Components.interfaces.nsISHEntry);
 
-      shEntry.cacheKey.QueryInterface(Components.interfaces.nsISupportsPRUint32);
-
-      // In the event that the cacheKey is a CPOW, we cannot pass it to
-      // nsIWebBrowserPersist, so we create a new one and copy the value
-      // over. This is a workaround until bug 1101100 is fixed.
-      cacheKey = Cc["@mozilla.org/supports-PRUint32;1"]
-                   .createInstance(Ci.nsISupportsPRUint32);
-      cacheKey.data = shEntry.cacheKey.data;
+      let cacheKey = shEntry.cacheKey
+                        .QueryInterface(Components.interfaces
+                                                  .nsISupportsPRUint32)
+                        .data;
+      // cacheKey might be a CPOW, but numbers aren't wrapped.
+      cacheKeyInt = shEntry.cacheKey.data;
     } catch (ex) {
       // We might not find it in the cache.  Oh, well.
     }
+  }
+
+  // Convert the cacheKey back into an XPCOM object.
+  let cacheKey = null;
+  if (cacheKeyInt) {
+    cacheKey = Cc["@mozilla.org/supports-PRUint32;1"]
+      .createInstance(Ci.nsISupportsPRUint32);
+    cacheKey.data = cacheKeyInt;
   }
 
   internalSave(aDocument.documentURI, aDocument, null, contentDisposition,
@@ -835,6 +844,9 @@ function appendFiltersForContentType(aFilePicker, aContentType, aFileExtension, 
 
 function getPostData(aDocument)
 {
+  if ("postData" in aDocument) {
+    return aDocument.postData;
+  }
   try {
     // Find the session history entry corresponding to the given document. In
     // the current implementation, nsIWebPageDescriptor.currentDescriptor always
