@@ -44,14 +44,18 @@
 #include "nsIDOMNodeList.h"
 #include "nsIDOMProcessingInstruction.h"
 #include "nsIDOMTreeWalker.h"
+#include "nsIDOMWindowUtils.h"
 #include "nsIDOMXMLDocument.h"
 #include "nsIDocShell.h"
 #include "nsIDocument.h"
 #include "nsIDocumentEncoder.h"
 #include "nsILoadContext.h"
 #include "nsIProtocolHandler.h"
+#include "nsISHEntry.h"
 #include "nsITabParent.h"
 #include "nsIWebBrowserPersist.h"
+#include "nsIWebNavigation.h"
+#include "nsIWebPageDescriptor.h"
 #include "nsNetUtil.h"
 
 using mozilla::dom::HTMLInputElement;
@@ -132,12 +136,88 @@ nsWebBrowserPersistDocument::GetCharacterSet(nsACString& aCharSet)
     return NS_OK;
 }
 
+NS_IMETHODIMP
+nsWebBrowserPersistDocument::GetTitle(nsAString& aTitle)
+{
+    nsAutoString titleBuffer;
+    mDocument->GetTitle(titleBuffer);
+    aTitle = titleBuffer;
+    return NS_OK;
+}
+
+NS_IMETHODIMP
+nsWebBrowserPersistDocument::GetReferrer(nsAString& aReferrer)
+{
+    mDocument->GetReferrer(aReferrer);
+    return NS_OK;
+}
+
+NS_IMETHODIMP
+nsWebBrowserPersistDocument::GetContentDisposition(nsAString& aCD)
+{
+    nsCOMPtr<nsIDOMWindow> window = mDocument->GetDefaultView();
+    NS_ENSURE_STATE(window);
+    nsCOMPtr<nsIDOMWindowUtils> utils = do_GetInterface(window);
+    NS_ENSURE_STATE(utils);
+    return utils->GetDocumentMetadata(
+        NS_LITERAL_STRING("content-disposition"), aCD);
+}
+
+NS_IMETHODIMP
+nsWebBrowserPersistDocument::GetCacheKey(uint32_t* aKey)
+{
+    nsCOMPtr<nsISHEntry> history;
+    nsresult rv = GetHistory(getter_AddRefs(history));
+    NS_ENSURE_SUCCESS(rv, rv);
+    NS_ENSURE_STATE(history);
+    nsCOMPtr<nsISupports> abstractKey;
+    rv = history->GetCacheKey(getter_AddRefs(abstractKey));
+    NS_ENSURE_SUCCESS(rv, rv);
+    if (!abstractKey) {
+        *aKey = 0;
+        return NS_OK;
+    }
+    nsCOMPtr<nsISupportsPRUint32> u32 = do_QueryInterface(abstractKey);
+    if (NS_WARN_IF(!u32)) {
+        *aKey = 0;
+        return NS_OK;
+    }
+    return u32->GetData(aKey);
+}
+
+NS_IMETHODIMP
+nsWebBrowserPersistDocument::GetPostData(nsIInputStream** aStream)
+{
+    nsCOMPtr<nsISHEntry> history;
+    nsresult rv = GetHistory(getter_AddRefs(history));
+    NS_ENSURE_SUCCESS(rv, rv);
+    NS_ENSURE_STATE(history);
+    return history->GetPostData(aStream);
+}
+
+nsresult
+nsWebBrowserPersistDocument::GetHistory(nsISHEntry** aHistory)
+{
+    nsCOMPtr<nsIDOMWindow> window = mDocument->GetDefaultView();
+    NS_ENSURE_STATE(window);
+    nsCOMPtr<nsIWebNavigation> webNav = do_GetInterface(window);
+    NS_ENSURE_STATE(webNav);
+    nsCOMPtr<nsIWebPageDescriptor> desc = do_QueryInterface(webNav);
+    NS_ENSURE_STATE(desc);
+    nsCOMPtr<nsISupports> curDesc;
+    nsresult rv = desc->GetCurrentDescriptor(getter_AddRefs(curDesc));
+    NS_ENSURE_SUCCESS(rv, rv);
+    NS_ENSURE_STATE(curDesc);
+    nsCOMPtr<nsISHEntry> history = do_QueryInterface(curDesc);
+    history.forget(aHistory);
+    return NS_OK;
+}
+
 const nsCString&
 nsWebBrowserPersistDocument::GetCharacterSet() const
 {
     return mDocument->GetDocumentCharacterSet();
 }
-
 
 uint32_t
 nsWebBrowserPersistDocument::GetPersistFlags() const

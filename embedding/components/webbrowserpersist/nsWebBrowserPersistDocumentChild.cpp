@@ -6,7 +6,9 @@
 
 #include "nsWebBrowserPersistDocumentChild.h"
 
+#include "mozilla/ipc/InputStreamUtils.h"
 #include "nsIDocument.h"
+#include "nsIInputStream.h"
 #include "nsWebBrowserPersistDocument.h"
 #include "nsWebBrowserPersistDocumentReadChild.h"
 #include "nsWebBrowserPersistDocumentWriteChild.h"
@@ -35,6 +37,7 @@ nsWebBrowserPersistDocumentChild::Start(nsIWebBrowserPersistDocument* aDocument)
     }
 
     WebBrowserPersistDocumentAttrs attrs;
+    nsCOMPtr<nsIInputStream> postData;
 #define ENSURE(e) do {           \
         nsresult rv = (e);       \
         if (NS_FAILED(rv)) {     \
@@ -47,7 +50,15 @@ nsWebBrowserPersistDocumentChild::Start(nsIWebBrowserPersistDocument* aDocument)
     ENSURE(aDocument->GetBaseURI(attrs.baseURI()));
     ENSURE(aDocument->GetContentType(attrs.contentType()));
     ENSURE(aDocument->GetCharacterSet(attrs.characterSet()));
+    ENSURE(aDocument->GetTitle(attrs.title()));
+    ENSURE(aDocument->GetReferrer(attrs.referrer()));
+    ENSURE(aDocument->GetContentDisposition(attrs.contentDisposition()));
+    ENSURE(aDocument->GetCacheKey(&(attrs.cacheKey())));
     ENSURE(aDocument->GetPersistFlags(&(attrs.persistFlags())));
+    ENSURE(aDocument->GetPostData(getter_AddRefs(postData)));
+    mozilla::ipc::SerializeInputStream(postData,
+                                       attrs.postData(),
+                                       attrs.postFiles());
 #undef ENSURE
     mDocument = aDocument;
     SendAttributes(attrs);
