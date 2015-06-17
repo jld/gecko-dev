@@ -24,7 +24,7 @@
 #include "mozilla/Attributes.h"
 #include "nsStubMutationObserver.h"
 #include "Units.h"
-#include "nsIWebBrowserPersistDocument.h"
+#include "nsIWebBrowserPersistable.h"
 
 class nsIURI;
 class nsSubDocumentFrame;
