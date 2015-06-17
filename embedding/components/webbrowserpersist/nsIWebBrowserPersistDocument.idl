@@ -7,6 +7,7 @@
 #include "nsISupports.idl"
 
 interface nsIDOMDocument;
+interface nsIInputStream;
 interface nsIOutputStream;
 interface nsITabParent;
 interface nsIWebBrowserPersistResourceVisitor;
@@ -30,6 +31,11 @@ interface nsIWebBrowserPersistDocument : nsISupports
   readonly attribute AUTF8String baseURI;
   readonly attribute ACString contentType;
   readonly attribute ACString characterSet;
+  readonly attribute AString title;
+  readonly attribute AString referrer;
+  readonly attribute AString contentDisposition;
+  readonly attribute unsigned long cacheKey;
+  readonly attribute nsIInputStream postData;
   attribute unsigned long persistFlags;
   void readResources(in nsIWebBrowserPersistResourceVisitor aVisitor);
   void writeContent(in nsIOutputStream aStream,

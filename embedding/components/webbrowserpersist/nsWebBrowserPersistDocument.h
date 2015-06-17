@@ -13,6 +13,7 @@
 #include "nsIWebBrowserPersistDocument.h"
 
 class nsIDocumentEncoder;
+class nsISHEntry;
 
 class nsWebBrowserPersistDocument final
     : public nsIWebBrowserPersistDocument
@@ -35,6 +36,7 @@ private:
     nsresult GetDocEncoder(const nsACString& aContentType,
                            uint32_t aEncoderFlags,
                            nsIDocumentEncoder** aEncoder);
+    nsresult GetHistory(nsISHEntry** aHistory);
 
     virtual ~nsWebBrowserPersistDocument();
 };

@@ -7,6 +7,8 @@ include protocol PBrowser;
 include protocol PWebBrowserPersistDocumentRead;
 include protocol PWebBrowserPersistDocumentWrite;
 
+include InputStreamParams;
+
 namespace mozilla {
 
 struct WebBrowserPersistDocumentAttrs {
@@ -15,7 +17,13 @@ struct WebBrowserPersistDocumentAttrs {
   nsCString baseURI;
   nsCString contentType;
   nsCString characterSet;
+  nsString title;
+  nsString referrer;
+  nsString contentDisposition;
+  uint32_t cacheKey;
   uint32_t persistFlags;
+  OptionalInputStreamParams postData;
+  FileDescriptor[] postFiles;
 };
 
 // == nsIWebBrowserPersistMap

@@ -6,6 +6,8 @@
 
 #include "nsWebBrowserPersistDocumentParent.h"
 
+#include "mozilla/ipc/InputStreamUtils.h"
+#include "nsIInputStream.h"
 #include "nsThreadUtils.h"
 #include "nsWebBrowserPersistDocumentReadParent.h"
 #include "nsWebBrowserPersistDocumentWriteParent.h"
@@ -185,6 +187,45 @@ nsWebBrowserPersistDocumentParent::GetCharacterSet(nsACString& aCharSet)
     return rv;
 }
 
+NS_IMETHODIMP
+nsWebBrowserPersistDocumentParent::GetTitle(nsAString& aTitle)
+{
+    nsresult rv = AccessAttrs();
+    if (NS_SUCCEEDED(rv)) {
+        aTitle = mAttrs->title();
+    }
+    return rv;
+}
+
+NS_IMETHODIMP
+nsWebBrowserPersistDocumentParent::GetReferrer(nsAString& aReferrer)
+{
+    nsresult rv = AccessAttrs();
+    if (NS_SUCCEEDED(rv)) {
+        aReferrer = mAttrs->referrer();
+    }
+    return rv;
+}
+
+NS_IMETHODIMP
+nsWebBrowserPersistDocumentParent::GetContentDisposition(nsAString& aDisp)
+{
+    nsresult rv = AccessAttrs();
+    if (NS_SUCCEEDED(rv)) {
+        aDisp = mAttrs->contentDisposition();
+    }
+    return rv;
+}
+
+NS_IMETHODIMP
+nsWebBrowserPersistDocumentParent::GetCacheKey(uint32_t* aCacheKey)
+{
+    nsresult rv = AccessAttrs();
+    if (NS_SUCCEEDED(rv)) {
+        *aCacheKey = mAttrs->cacheKey();
+    }
+    return rv;
+}
 
 NS_IMETHODIMP
 nsWebBrowserPersistDocumentParent::GetPersistFlags(uint32_t* aFlags)
@@ -205,6 +246,21 @@ nsWebBrowserPersistDocumentParent::SetPersistFlags(uint32_t aFlags)
             return NS_ERROR_FAILURE;
         }
         mAttrs->persistFlags() = aFlags;
+    }
+    return rv;
+}
+
+NS_IMETHODIMP
+nsWebBrowserPersistDocumentParent::GetPostData(nsIInputStream** aStream)
+{
+    // FIXME: can this be called other than exactly once or will that
+    // break everything?
+    nsresult rv = AccessAttrs();
+    if (NS_SUCCEEDED(rv)) {
+        nsCOMPtr<nsIInputStream> stream =
+            mozilla::ipc::DeserializeInputStream(mAttrs->postData(),
+                                                 mAttrs->postFiles());
+        stream.forget(aStream);
     }
     return rv;
 }
