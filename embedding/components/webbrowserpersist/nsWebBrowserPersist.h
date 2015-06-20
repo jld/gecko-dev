@@ -70,7 +70,6 @@ protected:
         nsIURI *aDataPath);
     nsresult SaveDocuments();
     void FinishSaveDocumentInternal(nsIURI* aFIle, nsIFile* aDataPath);
-    void FinishSaveDocument();
     nsresult GetExtensionForContentType(
         const char16_t *aContentType, char16_t **aExt);
 
@@ -133,7 +132,8 @@ private:
 
     nsresult FixRedirectedChannelEntry(nsIChannel *aNewChannel);
 
-    void EndDownload(nsresult aResult = NS_OK);
+    void EndDownload(nsresult aResult);
+    void FinishDownload();
     void SerializeNextFile();
     void CalcTotalProgress();
 

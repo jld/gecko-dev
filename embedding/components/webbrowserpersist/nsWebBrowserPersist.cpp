@@ -573,20 +573,6 @@ nsWebBrowserPersist::OnStart::OnDocumentReady(nsIWebBrowserPersistDocument* aDoc
     return rv;
 }
 
-void
-nsWebBrowserPersist::FinishSaveDocument() {
-    // State stop notification
-    if (mProgressListener) {
-        mProgressListener->OnStateChange(nullptr, nullptr,
-            nsIWebProgressListener::STATE_STOP
-            | nsIWebProgressListener::STATE_IS_NETWORK, mPersistResult);
-    }
-    EndDownload();
-    mProgressListener = nullptr;
-    mProgressListener2 = nullptr;
-    mEventSink = nullptr;
-}
-
 /* void cancel(nsresult aReason); */
 NS_IMETHODIMP nsWebBrowserPersist::Cancel(nsresult aReason)
 {
@@ -674,10 +660,11 @@ nsWebBrowserPersist::SerializeNextFile()
         if (mUploadList.Count() > 0) {
             return;
         }
-        // Finish and clean things up.
-        // FIXME does this need to be deferred?
+        // Finish and clean things up.  Defer this because the caller
+        // may have been expecting to use the listeners that that
+        // method will clear.
         NS_DispatchToCurrentThread(NS_NewRunnableMethod(this,
-            &nsWebBrowserPersist::FinishSaveDocument));
+            &nsWebBrowserPersist::FinishDownload));
         return;
     }
 
@@ -2317,8 +2304,21 @@ nsWebBrowserPersist::MakeOutputStreamFromURI(
 }
 
 void
+nsWebBrowserPersist::FinishDownload()
+{
+    EndDownload(NS_OK);
+}
+
+void
 nsWebBrowserPersist::EndDownload(nsresult aResult)
 {
+    // State stop notification
+    if (mProgressListener) {
+        mProgressListener->OnStateChange(nullptr, nullptr,
+            nsIWebProgressListener::STATE_STOP
+            | nsIWebProgressListener::STATE_IS_NETWORK, mPersistResult);
+    }
+
     // Store the error code in the result if it is an error
     if (NS_SUCCEEDED(mPersistResult) && NS_FAILED(aResult))
     {
@@ -2334,6 +2334,10 @@ nsWebBrowserPersist::EndDownload(nsresult aResult)
     // Cleanup the channels
     mCompleted = true;
     Cleanup();
+
+    mProgressListener = nullptr;
+    mProgressListener2 = nullptr;
+    mEventSink = nullptr;
 }
 
 struct MOZ_STACK_CLASS FixRedirectData
