@@ -22,6 +22,7 @@
 #include "nsIProgressEventSink.h"
 #include "nsIFile.h"
 #include "nsIWebProgressListener2.h"
+#include "nsIWebBrowserPersistDocument.h"
 
 #include "mozilla/UniquePtr.h"
 #include "nsClassHashtable.h"
@@ -178,6 +179,7 @@ private:
     nsClassHashtable<nsISupportsHashKey, OutputData> mOutputMap;
     nsClassHashtable<nsISupportsHashKey, UploadData> mUploadList;
     nsClassHashtable<nsCStringHashKey, URIData> mURIMap;
+    nsCOMPtr<nsIWebBrowserPersistMap> mFlatMap;
     nsTArray<mozilla::UniquePtr<WalkData>> mWalkStack;
     nsTArray<DocData*>        mDocList;
     nsTArray<CleanupData*>    mCleanupList;

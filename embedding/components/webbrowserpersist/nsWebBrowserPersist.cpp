@@ -630,10 +630,14 @@ nsWebBrowserPersist::SerializeNextFile()
     nsresult rv = NS_OK;
     MOZ_ASSERT(mWalkStack.Length() == 0);
 
-    // First, handle gathered URIs.  (FIXME: cache this or something.)
+    // First, handle gathered URIs.
     // Count how many URIs in the URI map require persisting
     uint32_t urisToPersist = 0;
     if (mURIMap.Count() > 0) {
+        // This is potentially O(n^2), when taking into account the
+        // number of times this method is called.  If it becomes a
+        // bottleneck, the count of not-yet-persisted URIs could be
+        // maintained separately.
         mURIMap.EnumerateRead(EnumCountURIsToPersist, &urisToPersist);
     }
 
@@ -684,19 +688,21 @@ nsWebBrowserPersist::SerializeNextFile()
 
     // Save the document, fixing it up with the new URIs as we do
 
-    // FIXME: this map thing should be cacheable, no?
-    nsAutoCString targetBaseSpec;
-    if (mTargetBaseURI) {
-        rv = mTargetBaseURI->GetSpec(targetBaseSpec);
-        if (NS_FAILED(rv)) {
-            SendErrorStatusChange(true, rv, nullptr, nullptr);
-            EndDownload(rv);
-            return;
+    if (!mFlatMap) {
+        nsAutoCString targetBaseSpec;
+        if (mTargetBaseURI) {
+            rv = mTargetBaseURI->GetSpec(targetBaseSpec);
+            if (NS_FAILED(rv)) {
+                SendErrorStatusChange(true, rv, nullptr, nullptr);
+                EndDownload(rv);
+                return;
+            }
         }
+        nsRefPtr<FlatMap> flatMap = new FlatMap(targetBaseSpec);
+        mURIMap.EnumerateRead(EnumCopyURIsToFlatMap, flatMap);
+        mFlatMap = flatMap.forget();
     }
-    nsRefPtr<FlatMap> flatMap = new FlatMap(targetBaseSpec);
-    mURIMap.EnumerateRead(EnumCopyURIsToFlatMap, flatMap);
-        
+
     nsCOMPtr<nsIFile> localFile;
     GetLocalFileFromURI(docData->mFile, getter_AddRefs(localFile));
     if (localFile) {
@@ -726,7 +732,7 @@ nsWebBrowserPersist::SerializeNextFile()
 
     nsRefPtr<OnWrite> finish = new OnWrite(this, docData->mFile, localFile);
     rv = docData->mDocument->WriteContent(outputStream,
-                                          flatMap,
+                                          mFlatMap,
                                           NS_ConvertUTF16toUTF8(mContentType),
                                           mEncodingFlags,
                                           mWrapColumn,
@@ -2747,7 +2753,6 @@ nsWebBrowserPersist::SaveSubframeContent(
 
     // We shouldn't use SaveDocumentInternal for the contents
     // of frames that are not documents, e.g. images.
-    // FIXME: wait, shouldn't this test be before all that path stuff?
     if (DocumentEncoderExists(contentType.get())) {
         auto toWalk = mozilla::MakeUnique<WalkData>();
         toWalk->mDocument = aFrameContent;
