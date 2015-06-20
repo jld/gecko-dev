@@ -50,6 +50,7 @@ public:
 private:
     nsresult mFailure;
     mozilla::Maybe<Attrs> mAttrs;
+    // FIXME: for this and all the unset-on-call callbacks, maybe comment that.
     nsCOMPtr<nsIWebBrowserPersistDocumentReceiver> mOnReady;
     bool mHoldingExtraRef;
     bool mShouldSendDelete;

@@ -84,8 +84,9 @@ nsWebBrowserPersistDocumentParent::ActorDestroy(ActorDestroyReason aWhy)
         MOZ_ASSERT(!mHoldingExtraRef);
     }
     if (mOnReady) {
-        // Try to make things blow up instead of just hang.
-        // FIXME: is this actually a horrible idea because reentrancy?
+        // If the callback just doesn't happen, then things will
+        // mysteriously hang.  Instead, propagate the failure by
+        // giving it a document where attribute accesses fail.
         mFailure = NS_ERROR_FAILURE;
         FireOnReady();
     }
