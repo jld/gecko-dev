@@ -438,6 +438,8 @@ public:
     ResourceReader(nsWebBrowserPersistDocument* aParent,
                    nsIWebBrowserPersistResourceVisitor* aVisitor);
     nsresult OnWalkDOMNode(nsIDOMNode* aNode);
+    // FIXME: if nothing else, explain this and mOutstandingDocuments.
+    // Because I didn't understand them a week after I wrote the code.
     void DocumentDone(nsresult aStatus);
 
     NS_DECL_NSIWEBBROWSERPERSISTDOCUMENTRECEIVER
@@ -501,14 +503,18 @@ ResourceReader::DocumentDone(nsresult aStatus)
 nsresult
 ResourceReader::OnWalkSubframe(nsIDOMNode* aNode)
 {
-    ++mOutstandingDocuments;
     nsCOMPtr<nsIFrameLoaderOwner> loaderOwner = do_QueryInterface(aNode);
     NS_ENSURE_STATE(loaderOwner);
     nsRefPtr<nsFrameLoader> loader = loaderOwner->GetFrameLoader();
     NS_ENSURE_STATE(loader);
+
+    ++mOutstandingDocuments;
     nsresult rv = loader->StartPersistence(this);
     if (NS_FAILED(rv)) {
-        // FIXME: should NS_ERROR_NO_CONTENT be ignored?
+        if (rv == NS_ERROR_NO_CONTENT) {
+            // Ignore frames with no content document.
+            rv = NS_OK;
+        }
         DocumentDone(rv);
     }
     return rv;
@@ -729,7 +735,6 @@ ResourceReader::OnWalkDOMNode(nsIDOMNode* aNode)
         }
 
         // restore the base URI we really want to have
-        // FIXME jld: don't we have a RAII class for this now?
         mCurrentBaseURI = oldBase;
         return rv;
     }
@@ -892,9 +897,7 @@ PersistNodeFixup::FixupURI(nsAString &aURI)
 
     const nsCString* replacement = mMap.Get(spec);
     if (!replacement) {
-        // FIXME: should this be less fatal now that things are async?
-        // But see also "Perhaps this link is..." in FixupNode.
-        // (Also all the Fixup* callers that drop the rv....)
+        // Note that most callers ignore this "failure".
         return NS_ERROR_FAILURE;
     }
     if (!replacement->IsEmpty()) {
@@ -1246,7 +1249,6 @@ PersistNodeFixup::FixupNode(nsIDOMNode *aNodeIn,
                 imgCon->SetLoadingEnabled(false);
 
             // FixupAnchor(*aNodeOut);  // XXXjwatt: is this line needed?
-            // FIXME(jld): Should this be FixupAnchor with an extra param?
             FixupAttribute(*aNodeOut, "href", "http://www.w3.org/1999/xlink");
         }
         return rv;
@@ -1264,7 +1266,6 @@ PersistNodeFixup::FixupNode(nsIDOMNode *aNodeIn,
     if (content->IsSVGElement(nsGkAtoms::script)) {
         rv = GetNodeToFixup(aNodeIn, aNodeOut);
         if (NS_SUCCEEDED(rv) && *aNodeOut) {
-            // FIXME(jld): see above.
             FixupAttribute(*aNodeOut, "href", "http://www.w3.org/1999/xlink");
         }
         return rv;
