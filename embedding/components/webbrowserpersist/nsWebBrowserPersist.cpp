@@ -312,7 +312,6 @@ nsWebBrowserPersist::nsWebBrowserPersist() :
     mCurrentThingsToPersist(0),
     mFirstAndOnlyUse(true),
     mCancel(false),
-    mJustStartedLoading(true),
     mCompleted(false),
     mStartSaving(false),
     mReplaceExisting(true),
@@ -548,13 +547,19 @@ NS_IMETHODIMP nsWebBrowserPersist::SaveDocument(
         new OnStart(this, fileAsURI, datapathAsURI);
     nsCOMPtr<nsIWebBrowserPersistDocument> doc = do_QueryInterface(aDocument);
     if (doc) {
-        return start->OnDocumentReady(doc);
+        rv = start->OnDocumentReady(doc);
+    } else {
+        nsCOMPtr<nsIWebBrowserPersistable> pdoc = do_QueryInterface(aDocument);
+        if (pdoc) {
+            rv = pdoc->StartPersistence(start);
+        } else {
+            rv = NS_ERROR_NO_INTERFACE;
+        }
     }
-    nsCOMPtr<nsIWebBrowserPersistable> pdoc = do_QueryInterface(aDocument);
-    if (pdoc) {
-        return pdoc->StartPersistence(start);
+    if (NS_FAILED(rv)) {
+        EndDownload(rv);
     }
-    return NS_ERROR_NO_INTERFACE;
+    return rv;
 }
 
 NS_IMETHODIMP
@@ -787,14 +792,8 @@ NS_IMETHODIMP nsWebBrowserPersist::OnStartRequest(
     {
         uint32_t stateFlags = nsIWebProgressListener::STATE_START |
                               nsIWebProgressListener::STATE_IS_REQUEST;
-        if (mJustStartedLoading)
-        {
-            stateFlags |= nsIWebProgressListener::STATE_IS_NETWORK;
-        }
         mProgressListener->OnStateChange(nullptr, request, stateFlags, NS_OK);
     }
-
-    mJustStartedLoading = false;
 
     nsCOMPtr<nsIChannel> channel = do_QueryInterface(request);
     NS_ENSURE_TRUE(channel, NS_ERROR_FAILURE);

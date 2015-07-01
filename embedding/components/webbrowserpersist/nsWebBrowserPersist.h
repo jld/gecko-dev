@@ -186,7 +186,6 @@ private:
     nsTArray<nsCString>       mFilenameList;
     bool                      mFirstAndOnlyUse;
     bool                      mCancel;
-    bool                      mJustStartedLoading;
     bool                      mCompleted;
     bool                      mStartSaving;
     bool                      mReplaceExisting;
