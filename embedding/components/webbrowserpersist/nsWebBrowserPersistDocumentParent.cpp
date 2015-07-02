@@ -326,9 +326,9 @@ nsWebBrowserPersistDocumentParent::WriteContent(
         rv = aMap->GetNumMappedURIs(&numMappedURIs);
         NS_ENSURE_SUCCESS(rv, rv);
         for (uint32_t i = 0; i < numMappedURIs; ++i) {
-            rv = aMap->GetURIMapping(i,
-                                     *(map.mapURIsFrom().AppendElement()),
-                                     *(map.mapURIsTo().AppendElement()));
+            WebBrowserPersistMapEntry& nextEntry =
+                *(map.mapURIs().AppendElement());
+            rv = aMap->GetURIMapping(i, nextEntry.mapFrom(), nextEntry.mapTo());
             NS_ENSURE_SUCCESS(rv, rv);
         }
     }

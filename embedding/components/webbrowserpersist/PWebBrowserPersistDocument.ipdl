@@ -26,10 +26,14 @@ struct WebBrowserPersistDocumentAttrs {
   FileDescriptor[] postFiles;
 };
 
+struct WebBrowserPersistMapEntry {
+  nsCString mapFrom;
+  nsCString mapTo;
+};
+
 // == nsIWebBrowserPersistMap
 struct WebBrowserPersistMap {
-  nsCString[] mapURIsFrom;
-  nsCString[] mapURIsTo;
+  WebBrowserPersistMapEntry[] mapURIs;
   nsCString targetBaseURI;
 };
 

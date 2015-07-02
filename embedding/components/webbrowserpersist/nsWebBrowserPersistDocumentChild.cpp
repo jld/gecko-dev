@@ -130,8 +130,7 @@ nsWebBrowserPersistDocumentChild::RecvPWebBrowserPersistDocumentWriteConstructor
     auto* castActor =
         static_cast<nsWebBrowserPersistDocumentWriteChild*>(aActor);
     nsresult rv = mDocument->WriteContent(castActor,
-                                          aMap.targetBaseURI().IsEmpty() &&
-                                          aMap.mapURIsFrom().Length() == 0
+                                          aMap.mapURIs().Length() == 0
                                           ? nullptr
                                           : castActor,
                                           aRequestedContentType,
