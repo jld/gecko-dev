@@ -11,6 +11,10 @@ include InputStreamParams;
 
 namespace mozilla {
 
+// nsIWebBrowserPersistDocument has attributes which can be read
+// synchronously.  To avoid using sync IPC for them, the actor sends
+// this structure from the child to the parent before the parent actor
+// is exposed to XPCOM.
 struct WebBrowserPersistDocumentAttrs {
   bool isPrivate;
   nsCString documentURI;
