@@ -8,6 +8,17 @@
 
 interface nsIWebBrowserPersistDocumentReceiver;
 
+/**
+ * Interface for objects which represent a document that can be
+ * serialized with nsIWebBrowserPersist.  This interface is
+ * asynchronous because the actual document can be in another process
+ * (e.g., if this object is an nsFrameLoader for an out-of-process
+ * frame).
+ *
+ * @see nsIWebBrowserPersistDocumentReceiver
+ * @see nsIWebBrowserPersistDocument
+ * @see nsIWebBrowserPersist
+ */
 [scriptable, function, uuid(24d0dc9e-b970-4cca-898f-cbba03abaa73)]
 interface nsIWebBrowserPersistable : nsISupports
 {

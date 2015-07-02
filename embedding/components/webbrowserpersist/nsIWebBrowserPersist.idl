@@ -248,7 +248,9 @@ interface nsIWebBrowserPersist : nsICancelable
    *
    * @param aDocument          Document to save to file. Some implementations of
    *                           this interface may also support <CODE>nullptr</CODE>
-   *                           to imply the currently loaded document.
+   *                           to imply the currently loaded document.  Can be an
+   *                           nsIWebBrowserPersistDocument or nsIWebBrowserPersistable
+   *                           (which includes nsDocument and nsFrameLoader).
    * @param aFile              Target local file. This may be a nsIFile object or an
    *                           nsIURI object with a file scheme or a scheme that
    *                           supports uploading (e.g. ftp).
@@ -264,6 +266,8 @@ interface nsIWebBrowserPersist : nsICancelable
    *                           wrap text at. Parameter is ignored if wrapping is not
    *                           specified by the encoding flags.
    *
+   * @see nsIWebBrowserPersistDocument
+   * @see nsIWebBrowserPersistable
    * @see nsIFile
    * @see nsIURI
    *
