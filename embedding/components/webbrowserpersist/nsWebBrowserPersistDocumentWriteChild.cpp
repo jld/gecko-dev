@@ -18,7 +18,6 @@ NS_IMPL_ISUPPORTS(nsWebBrowserPersistDocumentWriteChild,
 nsWebBrowserPersistDocumentWriteChild::nsWebBrowserPersistDocumentWriteChild(const WebBrowserPersistMap& aMap)
 : mMap(aMap)
 {
-    MOZ_RELEASE_ASSERT(mMap.mapURIsFrom().Length() == mMap.mapURIsTo().Length());
 }
 
 nsWebBrowserPersistDocumentWriteChild::~nsWebBrowserPersistDocumentWriteChild()
@@ -40,7 +39,7 @@ nsWebBrowserPersistDocumentWriteChild::OnFinish(nsIWebBrowserPersistDocument* aD
 NS_IMETHODIMP
 nsWebBrowserPersistDocumentWriteChild::GetNumMappedURIs(uint32_t* aNum)
 {
-    *aNum = static_cast<uint32_t>(mMap.mapURIsTo().Length());
+    *aNum = static_cast<uint32_t>(mMap.mapURIs().Length());
     return NS_OK;
 }
 
@@ -49,11 +48,11 @@ nsWebBrowserPersistDocumentWriteChild::GetURIMapping(uint32_t aIndex,
                                                      nsACString& aMapFrom,
                                                      nsACString& aMapTo)
 {
-    if (aIndex >= mMap.mapURIsTo().Length()) {
+    if (aIndex >= mMap.mapURIs().Length()) {
         return NS_ERROR_INVALID_ARG;
     }
-    aMapFrom = mMap.mapURIsFrom()[aIndex];
-    aMapTo = mMap.mapURIsTo()[aIndex];
+    aMapFrom = mMap.mapURIs()[aIndex].mapFrom();
+    aMapTo = mMap.mapURIs()[aIndex].mapTo();
     return NS_OK;
 }
 
