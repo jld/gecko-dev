@@ -28,8 +28,8 @@ interface nsIWebBrowserPersistMap : nsISupports
   readonly attribute unsigned long numMappedURIs;
 
   /**
-   * Obtain the URI mapping, as a pair of URI spec strings, at the
-   * given index, which must be less than numMappedURIs.
+   * Obtain the URI mapping at the given index, which must be less than
+   * numMappedURIs, as a pair of URI spec strings.
    */
   void getURIMapping(in unsigned long aIndex,
                      out AUTF8String aMapFrom,
