@@ -507,18 +507,20 @@ PersistNodeFixup::PersistNodeFixup(nsWebBrowserPersistLocalDocument* aParent,
 , mCurrentBaseURI(aParent->GetBaseURI())
 , mTargetBaseURI(aTargetURI)
 {
-    uint32_t mapSize;
-    nsresult rv = aMap->GetNumMappedURIs(&mapSize);
-    MOZ_ASSERT(NS_SUCCEEDED(rv));
-    NS_ENSURE_SUCCESS_VOID(rv);
-    for (uint32_t i = 0; i < mapSize; ++i) {
-        nsAutoCString urlFrom;
-        nsCString* urlTo = new nsCString();
-
-        rv = aMap->GetURIMapping(i, urlFrom, *urlTo);
+    if (aMap) {
+        uint32_t mapSize;
+        nsresult rv = aMap->GetNumMappedURIs(&mapSize);
         MOZ_ASSERT(NS_SUCCEEDED(rv));
-        if (NS_SUCCEEDED(rv)) {
-            mMap.Put(urlFrom, urlTo);
+        NS_ENSURE_SUCCESS_VOID(rv);
+        for (uint32_t i = 0; i < mapSize; ++i) {
+            nsAutoCString urlFrom;
+            nsCString* urlTo = new nsCString();
+
+            rv = aMap->GetURIMapping(i, urlFrom, *urlTo);
+            MOZ_ASSERT(NS_SUCCEEDED(rv));
+            if (NS_SUCCEEDED(rv)) {
+                mMap.Put(urlFrom, urlTo);
+            }
         }
     }
 }
@@ -900,8 +902,8 @@ nsWebBrowserPersistLocalDocument::WriteContent(
         encoder->SetWrapColumn(aWrapColumn);
     }
 
+    nsCOMPtr<nsIURI> targetURI;
     if (aMap) {
-        nsCOMPtr<nsIURI> targetURI;
         nsAutoCString targetURISpec;
         rv = aMap->GetTargetBaseURI(targetURISpec);
         if (NS_SUCCEEDED(rv) && !targetURISpec.IsEmpty()) {
@@ -911,10 +913,9 @@ nsWebBrowserPersistLocalDocument::WriteContent(
         } else if (mPersistFlags & nsIWebBrowserPersist::PERSIST_FLAGS_FIXUP_LINKS_TO_DESTINATION) {
             return NS_ERROR_UNEXPECTED;
         }
-
-        rv = encoder->SetNodeFixup(new PersistNodeFixup(this, aMap, targetURI));
-        NS_ENSURE_SUCCESS(rv, NS_ERROR_FAILURE);
     }
+    rv = encoder->SetNodeFixup(new PersistNodeFixup(this, aMap, targetURI));
+    NS_ENSURE_SUCCESS(rv, NS_ERROR_FAILURE);
 
     rv = encoder->EncodeToStream(aStream);
     NS_ENSURE_SUCCESS(rv, NS_ERROR_FAILURE);
