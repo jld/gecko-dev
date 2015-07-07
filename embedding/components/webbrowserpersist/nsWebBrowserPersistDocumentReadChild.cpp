@@ -42,7 +42,7 @@ nsWebBrowserPersistDocumentReadChild::VisitDocument(nsIWebBrowserPersistDocument
     }
     // ...but here, IPC won't free subActor until after this returns
     // to the event loop.
-    
+
     // The order of these two messages will be preserved, because
     // they're the same toplevel protocol and priority.  This order
     // makes things a little cleaner for the parent side.

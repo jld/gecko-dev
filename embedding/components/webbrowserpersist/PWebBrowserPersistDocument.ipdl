@@ -30,24 +30,37 @@ struct WebBrowserPersistDocumentAttrs {
   FileDescriptor[] postFiles;
 };
 
+// IPDL doesn't have tuples, so this gives the pair of strings from
+// nsIWebBrowserPersistMap::getURIMapping a name.
 struct WebBrowserPersistMapEntry {
   nsCString mapFrom;
   nsCString mapTo;
 };
 
-// == nsIWebBrowserPersistMap
+// nsIWebBrowserPersistMap is just copied over IPC as one of these,
+// not proxied, to simplify the protocol.
 struct WebBrowserPersistMap {
   WebBrowserPersistMapEntry[] mapURIs;
   nsCString targetBaseURI;
 };
 
-// == nsIWebBrowserPersistDocument
+// This remotes nsIWebBrowserPersistDocument and its visitors.  The
+// lifecycle is a little complicated: the initial document is
+// constructed parent->child, but subdocuments are constructed
+// child->parent and then passed back.  Subdocuments aren't subactors,
+// because that would impose a lifetime relationship that doesn't
+// exist in the XIPDL; instead they're all managed by the enclosing
+// PBrowser (== TabParent/TabChild).
 protocol PWebBrowserPersistDocument {
   manager PBrowser;
   manages PWebBrowserPersistDocumentRead;
   manages PWebBrowserPersistDocumentWrite;
 
 parent:
+  // The actor isn't exposed to XPCOM until after it gets one of these
+  // two messages; see also the state transition rules.  The message
+  // is either a response to the constructor (if it was parent->child)
+  // or sent after it (if it was child->parent).
   Attributes(WebBrowserPersistDocumentAttrs aAttrs);
   InitFailure(nsresult aStatus);
 

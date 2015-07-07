@@ -13,7 +13,13 @@ protocol PWebBrowserPersistDocumentRead {
 
 parent:
   VisitURI(nsCString aURI);
+
+  // The actor sent here is in the START state; the parent-side
+  // receiver will have to wait for it to enter the MAIN state
+  // before exposing it with a visitDocument call.
   VisitDocument(PWebBrowserPersistDocument aSubDocument);
+
+  // This reflects the endVisit method.
   __delete__(nsresult aStatus);
 };
 
