@@ -37,6 +37,7 @@ nsWebBrowserPersistDocumentWriteParent::RecvWriteData(nsTArray<uint8_t>&& aData)
     static_assert(sizeof(char) == sizeof(uint8_t),
                   "char must be (at least?) 8 bits");
     const char* data = reinterpret_cast<const char*>(aData.Elements());
+    // nsIOutputStream::Write is allowed to return short writes.
     while (written < aData.Length()) {
         uint32_t writeReturn;
         nsresult rv = mStream->Write(data + written,

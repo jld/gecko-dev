@@ -82,14 +82,27 @@ NS_IMETHODIMP
 nsWebBrowserPersistDocumentWriteChild::Write(const char* aBuf, uint32_t aCount,
                                              uint32_t* aWritten)
 {
+    // Normally an nsIOutputStream would have to be thread-safe, but
+    // nsDocumentEncoder currently doesn't call this off the main
+    // thread (which also means it's difficult to test the
+    // thread-safety code this class doesn't yet have).
+    //
+    // This is *not* an NS_ERROR_NOT_IMPLEMENTED, because at this
+    // point we've probably already misused the non-thread-safe
+    // refcounting.
+    MOZ_RELEASE_ASSERT(NS_IsMainThread(), "Fix this class to be thread-safe.");
+
+    // Limit the size of an individual IPC message.
     static const uint32_t kMaxWrite = 4096;
     
-    MOZ_ASSERT(NS_IsMainThread());
-    // nsDocumentEncoder doesn't handle partial writes, so don't do that.
+    // Work around bug 1181433 by sending multiple messages if
+    // necessary to write the entire aCount bytes, even though
+    // nsIOutputStream.idl says we're allowed to do a short write.
     *aWritten = 0;
     while (aCount > 0) {
         uint32_t toWrite = std::min(kMaxWrite, aCount);
         nsTArray<uint8_t> buf;
+        // It would be nice if this extra copy could be avoided.
         buf.AppendElements(aBuf, toWrite);
         SendWriteData(mozilla::Move(buf));
         *aWritten += toWrite;
@@ -123,7 +136,6 @@ nsWebBrowserPersistDocumentWriteChild::IsNonBlocking(bool* aNonBlocking)
 {
     // Writes will never fail with NS_BASE_STREAM_WOULD_BLOCK, so:
     *aNonBlocking = false;
-    // (They'll probably OOM instead of blocking, though, which is bad.)
     return NS_OK;
 }
 

@@ -20,6 +20,8 @@ public:
     nsWebBrowserPersistDocumentChild();
     ~nsWebBrowserPersistDocumentChild();
 
+    // This sends either Attributes or InitFailure and thereby causes
+    // the actor to leave the START state.
     void Start(nsIWebBrowserPersistDocument* aDocument);
     void Start(nsIDocument* aDocument);
 

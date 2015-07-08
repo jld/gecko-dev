@@ -50,6 +50,8 @@ nsWebBrowserPersistDocumentReadParent::RecvVisitURI(const nsCString& aURI)
 bool
 nsWebBrowserPersistDocumentReadParent::RecvVisitDocument(PWebBrowserPersistDocumentParent* aSubDocument)
 {
+    // Don't expose the subdocument to the visitor until it's ready
+    // (until the actor isn't in START state).
     static_cast<nsWebBrowserPersistDocumentParent*>(aSubDocument)
         ->SetOnReady(this);
     return true;

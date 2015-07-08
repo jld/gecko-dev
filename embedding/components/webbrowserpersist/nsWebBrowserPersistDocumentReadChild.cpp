@@ -44,8 +44,12 @@ nsWebBrowserPersistDocumentReadChild::VisitDocument(nsIWebBrowserPersistDocument
     // to the event loop.
 
     // The order of these two messages will be preserved, because
-    // they're the same toplevel protocol and priority.  This order
-    // makes things a little cleaner for the parent side.
+    // they're the same toplevel protocol and priority.
+    //
+    // With this ordering, it's always the transition out of START
+    // state that causes a document's parent actor to be exposed to
+    // XPCOM (for both parent->child and child->parent construction),
+    // which simplifies the lifetime management.
     SendVisitDocument(subActor);
     subActor->Start(aSubDocument);
     return NS_OK;

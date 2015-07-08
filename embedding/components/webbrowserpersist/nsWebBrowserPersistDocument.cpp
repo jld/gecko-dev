@@ -233,13 +233,17 @@ nsWebBrowserPersistDocument::GetBaseURI() const
 
 namespace {
 
+// Helper class for ReadResources().
 class ResourceReader final : public nsIWebBrowserPersistDocumentReceiver {
 public:
     ResourceReader(nsWebBrowserPersistDocument* aParent,
                    nsIWebBrowserPersistResourceVisitor* aVisitor);
     nsresult OnWalkDOMNode(nsIDOMNode* aNode);
-    // FIXME: if nothing else, explain this and mOutstandingDocuments.
-    // Because I didn't understand them a week after I wrote the code.
+
+    // This is called both to indicate the end of the document walk
+    // and when a subdocument is (maybe asynchronously) sent to the
+    // visitor.  The call to EndVisit needs to happen after both of
+    // those have finished.
     void DocumentDone(nsresult aStatus);
 
     NS_DECL_NSIWEBBROWSERPERSISTDOCUMENTRECEIVER
@@ -250,7 +254,13 @@ private:
     nsCOMPtr<nsIWebBrowserPersistResourceVisitor> mVisitor;
     nsCOMPtr<nsIURI> mCurrentBaseURI;
     uint32_t mPersistFlags;
+
+    // The number of DocumentDone calls after which EndVisit will be
+    // called on the visitor.  Counts the main document if it's still
+    // being walked and any outstanding asynchronous subdocument
+    // StartPersistence calls.
     size_t mOutstandingDocuments;
+    // Collects the status parameters to DocumentDone calls.
     nsresult mEndStatus;
 
     nsresult OnWalkURI(const nsACString& aURISpec);
@@ -312,9 +322,11 @@ ResourceReader::OnWalkSubframe(nsIDOMNode* aNode)
     nsresult rv = loader->StartPersistence(this);
     if (NS_FAILED(rv)) {
         if (rv == NS_ERROR_NO_CONTENT) {
-            // Ignore frames with no content document.
+            // Just ignore frames with no content document.
             rv = NS_OK;
         }
+        // StartPersistence won't eventually call this if it failed,
+        // so this does so (to keep mOutstandingDocuments correct).
         DocumentDone(rv);
     }
     return rv;
@@ -597,6 +609,7 @@ ResourceReader::OnWalkDOMNode(nsIDOMNode* aNode)
     return NS_OK;
 }
 
+// Helper class for node rewriting in writeContent().
 class PersistNodeFixup final : public nsIDocumentEncoderNodeFixup {
 public:
     PersistNodeFixup(nsWebBrowserPersistDocument* aParent,
