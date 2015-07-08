@@ -26,6 +26,7 @@ nsWebBrowserPersistDocumentParent::nsWebBrowserPersistDocumentParent()
 bool
 nsWebBrowserPersistDocumentParent::WaitingForAttrs()
 {
+    // i.e., is the actor in the START state?
     return NS_SUCCEEDED(mFailure) && mAttrs.isNothing();
 }
 
@@ -67,11 +68,13 @@ nsWebBrowserPersistDocumentParent::DropExtraRef()
         &nsWebBrowserPersistDocumentParent::ReallyDropExtraRef));
 }
 
+// This method can `delete this`; use DropExtraRef() instead.
 void
 nsWebBrowserPersistDocumentParent::ReallyDropExtraRef()
 {
     MOZ_ASSERT(!mHoldingExtraRef);
-    NS_RELEASE_THIS(); // This can call dtor -> IPC -> all the things.
+    // Note also that the destructor normally calls IPC code.
+    NS_RELEASE_THIS();
 }
 
 void
@@ -128,6 +131,7 @@ nsWebBrowserPersistDocumentParent::RecvInitFailure(const nsresult& aFailure)
     return FireOnReady();
 }
 
+// Common prologue for the XPIDL attribute accessors.
 nsresult
 nsWebBrowserPersistDocumentParent::AccessAttrs()
 {
@@ -327,9 +331,9 @@ nsWebBrowserPersistDocumentParent::WriteContent(
         }
     }
 
-    auto subActor = new nsWebBrowserPersistDocumentWriteParent(this,
-                                                               aStream,
-                                                               aCompletion);
+    auto* subActor = new nsWebBrowserPersistDocumentWriteParent(this,
+                                                                aStream,
+                                                                aCompletion);
     nsCString requestedContentType(aRequestedContentType); // Sigh.
     return SendPWebBrowserPersistDocumentWriteConstructor(subActor,
                                                           map,
