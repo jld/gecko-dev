@@ -93,7 +93,7 @@ nsWebBrowserPersistDocumentWriteChild::Write(const char* aBuf, uint32_t aCount,
     MOZ_RELEASE_ASSERT(NS_IsMainThread(), "Fix this class to be thread-safe.");
 
     // Limit the size of an individual IPC message.
-    static const uint32_t kMaxWrite = 4096;
+    static const uint32_t kMaxWrite = 65536;
     
     // Work around bug 1181433 by sending multiple messages if
     // necessary to write the entire aCount bytes, even though
