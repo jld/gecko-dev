@@ -54,8 +54,12 @@ public:
     NS_DECL_NSISTREAMLISTENER
     NS_DECL_NSIPROGRESSEVENTSINK
 
+// FIXME: Is the right set of members still protected vs. private
+// after all these changes?  Or does it even matter, given that
+// nothing inherits from this class?  (i.e., can I just change
+// protected to private and declare the class final?)
+
 // Protected members
-// FIXME: rethink all the privacy stuff
 protected:
     virtual ~nsWebBrowserPersist();
     nsresult SaveURIInternal(
