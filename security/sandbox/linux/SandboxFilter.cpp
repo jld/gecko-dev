@@ -499,7 +499,7 @@ public:
 };
 
 UniquePtr<sandbox::bpf_dsl::Policy>
-GetContentSandboxPolicy()
+GetContentSandboxPolicy(SandboxBrokerClient* aMaybeBroker)
 {
   return UniquePtr<sandbox::bpf_dsl::Policy>(new ContentSandboxPolicy());
 }

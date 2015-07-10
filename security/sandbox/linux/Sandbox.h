@@ -30,7 +30,7 @@ MOZ_SANDBOX_EXPORT void SandboxEarlyInit(GeckoProcessType aType, bool aIsNuwa);
 #ifdef MOZ_CONTENT_SANDBOX
 // Call only if SandboxInfo::CanSandboxContent() returns true.
 // (No-op if MOZ_DISABLE_CONTENT_SANDBOX is set.)
-MOZ_SANDBOX_EXPORT void SetContentProcessSandbox();
+MOZ_SANDBOX_EXPORT void SetContentProcessSandbox(int aBrokerFd);
 #endif
 
 #ifdef MOZ_GMP_SANDBOX

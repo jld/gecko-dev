@@ -1,0 +1,37 @@
+/* -*- Mode: C++; tab-width: 8; indent-tabs-mode: nil; c-basic-offset: 2 -*- */
+/* vim: set ts=8 sts=2 et sw=2 tw=80: */
+/* This Source Code Form is subject to the terms of the Mozilla Public
+ * License, v. 2.0. If a copy of the MPL was not distributed with this file,
+ * You can obtain one at http://mozilla.org/MPL/2.0/. */
+
+#ifndef mozilla_SandboxBrokerClient_h
+#define mozilla_SandboxBrokerClient_h
+
+#include "broker/SandboxBrokerCommon.h"
+
+#include "mozilla/Attributes.h"
+
+struct stat;
+
+namespace mozilla {
+
+class SandboxBrokerClient final : private SandboxBrokerCommon {
+ public:
+  explicit SandboxBrokerClient(int aFd);
+  ~SandboxBrokerClient();
+
+  int Open(const char* aPath, int aFlags);
+  int Access(const char* aPath, int aMode);
+  int Stat(const char* aPath, struct stat* aStat);
+  int LStat(const char* aPath, struct stat* aStat);
+
+ private:
+  int mFileDesc;
+
+  int DoCall(const Request *aReq, const char *aPath, struct stat* aStat,
+             int *aOpenedFd);
+};
+
+} // namespace mozilla
+
+#endif // mozilla_SandboxBrokerClient_h

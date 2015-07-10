@@ -16,6 +16,9 @@
 
 #include "BlobChild.h"
 #include "CrashReporterChild.h"
+#ifdef MOZ_WIDGET_GONK
+#include "GLLibraryEGL.h"
+#endif
 #include "GeckoProfiler.h"
 #include "TabChild.h"
 
@@ -1163,7 +1166,7 @@ StartMacOSContentSandbox()
 #endif
 
 bool
-ContentChild::RecvSetProcessSandbox()
+ContentChild::RecvSetProcessSandbox(const MaybeFileDesc& aBroker)
 {
     // We may want to move the sandbox initialization somewhere else
     // at some point; see bug 880808.
@@ -1179,7 +1182,14 @@ ContentChild::RecvSetProcessSandbox()
         return true;
     }
 #endif
-    SetContentProcessSandbox();
+    int brokerFd = -1;
+    if (aBroker.type() == MaybeFileDesc::TFileDescriptor) {
+        brokerFd = aBroker.get_FileDescriptor().PlatformHandle();
+#ifdef MOZ_WIDGET_GONK
+        mozilla::gl::sEGLLibrary.EnsureInitialized();
+#endif
+    }
+    SetContentProcessSandbox(brokerFd);
 #elif defined(XP_WIN)
     mozilla::SandboxTarget::Instance()->StartSandbox();
 #elif defined(XP_MACOSX)
