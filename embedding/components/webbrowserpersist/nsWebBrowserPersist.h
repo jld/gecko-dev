@@ -189,6 +189,7 @@ private:
     nsTArray<CleanupData*>    mCleanupList;
     nsTArray<nsCString>       mFilenameList;
     bool                      mFirstAndOnlyUse;
+    bool                      mSavingDocument;
     bool                      mCancel;
     bool                      mCompleted;
     bool                      mStartSaving;

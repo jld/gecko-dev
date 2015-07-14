@@ -314,6 +314,7 @@ const char *kWebBrowserPersistStringBundle =
 nsWebBrowserPersist::nsWebBrowserPersist() :
     mCurrentThingsToPersist(0),
     mFirstAndOnlyUse(true),
+    mSavingDocument(false),
     mCancel(false),
     mCompleted(false),
     mStartSaving(false),
@@ -510,6 +511,12 @@ NS_IMETHODIMP nsWebBrowserPersist::SaveDocument(
 {
     NS_ENSURE_TRUE(mFirstAndOnlyUse, NS_ERROR_FAILURE);
     mFirstAndOnlyUse = false; // Stop people from reusing this object!
+
+    // We need a STATE_IS_NETWORK start/stop pair to bracket the
+    // notification callbacks.  For a whole document we generate those
+    // here and in EndDownload(), but for the single-request methods
+    // that's done in On{Start,Stop}Request instead.
+    mSavingDocument = true;
 
     NS_ENSURE_ARG_POINTER(aDocument);
     NS_ENSURE_ARG_POINTER(aFile);
@@ -789,6 +796,9 @@ NS_IMETHODIMP nsWebBrowserPersist::OnStartRequest(
     {
         uint32_t stateFlags = nsIWebProgressListener::STATE_START |
                               nsIWebProgressListener::STATE_IS_REQUEST;
+        if (!mSavingDocument) {
+            stateFlags |= nsIWebProgressListener::STATE_IS_NETWORK;
+        }
         mProgressListener->OnStateChange(nullptr, request, stateFlags, NS_OK);
     }
 
@@ -884,6 +894,9 @@ NS_IMETHODIMP nsWebBrowserPersist::OnStopRequest(
     if (mProgressListener) {
         uint32_t stateFlags = nsIWebProgressListener::STATE_STOP |
                               nsIWebProgressListener::STATE_IS_REQUEST;
+        if (!mSavingDocument) {
+            stateFlags |= nsIWebProgressListener::STATE_IS_NETWORK;
+        }
         mProgressListener->OnStateChange(nullptr, request, stateFlags, status);
     }
 
