@@ -50,6 +50,7 @@
 #include "nsILoadContext.h"
 #include "nsIProtocolHandler.h"
 #include "nsISHEntry.h"
+#include "nsISupportsPrimitives.h"
 #include "nsITabParent.h"
 #include "nsIWebBrowserPersist.h"
 #include "nsIWebNavigation.h"
