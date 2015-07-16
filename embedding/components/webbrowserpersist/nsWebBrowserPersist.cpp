@@ -245,7 +245,7 @@ class nsWebBrowserPersist::FlatMap final
     : public nsIWebBrowserPersistMap
 {
 public:
-    FlatMap(const nsACString& aTargetBase)
+    explicit FlatMap(const nsACString& aTargetBase)
     : mTargetBase(aTargetBase) { }
 
     void Add(const nsACString& aMapFrom, const nsACString& aMapTo) {
