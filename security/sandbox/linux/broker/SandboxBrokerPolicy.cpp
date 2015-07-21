@@ -7,18 +7,22 @@
 #include "SandboxBrokerPolicy.h"
 
 #include "mozilla/ClearOnShutdown.h"
+#include "nsPrintfCString.h"
+#include "nsString.h"
 #include "nsThreadUtils.h"
 
 namespace mozilla {
 
+namespace {
+static const int rdonly = SandboxBroker::MAY_READ;
+static const int wronly = SandboxBroker::MAY_WRITE;
+static const int rdwr = rdonly | wronly;
+static const int wrlog = wronly | SandboxBroker::MAY_CREATE;
+}
+
 SandboxBrokerPolicyFactory::SandboxBrokerPolicyFactory()
 {
 #if defined(MOZ_CONTENT_SANDBOX) && defined(MOZ_WIDGET_GONK)
-  static const int rdonly = SandboxBroker::MAY_READ;
-  static const int wronly = SandboxBroker::MAY_WRITE;
-  static const int rdwr = rdonly | wronly;
-  static const int wrlog = wronly | SandboxBroker::MAY_CREATE;
-
   SandboxBroker::Policy* policy = new SandboxBroker::Policy;
 
   policy->AddPath(rdwr, "/dev/genlock");  // bug 980924
@@ -49,14 +53,20 @@ SandboxBrokerPolicyFactory::SandboxBrokerPolicyFactory()
   policy->AddTree(rdonly, "/system/b2g");
 
   // Dynamic library loading from assorted frameworks we don't control
-  // (media codecs, maybe others).
+  // (media codecs, maybe others).  Also, the profiler calls breakpad
+  // code to get info on loaded libraries which opens them all; that
+  // we could maybe fix, but NO BUG YET.
   policy->AddTree(rdonly, "/system/lib");
   policy->AddTree(rdonly, "/vendor/lib");
+  policy->AddPath(rdonly, "/system/bin/linker"); // (profiler only)
 
   policy->AddTree(rdonly, "/system/usr/share/zoneinfo"); // Timezones???
 
   // FIXME: conditionalize this on actually running mochitests.
   policy->AddPath(wrlog, "/data/local/tests/log/mochitest.log");
+
+  policy->AddPath(rdonly, "/data/local/tmp/profiler.options",
+                  /* might not exist yet: */ true); // bug 1029337
 
   mCommonContentPolicy.reset(policy);
 #endif
@@ -72,7 +82,17 @@ SandboxBrokerPolicyFactory::GetContentPolicy(int aPid)
   UniquePtr<SandboxBroker::Policy>
     policy(new SandboxBroker::Policy(*mCommonContentPolicy));
 
-  // FIXME: profile thing goes here
+  // FIXME, maybe: don't hardcode 2 (== GeckoProcessType_Content).
+  nsPrintfCString profilerLogPath("/data/local/tmp/profile_2_%d.txt", aPid);
+  policy->AddPath(wrlog, profilerLogPath.get()); // bug 1029337
+
+  // No bug yet: memory reporting.
+  policy->AddPath(rdonly, nsPrintfCString("/proc/%d/statm", aPid).get());
+  policy->AddPath(rdonly, nsPrintfCString("/proc/%d/smaps", aPid).get());
+
+  // This one is actually for profiling.
+  policy->AddPath(rdonly, nsPrintfCString("/proc/%d/maps", aPid).get());
+
   return policy;
 #else // MOZ_WIDGET_GONK
   // Not implemented for desktop yet.
