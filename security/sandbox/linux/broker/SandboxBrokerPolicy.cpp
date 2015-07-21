@@ -34,26 +34,29 @@ SandboxBrokerPolicyFactory::SandboxBrokerPolicyFactory()
   policy->AddPath(rdonly, "/sys/devices/system/cpu"); // NO BUG; sysconf
   policy->AddPath(rdonly, "/sys/devices/system/cpu/present"); // bug 1025329
   policy->AddPath(rdonly, "/sys/devices/system/soc/soc0/id"); // bug 1025339
+  policy->AddPath(rdonly, "/etc/media_profiles.xml"); // NO BUG YET; camera.
+  policy->AddPath(rdonly, "/etc/media_codecs.xml"); // NO BUG YET; video decode
+  policy->AddTree(rdonly, "/system/fonts"); // bug 1026063
 
-  // Uncategorized hacks:
-  policy->AddTree(rdonly, "/system/fonts");
-  policy->AddTree(rdonly, "/system/lib"); // I dislike this.
-  policy->AddTree(rdonly, "/vendor/lib"); // And this.
+  // Things known to be in /system/b2g and used in content:
+  // * NSS libraries
+  // * Possibly web apps, depending on build type
+  // * Reftest data
+  // * Speech recognition models
+  // Given that people are probably going to keep throwing stuff
+  // into this directory, the whole thing gets whitelisted for now.
+  // (For future reference: crossplatformly, this is NS_GRE_DIR.)
+  policy->AddTree(rdonly, "/system/b2g");
 
-  // Camera hacks:
-  policy->AddPath(rdonly, "/etc/media_profiles.xml");
+  // Dynamic library loading from assorted frameworks we don't control
+  // (media codecs, maybe others).
+  policy->AddTree(rdonly, "/system/lib");
+  policy->AddTree(rdonly, "/vendor/lib");
 
-  // Video hacks:
-  policy->AddPath(rdonly, "/etc/media_codecs.xml");
+  policy->AddTree(rdonly, "/system/usr/share/zoneinfo"); // Timezones???
 
-  // NSS hacks:
-  policy->AddPath(rdonly, "/system/b2g/libsoftokn3.so");
-  policy->AddPath(rdonly, "/system/b2g/libfreebl3.so");
-
-  // Test hacks: (FIXME: conditionalize)
+  // FIXME: conditionalize this on actually running mochitests.
   policy->AddPath(wrlog, "/data/local/tests/log/mochitest.log");
-  policy->AddTree(rdonly, "/system/b2g/distribution/bundles/reftest@mozilla.org");
-  policy->AddPath(0, "/data/local/tests/profile"); // FIXME: explain this
 
   mCommonContentPolicy.reset(policy);
 #endif
