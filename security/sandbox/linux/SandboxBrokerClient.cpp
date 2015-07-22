@@ -17,6 +17,7 @@
 
 #include "mozilla/Assertions.h"
 #include "mozilla/NullPtr.h"
+#include "base/strings/safe_sprintf.h"
 
 namespace mozilla {
 
@@ -31,16 +32,40 @@ SandboxBrokerClient::~SandboxBrokerClient()
 }
 
 int
-SandboxBrokerClient::DoCall(const Request *aReq, const char *aPath,
-				struct stat *aStat, int *aOpenedFd)
+SandboxBrokerClient::DoCall(const Request* aReq, const char* aPath,
+				struct stat* aStat, int* aOpenedFd)
 {
+  // Remap /proc/self to the actual pid, so that the broker can open
+  // it.  This happens here instead of in the broker to follow the
+  // principle of least privilege and keep the broker as simple as
+  // possible.  (Note: when pid namespaces happen, this will also need
+  // to remap the inner pid to the outer pid.)
+  static const char kProcSelf[] = "/proc/self/";
+  static const size_t kProcSelfLen = sizeof(kProcSelf) - 1;
+  const char* path = aPath;
+  // This buffer just needs to be large enough for any such path that
+  // the policy would actually allow.  sizeof("/proc/2147483647/") == 18.
+  char rewrittenPath[64];
+  if (strncmp(aPath, kProcSelf, kProcSelfLen) == 0) {
+    ssize_t len =
+      base::strings::SafeSPrintf(rewrittenPath, "/proc/%d/%s",
+                                 getpid(), aPath + kProcSelfLen);
+    if (static_cast<size_t>(len) < sizeof(rewrittenPath)) {
+      // FIXME: this one definitely needs to be verbose-gated for landing.
+      SANDBOX_LOG_ERROR("rewriting %s -> %s", aPath, rewrittenPath);
+      path = rewrittenPath;
+    } else {
+      SANDBOX_LOG_ERROR("not rewriting unexpectedly long path %s", aPath);
+    }
+  }
+
   struct iovec ios[2];
   int respFds[2];
 
   ios[0].iov_base = const_cast<Request*>(aReq);
   ios[0].iov_len = sizeof(*aReq);
-  ios[1].iov_base = const_cast<char*>(aPath);
-  ios[1].iov_len = strlen(aPath);
+  ios[1].iov_base = const_cast<char*>(path);
+  ios[1].iov_len = strlen(path);
   if (ios[1].iov_len > kMaxPathLen) {
     errno = ENAMETOOLONG;
     return -1;
@@ -76,7 +101,7 @@ SandboxBrokerClient::DoCall(const Request *aReq, const char *aPath,
   }
   if (recvd == 0) {
     SANDBOX_LOG_ERROR("Unexpected EOF, op %d flags 0%o path %s",
-                      aReq->mOp, aReq->mFlags, aPath);
+                      aReq->mOp, aReq->mFlags, path);
     errno = EIO;
     return -1;
   }
@@ -91,7 +116,7 @@ SandboxBrokerClient::DoCall(const Request *aReq, const char *aPath,
   }
   // FIXME: verbose?
   SANDBOX_LOG_ERROR("Rejected errno %d op %d flags 0%o path %s",
-                    resp.mError, aReq->mOp, aReq->mFlags, aPath);
+                    resp.mError, aReq->mOp, aReq->mFlags, path);
   if (aOpenedFd && *aOpenedFd >= 0) {
     close(*aOpenedFd);
     *aOpenedFd = -1;
