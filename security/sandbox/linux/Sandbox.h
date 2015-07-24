@@ -27,6 +27,8 @@ namespace mozilla {
 // This must be called early, while the process is still single-threaded.
 MOZ_SANDBOX_EXPORT void SandboxEarlyInit(GeckoProcessType aType, bool aIsNuwa);
 
+MOZ_SANDBOX_EXPORT void SandboxPostFork(int aCloneFlags, uid_t aUid, gid_t aGid);
+
 #ifdef MOZ_CONTENT_SANDBOX
 // Call only if SandboxInfo::CanSandboxContent() returns true.
 // (No-op if MOZ_DISABLE_CONTENT_SANDBOX is set.)

@@ -7,6 +7,8 @@
 #ifndef mozilla_SandboxUtil_h
 #define mozilla_SandboxUtil_h
 
+#include <sys/types.h>
+
 namespace mozilla {
 
 bool IsSingleThreaded();
@@ -15,6 +17,8 @@ bool IsSingleThreaded();
 // process's subjective uid and gid are unchanged.  This will always
 // fail if the process is multithreaded.
 bool UnshareUserNamespace();
+
+void SetUpUserNamespace(uid_t aUid, gid_t aGid);
 
 } // namespace mozilla
 

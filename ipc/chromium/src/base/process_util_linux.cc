@@ -28,6 +28,15 @@
 #ifdef MOZ_B2G_LOADER
 #include "ProcessUtils.h"
 
+#if defined(MOZ_SANDBOX) && !defined(MOZ_WIDGET_GONK)
+#define USE_PID_NAMESPACE
+#include <linux/sched.h>
+#include <sched.h>
+#include <setjmp.h>
+#include "mozilla/Sandbox.h"
+#endif
+
+
 using namespace mozilla::ipc;
 #endif	// MOZ_B2G_LOADER
 
@@ -211,6 +220,107 @@ IsLaunchingNuwa(const std::vector<std::string>& argv) {
 }
 #endif // MOZ_B2G_LOADER
 
+#ifdef USE_PID_NAMESPACE
+namespace {
+
+#ifdef MOZ_VALGRIND
+bool IsRunningOnValgrind() {
+#ifdef RUNNING_ON_VALGRIND
+  return RUNNING_ON_VALGRIND;
+#else
+  return false;
+#endif // RUNNING_ON_VALGRIND
+}
+#endif // MOZ_VALGRIND
+
+// This function runs on the stack specified on the clone call. It uses longjmp
+// to switch back to the original stack so the child can return from sys_clone.
+int
+CloneHelper(void* arg) {
+  jmp_buf* env_ptr = reinterpret_cast<jmp_buf*>(arg);
+  longjmp(*env_ptr, 1);
+
+  // Should not be reached.
+  MOZ_CRASH("unreachable");
+  return 1;
+}
+
+// This function is noinline to ensure that stack_buf is below the stack pointer
+// that is saved when setjmp is called below. This is needed because when
+// compiled with FORTIFY_SOURCE, glibc's longjmp checks that the stack is moved
+// upwards. See https://crbug.com/442912 for more details.
+//
+// Disable AddressSanitizer instrumentation for this function to make sure
+// |stack_buf| is allocated on thread stack instead of ASan's fake stack.
+// Under ASan longjmp() will attempt to clean up the area between the old and
+// new stack pointers and print a warning that may confuse the user.
+MOZ_NEVER_INLINE MOZ_ASAN_BLACKLIST pid_t
+CloneAndLongjmpInChild(unsigned long flags,
+                       pid_t* ptid,
+                       pid_t* ctid,
+                       jmp_buf* env) {
+  // We use the libc clone wrapper instead of making the syscall
+  // directly because making the syscall may fail to update the libc's
+  // internal pid cache. The libc interface unfortunately requires
+  // specifying a new stack, so we use setjmp/longjmp to emulate
+  // fork-like behavior.
+  char stack_buf[PTHREAD_STACK_MIN];
+#if defined(ARCH_CPU_X86_FAMILY) || defined(ARCH_CPU_ARM_FAMILY) || \
+    defined(ARCH_CPU_MIPS64_FAMILY) || defined(ARCH_CPU_MIPS_FAMILY)
+  // The stack grows downward.
+  void* stack = stack_buf + sizeof(stack_buf);
+#else
+#error "Unsupported architecture"
+#endif // ARCH_*
+  return clone(&CloneHelper, stack, flags, env, ptid, nullptr, ctid);
+}
+
+}  // anonymous namespace
+
+pid_t ForkWithFlags(unsigned long flags,
+                    pid_t* ptid = nullptr,
+                    pid_t* ctid = nullptr) {
+  const bool clone_tls_used = flags & CLONE_SETTLS;
+  const bool invalid_ctid =
+      (flags & (CLONE_CHILD_SETTID | CLONE_CHILD_CLEARTID)) && !ctid;
+  const bool invalid_ptid = (flags & CLONE_PARENT_SETTID) && !ptid;
+
+  // We do not support CLONE_VM.
+  const bool clone_vm_used = flags & CLONE_VM;
+
+  if (clone_tls_used || invalid_ctid || invalid_ptid || clone_vm_used) {
+    MOZ_CRASH("Invalid usage of ForkWithFlags");
+  }
+
+#ifdef MOZ_VALGRIND
+  // Valgrind's clone implementation does not support specifiying a child_stack
+  // without CLONE_VM, so we cannot use libc's clone wrapper when running under
+  // Valgrind. As a result, the libc pid cache may be incorrect under Valgrind.
+  // See https://crbug.com/442817 for more details.
+  if (IsRunningOnValgrind()) {
+    // See kernel/fork.c in Linux. There is different ordering of sys_clone
+    // parameters depending on CONFIG_CLONE_BACKWARDS* configuration options.
+#if defined(ARCH_CPU_X86_64)
+    return syscall(__NR_clone, flags, nullptr, ptid, ctid, nullptr);
+#elif defined(ARCH_CPU_X86) || defined(ARCH_CPU_ARM_FAMILY) || \
+    defined(ARCH_CPU_MIPS_FAMILY) || defined(ARCH_CPU_MIPS64_FAMILY)
+    // CONFIG_CLONE_BACKWARDS defined.
+    return syscall(__NR_clone, flags, nullptr, ptid, nullptr, ctid);
+#else
+#error "Unsupported architecture"
+#endif // ARCH_*
+  }
+#endif // MOZ_VALGRIND
+
+  jmp_buf env;
+  if (setjmp(env) == 0) {
+    return CloneAndLongjmpInChild(flags, ptid, ctid, &env);
+  }
+
+  return 0;
+}
+#endif // USE_PID_NAMESPACE
+
 bool LaunchApp(const std::vector<std::string>& argv,
                const file_handle_mapping_vector& fds_to_remap,
                const environment_map& env_vars_to_set,
@@ -240,11 +350,28 @@ bool LaunchApp(const std::vector<std::string>& argv,
     return false;
   }
 
-  pid_t pid = fork();
-  if (pid < 0)
+  pid_t pid = -1;
+  int cloneFlags;
+#ifdef USE_PID_NAMESPACE
+  uid_t uid = getuid();
+  gid_t gid = getgid();
+  if (privs == PRIVILEGES_UNPRIVILEGED) {
+    cloneFlags = CLONE_NEWUSER | CLONE_NEWPID;
+    pid = ForkWithFlags(SIGCHLD | cloneFlags);
+  }
+#endif // USE_PID_NAMESPACE
+  if (pid < 0) {
+    cloneFlags = 0;
+    pid = fork();
+  }
+  if (pid < 0) {
     return false;
+  }
 
   if (pid == 0) {
+#ifdef USE_PID_NAMESPACE
+    SandboxPostFork(cloneFlags, uid, gid);
+#endif // USE_PID_NAMESPACE
     for (file_handle_mapping_vector::const_iterator
         it = fds_to_remap.begin(); it != fds_to_remap.end(); ++it) {
       fd_shuffle1.push_back(InjectionArc(it->first, it->second, false));
@@ -289,13 +416,13 @@ bool LaunchApp(const CommandLine& cl,
 }
 
 void SetCurrentProcessPrivileges(ChildPrivileges privs) {
+#ifdef MOZ_WIDGET_GONK
   if (privs == PRIVILEGES_INHERIT) {
     return;
   }
 
   gid_t gid = CHILD_UNPRIVILEGED_GID;
   uid_t uid = CHILD_UNPRIVILEGED_UID;
-#ifdef MOZ_WIDGET_GONK
   {
     static bool checked_pix_max, pix_max_ok;
     if (!checked_pix_max) {
@@ -324,7 +451,6 @@ void SetCurrentProcessPrivileges(ChildPrivileges privs) {
     gid += getpid();
     uid += getpid();
   }
-#endif
   if (setgid(gid) != 0) {
     DLOG(ERROR) << "FAILED TO setgid() CHILD PROCESS";
     _exit(127);
@@ -335,6 +461,7 @@ void SetCurrentProcessPrivileges(ChildPrivileges privs) {
   }
   if (chdir("/") != 0)
     gProcessLog.print("==> could not chdir()\n");
+#endif
 }
 
 }  // namespace base

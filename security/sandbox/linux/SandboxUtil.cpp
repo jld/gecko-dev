@@ -8,6 +8,7 @@
 
 #include "LinuxCapabilities.h"
 #include "LinuxSched.h"
+#include "SandboxInternal.h"
 #include "SandboxLogging.h"
 
 #include <fcntl.h>
@@ -16,11 +17,14 @@
 #include <sys/types.h>
 #include <unistd.h>
 
+#include "base/strings/safe_sprintf.h"
 #include "mozilla/Assertions.h"
 #include "mozilla/unused.h"
 #include "sandbox/linux/services/linux_syscalls.h"
 
 namespace mozilla {
+
+using base::strings::SafeSPrintf;
 
 bool
 IsSingleThreaded()
@@ -60,19 +64,24 @@ UnshareUserNamespace()
   // below.
   uid_t uid = getuid();
   gid_t gid = getgid();
-  char buf[80];
-  size_t len;
 
   if (syscall(__NR_unshare, CLONE_NEWUSER) != 0) {
     return false;
   }
 
+  SetUpUserNamespace(uid, gid);
+  return true;
+}
+
+
+void
+SetUpUserNamespace(uid_t aUid, gid_t aGid)
+{
   // As mentioned in the header, this function sets up uid/gid
   // mappings that preserve the process's previous ids.  Mapping the
   // uid/gid to something is necessary in order to nest user
-  // namespaces (not used yet, but we'll need this in the future for
-  // pid namespace support), and leaving the ids unchanged is the
-  // least confusing option.
+  // namespaces (needed for pid namespace support), and leaving the
+  // ids unchanged is the least confusing option.
   //
   // In recent kernels (3.19, 3.18.2, 3.17.8), for security reasons,
   // establishing gid mappings will fail unless the process first
@@ -83,7 +92,10 @@ UnshareUserNamespace()
   // current thread.  However, CLONE_NEWUSER can be unshared only in a
   // single-threaded process, so those are equivalent if we reach this
   // point.
-  len = size_t(snprintf(buf, sizeof(buf), "%u %u 1\n", uid, uid));
+  char buf[80];
+  size_t len;
+
+  len = static_cast<size_t>(SafeSPrintf(buf, "%d %d 1\n", aUid, aUid));
   MOZ_ASSERT(len < sizeof(buf));
   if (!WriteStringToFile("/proc/self/uid_map", buf, len)) {
     MOZ_CRASH("Failed to write /proc/self/uid_map");
@@ -91,12 +103,11 @@ UnshareUserNamespace()
 
   unused << WriteStringToFile("/proc/self/setgroups", "deny", 4);
 
-  len = size_t(snprintf(buf, sizeof(buf), "%u %u 1\n", gid, gid));
+  len = static_cast<size_t>(SafeSPrintf(buf, "%d %d 1\n", aGid, aGid));
   MOZ_ASSERT(len < sizeof(buf));
   if (!WriteStringToFile("/proc/self/gid_map", buf, len)) {
     MOZ_CRASH("Failed to write /proc/self/gid_map");
   }
-  return true;
 }
 
 } // namespace mozilla

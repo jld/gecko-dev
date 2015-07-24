@@ -63,16 +63,6 @@ static const int kMagicAndroidSystemPropFd = 5;
 #include "AndroidBridge.h"
 #endif
 
-static const bool kLowRightsSubprocesses =
-  // We currently only attempt to drop privileges on gonk, because we
-  // have no plugins or extensions to worry about breaking.
-#ifdef MOZ_WIDGET_GONK
-  true
-#else
-  false
-#endif
-  ;
-
 static bool
 ShouldHaveDirectoryService()
 {
@@ -90,8 +80,7 @@ struct RunnableMethodTraits<GeckoChildProcessHost>
 base::ChildPrivileges
 GeckoChildProcessHost::DefaultChildPrivileges()
 {
-  return (kLowRightsSubprocesses ?
-          base::PRIVILEGES_UNPRIVILEGED : base::PRIVILEGES_INHERIT);
+  return base::PRIVILEGES_DEFAULT;
 }
 
 GeckoChildProcessHost::GeckoChildProcessHost(GeckoProcessType aProcessType,

@@ -599,6 +599,14 @@ SandboxEarlyInit(GeckoProcessType aType, bool aIsNuwa)
   }
 }
 
+void
+SandboxPostFork(int aCloneFlags, uid_t aUid, gid_t aGid)
+{
+  if (aCloneFlags & CLONE_NEWUSER) {
+    SetUpUserNamespace(aUid, aGid);
+  }
+}
+
 #ifdef MOZ_CONTENT_SANDBOX
 /**
  * Starts the seccomp sandbox for a content process.  Should be called
