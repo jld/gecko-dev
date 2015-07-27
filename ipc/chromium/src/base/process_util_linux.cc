@@ -25,9 +25,6 @@
 #include "prenv.h"
 #include "prmem.h"
 
-#ifdef MOZ_B2G_LOADER
-#include "ProcessUtils.h"
-
 #if defined(MOZ_SANDBOX) && !defined(MOZ_WIDGET_GONK)
 #define USE_PID_NAMESPACE
 #include <linux/sched.h>
@@ -36,6 +33,8 @@
 #include "mozilla/Sandbox.h"
 #endif
 
+#ifdef MOZ_B2G_LOADER
+#include "ProcessUtils.h"
 
 using namespace mozilla::ipc;
 #endif	// MOZ_B2G_LOADER
@@ -358,6 +357,9 @@ bool LaunchApp(const std::vector<std::string>& argv,
   if (privs == PRIVILEGES_UNPRIVILEGED) {
     cloneFlags = CLONE_NEWUSER | CLONE_NEWPID;
     pid = ForkWithFlags(SIGCHLD | cloneFlags);
+    if (pid < 0) {
+      gProcessLog.print("==> failed namespace fork: %s\n", strerror(errno));
+    }
   }
 #endif // USE_PID_NAMESPACE
   if (pid < 0) {
@@ -370,7 +372,7 @@ bool LaunchApp(const std::vector<std::string>& argv,
 
   if (pid == 0) {
 #ifdef USE_PID_NAMESPACE
-    SandboxPostFork(cloneFlags, uid, gid);
+    mozilla::SandboxPostFork(cloneFlags, uid, gid);
 #endif // USE_PID_NAMESPACE
     for (file_handle_mapping_vector::const_iterator
         it = fds_to_remap.begin(); it != fds_to_remap.end(); ++it) {
@@ -396,8 +398,8 @@ bool LaunchApp(const std::vector<std::string>& argv,
     DLOG(ERROR) << "FAILED TO exec() CHILD PROCESS, path: " << argv_cstr[0];
     _exit(127);
   } else {
-    gProcessLog.print("==> process %d launched child process %d\n",
-                      GetCurrentProcId(), pid);
+    gProcessLog.print("==> process %d launched child process %d (privs %d flags %x)\n",
+                      GetCurrentProcId(), pid, privs, (unsigned)cloneFlags);
     if (wait)
       HANDLE_EINTR(waitpid(pid, 0, 0));
 

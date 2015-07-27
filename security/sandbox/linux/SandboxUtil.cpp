@@ -73,7 +73,6 @@ UnshareUserNamespace()
   return true;
 }
 
-
 void
 SetUpUserNamespace(uid_t aUid, gid_t aGid)
 {
