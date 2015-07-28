@@ -24,7 +24,11 @@ nsWebBrowserPersistDocumentChild::~nsWebBrowserPersistDocumentChild()
 void
 nsWebBrowserPersistDocumentChild::Start(nsIDocument* aDocument)
 {
-    Start(aDocument ? new nsWebBrowserPersistDocument(aDocument) : nullptr);
+    nsRefPtr<nsWebBrowserPersistDocument> doc;
+    if (aDocument) {
+        doc = new nsWebBrowserPersistDocument(aDocument);
+    }
+    Start(doc);
 }
 
 void
