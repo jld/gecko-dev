@@ -3368,6 +3368,7 @@ TabParent::StartPersistence(nsIWebBrowserPersistDocumentReceiver* aRecv)
   actor->SetOnReady(aRecv);
   return SendPWebBrowserPersistDocumentConstructor(actor)
     ? NS_OK : NS_ERROR_FAILURE;
+  // (The actor will be destroyed on constructor failure.)
 }
 
 NS_IMETHODIMP

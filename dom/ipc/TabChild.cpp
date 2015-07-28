@@ -3112,7 +3112,6 @@ PWebBrowserPersistDocumentChild*
 TabChild::AllocPWebBrowserPersistDocumentChild()
 {
   return new nsWebBrowserPersistDocumentChild();
-  MOZ_CRASH("not implemented yet");
 }
 
 bool
