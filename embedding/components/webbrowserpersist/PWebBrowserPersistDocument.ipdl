@@ -49,7 +49,7 @@ struct WebBrowserPersistMap {
 // constructed parent->child, but subdocuments are constructed
 // child->parent and then passed back.  Subdocuments aren't subactors,
 // because that would impose a lifetime relationship that doesn't
-// exist in the XIPDL; instead they're all managed by the enclosing
+// exist in the XPIDL; instead they're all managed by the enclosing
 // PBrowser (== TabParent/TabChild).
 protocol PWebBrowserPersistDocument {
   manager PBrowser;
