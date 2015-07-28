@@ -1267,8 +1267,8 @@ nsWebBrowserPersistDocument::ReadResources(nsIWebBrowserPersistResourceVisitor* 
     MOZ_ASSERT(oldStyleDoc);
     rv = oldStyleDoc->CreateTreeWalker(docAsNode,
             nsIDOMNodeFilter::SHOW_ELEMENT |
-                nsIDOMNodeFilter::SHOW_DOCUMENT |
-                nsIDOMNodeFilter::SHOW_PROCESSING_INSTRUCTION,
+            nsIDOMNodeFilter::SHOW_DOCUMENT |
+            nsIDOMNodeFilter::SHOW_PROCESSING_INSTRUCTION,
             nullptr, 1, getter_AddRefs(walker));
     NS_ENSURE_SUCCESS(rv, NS_ERROR_FAILURE);
     MOZ_ASSERT(walker);
