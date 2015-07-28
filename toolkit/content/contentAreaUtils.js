@@ -126,19 +126,26 @@ function saveImageURL(aURL, aFileName, aFilePickerTitleKey, aShouldBypassCache,
                aDoc, aSkipPrompt, null);
 }
 
-function saveFrame(aFrame, aSkipPrompt)
+// This is like saveDocument, but takes any browser/frame-like element
+// (nsIFrameLoaderOwner) and saves the current document inside it,
+// whether in-process or out-of-process.
+function saveBrowser(aBrowser, aSkipPrompt)
 {
-  if (!aFrame) {
-    throw "Must have a frame when calling saveFrame";
+  if (!aBrowser) {
+    throw "Must have a browser when calling saveBrowser";
   }
-  aFrame.QueryInterface(Ci.nsIFrameLoaderOwner)
-        .frameLoader
-        .QueryInterface(Ci.nsIWebBrowserPersistable)
-        .startPersistence(function (document) {
+  let persistable = aBrowser.QueryInterface(Ci.nsIFrameLoaderOwner)
+                    .frameLoader
+                    .QueryInterface(Ci.nsIWebBrowserPersistable);
+  persistable.startPersistence(function (document) {
     saveDocument(document, aSkipPrompt);
   });
 }
 
+// Saves a document; aDocument can be an nsIWebBrowserPersistDocument,
+// an nsIDOMDocument, or a CPOW to a remote nsIDOMDocument.  In the
+// CPOW case, "save as" modes that serialize the document's DOM are
+// unavailable.
 function saveDocument(aDocument, aSkipPrompt)
 {
   if (!aDocument)
