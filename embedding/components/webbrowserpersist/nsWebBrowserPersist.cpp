@@ -180,7 +180,7 @@ nsWebBrowserPersist::OnStart::OnStart(nsWebBrowserPersist* aParent,
 : mParent(aParent)
 , mFile(aFile)
 , mDataPath(aDataPath)
-{    
+{
 }
 
 class nsWebBrowserPersist::OnWalk final
@@ -188,7 +188,7 @@ class nsWebBrowserPersist::OnWalk final
 {
 public:
     OnWalk(nsWebBrowserPersist* mParent, nsIURI* aFile, nsIFile* aDataPath);
-    
+
     NS_DECL_NSIWEBBROWSERPERSISTRESOURCEVISITOR
     NS_DECL_ISUPPORTS
 private:
@@ -208,7 +208,7 @@ nsWebBrowserPersist::OnWalk::OnWalk(nsWebBrowserPersist* aParent,
 : mParent(aParent)
 , mFile(aFile)
 , mDataPath(aDataPath)
-{    
+{
 }
 
 class nsWebBrowserPersist::OnWrite final
@@ -218,7 +218,7 @@ public:
     OnWrite(nsWebBrowserPersist* aParent,
             nsIURI* aFile,
             nsIFile* aLocalFile);
-    
+
     NS_DECL_NSIWEBBROWSERPERSISTWRITECOMPLETION
     NS_DECL_ISUPPORTS
 private:
@@ -2713,7 +2713,7 @@ nsWebBrowserPersist::SaveSubframeContent(
         nsCOMPtr<nsIURI> docURI;
         rv = NS_NewURI(getter_AddRefs(docURI), aURISpec, mCurrentCharset.get());
         NS_ENSURE_SUCCESS(rv, rv);
-        
+
         nsCOMPtr<nsIURL> url(do_QueryInterface(docURI, &rv));
         nsAutoCString extension;
         if (NS_SUCCEEDED(rv)) {

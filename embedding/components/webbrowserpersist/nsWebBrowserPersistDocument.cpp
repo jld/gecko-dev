@@ -440,7 +440,7 @@ nsresult
 ResourceReader::OnWalkDOMNode(nsIDOMNode* aNode)
 {
     nsresult rv;
-    
+
     // Fixup xml-stylesheet processing instructions
     nsCOMPtr<nsIDOMProcessingInstruction> nodeAsPI = do_QueryInterface(aNode);
     if (nodeAsPI) {

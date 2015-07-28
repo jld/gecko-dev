@@ -63,7 +63,6 @@ nsWebBrowserPersistDocumentWriteChild::GetTargetBaseURI(nsACString& aURI)
     return NS_OK;
 }
 
-
 NS_IMETHODIMP
 nsWebBrowserPersistDocumentWriteChild::Close()
 {
@@ -94,7 +93,7 @@ nsWebBrowserPersistDocumentWriteChild::Write(const char* aBuf, uint32_t aCount,
 
     // Limit the size of an individual IPC message.
     static const uint32_t kMaxWrite = 65536;
-    
+
     // Work around bug 1181433 by sending multiple messages if
     // necessary to write the entire aCount bytes, even though
     // nsIOutputStream.idl says we're allowed to do a short write.

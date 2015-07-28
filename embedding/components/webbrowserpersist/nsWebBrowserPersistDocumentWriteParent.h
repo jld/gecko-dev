@@ -22,7 +22,7 @@ public:
         nsIOutputStream* aStream,
         nsIWebBrowserPersistWriteCompletion* aFinish);
     virtual ~nsWebBrowserPersistDocumentWriteParent();
-    
+
     virtual bool
     RecvWriteData(nsTArray<uint8_t>&& aData) override;
 

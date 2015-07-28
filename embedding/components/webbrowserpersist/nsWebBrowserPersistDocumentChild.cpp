@@ -82,7 +82,7 @@ nsWebBrowserPersistDocumentChild::AllocPWebBrowserPersistDocumentReadChild()
 bool
 nsWebBrowserPersistDocumentChild::RecvPWebBrowserPersistDocumentReadConstructor(PWebBrowserPersistDocumentReadChild* aActor)
 {
-    nsRefPtr<nsWebBrowserPersistDocumentReadChild> visitor = 
+    nsRefPtr<nsWebBrowserPersistDocumentReadChild> visitor =
         static_cast<nsWebBrowserPersistDocumentReadChild*>(aActor);
     nsresult rv = mDocument->ReadResources(visitor);
     if (NS_FAILED(rv)) {
