@@ -159,7 +159,11 @@ class nsWebBrowserPersist::OnStart final
     : public nsIWebBrowserPersistDocumentReceiver
 {
 public:
-    OnStart(nsWebBrowserPersist* aParent, nsIURI* aFile, nsIURI* aDataPath);
+    OnStart(nsWebBrowserPersist* aParent, nsIURI* aFile, nsIURI* aDataPath)
+    : mParent(aParent)
+    , mFile(aFile)
+    , mDataPath(aDataPath)
+    { }
 
     NS_DECL_NSIWEBBROWSERPERSISTDOCUMENTRECEIVER
     NS_DECL_ISUPPORTS
@@ -174,20 +178,15 @@ private:
 NS_IMPL_ISUPPORTS(nsWebBrowserPersist::OnStart,
                   nsIWebBrowserPersistDocumentReceiver)
 
-nsWebBrowserPersist::OnStart::OnStart(nsWebBrowserPersist* aParent,
-                                      nsIURI* aFile,
-                                      nsIURI* aDataPath)
-: mParent(aParent)
-, mFile(aFile)
-, mDataPath(aDataPath)
-{
-}
-
 class nsWebBrowserPersist::OnWalk final
     : public nsIWebBrowserPersistResourceVisitor
 {
 public:
-    OnWalk(nsWebBrowserPersist* mParent, nsIURI* aFile, nsIFile* aDataPath);
+    OnWalk(nsWebBrowserPersist* aParent, nsIURI* aFile, nsIFile* aDataPath)
+    : mParent(aParent)
+    , mFile(aFile)
+    , mDataPath(aDataPath)
+    { }
 
     NS_DECL_NSIWEBBROWSERPERSISTRESOURCEVISITOR
     NS_DECL_ISUPPORTS
@@ -202,22 +201,17 @@ private:
 NS_IMPL_ISUPPORTS(nsWebBrowserPersist::OnWalk,
                   nsIWebBrowserPersistResourceVisitor)
 
-nsWebBrowserPersist::OnWalk::OnWalk(nsWebBrowserPersist* aParent,
-                                    nsIURI* aFile,
-                                    nsIFile* aDataPath)
-: mParent(aParent)
-, mFile(aFile)
-, mDataPath(aDataPath)
-{
-}
-
 class nsWebBrowserPersist::OnWrite final
     : public nsIWebBrowserPersistWriteCompletion
 {
 public:
     OnWrite(nsWebBrowserPersist* aParent,
             nsIURI* aFile,
-            nsIFile* aLocalFile);
+            nsIFile* aLocalFile)
+    : mParent(aParent)
+    , mFile(aFile)
+    , mLocalFile(aLocalFile)
+    { }
 
     NS_DECL_NSIWEBBROWSERPERSISTWRITECOMPLETION
     NS_DECL_ISUPPORTS
@@ -231,15 +225,6 @@ private:
 
 NS_IMPL_ISUPPORTS(nsWebBrowserPersist::OnWrite,
                   nsIWebBrowserPersistWriteCompletion)
-
-nsWebBrowserPersist::OnWrite::OnWrite(nsWebBrowserPersist* aParent,
-                                      nsIURI* aFile,
-                                      nsIFile* aLocalFile)
-: mParent(aParent)
-, mFile(aFile)
-, mLocalFile(aLocalFile)
-{
-}
 
 class nsWebBrowserPersist::FlatMap final
     : public nsIWebBrowserPersistMap
