@@ -54,9 +54,9 @@ typedef struct _GtkWidget GtkWidget;
 #endif
 
 class nsFrameLoader final : public nsIFrameLoader,
+                            public nsIWebBrowserPersistable,
                             public nsStubMutationObserver,
-                            public mozilla::dom::ipc::MessageManagerCallback,
-                            public nsIWebBrowserPersistable
+                            public mozilla::dom::ipc::MessageManagerCallback
 {
   friend class AutoResetInShow;
   typedef mozilla::dom::PBrowserParent PBrowserParent;
