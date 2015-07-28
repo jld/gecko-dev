@@ -41,9 +41,9 @@ nsWebBrowserPersistDocumentReadParent::Recv__delete__(const nsresult& aStatus)
 }
 
 bool
-nsWebBrowserPersistDocumentReadParent::RecvVisitURI(const nsCString& aURI)
+nsWebBrowserPersistDocumentReadParent::RecvVisitResource(const nsCString& aURI)
 {
-    mVisitor->VisitURI(mDocument, aURI);
+    mVisitor->VisitResource(mDocument, aURI);
     return true;
 }
 

@@ -22,11 +22,11 @@ nsWebBrowserPersistDocumentReadChild::~nsWebBrowserPersistDocumentReadChild()
 }
 
 NS_IMETHODIMP
-nsWebBrowserPersistDocumentReadChild::VisitURI(nsIWebBrowserPersistDocument *aDocument,
-                                               const nsACString& aURI)
+nsWebBrowserPersistDocumentReadChild::VisitResource(nsIWebBrowserPersistDocument *aDocument,
+                                                    const nsACString& aURI)
 {
     nsCString copiedURI(aURI); // Yay, XPIDL/IPDL mismatch.
-    SendVisitURI(copiedURI);
+    SendVisitResource(copiedURI);
     return NS_OK;
 }
 

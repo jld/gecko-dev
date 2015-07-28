@@ -22,7 +22,7 @@ public:
                                           nsIWebBrowserPersistResourceVisitor* aVisitor);
 
     virtual bool
-    RecvVisitURI(const nsCString& aURI) override;
+    RecvVisitResource(const nsCString& aURI) override;
 
     virtual bool
     RecvVisitDocument(PWebBrowserPersistDocumentParent* aSubDocument) override;

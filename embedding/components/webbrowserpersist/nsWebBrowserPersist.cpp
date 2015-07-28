@@ -1686,8 +1686,8 @@ nsresult nsWebBrowserPersist::SaveDocumentInternal(
 }
 
 NS_IMETHODIMP
-nsWebBrowserPersist::OnWalk::VisitURI(nsIWebBrowserPersistDocument* aDoc,
-                                      const nsACString& aURI)
+nsWebBrowserPersist::OnWalk::VisitResource(nsIWebBrowserPersistDocument* aDoc,
+                                           const nsACString& aURI)
 {
     return mParent->StoreURI(nsAutoCString(aURI).get());
 }

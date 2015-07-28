@@ -361,7 +361,7 @@ ResourceReader::OnWalkURI(nsIURI* aURI)
     nsAutoCString stringURI;
     rv = aURI->GetSpec(stringURI);
     NS_ENSURE_SUCCESS(rv, rv);
-    return mVisitor->VisitURI(mParent, stringURI);
+    return mVisitor->VisitResource(mParent, stringURI);
 }
 
 nsresult

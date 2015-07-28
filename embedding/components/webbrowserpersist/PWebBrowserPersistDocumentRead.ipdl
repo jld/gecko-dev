@@ -12,7 +12,7 @@ protocol PWebBrowserPersistDocumentRead {
   manager PWebBrowserPersistDocument;
 
 parent:
-  VisitURI(nsCString aURI);
+  VisitResource(nsCString aURI);
 
   // The actor sent here is in the START state; the parent-side
   // receiver will have to wait for it to enter the MAIN state

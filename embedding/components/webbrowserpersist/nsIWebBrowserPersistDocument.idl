@@ -134,8 +134,8 @@ interface nsIWebBrowserPersistResourceVisitor : nsISupports
    * @param aDocument   The document containing the reference.
    * @param aURI        The absolute URI spec for the referenced resource.
    */
-  void visitURI(in nsIWebBrowserPersistDocument aDocument,
-                in AUTF8String aURI);
+  void visitResource(in nsIWebBrowserPersistDocument aDocument,
+                     in AUTF8String aURI);
   /**
    * Indicates a subdocument resource; e.g., a frame or iframe.
    *
