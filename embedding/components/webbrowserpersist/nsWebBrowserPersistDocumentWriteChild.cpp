@@ -97,16 +97,18 @@ nsWebBrowserPersistDocumentWriteChild::Write(const char* aBuf, uint32_t aCount,
     // Work around bug 1181433 by sending multiple messages if
     // necessary to write the entire aCount bytes, even though
     // nsIOutputStream.idl says we're allowed to do a short write.
+    const char* buf = aBuf;
+    uint32_t count = aCount;
     *aWritten = 0;
-    while (aCount > 0) {
-        uint32_t toWrite = std::min(kMaxWrite, aCount);
-        nsTArray<uint8_t> buf;
+    while (count > 0) {
+        uint32_t toWrite = std::min(kMaxWrite, count);
+        nsTArray<uint8_t> arrayBuf;
         // It would be nice if this extra copy could be avoided.
-        buf.AppendElements(aBuf, toWrite);
-        SendWriteData(mozilla::Move(buf));
+        arrayBuf.AppendElements(buf, toWrite);
+        SendWriteData(mozilla::Move(arrayBuf));
         *aWritten += toWrite;
-        aBuf += toWrite;
-        aCount -= toWrite;
+        buf += toWrite;
+        count -= toWrite;
     }
     return NS_OK;
 }
