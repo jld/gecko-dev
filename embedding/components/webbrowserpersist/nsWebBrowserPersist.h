@@ -74,7 +74,7 @@ protected:
         nsIURI *aFile,
         nsIURI *aDataPath);
     nsresult SaveDocuments();
-    void FinishSaveDocumentInternal(nsIURI* aFIle, nsIFile* aDataPath);
+    void FinishSaveDocumentInternal(nsIURI* aFile, nsIFile* aDataPath);
     nsresult GetExtensionForContentType(
         const char16_t *aContentType, char16_t **aExt);
 
