@@ -41,7 +41,9 @@ nsWebBrowserPersistDocumentChild::Start(nsIWebBrowserPersistDocument* aDocument)
     }
 
     WebBrowserPersistDocumentAttrs attrs;
-    nsCOMPtr<nsIInputStream> postData;
+    nsCOMPtr<nsIInputStream> postDataStream;
+    OptionalInputStreamParams postData;
+    nsTArray<FileDescriptor> postFiles;
 #define ENSURE(e) do {           \
         nsresult rv = (e);       \
         if (NS_FAILED(rv)) {     \
@@ -59,13 +61,13 @@ nsWebBrowserPersistDocumentChild::Start(nsIWebBrowserPersistDocument* aDocument)
     ENSURE(aDocument->GetContentDisposition(attrs.contentDisposition()));
     ENSURE(aDocument->GetCacheKey(&(attrs.cacheKey())));
     ENSURE(aDocument->GetPersistFlags(&(attrs.persistFlags())));
-    ENSURE(aDocument->GetPostData(getter_AddRefs(postData)));
-    mozilla::ipc::SerializeInputStream(postData,
-                                       attrs.postData(),
-                                       attrs.postFiles());
+    ENSURE(aDocument->GetPostData(getter_AddRefs(postDataStream)));
+    mozilla::ipc::SerializeInputStream(postDataStream,
+                                       postData,
+                                       postFiles);
 #undef ENSURE
     mDocument = aDocument;
-    SendAttributes(attrs);
+    SendAttributes(attrs, postData, postFiles);
 }
 
 bool

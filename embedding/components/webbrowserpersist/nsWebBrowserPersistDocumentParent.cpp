@@ -107,15 +107,21 @@ nsWebBrowserPersistDocumentParent::~nsWebBrowserPersistDocumentParent()
 }
 
 bool
-nsWebBrowserPersistDocumentParent::RecvAttributes(const Attrs& aAttrs)
+nsWebBrowserPersistDocumentParent::RecvAttributes(const Attrs& aAttrs,
+                                                  const OptionalInputStreamParams& aPostData,
+                                                  nsTArray<FileDescriptor>&& aPostFiles)
 {
     MOZ_ASSERT(mAttrs.isNothing());
     MOZ_ASSERT(NS_SUCCEEDED(mFailure));
     MOZ_ASSERT(mHoldingExtraRef);
+    // Always deserialize, so that we don't leak fds on failure.
+    nsCOMPtr<nsIInputStream> postData =
+        mozilla::ipc::DeserializeInputStream(aPostData, aPostFiles);
     if (!WaitingForAttrs()) {
         return false;
     }
     mAttrs.emplace(aAttrs);
+    mPostData.swap(postData);
     return FireOnReady();
 }
 
@@ -262,9 +268,7 @@ nsWebBrowserPersistDocumentParent::GetPostData(nsIInputStream** aStream)
     // break everything?
     nsresult rv = AccessAttrs();
     if (NS_SUCCEEDED(rv)) {
-        nsCOMPtr<nsIInputStream> stream =
-            mozilla::ipc::DeserializeInputStream(mAttrs->postData(),
-                                                 mAttrs->postFiles());
+        nsCOMPtr<nsIInputStream> stream = mPostData;
         stream.forget(aStream);
     }
     return rv;

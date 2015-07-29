@@ -26,8 +26,6 @@ struct WebBrowserPersistDocumentAttrs {
   nsString contentDisposition;
   uint32_t cacheKey;
   uint32_t persistFlags;
-  OptionalInputStreamParams postData;
-  FileDescriptor[] postFiles;
 };
 
 // IPDL doesn't have tuples, so this gives the pair of strings from
@@ -61,7 +59,9 @@ parent:
   // two messages; see also the state transition rules.  The message
   // is either a response to the constructor (if it was parent->child)
   // or sent after it (if it was child->parent).
-  Attributes(WebBrowserPersistDocumentAttrs aAttrs);
+  Attributes(WebBrowserPersistDocumentAttrs aAttrs,
+             OptionalInputStreamParams postData,
+             FileDescriptor[] postFiles);
   InitFailure(nsresult aStatus);
 
 child:

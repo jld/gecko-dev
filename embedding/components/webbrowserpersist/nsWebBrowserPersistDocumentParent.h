@@ -31,7 +31,9 @@ public:
 
     // IPDL methods:
     virtual bool
-    RecvAttributes(const Attrs& aAttrs) override;
+    RecvAttributes(const Attrs& aAttrs,
+                   const OptionalInputStreamParams& aPostData,
+                   nsTArray<FileDescriptor>&& aPostFiles) override;
     virtual bool
     RecvInitFailure(const nsresult& aFailure) override;
 
@@ -63,6 +65,7 @@ private:
     // FAILED: NS_FAILED(mFailure), mAttrs == Nothing()
     nsresult mFailure;
     mozilla::Maybe<Attrs> mAttrs;
+    nsCOMPtr<nsIInputStream> mPostData;
     // This is reset to nullptr when the callback is invoked.
     nsCOMPtr<nsIWebBrowserPersistDocumentReceiver> mOnReady;
     // This object holds a reference to itself so that it's not
