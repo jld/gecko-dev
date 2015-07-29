@@ -1762,8 +1762,12 @@ nsWebBrowserPersist::FinishSaveDocumentInternal(nsIURI* aFile,
         mWalkStack.LastElement().swap(toWalk);
         mWalkStack.TruncateLength(mWalkStack.Length() - 1);
         // Bounce this off the event loop to avoid stack overflow.
-        // FIXME: is there any non-ugly way to indent this.
-        NS_DispatchToCurrentThread(NS_NewRunnableMethodWithArg<StoreCopyPassByRRef<mozilla::UniquePtr<WalkData>>>(this, &nsWebBrowserPersist::SaveDocumentDeferred, mozilla::Move(toWalk)));
+        typedef StoreCopyPassByRRef<decltype(toWalk)> WalkStorage;
+        auto saveMethod = &nsWebBrowserPersist::SaveDocumentDeferred;
+        nsCOMPtr<nsIRunnable> saveLater =
+            NS_NewRunnableMethodWithArg<WalkStorage>(this, saveMethod,
+                                                     mozilla::Move(toWalk));
+        NS_DispatchToCurrentThread(saveLater);
     } else {
         // Done walking DOMs; on to the serialization phase.
         SerializeNextFile();
