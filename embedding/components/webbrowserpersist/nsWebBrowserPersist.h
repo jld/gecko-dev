@@ -34,11 +34,11 @@
 class nsIStorageStream;
 class nsIWebBrowserPersistDocument;
 
-class nsWebBrowserPersist : public nsIInterfaceRequestor,
-                            public nsIWebBrowserPersist,
-                            public nsIStreamListener,
-                            public nsIProgressEventSink,
-                            public nsSupportsWeakReference
+class nsWebBrowserPersist final : public nsIInterfaceRequestor,
+                                  public nsIWebBrowserPersist,
+                                  public nsIStreamListener,
+                                  public nsIProgressEventSink,
+                                  public nsSupportsWeakReference
 {
     friend class nsEncoderNodeFixup;
 
@@ -54,13 +54,8 @@ public:
     NS_DECL_NSISTREAMLISTENER
     NS_DECL_NSIPROGRESSEVENTSINK
 
-// FIXME: Is the right set of members still protected vs. private
-// after all these changes?  Or does it even matter, given that
-// nothing inherits from this class?  (i.e., can I just change
-// protected to private and declare the class final?)
-
-// Protected members
-protected:
+// Private members
+private:
     virtual ~nsWebBrowserPersist();
     nsresult SaveURIInternal(
         nsIURI *aURI, nsISupports *aCacheKey, nsIURI *aReferrer,
@@ -93,8 +88,6 @@ protected:
     friend class OnWalk;
     friend class OnWrite;
 
-// Private members
-private:
     nsresult SaveDocumentDeferred(mozilla::UniquePtr<WalkData>&& aData);
     void Cleanup();
     void CleanupLocalFiles();
