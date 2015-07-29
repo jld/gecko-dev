@@ -142,12 +142,14 @@ function saveBrowser(aBrowser, aSkipPrompt)
   });
 }
 
-// Saves a document; aDocument can be an nsIWebBrowserPersistDocument,
-// an nsIDOMDocument, or a CPOW to a remote nsIDOMDocument.  In the
-// CPOW case, "save as" modes that serialize the document's DOM are
-// unavailable.  (CPOWs are used only by the context menu "Save Frame
-// As" command, and could in principle be used by add-ons, but this is
-// discouraged.)
+// Saves a document; aDocument can be an nsIWebBrowserPersistDocument
+// (see saveBrowser, above) or an nsIDOMDocument.
+//
+// aDocument can also be a CPOW for a remote nsIDOMDocument, in which
+// case "save as" modes that serialize the document's DOM are
+// unavailable.  This is a temporary measure for the "Save Frame As"
+// command (bug 1141337), and it's possible that there could be
+// add-ons doing something similar.
 function saveDocument(aDocument, aSkipPrompt)
 {
   const Ci = Components.interfaces;
@@ -187,7 +189,8 @@ function saveDocument(aDocument, aSkipPrompt)
       let cacheKey = shEntry.cacheKey
                             .QueryInterface(Ci.nsISupportsPRUint32)
                             .data;
-      // cacheKey might be a CPOW, but numbers aren't wrapped.
+      // cacheKey might be a CPOW, which can't be passed to native
+      // code, but the data attribute is just a number.
       cacheKeyInt = cacheKey.data;
     } catch (ex) {
       // We might not find it in the cache.  Oh, well.
