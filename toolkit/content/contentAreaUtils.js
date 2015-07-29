@@ -145,29 +145,33 @@ function saveBrowser(aBrowser, aSkipPrompt)
 // Saves a document; aDocument can be an nsIWebBrowserPersistDocument,
 // an nsIDOMDocument, or a CPOW to a remote nsIDOMDocument.  In the
 // CPOW case, "save as" modes that serialize the document's DOM are
-// unavailable.
+// unavailable.  (CPOWs are used only by the context menu "Save Frame
+// As" command, and could in principle be used by add-ons, but this is
+// discouraged.)
 function saveDocument(aDocument, aSkipPrompt)
 {
+  const Ci = Components.interfaces;
+
   if (!aDocument)
     throw "Must have a document when calling saveDocument";
 
   let contentDisposition = null;
   let cacheKeyInt = null;
 
-  if ("contentDisposition" in aDocument && "cacheKey" in aDocument) {
+  if (aDocument instanceof Ci.nsIWebBrowserPersistDocument) {
     // nsIWebBrowserPersistDocument exposes these directly.
     contentDisposition = aDocument.contentDisposition;
     cacheKeyInt = aDocument.cacheKey;
-  } else if ("defaultView" in aDocument) {
+  } else if (aDocument instanceof Ci.nsIDOMDocument) {
     // Otherwise it's an actual nsDocument (and possibly a CPOW).
     // We want to use cached data because the document is currently visible.
-    var ifreq =
+    let ifreq =
       aDocument.defaultView
-               .QueryInterface(Components.interfaces.nsIInterfaceRequestor);
+               .QueryInterface(Ci.nsIInterfaceRequestor);
 
     try {
       contentDisposition =
-        ifreq.getInterface(Components.interfaces.nsIDOMWindowUtils)
+        ifreq.getInterface(Ci.nsIDOMWindowUtils)
              .getDocumentMetadata("content-disposition");
     } catch (ex) {
       // Failure to get a content-disposition is ok
@@ -175,17 +179,16 @@ function saveDocument(aDocument, aSkipPrompt)
 
     try {
       let shEntry =
-        ifreq.getInterface(Components.interfaces.nsIWebNavigation)
-             .QueryInterface(Components.interfaces.nsIWebPageDescriptor)
+        ifreq.getInterface(Ci.nsIWebNavigation)
+             .QueryInterface(Ci.nsIWebPageDescriptor)
              .currentDescriptor
-             .QueryInterface(Components.interfaces.nsISHEntry);
+             .QueryInterface(Ci.nsISHEntry);
 
       let cacheKey = shEntry.cacheKey
-                        .QueryInterface(Components.interfaces
-                                                  .nsISupportsPRUint32)
-                        .data;
+                            .QueryInterface(Ci.nsISupportsPRUint32)
+                            .data;
       // cacheKey might be a CPOW, but numbers aren't wrapped.
-      cacheKeyInt = shEntry.cacheKey.data;
+      cacheKeyInt = cacheKey.data;
     } catch (ex) {
       // We might not find it in the cache.  Oh, well.
     }
@@ -389,7 +392,7 @@ function internalSave(aURL, aDocument, aDefaultFileName, aContentDisposition,
 
     let isPrivate = aIsContentWindowPrivate;
     if (isPrivate === undefined) {
-      isPrivate = "defaultView" in aInitiatingDocument
+      isPrivate = aInitiatingDocument instanceof Components.interfaces.nsIDOMDocument
         ? PrivateBrowsingUtils.isContentWindowPrivate(aInitiatingDocument.defaultView)
         : aInitiatingDocument.isPrivate;
     }
@@ -859,20 +862,22 @@ function appendFiltersForContentType(aFilePicker, aContentType, aFileExtension, 
 
 function getPostData(aDocument)
 {
-  if ("postData" in aDocument) {
+  const Ci = Components.interfaces;
+
+  if (aDocument instanceof Ci.nsIWebBrowserPersistDocument) {
     return aDocument.postData;
   }
   try {
     // Find the session history entry corresponding to the given document. In
     // the current implementation, nsIWebPageDescriptor.currentDescriptor always
     // returns a session history entry.
-    var sessionHistoryEntry =
+    let sessionHistoryEntry =
         aDocument.defaultView
-                 .QueryInterface(Components.interfaces.nsIInterfaceRequestor)
-                 .getInterface(Components.interfaces.nsIWebNavigation)
-                 .QueryInterface(Components.interfaces.nsIWebPageDescriptor)
+                 .QueryInterface(Ci.nsIInterfaceRequestor)
+                 .getInterface(Ci.nsIWebNavigation)
+                 .QueryInterface(Ci.nsIWebPageDescriptor)
                  .currentDescriptor
-                 .QueryInterface(Components.interfaces.nsISHEntry);
+                 .QueryInterface(Ci.nsISHEntry);
     return sessionHistoryEntry.postData;
   }
   catch (e) {
@@ -970,7 +975,7 @@ function getDefaultFileName(aDefaultFileName, aURI, aDocument,
   }
 
   let docTitle;
-  if (aDocument && aDocument.title) {
+  if (aDocument) {
     // If the document looks like HTML or XML, try to use its original title.
     docTitle = validateFileName(aDocument.title).trim();
     if (docTitle) {
