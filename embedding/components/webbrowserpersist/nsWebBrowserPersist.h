@@ -80,11 +80,9 @@ private:
     struct URIData;
     struct WalkData;
 
-    class OnStart;
     class OnWalk;
     class OnWrite;
     class FlatMap;
-    friend class OnStart;
     friend class OnWalk;
     friend class OnWrite;
 

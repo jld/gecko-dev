@@ -155,29 +155,6 @@ struct nsWebBrowserPersist::CleanupData
     bool mIsDirectory;
 };
 
-class nsWebBrowserPersist::OnStart final
-    : public nsIWebBrowserPersistDocumentReceiver
-{
-public:
-    OnStart(nsWebBrowserPersist* aParent, nsIURI* aFile, nsIURI* aDataPath)
-    : mParent(aParent)
-    , mFile(aFile)
-    , mDataPath(aDataPath)
-    { }
-
-    NS_DECL_NSIWEBBROWSERPERSISTDOCUMENTRECEIVER
-    NS_DECL_ISUPPORTS
-private:
-    nsRefPtr<nsWebBrowserPersist> mParent;
-    nsCOMPtr<nsIURI> mFile;
-    nsCOMPtr<nsIURI> mDataPath;
-
-    virtual ~OnStart() { }
-};
-
-NS_IMPL_ISUPPORTS(nsWebBrowserPersist::OnStart,
-                  nsIWebBrowserPersistDocumentReceiver)
-
 class nsWebBrowserPersist::OnWalk final
     : public nsIWebBrowserPersistResourceVisitor
 {
@@ -533,37 +510,21 @@ NS_IMETHODIMP nsWebBrowserPersist::SaveDocument(
             | nsIWebProgressListener::STATE_IS_NETWORK, NS_OK);
     }
 
-    nsCOMPtr<nsIWebBrowserPersistDocumentReceiver> start =
-        new OnStart(this, fileAsURI, datapathAsURI);
     nsCOMPtr<nsIWebBrowserPersistDocument> doc = do_QueryInterface(aDocument);
-    if (doc) {
-        rv = start->OnDocumentReady(doc);
-    } else {
-        nsCOMPtr<nsIWebBrowserPersistable> pdoc = do_QueryInterface(aDocument);
-        if (pdoc) {
-            rv = pdoc->StartPersistence(start);
+    if (!doc) {
+        nsCOMPtr<nsIDocument> localDoc = do_QueryInterface(aDocument);
+        if (localDoc) {
+            doc = new nsWebBrowserPersistDocument(localDoc);
         } else {
             rv = NS_ERROR_NO_INTERFACE;
         }
     }
+    if (doc) {
+        rv = SaveDocumentInternal(doc, fileAsURI, datapathAsURI);
+    }
     if (NS_FAILED(rv)) {
+        SendErrorStatusChange(true, rv, nullptr, mURI);
         EndDownload(rv);
-    }
-    return rv;
-}
-
-NS_IMETHODIMP
-nsWebBrowserPersist::OnStart::OnDocumentReady(nsIWebBrowserPersistDocument* aDocument)
-{
-    nsresult rv;
-    if (aDocument) {
-        rv = mParent->SaveDocumentInternal(aDocument, mFile, mDataPath);
-    } else {
-        rv = NS_ERROR_FAILURE;
-    }
-    if (NS_FAILED(rv)) {
-        mParent->SendErrorStatusChange(true, rv, nullptr, mParent->mURI);
-        mParent->EndDownload(rv);
     }
     return rv;
 }
