@@ -8,6 +8,7 @@
 #define nsWebBrowserPersistDocument_h__
 
 #include "nsCOMPtr.h"
+#include "nsCycleCollectionParticipant.h"
 #include "nsIDocument.h"
 #include "nsIURI.h"
 #include "nsIWebBrowserPersistDocument.h"
@@ -25,11 +26,13 @@ public:
     uint32_t GetPersistFlags() const;
     already_AddRefed<nsIURI> GetBaseURI() const;
 
-    NS_DECL_ISUPPORTS
+    NS_DECL_CYCLE_COLLECTING_ISUPPORTS
     NS_DECL_NSIWEBBROWSERPERSISTDOCUMENT
 
+    NS_DECL_CYCLE_COLLECTION_CLASS(nsWebBrowserPersistDocument)
+
 private:
-    nsCOMPtr<nsIDocument> mDocument; // Reference cycles?
+    nsCOMPtr<nsIDocument> mDocument;
     uint32_t mPersistFlags;
 
     void DecideContentType(nsACString& aContentType);

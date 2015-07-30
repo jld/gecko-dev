@@ -13,6 +13,7 @@
 #include "nsComponentManagerUtils.h"
 #include "nsContentUtils.h"
 #include "nsContentCID.h"
+#include "nsCycleCollectionParticipant.h"
 #include "nsFrameLoader.h"
 #include "nsIComponentRegistrar.h"
 #include "nsIContent.h"
@@ -61,7 +62,16 @@ using mozilla::dom::HTMLInputElement;
 using mozilla::dom::HTMLSharedElement;
 using mozilla::dom::HTMLSharedObjectElement;
 
-NS_IMPL_ISUPPORTS(nsWebBrowserPersistDocument, nsIWebBrowserPersistDocument)
+NS_IMPL_CYCLE_COLLECTING_ADDREF(nsWebBrowserPersistDocument)
+NS_IMPL_CYCLE_COLLECTING_RELEASE(nsWebBrowserPersistDocument)
+
+NS_INTERFACE_MAP_BEGIN_CYCLE_COLLECTION(nsWebBrowserPersistDocument)
+  NS_INTERFACE_MAP_ENTRY(nsIWebBrowserPersistDocument)
+  NS_INTERFACE_MAP_ENTRY(nsISupports)
+NS_INTERFACE_MAP_END
+
+NS_IMPL_CYCLE_COLLECTION(nsWebBrowserPersistDocument, mDocument)
+
 
 nsWebBrowserPersistDocument::nsWebBrowserPersistDocument(nsIDocument* aDocument)
 : mDocument(aDocument)
