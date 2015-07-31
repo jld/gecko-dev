@@ -39,19 +39,19 @@ public:
     virtual bool
     RecvInitFailure(const nsresult& aFailure) override;
 
-    virtual PWebBrowserPersistDocumentReadParent*
-    AllocPWebBrowserPersistDocumentReadParent() override;
+    virtual PWebBrowserPersistResourcesParent*
+    AllocPWebBrowserPersistResourcesParent() override;
     virtual bool
-    DeallocPWebBrowserPersistDocumentReadParent(PWebBrowserPersistDocumentReadParent* aActor) override;
+    DeallocPWebBrowserPersistResourcesParent(PWebBrowserPersistResourcesParent* aActor) override;
 
-    virtual PWebBrowserPersistDocumentWriteParent*
-    AllocPWebBrowserPersistDocumentWriteParent(
+    virtual PWebBrowserPersistSerializeParent*
+    AllocPWebBrowserPersistSerializeParent(
             const WebBrowserPersistMap& aMap,
             const nsCString& aRequestedContentType,
             const uint32_t& aEncoderFlags,
             const uint32_t& aWrapColumn) override;
     virtual bool
-    DeallocPWebBrowserPersistDocumentWriteParent(PWebBrowserPersistDocumentWriteParent* aActor) override;
+    DeallocPWebBrowserPersistSerializeParent(PWebBrowserPersistSerializeParent* aActor) override;
 
     virtual void
     ActorDestroy(ActorDestroyReason aWhy) override;

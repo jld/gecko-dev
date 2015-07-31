@@ -9,8 +9,8 @@
 #include "mozilla/ipc/InputStreamUtils.h"
 #include "nsIInputStream.h"
 #include "nsThreadUtils.h"
-#include "nsWebBrowserPersistDocumentReadParent.h"
-#include "nsWebBrowserPersistDocumentWriteParent.h"
+#include "nsWebBrowserPersistResourcesParent.h"
+#include "nsWebBrowserPersistSerializeParent.h"
 #include "nsWebBrowserPersistRemoteDocument.h"
 
 nsWebBrowserPersistDocumentParent::nsWebBrowserPersistDocumentParent()
@@ -75,25 +75,25 @@ nsWebBrowserPersistDocumentParent::RecvInitFailure(const nsresult& aFailure)
     return true;
 }
 
-mozilla::PWebBrowserPersistDocumentReadParent*
-nsWebBrowserPersistDocumentParent::AllocPWebBrowserPersistDocumentReadParent()
+mozilla::PWebBrowserPersistResourcesParent*
+nsWebBrowserPersistDocumentParent::AllocPWebBrowserPersistResourcesParent()
 {
     MOZ_CRASH("Don't use this; construct the actor directly and AddRef.");
     return nullptr;
 }
 
 bool
-nsWebBrowserPersistDocumentParent::DeallocPWebBrowserPersistDocumentReadParent(PWebBrowserPersistDocumentReadParent* aActor)
+nsWebBrowserPersistDocumentParent::DeallocPWebBrowserPersistResourcesParent(PWebBrowserPersistResourcesParent* aActor)
 {
     // Turn the ref held by IPC back into an nsRefPtr.
-    nsRefPtr<nsWebBrowserPersistDocumentReadParent> actor =
-        already_AddRefed<nsWebBrowserPersistDocumentReadParent>(
-            static_cast<nsWebBrowserPersistDocumentReadParent*>(aActor));
+    nsRefPtr<nsWebBrowserPersistResourcesParent> actor =
+        already_AddRefed<nsWebBrowserPersistResourcesParent>(
+            static_cast<nsWebBrowserPersistResourcesParent*>(aActor));
     return true;
 }
 
-mozilla::PWebBrowserPersistDocumentWriteParent*
-nsWebBrowserPersistDocumentParent::AllocPWebBrowserPersistDocumentWriteParent(
+mozilla::PWebBrowserPersistSerializeParent*
+nsWebBrowserPersistDocumentParent::AllocPWebBrowserPersistSerializeParent(
         const WebBrowserPersistMap& aMap,
         const nsCString& aRequestedContentType,
         const uint32_t& aEncoderFlags,
@@ -104,7 +104,7 @@ nsWebBrowserPersistDocumentParent::AllocPWebBrowserPersistDocumentWriteParent(
 }
 
 bool
-nsWebBrowserPersistDocumentParent::DeallocPWebBrowserPersistDocumentWriteParent(PWebBrowserPersistDocumentWriteParent* aActor)
+nsWebBrowserPersistDocumentParent::DeallocPWebBrowserPersistSerializeParent(PWebBrowserPersistSerializeParent* aActor)
 {
     delete aActor;
     return true;

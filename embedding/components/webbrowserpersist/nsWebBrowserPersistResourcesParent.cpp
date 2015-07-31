@@ -4,12 +4,12 @@
  * License, v. 2.0. If a copy of the MPL was not distributed with this
  * file, You can obtain one at http://mozilla.org/MPL/2.0/. */
 
-#include "nsWebBrowserPersistDocumentReadParent.h"
+#include "nsWebBrowserPersistResourcesParent.h"
 
-NS_IMPL_ISUPPORTS(nsWebBrowserPersistDocumentReadParent,
+NS_IMPL_ISUPPORTS(nsWebBrowserPersistResourcesParent,
                   nsIWebBrowserPersistDocumentReceiver)
 
-nsWebBrowserPersistDocumentReadParent::nsWebBrowserPersistDocumentReadParent(
+nsWebBrowserPersistResourcesParent::nsWebBrowserPersistResourcesParent(
         nsIWebBrowserPersistDocument* aDocument,
         nsIWebBrowserPersistResourceVisitor* aVisitor)
 : mDocument(aDocument)
@@ -19,12 +19,12 @@ nsWebBrowserPersistDocumentReadParent::nsWebBrowserPersistDocumentReadParent(
     MOZ_ASSERT(aVisitor);
 }
 
-nsWebBrowserPersistDocumentReadParent::~nsWebBrowserPersistDocumentReadParent()
+nsWebBrowserPersistResourcesParent::~nsWebBrowserPersistResourcesParent()
 {
 }
 
 void
-nsWebBrowserPersistDocumentReadParent::ActorDestroy(ActorDestroyReason aWhy)
+nsWebBrowserPersistResourcesParent::ActorDestroy(ActorDestroyReason aWhy)
 {
     if (aWhy != Deletion && mVisitor) {
         mVisitor->EndVisit(mDocument, NS_ERROR_FAILURE);
@@ -33,7 +33,7 @@ nsWebBrowserPersistDocumentReadParent::ActorDestroy(ActorDestroyReason aWhy)
 }
 
 bool
-nsWebBrowserPersistDocumentReadParent::Recv__delete__(const nsresult& aStatus)
+nsWebBrowserPersistResourcesParent::Recv__delete__(const nsresult& aStatus)
 {
     mVisitor->EndVisit(mDocument, aStatus);
     mVisitor = nullptr;
@@ -41,14 +41,14 @@ nsWebBrowserPersistDocumentReadParent::Recv__delete__(const nsresult& aStatus)
 }
 
 bool
-nsWebBrowserPersistDocumentReadParent::RecvVisitResource(const nsCString& aURI)
+nsWebBrowserPersistResourcesParent::RecvVisitResource(const nsCString& aURI)
 {
     mVisitor->VisitResource(mDocument, aURI);
     return true;
 }
 
 bool
-nsWebBrowserPersistDocumentReadParent::RecvVisitDocument(PWebBrowserPersistDocumentParent* aSubDocument)
+nsWebBrowserPersistResourcesParent::RecvVisitDocument(PWebBrowserPersistDocumentParent* aSubDocument)
 {
     // Don't expose the subdocument to the visitor until it's ready
     // (until the actor isn't in START state).
@@ -58,7 +58,7 @@ nsWebBrowserPersistDocumentReadParent::RecvVisitDocument(PWebBrowserPersistDocum
 }
 
 NS_IMETHODIMP
-nsWebBrowserPersistDocumentReadParent::OnDocumentReady(nsIWebBrowserPersistDocument* aSubDocument)
+nsWebBrowserPersistResourcesParent::OnDocumentReady(nsIWebBrowserPersistDocument* aSubDocument)
 {
     if (!mVisitor) {
         return NS_ERROR_FAILURE;
@@ -68,7 +68,7 @@ nsWebBrowserPersistDocumentReadParent::OnDocumentReady(nsIWebBrowserPersistDocum
 }
 
 NS_IMETHODIMP
-nsWebBrowserPersistDocumentReadParent::OnError(nsresult aFailure)
+nsWebBrowserPersistResourcesParent::OnError(nsresult aFailure)
 {
     // Nothing useful to do but ignore the failed document.
     return NS_OK;

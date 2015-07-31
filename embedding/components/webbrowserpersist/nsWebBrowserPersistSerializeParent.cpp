@@ -4,11 +4,11 @@
  * License, v. 2.0. If a copy of the MPL was not distributed with this
  * file, You can obtain one at http://mozilla.org/MPL/2.0/. */
 
-#include "nsWebBrowserPersistDocumentWriteParent.h"
+#include "nsWebBrowserPersistSerializeParent.h"
 
 #include "nsReadableUtils.h"
 
-nsWebBrowserPersistDocumentWriteParent::nsWebBrowserPersistDocumentWriteParent(
+nsWebBrowserPersistSerializeParent::nsWebBrowserPersistSerializeParent(
         nsIWebBrowserPersistDocument* aDocument,
         nsIOutputStream* aStream,
         nsIWebBrowserPersistWriteCompletion* aFinish)
@@ -22,12 +22,12 @@ nsWebBrowserPersistDocumentWriteParent::nsWebBrowserPersistDocumentWriteParent(
     MOZ_ASSERT(aFinish);
 }
 
-nsWebBrowserPersistDocumentWriteParent::~nsWebBrowserPersistDocumentWriteParent()
+nsWebBrowserPersistSerializeParent::~nsWebBrowserPersistSerializeParent()
 {
 }
 
 bool
-nsWebBrowserPersistDocumentWriteParent::RecvWriteData(nsTArray<uint8_t>&& aData)
+nsWebBrowserPersistSerializeParent::RecvWriteData(nsTArray<uint8_t>&& aData)
 {
     if (NS_FAILED(mOutputError)) {
         return true;
@@ -53,7 +53,7 @@ nsWebBrowserPersistDocumentWriteParent::RecvWriteData(nsTArray<uint8_t>&& aData)
 }
 
 bool
-nsWebBrowserPersistDocumentWriteParent::Recv__delete__(const nsCString& aContentType,
+nsWebBrowserPersistSerializeParent::Recv__delete__(const nsCString& aContentType,
                                                        const nsresult& aStatus)
 {
     if (NS_SUCCEEDED(mOutputError)) {
@@ -68,7 +68,7 @@ nsWebBrowserPersistDocumentWriteParent::Recv__delete__(const nsCString& aContent
 }
 
 void
-nsWebBrowserPersistDocumentWriteParent::ActorDestroy(ActorDestroyReason aWhy)
+nsWebBrowserPersistSerializeParent::ActorDestroy(ActorDestroyReason aWhy)
 {
     if (mFinish) {
         MOZ_ASSERT(aWhy != Deletion);

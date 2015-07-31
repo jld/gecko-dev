@@ -4,25 +4,25 @@
  * License, v. 2.0. If a copy of the MPL was not distributed with this
  * file, You can obtain one at http://mozilla.org/MPL/2.0/. */
 
-#include "nsWebBrowserPersistDocumentReadChild.h"
+#include "nsWebBrowserPersistResourcesChild.h"
 
 #include "nsWebBrowserPersistDocumentChild.h"
 #include "mozilla/dom/PBrowserChild.h"
 
 
-NS_IMPL_ISUPPORTS(nsWebBrowserPersistDocumentReadChild,
+NS_IMPL_ISUPPORTS(nsWebBrowserPersistResourcesChild,
                   nsIWebBrowserPersistResourceVisitor)
 
-nsWebBrowserPersistDocumentReadChild::nsWebBrowserPersistDocumentReadChild()
+nsWebBrowserPersistResourcesChild::nsWebBrowserPersistResourcesChild()
 {
 }
 
-nsWebBrowserPersistDocumentReadChild::~nsWebBrowserPersistDocumentReadChild()
+nsWebBrowserPersistResourcesChild::~nsWebBrowserPersistResourcesChild()
 {
 }
 
 NS_IMETHODIMP
-nsWebBrowserPersistDocumentReadChild::VisitResource(nsIWebBrowserPersistDocument *aDocument,
+nsWebBrowserPersistResourcesChild::VisitResource(nsIWebBrowserPersistDocument *aDocument,
                                                     const nsACString& aURI)
 {
     nsCString copiedURI(aURI); // Yay, XPIDL/IPDL mismatch.
@@ -31,7 +31,7 @@ nsWebBrowserPersistDocumentReadChild::VisitResource(nsIWebBrowserPersistDocument
 }
 
 NS_IMETHODIMP
-nsWebBrowserPersistDocumentReadChild::VisitDocument(nsIWebBrowserPersistDocument* aDocument,
+nsWebBrowserPersistResourcesChild::VisitDocument(nsIWebBrowserPersistDocument* aDocument,
                                                     nsIWebBrowserPersistDocument* aSubDocument)
 {
     auto* subActor = new nsWebBrowserPersistDocumentChild();
@@ -56,7 +56,7 @@ nsWebBrowserPersistDocumentReadChild::VisitDocument(nsIWebBrowserPersistDocument
 }
 
 NS_IMETHODIMP
-nsWebBrowserPersistDocumentReadChild::EndVisit(nsIWebBrowserPersistDocument *aDocument,
+nsWebBrowserPersistResourcesChild::EndVisit(nsIWebBrowserPersistDocument *aDocument,
                                                nsresult aStatus)
 {
     Send__delete__(this, aStatus);

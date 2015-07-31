@@ -28,28 +28,28 @@ public:
     virtual bool
     RecvSetPersistFlags(const uint32_t& aNewFlags) override;
 
-    virtual PWebBrowserPersistDocumentReadChild*
-    AllocPWebBrowserPersistDocumentReadChild() override;
+    virtual PWebBrowserPersistResourcesChild*
+    AllocPWebBrowserPersistResourcesChild() override;
     virtual bool
-    RecvPWebBrowserPersistDocumentReadConstructor(PWebBrowserPersistDocumentReadChild* aActor) override;
+    RecvPWebBrowserPersistResourcesConstructor(PWebBrowserPersistResourcesChild* aActor) override;
     virtual bool
-    DeallocPWebBrowserPersistDocumentReadChild(PWebBrowserPersistDocumentReadChild* aActor) override;
+    DeallocPWebBrowserPersistResourcesChild(PWebBrowserPersistResourcesChild* aActor) override;
 
-    virtual PWebBrowserPersistDocumentWriteChild*
-    AllocPWebBrowserPersistDocumentWriteChild(
+    virtual PWebBrowserPersistSerializeChild*
+    AllocPWebBrowserPersistSerializeChild(
             const WebBrowserPersistMap& aMap,
             const nsCString& aRequestedContentType,
             const uint32_t& aEncoderFlags,
             const uint32_t& aWrapColumn) override;
     virtual bool
-    RecvPWebBrowserPersistDocumentWriteConstructor(
-            PWebBrowserPersistDocumentWriteChild* aActor,
+    RecvPWebBrowserPersistSerializeConstructor(
+            PWebBrowserPersistSerializeChild* aActor,
             const WebBrowserPersistMap& aMap,
             const nsCString& aRequestedContentType,
             const uint32_t& aEncoderFlags,
             const uint32_t& aWrapColumn) override;
     virtual bool
-    DeallocPWebBrowserPersistDocumentWriteChild(PWebBrowserPersistDocumentWriteChild* aActor) override;
+    DeallocPWebBrowserPersistSerializeChild(PWebBrowserPersistSerializeChild* aActor) override;
 
 private:
     nsCOMPtr<nsIWebBrowserPersistDocument> mDocument;

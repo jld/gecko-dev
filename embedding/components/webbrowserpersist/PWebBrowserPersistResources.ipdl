@@ -8,7 +8,7 @@ include protocol PWebBrowserPersistDocument;
 namespace mozilla {
 
 // == nsIWebBrowserPersistResourceVisitor
-protocol PWebBrowserPersistDocumentRead {
+protocol PWebBrowserPersistResources {
   manager PWebBrowserPersistDocument;
 
 parent:

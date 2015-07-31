@@ -4,28 +4,28 @@
  * License, v. 2.0. If a copy of the MPL was not distributed with this
  * file, You can obtain one at http://mozilla.org/MPL/2.0/. */
 
-#include "nsWebBrowserPersistDocumentWriteChild.h"
+#include "nsWebBrowserPersistSerializeChild.h"
 
 #include <algorithm>
 
 #include "nsThreadUtils.h"
 
-NS_IMPL_ISUPPORTS(nsWebBrowserPersistDocumentWriteChild,
+NS_IMPL_ISUPPORTS(nsWebBrowserPersistSerializeChild,
                   nsIWebBrowserPersistWriteCompletion,
                   nsIWebBrowserPersistMap,
                   nsIOutputStream)
 
-nsWebBrowserPersistDocumentWriteChild::nsWebBrowserPersistDocumentWriteChild(const WebBrowserPersistMap& aMap)
+nsWebBrowserPersistSerializeChild::nsWebBrowserPersistSerializeChild(const WebBrowserPersistMap& aMap)
 : mMap(aMap)
 {
 }
 
-nsWebBrowserPersistDocumentWriteChild::~nsWebBrowserPersistDocumentWriteChild()
+nsWebBrowserPersistSerializeChild::~nsWebBrowserPersistSerializeChild()
 {
 }
 
 NS_IMETHODIMP
-nsWebBrowserPersistDocumentWriteChild::OnFinish(nsIWebBrowserPersistDocument* aDocument,
+nsWebBrowserPersistSerializeChild::OnFinish(nsIWebBrowserPersistDocument* aDocument,
                                                 nsIOutputStream* aStream,
                                                 const nsACString& aContentType,
                                                 nsresult aStatus)
@@ -37,14 +37,14 @@ nsWebBrowserPersistDocumentWriteChild::OnFinish(nsIWebBrowserPersistDocument* aD
 }
 
 NS_IMETHODIMP
-nsWebBrowserPersistDocumentWriteChild::GetNumMappedURIs(uint32_t* aNum)
+nsWebBrowserPersistSerializeChild::GetNumMappedURIs(uint32_t* aNum)
 {
     *aNum = static_cast<uint32_t>(mMap.mapURIs().Length());
     return NS_OK;
 }
 
 NS_IMETHODIMP
-nsWebBrowserPersistDocumentWriteChild::GetURIMapping(uint32_t aIndex,
+nsWebBrowserPersistSerializeChild::GetURIMapping(uint32_t aIndex,
                                                      nsACString& aMapFrom,
                                                      nsACString& aMapTo)
 {
@@ -57,28 +57,28 @@ nsWebBrowserPersistDocumentWriteChild::GetURIMapping(uint32_t aIndex,
 }
 
 NS_IMETHODIMP
-nsWebBrowserPersistDocumentWriteChild::GetTargetBaseURI(nsACString& aURI)
+nsWebBrowserPersistSerializeChild::GetTargetBaseURI(nsACString& aURI)
 {
     aURI = mMap.targetBaseURI();
     return NS_OK;
 }
 
 NS_IMETHODIMP
-nsWebBrowserPersistDocumentWriteChild::Close()
+nsWebBrowserPersistSerializeChild::Close()
 {
-    NS_WARNING("nsWebBrowserPersistDocumentWriteChild::Close()");
+    NS_WARNING("nsWebBrowserPersistSerializeChild::Close()");
     return NS_ERROR_NOT_IMPLEMENTED;
 }
 
 NS_IMETHODIMP
-nsWebBrowserPersistDocumentWriteChild::Flush()
+nsWebBrowserPersistSerializeChild::Flush()
 {
-    NS_WARNING("nsWebBrowserPersistDocumentWriteChild::Flush()");
+    NS_WARNING("nsWebBrowserPersistSerializeChild::Flush()");
     return NS_ERROR_NOT_IMPLEMENTED;
 }
 
 NS_IMETHODIMP
-nsWebBrowserPersistDocumentWriteChild::Write(const char* aBuf, uint32_t aCount,
+nsWebBrowserPersistSerializeChild::Write(const char* aBuf, uint32_t aCount,
                                              uint32_t* aWritten)
 {
     // Normally an nsIOutputStream would have to be thread-safe, but
@@ -114,26 +114,26 @@ nsWebBrowserPersistDocumentWriteChild::Write(const char* aBuf, uint32_t aCount,
 }
 
 NS_IMETHODIMP
-nsWebBrowserPersistDocumentWriteChild::WriteFrom(nsIInputStream* aFrom,
+nsWebBrowserPersistSerializeChild::WriteFrom(nsIInputStream* aFrom,
                                                  uint32_t aCount,
                                                  uint32_t* aWritten)
 {
-    NS_WARNING("nsWebBrowserPersistDocumentWriteChild::WriteFrom()");
+    NS_WARNING("nsWebBrowserPersistSerializeChild::WriteFrom()");
     return NS_ERROR_NOT_IMPLEMENTED;
 }
 
 NS_IMETHODIMP
-nsWebBrowserPersistDocumentWriteChild::WriteSegments(nsReadSegmentFun aFun,
+nsWebBrowserPersistSerializeChild::WriteSegments(nsReadSegmentFun aFun,
                                                      void* aCtx,
                                                      uint32_t aCount,
                                                      uint32_t* aWritten)
 {
-    NS_WARNING("nsWebBrowserPersistDocumentWriteChild::WriteSegments()");
+    NS_WARNING("nsWebBrowserPersistSerializeChild::WriteSegments()");
     return NS_ERROR_NOT_IMPLEMENTED;
 }
 
 NS_IMETHODIMP
-nsWebBrowserPersistDocumentWriteChild::IsNonBlocking(bool* aNonBlocking)
+nsWebBrowserPersistSerializeChild::IsNonBlocking(bool* aNonBlocking)
 {
     // Writes will never fail with NS_BASE_STREAM_WOULD_BLOCK, so:
     *aNonBlocking = false;

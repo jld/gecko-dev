@@ -4,21 +4,21 @@
  * License, v. 2.0. If a copy of the MPL was not distributed with this
  * file, You can obtain one at http://mozilla.org/MPL/2.0/. */
 
-#ifndef nsWebBrowserPersistDocumentReadParent_h__
-#define nsWebBrowserPersistDocumentReadParent_h__
+#ifndef nsWebBrowserPersistResourcesParent_h__
+#define nsWebBrowserPersistResourcesParent_h__
 
-#include "mozilla/PWebBrowserPersistDocumentReadParent.h"
+#include "mozilla/PWebBrowserPersistResourcesParent.h"
 
 #include "nsWebBrowserPersistDocumentParent.h"
 #include "nsCOMPtr.h"
 #include "nsIWebBrowserPersistDocument.h"
 
-class nsWebBrowserPersistDocumentReadParent final
-    : public mozilla::PWebBrowserPersistDocumentReadParent
+class nsWebBrowserPersistResourcesParent final
+    : public mozilla::PWebBrowserPersistResourcesParent
     , public nsIWebBrowserPersistDocumentReceiver
 {
 public:
-    nsWebBrowserPersistDocumentReadParent(nsIWebBrowserPersistDocument* aDocument,
+    nsWebBrowserPersistResourcesParent(nsIWebBrowserPersistDocument* aDocument,
                                           nsIWebBrowserPersistResourceVisitor* aVisitor);
 
     virtual bool
@@ -44,7 +44,7 @@ private:
     nsCOMPtr<nsIWebBrowserPersistDocument> mDocument;
     nsCOMPtr<nsIWebBrowserPersistResourceVisitor> mVisitor;
 
-    virtual ~nsWebBrowserPersistDocumentReadParent();
+    virtual ~nsWebBrowserPersistResourcesParent();
 };
 
-#endif // nsWebBrowserPersistDocumentReadParent_h__
+#endif // nsWebBrowserPersistResourcesParent_h__

@@ -10,8 +10,8 @@
 #include "nsIDocument.h"
 #include "nsIInputStream.h"
 #include "nsWebBrowserPersistLocalDocument.h"
-#include "nsWebBrowserPersistDocumentReadChild.h"
-#include "nsWebBrowserPersistDocumentWriteChild.h"
+#include "nsWebBrowserPersistResourcesChild.h"
+#include "nsWebBrowserPersistSerializeChild.h"
 
 nsWebBrowserPersistDocumentChild::nsWebBrowserPersistDocumentChild()
 {
@@ -77,19 +77,19 @@ nsWebBrowserPersistDocumentChild::RecvSetPersistFlags(const uint32_t& aNewFlags)
     return true;
 }
 
-mozilla::PWebBrowserPersistDocumentReadChild*
-nsWebBrowserPersistDocumentChild::AllocPWebBrowserPersistDocumentReadChild()
+mozilla::PWebBrowserPersistResourcesChild*
+nsWebBrowserPersistDocumentChild::AllocPWebBrowserPersistResourcesChild()
 {
-    auto* actor = new nsWebBrowserPersistDocumentReadChild();
+    auto* actor = new nsWebBrowserPersistResourcesChild();
     NS_ADDREF(actor);
     return actor;
 }
 
 bool
-nsWebBrowserPersistDocumentChild::RecvPWebBrowserPersistDocumentReadConstructor(PWebBrowserPersistDocumentReadChild* aActor)
+nsWebBrowserPersistDocumentChild::RecvPWebBrowserPersistResourcesConstructor(PWebBrowserPersistResourcesChild* aActor)
 {
-    nsRefPtr<nsWebBrowserPersistDocumentReadChild> visitor =
-        static_cast<nsWebBrowserPersistDocumentReadChild*>(aActor);
+    nsRefPtr<nsWebBrowserPersistResourcesChild> visitor =
+        static_cast<nsWebBrowserPersistResourcesChild*>(aActor);
     nsresult rv = mDocument->ReadResources(visitor);
     if (NS_FAILED(rv)) {
         visitor->EndVisit(mDocument, rv);
@@ -98,36 +98,36 @@ nsWebBrowserPersistDocumentChild::RecvPWebBrowserPersistDocumentReadConstructor(
 }
 
 bool
-nsWebBrowserPersistDocumentChild::DeallocPWebBrowserPersistDocumentReadChild(PWebBrowserPersistDocumentReadChild* aActor)
+nsWebBrowserPersistDocumentChild::DeallocPWebBrowserPersistResourcesChild(PWebBrowserPersistResourcesChild* aActor)
 {
     auto* castActor =
-        static_cast<nsWebBrowserPersistDocumentReadChild*>(aActor);
+        static_cast<nsWebBrowserPersistResourcesChild*>(aActor);
     NS_RELEASE(castActor);
     return true;
 }
 
-mozilla::PWebBrowserPersistDocumentWriteChild*
-nsWebBrowserPersistDocumentChild::AllocPWebBrowserPersistDocumentWriteChild(
+mozilla::PWebBrowserPersistSerializeChild*
+nsWebBrowserPersistDocumentChild::AllocPWebBrowserPersistSerializeChild(
             const WebBrowserPersistMap& aMap,
             const nsCString& aRequestedContentType,
             const uint32_t& aEncoderFlags,
             const uint32_t& aWrapColumn)
 {
-    auto* actor = new nsWebBrowserPersistDocumentWriteChild(aMap);
+    auto* actor = new nsWebBrowserPersistSerializeChild(aMap);
     NS_ADDREF(actor);
     return actor;
 }
 
 bool
-nsWebBrowserPersistDocumentChild::RecvPWebBrowserPersistDocumentWriteConstructor(
-            PWebBrowserPersistDocumentWriteChild* aActor,
+nsWebBrowserPersistDocumentChild::RecvPWebBrowserPersistSerializeConstructor(
+            PWebBrowserPersistSerializeChild* aActor,
             const WebBrowserPersistMap& aMap,
             const nsCString& aRequestedContentType,
             const uint32_t& aEncoderFlags,
             const uint32_t& aWrapColumn)
 {
     auto* castActor =
-        static_cast<nsWebBrowserPersistDocumentWriteChild*>(aActor);
+        static_cast<nsWebBrowserPersistSerializeChild*>(aActor);
     // This actor performs the roles of: completion, URI map, and output stream.
     nsresult rv = mDocument->WriteContent(castActor,
                                           castActor,
@@ -142,10 +142,10 @@ nsWebBrowserPersistDocumentChild::RecvPWebBrowserPersistDocumentWriteConstructor
 }
 
 bool
-nsWebBrowserPersistDocumentChild::DeallocPWebBrowserPersistDocumentWriteChild(PWebBrowserPersistDocumentWriteChild* aActor)
+nsWebBrowserPersistDocumentChild::DeallocPWebBrowserPersistSerializeChild(PWebBrowserPersistSerializeChild* aActor)
 {
     auto* castActor =
-        static_cast<nsWebBrowserPersistDocumentWriteChild*>(aActor);
+        static_cast<nsWebBrowserPersistSerializeChild*>(aActor);
     NS_RELEASE(castActor);
     return true;
 }

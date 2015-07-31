@@ -4,24 +4,24 @@
  * License, v. 2.0. If a copy of the MPL was not distributed with this
  * file, You can obtain one at http://mozilla.org/MPL/2.0/. */
 
-#ifndef nsWebBrowserPersistDocumentReadChild_h__
-#define nsWebBrowserPersistDocumentReadChild_h__
+#ifndef nsWebBrowserPersistResourcesChild_h__
+#define nsWebBrowserPersistResourcesChild_h__
 
-#include "mozilla/PWebBrowserPersistDocumentReadChild.h"
+#include "mozilla/PWebBrowserPersistResourcesChild.h"
 
 #include "nsIWebBrowserPersistDocument.h"
 
-class nsWebBrowserPersistDocumentReadChild final
-    : public mozilla::PWebBrowserPersistDocumentReadChild
+class nsWebBrowserPersistResourcesChild final
+    : public mozilla::PWebBrowserPersistResourcesChild
     , public nsIWebBrowserPersistResourceVisitor
 {
 public:
-    nsWebBrowserPersistDocumentReadChild();
+    nsWebBrowserPersistResourcesChild();
 
     NS_DECL_NSIWEBBROWSERPERSISTRESOURCEVISITOR
     NS_DECL_ISUPPORTS
 private:
-    virtual ~nsWebBrowserPersistDocumentReadChild();
+    virtual ~nsWebBrowserPersistResourcesChild();
 };
 
 #endif // nsWebBrowserPersistDocumentChild_h__

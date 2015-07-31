@@ -6,8 +6,8 @@
 
 #include "nsWebBrowserPersistRemoteDocument.h"
 #include "nsWebBrowserPersistDocumentParent.h"
-#include "nsWebBrowserPersistDocumentReadParent.h"
-#include "nsWebBrowserPersistDocumentWriteParent.h"
+#include "nsWebBrowserPersistResourcesParent.h"
+#include "nsWebBrowserPersistSerializeParent.h"
 #include "mozilla/unused.h"
 
 NS_IMPL_ISUPPORTS(nsWebBrowserPersistRemoteDocument,
@@ -136,9 +136,9 @@ nsWebBrowserPersistRemoteDocument::ReadResources(nsIWebBrowserPersistResourceVis
     if (!mActor) {
         return NS_ERROR_FAILURE;
     }
-    nsRefPtr<nsWebBrowserPersistDocumentReadParent> subActor =
-        new nsWebBrowserPersistDocumentReadParent(this, aVisitor);
-    return mActor->SendPWebBrowserPersistDocumentReadConstructor(
+    nsRefPtr<nsWebBrowserPersistResourcesParent> subActor =
+        new nsWebBrowserPersistResourcesParent(this, aVisitor);
+    return mActor->SendPWebBrowserPersistResourcesConstructor(
         subActor.forget().take())
         ? NS_OK : NS_ERROR_FAILURE;
 }
@@ -172,11 +172,11 @@ nsWebBrowserPersistRemoteDocument::WriteContent(
         }
     }
 
-    auto* subActor = new nsWebBrowserPersistDocumentWriteParent(this,
+    auto* subActor = new nsWebBrowserPersistSerializeParent(this,
                                                                 aStream,
                                                                 aCompletion);
     nsCString requestedContentType(aRequestedContentType); // Sigh.
-    return mActor->SendPWebBrowserPersistDocumentWriteConstructor(
+    return mActor->SendPWebBrowserPersistSerializeConstructor(
         subActor, map, requestedContentType, aEncoderFlags, aWrapColumn)
         ? NS_OK : NS_ERROR_FAILURE;
 }

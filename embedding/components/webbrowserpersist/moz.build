@@ -15,20 +15,20 @@ XPIDL_MODULE = 'webbrowserpersist'
 
 IPDL_SOURCES += [
     'PWebBrowserPersistDocument.ipdl',
-    'PWebBrowserPersistDocumentRead.ipdl',
-    'PWebBrowserPersistDocumentWrite.ipdl',
+    'PWebBrowserPersistResources.ipdl',
+    'PWebBrowserPersistSerialize.ipdl',
 ]
 
 SOURCES += [
     'nsWebBrowserPersist.cpp',
     'nsWebBrowserPersistDocumentChild.cpp',
     'nsWebBrowserPersistDocumentParent.cpp',
-    'nsWebBrowserPersistDocumentReadChild.cpp',
-    'nsWebBrowserPersistDocumentReadParent.cpp',
-    'nsWebBrowserPersistDocumentWriteChild.cpp',
-    'nsWebBrowserPersistDocumentWriteParent.cpp',
     'nsWebBrowserPersistLocalDocument.cpp',
     'nsWebBrowserPersistRemoteDocument.cpp',
+    'nsWebBrowserPersistResourcesChild.cpp',
+    'nsWebBrowserPersistResourcesParent.cpp',
+    'nsWebBrowserPersistSerializeChild.cpp',
+    'nsWebBrowserPersistSerializeParent.cpp',
 ]
 
 EXPORTS += [
