@@ -189,11 +189,9 @@ interface nsIWebBrowserPersistWriteCompletion : nsISupports
  *
  * @see nsIWebBrowserPersistable.
  */
-[scriptable, function, uuid(321e3174-594f-4036-b7be-791b821bd376)]
+[scriptable, uuid(321e3174-594f-4036-b7be-791b821bd376)]
 interface nsIWebBrowserPersistDocumentReceiver : nsISupports
 {
-  /**
-   * The document passed can be null if an asynchronous error occurred.
-   */
   void onDocumentReady(in nsIWebBrowserPersistDocument aDocument);
+  void onError(in nsresult aFailure);
 };

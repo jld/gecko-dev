@@ -15,12 +15,14 @@
 // This class implements nsIWebBrowserPersistDocument for a remote document.
 // See also mozilla::dom::TabParent::StartPersistence.
 
+class nsWebBrowserPersistRemoteDocument;
+
 class nsWebBrowserPersistDocumentParent final
     : public mozilla::PWebBrowserPersistDocumentParent
-    , public nsIWebBrowserPersistDocument
 {
 public:
     nsWebBrowserPersistDocumentParent();
+    virtual ~nsWebBrowserPersistDocumentParent();
 
     // Set a callback to be invoked when the actor leaves the START
     // state.  It must be called exactly once while the actor is still
@@ -53,42 +55,10 @@ public:
 
     virtual void
     ActorDestroy(ActorDestroyReason aWhy) override;
-
-    // XPIDL methods:
-    NS_DECL_ISUPPORTS
-    NS_DECL_NSIWEBBROWSERPERSISTDOCUMENT
-
 private:
-    // These two instance variables represent the state.
-    //  START: mFailure == NS_OK, mAttrs == Nothing()
-    //   MAIN: mFailure == NS_OK, mAttrs == Some(...)
-    // FAILED: NS_FAILED(mFailure), mAttrs == Nothing()
-    nsresult mFailure;
-    mozilla::Maybe<Attrs> mAttrs;
-    nsCOMPtr<nsIInputStream> mPostData;
     // This is reset to nullptr when the callback is invoked.
     nsCOMPtr<nsIWebBrowserPersistDocumentReceiver> mOnReady;
-    // This object holds a reference to itself so that it's not
-    // destroyed before it's passed to mOnReady.  This gets special
-    // handling in ActorDestroy to not leak the object on abnormal
-    // destruction (normal destruction via __delete__ isn't allowed
-    // until the actor has left the START state).
-    bool mHoldingExtraRef;
-    // Normally the destructor will Send__delete__, but not if the
-    // actor was abormally destroyed.
-    bool mShouldSendDelete;
-
-    // Releasing the self-reference can `delete this`, which is bad if
-    // there are IPC methods of this object on the stack; this pair of
-    // methods exists to defer the actual destruction until it's safe.
-    void DropExtraRef();
-    void ReallyDropExtraRef();
-
-    bool WaitingForAttrs();
-    nsresult AccessAttrs();
-    bool FireOnReady();
-
-    virtual ~nsWebBrowserPersistDocumentParent();
+    nsWebBrowserPersistRemoteDocument* mReflection;
 };
 
 #endif // nsWebBrowserPersistDocumentParent_h__

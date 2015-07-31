@@ -66,3 +66,10 @@ nsWebBrowserPersistDocumentReadParent::OnDocumentReady(nsIWebBrowserPersistDocum
     mVisitor->VisitDocument(mDocument, aSubDocument);
     return NS_OK;
 }
+
+NS_IMETHODIMP
+nsWebBrowserPersistDocumentReadParent::OnError(nsresult aFailure)
+{
+    // Nothing useful to do but ignore the failed document.
+    return NS_OK;
+}

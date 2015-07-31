@@ -346,12 +346,15 @@ ResourceReader::OnWalkSubframe(nsIDOMNode* aNode)
 NS_IMETHODIMP
 ResourceReader::OnDocumentReady(nsIWebBrowserPersistDocument* aDocument)
 {
-    if (aDocument) {
-        mVisitor->VisitDocument(mParent, aDocument);
-        DocumentDone(NS_OK);
-    } else {
-        DocumentDone(NS_ERROR_FAILURE);
-    }
+    mVisitor->VisitDocument(mParent, aDocument);
+    DocumentDone(NS_OK);
+    return NS_OK;
+}
+
+NS_IMETHODIMP
+ResourceReader::OnError(nsresult aFailure)
+{
+    DocumentDone(aFailure);
     return NS_OK;
 }
 

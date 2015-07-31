@@ -137,8 +137,11 @@ function saveBrowser(aBrowser, aSkipPrompt)
   let persistable = aBrowser.QueryInterface(Ci.nsIFrameLoaderOwner)
                     .frameLoader
                     .QueryInterface(Ci.nsIWebBrowserPersistable);
-  persistable.startPersistence(function (document) {
-    saveDocument(document, aSkipPrompt);
+  persistable.startPersistence({
+    // FIXME: what to do with an error?  Cu.something?
+    onDocumentReady: function (document) {
+      saveDocument(document, aSkipPrompt);
+    }
   });
 }
 

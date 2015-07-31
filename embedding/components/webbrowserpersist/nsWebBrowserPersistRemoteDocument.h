@@ -1,0 +1,40 @@
+/* -*- Mode: C++; tab-width: 4; indent-tabs-mode: nil; c-basic-offset: 4 -*-
+ *
+ * This Source Code Form is subject to the terms of the Mozilla Public
+ * License, v. 2.0. If a copy of the MPL was not distributed with this
+ * file, You can obtain one at http://mozilla.org/MPL/2.0/. */
+
+#ifndef nsWebBrowserPersistRemoteDocument_h__
+#define nsWebBrowserPersistRemoteDocument_h__
+
+#include "mozilla/Maybe.h"
+#include "mozilla/PWebBrowserPersistDocumentParent.h"
+#include "nsCOMPtr.h"
+#include "nsIWebBrowserPersistDocument.h"
+#include "nsIInputStream.h"
+
+class nsWebBrowserPersistDocumentParent;
+
+class nsWebBrowserPersistRemoteDocument final
+    : public nsIWebBrowserPersistDocument
+{
+public:
+    NS_DECL_ISUPPORTS
+    NS_DECL_NSIWEBBROWSERPERSISTDOCUMENT
+
+private:
+    using Attrs = mozilla::WebBrowserPersistDocumentAttrs;
+    nsWebBrowserPersistDocumentParent* mActor;
+    Attrs mAttrs;
+    nsCOMPtr<nsIInputStream> mPostData;
+
+    friend class nsWebBrowserPersistDocumentParent;
+    nsWebBrowserPersistRemoteDocument(nsWebBrowserPersistDocumentParent* aActor,
+                                      const Attrs& aAttrs,
+                                      nsIInputStream* aPostData);
+    ~nsWebBrowserPersistRemoteDocument();
+
+    void ActorDestroy(void);
+};
+
+#endif // nsWebBrowserPersistRemoteDocument_h__
