@@ -54,7 +54,7 @@ nsWebBrowserPersistSerializeParent::RecvWriteData(nsTArray<uint8_t>&& aData)
 
 bool
 nsWebBrowserPersistSerializeParent::Recv__delete__(const nsCString& aContentType,
-                                                       const nsresult& aStatus)
+                                                   const nsresult& aStatus)
 {
     if (NS_SUCCEEDED(mOutputError)) {
         mOutputError = aStatus;
@@ -76,4 +76,3 @@ nsWebBrowserPersistSerializeParent::ActorDestroy(ActorDestroyReason aWhy)
         mFinish = nullptr;
     }
 }
-

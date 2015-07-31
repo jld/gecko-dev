@@ -23,7 +23,7 @@ nsWebBrowserPersistResourcesChild::~nsWebBrowserPersistResourcesChild()
 
 NS_IMETHODIMP
 nsWebBrowserPersistResourcesChild::VisitResource(nsIWebBrowserPersistDocument *aDocument,
-                                                    const nsACString& aURI)
+                                                 const nsACString& aURI)
 {
     nsCString copiedURI(aURI); // Yay, XPIDL/IPDL mismatch.
     SendVisitResource(copiedURI);
@@ -32,7 +32,7 @@ nsWebBrowserPersistResourcesChild::VisitResource(nsIWebBrowserPersistDocument *a
 
 NS_IMETHODIMP
 nsWebBrowserPersistResourcesChild::VisitDocument(nsIWebBrowserPersistDocument* aDocument,
-                                                    nsIWebBrowserPersistDocument* aSubDocument)
+                                                 nsIWebBrowserPersistDocument* aSubDocument)
 {
     auto* subActor = new nsWebBrowserPersistDocumentChild();
     mozilla::dom::PBrowserChild* grandManager = Manager()->Manager();
@@ -57,7 +57,7 @@ nsWebBrowserPersistResourcesChild::VisitDocument(nsIWebBrowserPersistDocument* a
 
 NS_IMETHODIMP
 nsWebBrowserPersistResourcesChild::EndVisit(nsIWebBrowserPersistDocument *aDocument,
-                                               nsresult aStatus)
+                                            nsresult aStatus)
 {
     Send__delete__(this, aStatus);
     return NS_OK;
