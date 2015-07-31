@@ -93,7 +93,7 @@
 #include "mozilla/layers/CompositorChild.h"
 
 #include "mozilla/dom/StructuredCloneUtils.h"
-#include "nsWebBrowserPersistDocument.h"
+#include "nsWebBrowserPersistLocalDocument.h"
 
 #ifdef MOZ_XUL
 #include "nsXULPopupManager.h"

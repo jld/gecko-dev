@@ -9,7 +9,7 @@
 #include "mozilla/ipc/InputStreamUtils.h"
 #include "nsIDocument.h"
 #include "nsIInputStream.h"
-#include "nsWebBrowserPersistDocument.h"
+#include "nsWebBrowserPersistLocalDocument.h"
 #include "nsWebBrowserPersistDocumentReadChild.h"
 #include "nsWebBrowserPersistDocumentWriteChild.h"
 
@@ -24,9 +24,9 @@ nsWebBrowserPersistDocumentChild::~nsWebBrowserPersistDocumentChild()
 void
 nsWebBrowserPersistDocumentChild::Start(nsIDocument* aDocument)
 {
-    nsRefPtr<nsWebBrowserPersistDocument> doc;
+    nsRefPtr<nsWebBrowserPersistLocalDocument> doc;
     if (aDocument) {
-        doc = new nsWebBrowserPersistDocument(aDocument);
+        doc = new nsWebBrowserPersistLocalDocument(aDocument);
     }
     Start(doc);
 }

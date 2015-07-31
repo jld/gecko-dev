@@ -21,19 +21,19 @@ IPDL_SOURCES += [
 
 SOURCES += [
     'nsWebBrowserPersist.cpp',
-    'nsWebBrowserPersistDocument.cpp',
     'nsWebBrowserPersistDocumentChild.cpp',
     'nsWebBrowserPersistDocumentParent.cpp',
     'nsWebBrowserPersistDocumentReadChild.cpp',
     'nsWebBrowserPersistDocumentReadParent.cpp',
     'nsWebBrowserPersistDocumentWriteChild.cpp',
     'nsWebBrowserPersistDocumentWriteParent.cpp',
+    'nsWebBrowserPersistLocalDocument.cpp',
 ]
 
 EXPORTS += [
-    'nsWebBrowserPersistDocument.h',
     'nsWebBrowserPersistDocumentChild.h',
     'nsWebBrowserPersistDocumentParent.h',
+    'nsWebBrowserPersistLocalDocument.h',
 ]
 
 FAIL_ON_WARNINGS = True

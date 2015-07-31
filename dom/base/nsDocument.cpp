@@ -235,7 +235,7 @@
 #include "gfxPrefs.h"
 
 #include "nsISpeculativeConnect.h"
-#include "nsWebBrowserPersistDocument.h"
+#include "nsWebBrowserPersistLocalDocument.h"
 
 #ifdef MOZ_MEDIA_NAVIGATOR
 #include "mozilla/MediaManager.h"
@@ -12994,6 +12994,6 @@ NS_IMETHODIMP
 nsDocument::StartPersistence(nsIWebBrowserPersistDocumentReceiver* aRecv)
 {
   nsCOMPtr<nsIWebBrowserPersistDocument> doc =
-    new nsWebBrowserPersistDocument(this);
+    new nsWebBrowserPersistLocalDocument(this);
   return aRecv->OnDocumentReady(doc);
 }
