@@ -72,7 +72,8 @@ nsWebBrowserPersistDocumentParent::RecvInitFailure(const nsresult& aFailure)
     }
     mOnReady->OnError(aFailure);
     mOnReady = nullptr;
-    return true;
+    // FIXME: does this need to be deferred?
+    return Send__delete__(this);
 }
 
 mozilla::PWebBrowserPersistResourcesParent*

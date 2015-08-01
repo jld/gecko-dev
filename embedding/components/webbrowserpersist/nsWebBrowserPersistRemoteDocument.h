@@ -13,6 +13,17 @@
 #include "nsIWebBrowserPersistDocument.h"
 #include "nsIInputStream.h"
 
+// This class is the XPCOM half of the glue between the
+// nsIWebBrowserPersistDocument interface and a remote document; it is
+// created by nsWebBrowserPersistDocumentParent when (and if) it
+// receives the information needed to populate the interface's
+// properties.
+//
+// This object has a normal refcounted lifetime.  The corresponding
+// IPC actor holds a weak reference to this class; when the last
+// strong reference is released, it sends an IPC delete message and
+// thereby removes that reference.
+
 class nsWebBrowserPersistDocumentParent;
 
 class nsWebBrowserPersistRemoteDocument final
