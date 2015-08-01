@@ -627,7 +627,7 @@ ResourceReader::OnWalkDOMNode(nsIDOMNode* aNode)
 class PersistNodeFixup final : public nsIDocumentEncoderNodeFixup {
 public:
     PersistNodeFixup(nsWebBrowserPersistLocalDocument* aParent,
-                     nsIWebBrowserPersistMap* aMap,
+                     nsIWebBrowserPersistURIMap* aMap,
                      nsIURI* aTargetURI);
 
     NS_DECL_ISUPPORTS
@@ -658,7 +658,7 @@ private:
 NS_IMPL_ISUPPORTS(PersistNodeFixup, nsIDocumentEncoderNodeFixup)
 
 PersistNodeFixup::PersistNodeFixup(nsWebBrowserPersistLocalDocument* aParent,
-                                   nsIWebBrowserPersistMap* aMap,
+                                   nsIWebBrowserPersistURIMap* aMap,
                                    nsIURI* aTargetURI)
 : mParent(aParent)
 , mCurrentBaseURI(aParent->GetBaseURI())
@@ -1410,7 +1410,7 @@ nsWebBrowserPersistLocalDocument::GetDocEncoder(const nsACString& aContentType,
 NS_IMETHODIMP
 nsWebBrowserPersistLocalDocument::WriteContent(
     nsIOutputStream* aStream,
-    nsIWebBrowserPersistMap* aMap,
+    nsIWebBrowserPersistURIMap* aMap,
     const nsACString& aRequestedContentType,
     uint32_t aEncoderFlags,
     uint32_t aWrapColumn,

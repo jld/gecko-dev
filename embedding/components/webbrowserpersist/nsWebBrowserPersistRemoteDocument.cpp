@@ -146,7 +146,7 @@ nsWebBrowserPersistRemoteDocument::ReadResources(nsIWebBrowserPersistResourceVis
 NS_IMETHODIMP
 nsWebBrowserPersistRemoteDocument::WriteContent(
     nsIOutputStream* aStream,
-    nsIWebBrowserPersistMap* aMap,
+    nsIWebBrowserPersistURIMap* aMap,
     const nsACString& aRequestedContentType,
     uint32_t aEncoderFlags,
     uint32_t aWrapColumn,
@@ -157,7 +157,7 @@ nsWebBrowserPersistRemoteDocument::WriteContent(
     }
 
     nsresult rv;
-    mozilla::WebBrowserPersistMap map;
+    mozilla::WebBrowserPersistURIMap map;
     uint32_t numMappedURIs;
     if (aMap) {
         rv = aMap->GetTargetBaseURI(map.targetBaseURI());
@@ -165,7 +165,7 @@ nsWebBrowserPersistRemoteDocument::WriteContent(
         rv = aMap->GetNumMappedURIs(&numMappedURIs);
         NS_ENSURE_SUCCESS(rv, rv);
         for (uint32_t i = 0; i < numMappedURIs; ++i) {
-            mozilla::WebBrowserPersistMapEntry& nextEntry =
+            mozilla::WebBrowserPersistURIMapEntry& nextEntry =
                 *(map.mapURIs().AppendElement());
             rv = aMap->GetURIMapping(i, nextEntry.mapFrom(), nextEntry.mapTo());
             NS_ENSURE_SUCCESS(rv, rv);

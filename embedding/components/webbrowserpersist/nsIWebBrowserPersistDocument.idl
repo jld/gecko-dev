@@ -20,7 +20,7 @@ interface nsIWebBrowserPersistWriteCompletion;
  * @see nsIWebBrowserPersistDocument
  */
 [scriptable, uuid(d52e8b93-2771-45e8-a5b0-6e12b667046b)]
-interface nsIWebBrowserPersistMap : nsISupports
+interface nsIWebBrowserPersistURIMap : nsISupports
 {
   /**
    * The number of URI mappings.
@@ -112,7 +112,7 @@ interface nsIWebBrowserPersistDocument : nsISupports
    * @see nsIDocumentEncoder
    */
   void writeContent(in nsIOutputStream aStream,
-                    in nsIWebBrowserPersistMap aURIMap,
+                    in nsIWebBrowserPersistURIMap aURIMap,
                     in ACString aRequestedContentType,
                     in unsigned long aEncoderFlags,
                     in unsigned long aWrapColumn,

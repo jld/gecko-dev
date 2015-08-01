@@ -108,7 +108,7 @@ nsWebBrowserPersistDocumentChild::DeallocPWebBrowserPersistResourcesChild(PWebBr
 
 mozilla::PWebBrowserPersistSerializeChild*
 nsWebBrowserPersistDocumentChild::AllocPWebBrowserPersistSerializeChild(
-            const WebBrowserPersistMap& aMap,
+            const WebBrowserPersistURIMap& aMap,
             const nsCString& aRequestedContentType,
             const uint32_t& aEncoderFlags,
             const uint32_t& aWrapColumn)
@@ -121,7 +121,7 @@ nsWebBrowserPersistDocumentChild::AllocPWebBrowserPersistSerializeChild(
 bool
 nsWebBrowserPersistDocumentChild::RecvPWebBrowserPersistSerializeConstructor(
             PWebBrowserPersistSerializeChild* aActor,
-            const WebBrowserPersistMap& aMap,
+            const WebBrowserPersistURIMap& aMap,
             const nsCString& aRequestedContentType,
             const uint32_t& aEncoderFlags,
             const uint32_t& aWrapColumn)

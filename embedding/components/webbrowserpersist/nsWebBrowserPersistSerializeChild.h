@@ -16,19 +16,19 @@
 class nsWebBrowserPersistSerializeChild final
     : public mozilla::PWebBrowserPersistSerializeChild
     , public nsIWebBrowserPersistWriteCompletion
-    , public nsIWebBrowserPersistMap
+    , public nsIWebBrowserPersistURIMap
     , public nsIOutputStream
 {
-    using WebBrowserPersistMap = mozilla::WebBrowserPersistMap;
+    using WebBrowserPersistURIMap = mozilla::WebBrowserPersistURIMap;
 public:
-    explicit nsWebBrowserPersistSerializeChild(const WebBrowserPersistMap& aMap);
+    explicit nsWebBrowserPersistSerializeChild(const WebBrowserPersistURIMap& aMap);
 
     NS_DECL_NSIWEBBROWSERPERSISTWRITECOMPLETION
-    NS_DECL_NSIWEBBROWSERPERSISTMAP
+    NS_DECL_NSIWEBBROWSERPERSISTURIMAP
     NS_DECL_NSIOUTPUTSTREAM
     NS_DECL_ISUPPORTS
 private:
-    WebBrowserPersistMap mMap;
+    WebBrowserPersistURIMap mMap;
 
     virtual ~nsWebBrowserPersistSerializeChild();
 };

@@ -37,14 +37,14 @@ public:
 
     virtual PWebBrowserPersistSerializeChild*
     AllocPWebBrowserPersistSerializeChild(
-            const WebBrowserPersistMap& aMap,
+            const WebBrowserPersistURIMap& aMap,
             const nsCString& aRequestedContentType,
             const uint32_t& aEncoderFlags,
             const uint32_t& aWrapColumn) override;
     virtual bool
     RecvPWebBrowserPersistSerializeConstructor(
             PWebBrowserPersistSerializeChild* aActor,
-            const WebBrowserPersistMap& aMap,
+            const WebBrowserPersistURIMap& aMap,
             const nsCString& aRequestedContentType,
             const uint32_t& aEncoderFlags,
             const uint32_t& aWrapColumn) override;

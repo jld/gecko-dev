@@ -94,7 +94,7 @@ nsWebBrowserPersistDocumentParent::DeallocPWebBrowserPersistResourcesParent(PWeb
 
 mozilla::PWebBrowserPersistSerializeParent*
 nsWebBrowserPersistDocumentParent::AllocPWebBrowserPersistSerializeParent(
-        const WebBrowserPersistMap& aMap,
+        const WebBrowserPersistURIMap& aMap,
         const nsCString& aRequestedContentType,
         const uint32_t& aEncoderFlags,
         const uint32_t& aWrapColumn)

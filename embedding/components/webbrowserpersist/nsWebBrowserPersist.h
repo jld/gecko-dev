@@ -82,7 +82,7 @@ private:
 
     class OnWalk;
     class OnWrite;
-    class FlatMap;
+    class FlatURIMap;
     friend class OnWalk;
     friend class OnWrite;
 
@@ -174,7 +174,7 @@ private:
     nsClassHashtable<nsISupportsHashKey, OutputData> mOutputMap;
     nsClassHashtable<nsISupportsHashKey, UploadData> mUploadList;
     nsClassHashtable<nsCStringHashKey, URIData> mURIMap;
-    nsCOMPtr<nsIWebBrowserPersistMap> mFlatMap;
+    nsCOMPtr<nsIWebBrowserPersistURIMap> mFlatURIMap;
     nsTArray<mozilla::UniquePtr<WalkData>> mWalkStack;
     nsTArray<DocData*>        mDocList;
     nsTArray<CleanupData*>    mCleanupList;

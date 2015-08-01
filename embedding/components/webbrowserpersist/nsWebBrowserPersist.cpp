@@ -203,11 +203,11 @@ private:
 NS_IMPL_ISUPPORTS(nsWebBrowserPersist::OnWrite,
                   nsIWebBrowserPersistWriteCompletion)
 
-class nsWebBrowserPersist::FlatMap final
-    : public nsIWebBrowserPersistMap
+class nsWebBrowserPersist::FlatURIMap final
+    : public nsIWebBrowserPersistURIMap
 {
 public:
-    explicit FlatMap(const nsACString& aTargetBase)
+    explicit FlatURIMap(const nsACString& aTargetBase)
     : mTargetBase(aTargetBase) { }
 
     void Add(const nsACString& aMapFrom, const nsACString& aMapTo) {
@@ -215,7 +215,7 @@ public:
         mMapTo.AppendElement(aMapTo);
     }
 
-    NS_DECL_NSIWEBBROWSERPERSISTMAP
+    NS_DECL_NSIWEBBROWSERPERSISTURIMAP
     NS_DECL_ISUPPORTS
 
 private:
@@ -223,13 +223,13 @@ private:
     nsTArray<nsCString> mMapTo;
     nsCString mTargetBase;
 
-    virtual ~FlatMap() { }
+    virtual ~FlatURIMap() { }
 };
 
-NS_IMPL_ISUPPORTS(nsWebBrowserPersist::FlatMap, nsIWebBrowserPersistMap)
+NS_IMPL_ISUPPORTS(nsWebBrowserPersist::FlatURIMap, nsIWebBrowserPersistURIMap)
 
 NS_IMETHODIMP
-nsWebBrowserPersist::FlatMap::GetNumMappedURIs(uint32_t* aNum)
+nsWebBrowserPersist::FlatURIMap::GetNumMappedURIs(uint32_t* aNum)
 {
     MOZ_ASSERT(mMapFrom.Length() == mMapTo.Length());
     *aNum = mMapTo.Length();
@@ -237,14 +237,14 @@ nsWebBrowserPersist::FlatMap::GetNumMappedURIs(uint32_t* aNum)
 }
 
 NS_IMETHODIMP
-nsWebBrowserPersist::FlatMap::GetTargetBaseURI(nsACString& aTargetBase)
+nsWebBrowserPersist::FlatURIMap::GetTargetBaseURI(nsACString& aTargetBase)
 {
     aTargetBase = mTargetBase;
     return NS_OK;
 }
 
 NS_IMETHODIMP
-nsWebBrowserPersist::FlatMap::GetURIMapping(uint32_t aIndex,
+nsWebBrowserPersist::FlatURIMap::GetURIMapping(uint32_t aIndex,
                                       nsACString& aMapFrom,
                                       nsACString& aMapTo)
 {
@@ -643,7 +643,7 @@ nsWebBrowserPersist::SerializeNextFile()
 
     // Save the document, fixing it up with the new URIs as we do
 
-    if (!mFlatMap) {
+    if (!mFlatURIMap) {
         nsAutoCString targetBaseSpec;
         if (mTargetBaseURI) {
             rv = mTargetBaseURI->GetSpec(targetBaseSpec);
@@ -653,9 +653,9 @@ nsWebBrowserPersist::SerializeNextFile()
                 return;
             }
         }
-        nsRefPtr<FlatMap> flatMap = new FlatMap(targetBaseSpec);
+        nsRefPtr<FlatURIMap> flatMap = new FlatURIMap(targetBaseSpec);
         mURIMap.EnumerateRead(EnumCopyURIsToFlatMap, flatMap);
-        mFlatMap = flatMap.forget();
+        mFlatURIMap = flatMap.forget();
     }
 
     nsCOMPtr<nsIFile> localFile;
@@ -687,7 +687,7 @@ nsWebBrowserPersist::SerializeNextFile()
 
     nsRefPtr<OnWrite> finish = new OnWrite(this, docData->mFile, localFile);
     rv = docData->mDocument->WriteContent(outputStream,
-                                          mFlatMap,
+                                          mFlatURIMap,
                                           NS_ConvertUTF16toUTF8(mContentType),
                                           mEncodingFlags,
                                           mWrapColumn,
@@ -2509,7 +2509,7 @@ nsWebBrowserPersist::EnumCopyURIsToFlatMap(const nsACString &aKey,
                                           URIData *aData,
                                           void* aClosure)
 {
-    FlatMap* theMap = static_cast<FlatMap*>(aClosure);
+    FlatURIMap* theMap = static_cast<FlatURIMap*>(aClosure);
     nsAutoCString mapTo;
     nsresult rv = aData->GetLocalURI(mapTo);
     if (NS_SUCCEEDED(rv) || !mapTo.IsVoid()) {

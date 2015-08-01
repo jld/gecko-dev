@@ -12,10 +12,10 @@
 
 NS_IMPL_ISUPPORTS(nsWebBrowserPersistSerializeChild,
                   nsIWebBrowserPersistWriteCompletion,
-                  nsIWebBrowserPersistMap,
+                  nsIWebBrowserPersistURIMap,
                   nsIOutputStream)
 
-nsWebBrowserPersistSerializeChild::nsWebBrowserPersistSerializeChild(const WebBrowserPersistMap& aMap)
+nsWebBrowserPersistSerializeChild::nsWebBrowserPersistSerializeChild(const WebBrowserPersistURIMap& aMap)
 : mMap(aMap)
 {
 }
