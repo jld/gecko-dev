@@ -138,10 +138,12 @@ function saveBrowser(aBrowser, aSkipPrompt)
                     .frameLoader
                     .QueryInterface(Ci.nsIWebBrowserPersistable);
   persistable.startPersistence({
-    // FIXME: what to do with an error?  Cu.something?
     onDocumentReady: function (document) {
       saveDocument(document, aSkipPrompt);
     }
+    // This interface also has an |onError| method which takes an
+    // nsresult, but in case of asynchronous failure there isn't
+    // really anything useful that can be done here.
   });
 }
 
