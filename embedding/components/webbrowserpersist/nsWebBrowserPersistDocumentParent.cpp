@@ -72,7 +72,7 @@ nsWebBrowserPersistDocumentParent::RecvInitFailure(const nsresult& aFailure)
     }
     mOnReady->OnError(aFailure);
     mOnReady = nullptr;
-    // FIXME: does this need to be deferred?
+    // Warning: Send__delete__ deallocates this object.
     return Send__delete__(this);
 }
 
