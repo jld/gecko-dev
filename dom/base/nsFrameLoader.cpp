@@ -2859,9 +2859,10 @@ nsFrameLoader::StartPersistence(nsIWebBrowserPersistDocumentReceiver* aRecv)
   if (mDocShell) {
     nsCOMPtr<nsIDocument> doc = do_GetInterface(mDocShell);
     NS_ENSURE_STATE(doc);
-    nsCOMPtr<nsIWebBrowserPersistable> delegate = do_QueryInterface(doc);
-    NS_ENSURE_STATE(delegate);
-    return delegate->StartPersistence(aRecv);
+    nsCOMPtr<nsIWebBrowserPersistDocument> pdoc =
+      new nsWebBrowserPersistLocalDocument(doc);
+    aRecv->OnDocumentReady(pdoc);
+    return NS_OK;
   }
   return NS_ERROR_NO_CONTENT;
 }
