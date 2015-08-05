@@ -1637,7 +1637,7 @@ nsresult nsWebBrowserPersist::SaveDocumentInternal(
         docData->mFile = aFile;
         docData->mRelativePathToData = nullptr;
         docData->mDataPath = nullptr;
-        docData->mDataPathIsRelative = nullptr;
+        docData->mDataPathIsRelative = false;
         mDocList.AppendElement(docData);
 
         // Not walking DOMs, so go directly to serialization.
