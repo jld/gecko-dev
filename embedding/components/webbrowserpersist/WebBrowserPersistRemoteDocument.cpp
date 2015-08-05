@@ -17,8 +17,8 @@ NS_IMPL_ISUPPORTS(WebBrowserPersistRemoteDocument,
 
 WebBrowserPersistRemoteDocument
 ::WebBrowserPersistRemoteDocument(WebBrowserPersistDocumentParent* aActor,
-                                    const Attrs& aAttrs,
-                                    nsIInputStream* aPostData)
+                                  const Attrs& aAttrs,
+                                  nsIInputStream* aPostData)
 : mActor(aActor)
 , mAttrs(aAttrs)
 , mPostData(aPostData)
@@ -175,8 +175,8 @@ WebBrowserPersistRemoteDocument::WriteContent(
     }
 
     auto* subActor = new WebBrowserPersistSerializeParent(this,
-                                                                aStream,
-                                                                aCompletion);
+                                                          aStream,
+                                                          aCompletion);
     nsCString requestedContentType(aRequestedContentType); // Sigh.
     return mActor->SendPWebBrowserPersistSerializeConstructor(
         subActor, map, requestedContentType, aEncoderFlags, aWrapColumn)

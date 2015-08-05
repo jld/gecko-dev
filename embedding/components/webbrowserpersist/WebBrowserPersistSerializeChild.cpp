@@ -28,9 +28,9 @@ WebBrowserPersistSerializeChild::~WebBrowserPersistSerializeChild()
 
 NS_IMETHODIMP
 WebBrowserPersistSerializeChild::OnFinish(nsIWebBrowserPersistDocument* aDocument,
-                                            nsIOutputStream* aStream,
-                                            const nsACString& aContentType,
-                                            nsresult aStatus)
+                                          nsIOutputStream* aStream,
+                                          const nsACString& aContentType,
+                                          nsresult aStatus)
 {
     MOZ_ASSERT(aStream == this);
     nsCString contentType(aContentType);
@@ -47,8 +47,8 @@ WebBrowserPersistSerializeChild::GetNumMappedURIs(uint32_t* aNum)
 
 NS_IMETHODIMP
 WebBrowserPersistSerializeChild::GetURIMapping(uint32_t aIndex,
-                                                 nsACString& aMapFrom,
-                                                 nsACString& aMapTo)
+                                               nsACString& aMapFrom,
+                                               nsACString& aMapTo)
 {
     if (aIndex >= mMap.mapURIs().Length()) {
         return NS_ERROR_INVALID_ARG;
@@ -81,7 +81,7 @@ WebBrowserPersistSerializeChild::Flush()
 
 NS_IMETHODIMP
 WebBrowserPersistSerializeChild::Write(const char* aBuf, uint32_t aCount,
-                                         uint32_t* aWritten)
+                                       uint32_t* aWritten)
 {
     // Normally an nsIOutputStream would have to be thread-safe, but
     // nsDocumentEncoder currently doesn't call this off the main
@@ -117,8 +117,8 @@ WebBrowserPersistSerializeChild::Write(const char* aBuf, uint32_t aCount,
 
 NS_IMETHODIMP
 WebBrowserPersistSerializeChild::WriteFrom(nsIInputStream* aFrom,
-                                             uint32_t aCount,
-                                             uint32_t* aWritten)
+                                           uint32_t aCount,
+                                           uint32_t* aWritten)
 {
     NS_WARNING("WebBrowserPersistSerializeChild::WriteFrom()");
     return NS_ERROR_NOT_IMPLEMENTED;
@@ -126,9 +126,9 @@ WebBrowserPersistSerializeChild::WriteFrom(nsIInputStream* aFrom,
 
 NS_IMETHODIMP
 WebBrowserPersistSerializeChild::WriteSegments(nsReadSegmentFun aFun,
-                                                 void* aCtx,
-                                                 uint32_t aCount,
-                                                 uint32_t* aWritten)
+                                               void* aCtx,
+                                               uint32_t aCount,
+                                               uint32_t* aWritten)
 {
     NS_WARNING("WebBrowserPersistSerializeChild::WriteSegments()");
     return NS_ERROR_NOT_IMPLEMENTED;

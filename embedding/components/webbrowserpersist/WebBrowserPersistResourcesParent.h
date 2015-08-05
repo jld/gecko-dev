@@ -21,7 +21,7 @@ class WebBrowserPersistResourcesParent final
 {
 public:
     WebBrowserPersistResourcesParent(nsIWebBrowserPersistDocument* aDocument,
-                                       nsIWebBrowserPersistResourceVisitor* aVisitor);
+                                     nsIWebBrowserPersistResourceVisitor* aVisitor);
 
     virtual bool
     RecvVisitResource(const nsCString& aURI) override;

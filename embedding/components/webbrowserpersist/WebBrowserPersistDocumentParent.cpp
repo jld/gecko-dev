@@ -50,8 +50,8 @@ WebBrowserPersistDocumentParent::~WebBrowserPersistDocumentParent()
 
 bool
 WebBrowserPersistDocumentParent::RecvAttributes(const Attrs& aAttrs,
-                                                  const OptionalInputStreamParams& aPostData,
-                                                  nsTArray<FileDescriptor>&& aPostFiles)
+                                                const OptionalInputStreamParams& aPostData,
+                                                nsTArray<FileDescriptor>&& aPostFiles)
 {
     // Deserialize the postData unconditionally so that fds aren't leaked.
     nsCOMPtr<nsIInputStream> postData =

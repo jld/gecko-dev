@@ -1378,8 +1378,8 @@ WebBrowserPersistLocalDocument::DecideContentType(nsACString& aContentType)
 
 nsresult
 WebBrowserPersistLocalDocument::GetDocEncoder(const nsACString& aContentType,
-                                           uint32_t aEncoderFlags,
-                                           nsIDocumentEncoder** aEncoder)
+                                              uint32_t aEncoderFlags,
+                                              nsIDocumentEncoder** aEncoder)
 {
     nsresult rv;
     nsAutoCString contractID(NS_DOC_ENCODER_CONTRACTID_BASE);
