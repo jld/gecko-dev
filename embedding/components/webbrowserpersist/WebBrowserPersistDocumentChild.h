@@ -4,8 +4,8 @@
  * License, v. 2.0. If a copy of the MPL was not distributed with this
  * file, You can obtain one at http://mozilla.org/MPL/2.0/. */
 
-#ifndef nsWebBrowserPersistDocumentChild_h__
-#define nsWebBrowserPersistDocumentChild_h__
+#ifndef WebBrowserPersistDocumentChild_h__
+#define WebBrowserPersistDocumentChild_h__
 
 #include "mozilla/PWebBrowserPersistDocumentChild.h"
 #include "nsCOMPtr.h"
@@ -13,12 +13,14 @@
 
 class nsIDocument;
 
-class nsWebBrowserPersistDocumentChild final
-    : public mozilla::PWebBrowserPersistDocumentChild
+namespace mozilla {
+
+class WebBrowserPersistDocumentChild final
+    : public PWebBrowserPersistDocumentChild
 {
 public:
-    nsWebBrowserPersistDocumentChild();
-    ~nsWebBrowserPersistDocumentChild();
+    WebBrowserPersistDocumentChild();
+    ~WebBrowserPersistDocumentChild();
 
     // This sends either Attributes or InitFailure and thereby causes
     // the actor to leave the START state.
@@ -55,4 +57,6 @@ private:
     nsCOMPtr<nsIWebBrowserPersistDocument> mDocument;
 };
 
-#endif // nsWebBrowserPersistDocumentChild_h__
+} // namespace mozilla
+
+#endif // WebBrowserPersistDocumentChild_h__

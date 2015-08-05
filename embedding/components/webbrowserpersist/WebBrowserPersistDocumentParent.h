@@ -4,8 +4,8 @@
  * License, v. 2.0. If a copy of the MPL was not distributed with this
  * file, You can obtain one at http://mozilla.org/MPL/2.0/. */
 
-#ifndef nsWebBrowserPersistDocumentParent_h__
-#define nsWebBrowserPersistDocumentParent_h__
+#ifndef WebBrowserPersistDocumentParent_h__
+#define WebBrowserPersistDocumentParent_h__
 
 #include "mozilla/Maybe.h"
 #include "mozilla/PWebBrowserPersistDocumentParent.h"
@@ -15,7 +15,7 @@
 // This class is the IPC half of the glue between the
 // nsIWebBrowserPersistDocument interface and a remote document.  When
 // (and if) it receives the Attributes message it constructs an
-// nsWebBrowserPersistRemoteDocument and releases it into the XPCOM
+// WebBrowserPersistRemoteDocument and releases it into the XPCOM
 // universe; otherwise, it invokes the document receiver's error
 // callback.
 //
@@ -26,14 +26,16 @@
 //
 // See also: TabParent::StartPersistence.
 
-class nsWebBrowserPersistRemoteDocument;
+namespace mozilla {
 
-class nsWebBrowserPersistDocumentParent final
-    : public mozilla::PWebBrowserPersistDocumentParent
+class WebBrowserPersistRemoteDocument;
+
+class WebBrowserPersistDocumentParent final
+    : public PWebBrowserPersistDocumentParent
 {
 public:
-    nsWebBrowserPersistDocumentParent();
-    virtual ~nsWebBrowserPersistDocumentParent();
+    WebBrowserPersistDocumentParent();
+    virtual ~WebBrowserPersistDocumentParent();
 
     // Set a callback to be invoked when the actor leaves the START
     // state.  This method must be called exactly once while the actor
@@ -69,7 +71,9 @@ public:
 private:
     // This is reset to nullptr when the callback is invoked.
     nsCOMPtr<nsIWebBrowserPersistDocumentReceiver> mOnReady;
-    nsWebBrowserPersistRemoteDocument* mReflection;
+    WebBrowserPersistRemoteDocument* mReflection;
 };
 
-#endif // nsWebBrowserPersistDocumentParent_h__
+} // namespace mozilla
+
+#endif // WebBrowserPersistDocumentParent_h__

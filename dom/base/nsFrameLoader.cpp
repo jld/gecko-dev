@@ -93,7 +93,7 @@
 #include "mozilla/layers/CompositorChild.h"
 
 #include "mozilla/dom/StructuredCloneUtils.h"
-#include "nsWebBrowserPersistLocalDocument.h"
+#include "mozilla/WebBrowserPersistLocalDocument.h"
 
 #ifdef MOZ_XUL
 #include "nsXULPopupManager.h"
@@ -2860,7 +2860,7 @@ nsFrameLoader::StartPersistence(nsIWebBrowserPersistDocumentReceiver* aRecv)
     nsCOMPtr<nsIDocument> doc = do_GetInterface(mDocShell);
     NS_ENSURE_STATE(doc);
     nsCOMPtr<nsIWebBrowserPersistDocument> pdoc =
-      new nsWebBrowserPersistLocalDocument(doc);
+      new mozilla::WebBrowserPersistLocalDocument(doc);
     aRecv->OnDocumentReady(pdoc);
     return NS_OK;
   }

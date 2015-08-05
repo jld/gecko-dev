@@ -54,7 +54,7 @@
 
 #include "nsIWebBrowserPersistable.h"
 #include "nsWebBrowserPersist.h"
-#include "nsWebBrowserPersistLocalDocument.h"
+#include "WebBrowserPersistLocalDocument.h"
 
 #include "nsIContent.h"
 #include "nsIMIMEInfo.h"
@@ -514,7 +514,7 @@ NS_IMETHODIMP nsWebBrowserPersist::SaveDocument(
     if (!doc) {
         nsCOMPtr<nsIDocument> localDoc = do_QueryInterface(aDocument);
         if (localDoc) {
-            doc = new nsWebBrowserPersistLocalDocument(localDoc);
+            doc = new mozilla::WebBrowserPersistLocalDocument(localDoc);
         } else {
             rv = NS_ERROR_NO_INTERFACE;
         }

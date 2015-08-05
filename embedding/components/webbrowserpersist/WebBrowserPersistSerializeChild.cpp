@@ -4,28 +4,30 @@
  * License, v. 2.0. If a copy of the MPL was not distributed with this
  * file, You can obtain one at http://mozilla.org/MPL/2.0/. */
 
-#include "nsWebBrowserPersistSerializeChild.h"
+#include "WebBrowserPersistSerializeChild.h"
 
 #include <algorithm>
 
 #include "nsThreadUtils.h"
 
-NS_IMPL_ISUPPORTS(nsWebBrowserPersistSerializeChild,
+namespace mozilla {
+
+NS_IMPL_ISUPPORTS(WebBrowserPersistSerializeChild,
                   nsIWebBrowserPersistWriteCompletion,
                   nsIWebBrowserPersistURIMap,
                   nsIOutputStream)
 
-nsWebBrowserPersistSerializeChild::nsWebBrowserPersistSerializeChild(const WebBrowserPersistURIMap& aMap)
+WebBrowserPersistSerializeChild::WebBrowserPersistSerializeChild(const WebBrowserPersistURIMap& aMap)
 : mMap(aMap)
 {
 }
 
-nsWebBrowserPersistSerializeChild::~nsWebBrowserPersistSerializeChild()
+WebBrowserPersistSerializeChild::~WebBrowserPersistSerializeChild()
 {
 }
 
 NS_IMETHODIMP
-nsWebBrowserPersistSerializeChild::OnFinish(nsIWebBrowserPersistDocument* aDocument,
+WebBrowserPersistSerializeChild::OnFinish(nsIWebBrowserPersistDocument* aDocument,
                                             nsIOutputStream* aStream,
                                             const nsACString& aContentType,
                                             nsresult aStatus)
@@ -37,14 +39,14 @@ nsWebBrowserPersistSerializeChild::OnFinish(nsIWebBrowserPersistDocument* aDocum
 }
 
 NS_IMETHODIMP
-nsWebBrowserPersistSerializeChild::GetNumMappedURIs(uint32_t* aNum)
+WebBrowserPersistSerializeChild::GetNumMappedURIs(uint32_t* aNum)
 {
     *aNum = static_cast<uint32_t>(mMap.mapURIs().Length());
     return NS_OK;
 }
 
 NS_IMETHODIMP
-nsWebBrowserPersistSerializeChild::GetURIMapping(uint32_t aIndex,
+WebBrowserPersistSerializeChild::GetURIMapping(uint32_t aIndex,
                                                  nsACString& aMapFrom,
                                                  nsACString& aMapTo)
 {
@@ -57,28 +59,28 @@ nsWebBrowserPersistSerializeChild::GetURIMapping(uint32_t aIndex,
 }
 
 NS_IMETHODIMP
-nsWebBrowserPersistSerializeChild::GetTargetBaseURI(nsACString& aURI)
+WebBrowserPersistSerializeChild::GetTargetBaseURI(nsACString& aURI)
 {
     aURI = mMap.targetBaseURI();
     return NS_OK;
 }
 
 NS_IMETHODIMP
-nsWebBrowserPersistSerializeChild::Close()
+WebBrowserPersistSerializeChild::Close()
 {
-    NS_WARNING("nsWebBrowserPersistSerializeChild::Close()");
+    NS_WARNING("WebBrowserPersistSerializeChild::Close()");
     return NS_ERROR_NOT_IMPLEMENTED;
 }
 
 NS_IMETHODIMP
-nsWebBrowserPersistSerializeChild::Flush()
+WebBrowserPersistSerializeChild::Flush()
 {
-    NS_WARNING("nsWebBrowserPersistSerializeChild::Flush()");
+    NS_WARNING("WebBrowserPersistSerializeChild::Flush()");
     return NS_ERROR_NOT_IMPLEMENTED;
 }
 
 NS_IMETHODIMP
-nsWebBrowserPersistSerializeChild::Write(const char* aBuf, uint32_t aCount,
+WebBrowserPersistSerializeChild::Write(const char* aBuf, uint32_t aCount,
                                          uint32_t* aWritten)
 {
     // Normally an nsIOutputStream would have to be thread-safe, but
@@ -105,7 +107,7 @@ nsWebBrowserPersistSerializeChild::Write(const char* aBuf, uint32_t aCount,
         nsTArray<uint8_t> arrayBuf;
         // It would be nice if this extra copy could be avoided.
         arrayBuf.AppendElements(buf, toWrite);
-        SendWriteData(mozilla::Move(arrayBuf));
+        SendWriteData(Move(arrayBuf));
         *aWritten += toWrite;
         buf += toWrite;
         count -= toWrite;
@@ -114,29 +116,30 @@ nsWebBrowserPersistSerializeChild::Write(const char* aBuf, uint32_t aCount,
 }
 
 NS_IMETHODIMP
-nsWebBrowserPersistSerializeChild::WriteFrom(nsIInputStream* aFrom,
+WebBrowserPersistSerializeChild::WriteFrom(nsIInputStream* aFrom,
                                              uint32_t aCount,
                                              uint32_t* aWritten)
 {
-    NS_WARNING("nsWebBrowserPersistSerializeChild::WriteFrom()");
+    NS_WARNING("WebBrowserPersistSerializeChild::WriteFrom()");
     return NS_ERROR_NOT_IMPLEMENTED;
 }
 
 NS_IMETHODIMP
-nsWebBrowserPersistSerializeChild::WriteSegments(nsReadSegmentFun aFun,
+WebBrowserPersistSerializeChild::WriteSegments(nsReadSegmentFun aFun,
                                                  void* aCtx,
                                                  uint32_t aCount,
                                                  uint32_t* aWritten)
 {
-    NS_WARNING("nsWebBrowserPersistSerializeChild::WriteSegments()");
+    NS_WARNING("WebBrowserPersistSerializeChild::WriteSegments()");
     return NS_ERROR_NOT_IMPLEMENTED;
 }
 
 NS_IMETHODIMP
-nsWebBrowserPersistSerializeChild::IsNonBlocking(bool* aNonBlocking)
+WebBrowserPersistSerializeChild::IsNonBlocking(bool* aNonBlocking)
 {
     // Writes will never fail with NS_BASE_STREAM_WOULD_BLOCK, so:
     *aNonBlocking = false;
     return NS_OK;
 }
 
+} // namespace mozilla

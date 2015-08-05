@@ -4,25 +4,26 @@
  * License, v. 2.0. If a copy of the MPL was not distributed with this
  * file, You can obtain one at http://mozilla.org/MPL/2.0/. */
 
-#include "nsWebBrowserPersistResourcesChild.h"
+#include "WebBrowserPersistResourcesChild.h"
 
-#include "nsWebBrowserPersistDocumentChild.h"
+#include "WebBrowserPersistDocumentChild.h"
 #include "mozilla/dom/PBrowserChild.h"
 
+namespace mozilla {
 
-NS_IMPL_ISUPPORTS(nsWebBrowserPersistResourcesChild,
+NS_IMPL_ISUPPORTS(WebBrowserPersistResourcesChild,
                   nsIWebBrowserPersistResourceVisitor)
 
-nsWebBrowserPersistResourcesChild::nsWebBrowserPersistResourcesChild()
+WebBrowserPersistResourcesChild::WebBrowserPersistResourcesChild()
 {
 }
 
-nsWebBrowserPersistResourcesChild::~nsWebBrowserPersistResourcesChild()
+WebBrowserPersistResourcesChild::~WebBrowserPersistResourcesChild()
 {
 }
 
 NS_IMETHODIMP
-nsWebBrowserPersistResourcesChild::VisitResource(nsIWebBrowserPersistDocument *aDocument,
+WebBrowserPersistResourcesChild::VisitResource(nsIWebBrowserPersistDocument *aDocument,
                                                  const nsACString& aURI)
 {
     nsCString copiedURI(aURI); // Yay, XPIDL/IPDL mismatch.
@@ -31,11 +32,11 @@ nsWebBrowserPersistResourcesChild::VisitResource(nsIWebBrowserPersistDocument *a
 }
 
 NS_IMETHODIMP
-nsWebBrowserPersistResourcesChild::VisitDocument(nsIWebBrowserPersistDocument* aDocument,
+WebBrowserPersistResourcesChild::VisitDocument(nsIWebBrowserPersistDocument* aDocument,
                                                  nsIWebBrowserPersistDocument* aSubDocument)
 {
-    auto* subActor = new nsWebBrowserPersistDocumentChild();
-    mozilla::dom::PBrowserChild* grandManager = Manager()->Manager();
+    auto* subActor = new WebBrowserPersistDocumentChild();
+    dom::PBrowserChild* grandManager = Manager()->Manager();
     if (!grandManager->SendPWebBrowserPersistDocumentConstructor(subActor)) {
         // NOTE: subActor is freed at this point.
         return NS_ERROR_FAILURE;
@@ -56,9 +57,11 @@ nsWebBrowserPersistResourcesChild::VisitDocument(nsIWebBrowserPersistDocument* a
 }
 
 NS_IMETHODIMP
-nsWebBrowserPersistResourcesChild::EndVisit(nsIWebBrowserPersistDocument *aDocument,
+WebBrowserPersistResourcesChild::EndVisit(nsIWebBrowserPersistDocument *aDocument,
                                             nsresult aStatus)
 {
     Send__delete__(this, aStatus);
     return NS_OK;
 }
+
+} // namespace mozilla

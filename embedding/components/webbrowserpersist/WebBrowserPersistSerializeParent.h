@@ -4,8 +4,8 @@
  * License, v. 2.0. If a copy of the MPL was not distributed with this
  * file, You can obtain one at http://mozilla.org/MPL/2.0/. */
 
-#ifndef nsWebBrowserPersistSerializeParent_h__
-#define nsWebBrowserPersistSerializeParent_h__
+#ifndef WebBrowserPersistSerializeParent_h__
+#define WebBrowserPersistSerializeParent_h__
 
 #include "mozilla/PWebBrowserPersistSerializeParent.h"
 
@@ -13,15 +13,17 @@
 #include "nsIOutputStream.h"
 #include "nsIWebBrowserPersistDocument.h"
 
-class nsWebBrowserPersistSerializeParent
-    : public mozilla::PWebBrowserPersistSerializeParent
+namespace mozilla {
+
+class WebBrowserPersistSerializeParent
+    : public PWebBrowserPersistSerializeParent
 {
 public:
-    nsWebBrowserPersistSerializeParent(
+    WebBrowserPersistSerializeParent(
         nsIWebBrowserPersistDocument* aDocument,
         nsIOutputStream* aStream,
         nsIWebBrowserPersistWriteCompletion* aFinish);
-    virtual ~nsWebBrowserPersistSerializeParent();
+    virtual ~WebBrowserPersistSerializeParent();
 
     virtual bool
     RecvWriteData(nsTArray<uint8_t>&& aData) override;
@@ -42,4 +44,6 @@ private:
     nsresult mOutputError;
 };
 
-#endif // nsWebBrowserPersistSerializeParent_h__
+} // namespace mozilla
+
+#endif // WebBrowserPersistSerializeParent_h__

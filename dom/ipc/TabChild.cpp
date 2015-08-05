@@ -99,7 +99,7 @@
 #include "nsIScriptError.h"
 #include "mozilla/EventForwards.h"
 #include "nsDeviceContext.h"
-#include "nsWebBrowserPersistDocumentChild.h"
+#include "mozilla/WebBrowserPersistDocumentChild.h"
 
 #define BROWSER_ELEMENT_CHILD_SCRIPT \
     NS_LITERAL_STRING("chrome://global/content/BrowserElementChild.js")
@@ -3111,14 +3111,14 @@ TabChildGlobal::GetGlobalJSObject()
 PWebBrowserPersistDocumentChild*
 TabChild::AllocPWebBrowserPersistDocumentChild()
 {
-  return new nsWebBrowserPersistDocumentChild();
+  return new WebBrowserPersistDocumentChild();
 }
 
 bool
 TabChild::RecvPWebBrowserPersistDocumentConstructor(PWebBrowserPersistDocumentChild *aActor)
 {
   nsCOMPtr<nsIDocument> doc = GetDocument();
-  static_cast<nsWebBrowserPersistDocumentChild*>(aActor)->Start(doc);
+  static_cast<WebBrowserPersistDocumentChild*>(aActor)->Start(doc);
   return true;
 }
 

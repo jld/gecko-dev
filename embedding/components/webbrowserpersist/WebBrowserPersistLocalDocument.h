@@ -4,8 +4,8 @@
  * License, v. 2.0. If a copy of the MPL was not distributed with this
  * file, You can obtain one at http://mozilla.org/MPL/2.0/. */
 
-#ifndef nsWebBrowserPersistLocalDocument_h__
-#define nsWebBrowserPersistLocalDocument_h__
+#ifndef WebBrowserPersistLocalDocument_h__
+#define WebBrowserPersistLocalDocument_h__
 
 #include "nsCOMPtr.h"
 #include "nsCycleCollectionParticipant.h"
@@ -16,11 +16,13 @@
 class nsIDocumentEncoder;
 class nsISHEntry;
 
-class nsWebBrowserPersistLocalDocument final
+namespace mozilla {
+
+class WebBrowserPersistLocalDocument final
     : public nsIWebBrowserPersistDocument
 {
 public:
-    explicit nsWebBrowserPersistLocalDocument(nsIDocument* aDocument);
+    explicit WebBrowserPersistLocalDocument(nsIDocument* aDocument);
 
     const nsCString& GetCharacterSet() const;
     uint32_t GetPersistFlags() const;
@@ -29,7 +31,7 @@ public:
     NS_DECL_CYCLE_COLLECTING_ISUPPORTS
     NS_DECL_NSIWEBBROWSERPERSISTDOCUMENT
 
-    NS_DECL_CYCLE_COLLECTION_CLASS(nsWebBrowserPersistLocalDocument)
+    NS_DECL_CYCLE_COLLECTION_CLASS(WebBrowserPersistLocalDocument)
 
 private:
     nsCOMPtr<nsIDocument> mDocument;
@@ -41,7 +43,9 @@ private:
                            nsIDocumentEncoder** aEncoder);
     nsresult GetHistory(nsISHEntry** aHistory);
 
-    virtual ~nsWebBrowserPersistLocalDocument();
+    virtual ~WebBrowserPersistLocalDocument();
 };
 
-#endif // nsWebBrowserPersistLocalDocument_h__
+} // namespace mozilla
+
+#endif // WebBrowserPersistLocalDocument_h__

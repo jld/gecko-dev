@@ -4,22 +4,24 @@
  * License, v. 2.0. If a copy of the MPL was not distributed with this
  * file, You can obtain one at http://mozilla.org/MPL/2.0/. */
 
-#include "nsWebBrowserPersistDocumentParent.h"
+#include "WebBrowserPersistDocumentParent.h"
 
 #include "mozilla/ipc/InputStreamUtils.h"
 #include "nsIInputStream.h"
 #include "nsThreadUtils.h"
-#include "nsWebBrowserPersistResourcesParent.h"
-#include "nsWebBrowserPersistSerializeParent.h"
-#include "nsWebBrowserPersistRemoteDocument.h"
+#include "WebBrowserPersistResourcesParent.h"
+#include "WebBrowserPersistSerializeParent.h"
+#include "WebBrowserPersistRemoteDocument.h"
 
-nsWebBrowserPersistDocumentParent::nsWebBrowserPersistDocumentParent()
+namespace mozilla {
+
+WebBrowserPersistDocumentParent::WebBrowserPersistDocumentParent()
 : mReflection(nullptr)
 {
 }
 
 void
-nsWebBrowserPersistDocumentParent::SetOnReady(nsIWebBrowserPersistDocumentReceiver* aOnReady)
+WebBrowserPersistDocumentParent::SetOnReady(nsIWebBrowserPersistDocumentReceiver* aOnReady)
 {
     MOZ_ASSERT(aOnReady);
     MOZ_ASSERT(!mOnReady);
@@ -28,7 +30,7 @@ nsWebBrowserPersistDocumentParent::SetOnReady(nsIWebBrowserPersistDocumentReceiv
 }
 
 void
-nsWebBrowserPersistDocumentParent::ActorDestroy(ActorDestroyReason aWhy)
+WebBrowserPersistDocumentParent::ActorDestroy(ActorDestroyReason aWhy)
 {
     if (mReflection) {
         mReflection->ActorDestroy();
@@ -40,32 +42,32 @@ nsWebBrowserPersistDocumentParent::ActorDestroy(ActorDestroyReason aWhy)
     }
 }
 
-nsWebBrowserPersistDocumentParent::~nsWebBrowserPersistDocumentParent()
+WebBrowserPersistDocumentParent::~WebBrowserPersistDocumentParent()
 {
     MOZ_RELEASE_ASSERT(!mReflection);
     MOZ_ASSERT(!mOnReady);
 }
 
 bool
-nsWebBrowserPersistDocumentParent::RecvAttributes(const Attrs& aAttrs,
+WebBrowserPersistDocumentParent::RecvAttributes(const Attrs& aAttrs,
                                                   const OptionalInputStreamParams& aPostData,
                                                   nsTArray<FileDescriptor>&& aPostFiles)
 {
     // Deserialize the postData unconditionally so that fds aren't leaked.
     nsCOMPtr<nsIInputStream> postData =
-        mozilla::ipc::DeserializeInputStream(aPostData, aPostFiles);
+        ipc::DeserializeInputStream(aPostData, aPostFiles);
     if (!mOnReady || mReflection) {
         return false;
     }
-    mReflection = new nsWebBrowserPersistRemoteDocument(this, aAttrs, postData);
-    nsRefPtr<nsWebBrowserPersistRemoteDocument> reflection = mReflection;
+    mReflection = new WebBrowserPersistRemoteDocument(this, aAttrs, postData);
+    nsRefPtr<WebBrowserPersistRemoteDocument> reflection = mReflection;
     mOnReady->OnDocumentReady(reflection);
     mOnReady = nullptr;
     return true;
 }
 
 bool
-nsWebBrowserPersistDocumentParent::RecvInitFailure(const nsresult& aFailure)
+WebBrowserPersistDocumentParent::RecvInitFailure(const nsresult& aFailure)
 {
     if (!mOnReady || mReflection) {
         return false;
@@ -76,25 +78,25 @@ nsWebBrowserPersistDocumentParent::RecvInitFailure(const nsresult& aFailure)
     return Send__delete__(this);
 }
 
-mozilla::PWebBrowserPersistResourcesParent*
-nsWebBrowserPersistDocumentParent::AllocPWebBrowserPersistResourcesParent()
+PWebBrowserPersistResourcesParent*
+WebBrowserPersistDocumentParent::AllocPWebBrowserPersistResourcesParent()
 {
     MOZ_CRASH("Don't use this; construct the actor directly and AddRef.");
     return nullptr;
 }
 
 bool
-nsWebBrowserPersistDocumentParent::DeallocPWebBrowserPersistResourcesParent(PWebBrowserPersistResourcesParent* aActor)
+WebBrowserPersistDocumentParent::DeallocPWebBrowserPersistResourcesParent(PWebBrowserPersistResourcesParent* aActor)
 {
     // Turn the ref held by IPC back into an nsRefPtr.
-    nsRefPtr<nsWebBrowserPersistResourcesParent> actor =
-        already_AddRefed<nsWebBrowserPersistResourcesParent>(
-            static_cast<nsWebBrowserPersistResourcesParent*>(aActor));
+    nsRefPtr<WebBrowserPersistResourcesParent> actor =
+        already_AddRefed<WebBrowserPersistResourcesParent>(
+            static_cast<WebBrowserPersistResourcesParent*>(aActor));
     return true;
 }
 
-mozilla::PWebBrowserPersistSerializeParent*
-nsWebBrowserPersistDocumentParent::AllocPWebBrowserPersistSerializeParent(
+PWebBrowserPersistSerializeParent*
+WebBrowserPersistDocumentParent::AllocPWebBrowserPersistSerializeParent(
         const WebBrowserPersistURIMap& aMap,
         const nsCString& aRequestedContentType,
         const uint32_t& aEncoderFlags,
@@ -105,8 +107,10 @@ nsWebBrowserPersistDocumentParent::AllocPWebBrowserPersistSerializeParent(
 }
 
 bool
-nsWebBrowserPersistDocumentParent::DeallocPWebBrowserPersistSerializeParent(PWebBrowserPersistSerializeParent* aActor)
+WebBrowserPersistDocumentParent::DeallocPWebBrowserPersistSerializeParent(PWebBrowserPersistSerializeParent* aActor)
 {
     delete aActor;
     return true;
 }
+
+} // namespace mozilla

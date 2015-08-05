@@ -4,8 +4,8 @@
  * License, v. 2.0. If a copy of the MPL was not distributed with this
  * file, You can obtain one at http://mozilla.org/MPL/2.0/. */
 
-#ifndef nsWebBrowserPersistSerializeChild_h__
-#define nsWebBrowserPersistSerializeChild_h__
+#ifndef WebBrowserPersistSerializeChild_h__
+#define WebBrowserPersistSerializeChild_h__
 
 #include "mozilla/PWebBrowserPersistSerializeChild.h"
 
@@ -13,15 +13,16 @@
 #include "nsIWebBrowserPersistDocument.h"
 #include "nsIOutputStream.h"
 
-class nsWebBrowserPersistSerializeChild final
-    : public mozilla::PWebBrowserPersistSerializeChild
+namespace mozilla {
+
+class WebBrowserPersistSerializeChild final
+    : public PWebBrowserPersistSerializeChild
     , public nsIWebBrowserPersistWriteCompletion
     , public nsIWebBrowserPersistURIMap
     , public nsIOutputStream
 {
-    using WebBrowserPersistURIMap = mozilla::WebBrowserPersistURIMap;
 public:
-    explicit nsWebBrowserPersistSerializeChild(const WebBrowserPersistURIMap& aMap);
+    explicit WebBrowserPersistSerializeChild(const WebBrowserPersistURIMap& aMap);
 
     NS_DECL_NSIWEBBROWSERPERSISTWRITECOMPLETION
     NS_DECL_NSIWEBBROWSERPERSISTURIMAP
@@ -30,7 +31,9 @@ public:
 private:
     WebBrowserPersistURIMap mMap;
 
-    virtual ~nsWebBrowserPersistSerializeChild();
+    virtual ~WebBrowserPersistSerializeChild();
 };
 
-#endif // nsWebBrowserPersistSerializeChild_h__
+} // namespace mozilla
+
+#endif // WebBrowserPersistSerializeChild_h__

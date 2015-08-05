@@ -4,8 +4,8 @@
  * License, v. 2.0. If a copy of the MPL was not distributed with this
  * file, You can obtain one at http://mozilla.org/MPL/2.0/. */
 
-#ifndef nsWebBrowserPersistRemoteDocument_h__
-#define nsWebBrowserPersistRemoteDocument_h__
+#ifndef WebBrowserPersistRemoteDocument_h__
+#define WebBrowserPersistRemoteDocument_h__
 
 #include "mozilla/Maybe.h"
 #include "mozilla/PWebBrowserPersistDocumentParent.h"
@@ -15,7 +15,7 @@
 
 // This class is the XPCOM half of the glue between the
 // nsIWebBrowserPersistDocument interface and a remote document; it is
-// created by nsWebBrowserPersistDocumentParent when (and if) it
+// created by WebBrowserPersistDocumentParent when (and if) it
 // receives the information needed to populate the interface's
 // properties.
 //
@@ -24,9 +24,11 @@
 // strong reference is released, it sends an IPC delete message and
 // thereby removes that reference.
 
-class nsWebBrowserPersistDocumentParent;
+namespace mozilla {
 
-class nsWebBrowserPersistRemoteDocument final
+class WebBrowserPersistDocumentParent;
+
+class WebBrowserPersistRemoteDocument final
     : public nsIWebBrowserPersistDocument
 {
 public:
@@ -34,18 +36,20 @@ public:
     NS_DECL_NSIWEBBROWSERPERSISTDOCUMENT
 
 private:
-    using Attrs = mozilla::WebBrowserPersistDocumentAttrs;
-    nsWebBrowserPersistDocumentParent* mActor;
+    using Attrs = WebBrowserPersistDocumentAttrs;
+    WebBrowserPersistDocumentParent* mActor;
     Attrs mAttrs;
     nsCOMPtr<nsIInputStream> mPostData;
 
-    friend class nsWebBrowserPersistDocumentParent;
-    nsWebBrowserPersistRemoteDocument(nsWebBrowserPersistDocumentParent* aActor,
-                                      const Attrs& aAttrs,
-                                      nsIInputStream* aPostData);
-    ~nsWebBrowserPersistRemoteDocument();
+    friend class WebBrowserPersistDocumentParent;
+    WebBrowserPersistRemoteDocument(WebBrowserPersistDocumentParent* aActor,
+                                    const Attrs& aAttrs,
+                                    nsIInputStream* aPostData);
+    ~WebBrowserPersistRemoteDocument();
 
     void ActorDestroy(void);
 };
 
-#endif // nsWebBrowserPersistRemoteDocument_h__
+} // namespace mozilla
+
+#endif // WebBrowserPersistRemoteDocument_h__

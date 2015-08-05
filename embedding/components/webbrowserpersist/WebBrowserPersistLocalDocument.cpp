@@ -3,8 +3,8 @@
  * License, v. 2.0. If a copy of the MPL was not distributed with this
  * file, You can obtain one at http://mozilla.org/MPL/2.0/. */
 
-#include "nsWebBrowserPersistLocalDocument.h"
-#include "nsWebBrowserPersistDocumentParent.h"
+#include "WebBrowserPersistLocalDocument.h"
+#include "WebBrowserPersistDocumentParent.h"
 
 #include "mozilla/dom/HTMLInputElement.h"
 #include "mozilla/dom/HTMLSharedElement.h"
@@ -58,48 +58,46 @@
 #include "nsIWebPageDescriptor.h"
 #include "nsNetUtil.h"
 
-using mozilla::dom::HTMLInputElement;
-using mozilla::dom::HTMLSharedElement;
-using mozilla::dom::HTMLSharedObjectElement;
+namespace mozilla {
 
-NS_IMPL_CYCLE_COLLECTING_ADDREF(nsWebBrowserPersistLocalDocument)
-NS_IMPL_CYCLE_COLLECTING_RELEASE(nsWebBrowserPersistLocalDocument)
+NS_IMPL_CYCLE_COLLECTING_ADDREF(WebBrowserPersistLocalDocument)
+NS_IMPL_CYCLE_COLLECTING_RELEASE(WebBrowserPersistLocalDocument)
 
-NS_INTERFACE_MAP_BEGIN_CYCLE_COLLECTION(nsWebBrowserPersistLocalDocument)
+NS_INTERFACE_MAP_BEGIN_CYCLE_COLLECTION(WebBrowserPersistLocalDocument)
   NS_INTERFACE_MAP_ENTRY(nsIWebBrowserPersistDocument)
   NS_INTERFACE_MAP_ENTRY(nsISupports)
 NS_INTERFACE_MAP_END
 
-NS_IMPL_CYCLE_COLLECTION(nsWebBrowserPersistLocalDocument, mDocument)
+NS_IMPL_CYCLE_COLLECTION(WebBrowserPersistLocalDocument, mDocument)
 
 
-nsWebBrowserPersistLocalDocument::nsWebBrowserPersistLocalDocument(nsIDocument* aDocument)
+WebBrowserPersistLocalDocument::WebBrowserPersistLocalDocument(nsIDocument* aDocument)
 : mDocument(aDocument)
 , mPersistFlags(0)
 {
     MOZ_ASSERT(mDocument);
 }
 
-nsWebBrowserPersistLocalDocument::~nsWebBrowserPersistLocalDocument()
+WebBrowserPersistLocalDocument::~WebBrowserPersistLocalDocument()
 {
 }
 
 NS_IMETHODIMP
-nsWebBrowserPersistLocalDocument::SetPersistFlags(uint32_t aFlags)
+WebBrowserPersistLocalDocument::SetPersistFlags(uint32_t aFlags)
 {
     mPersistFlags = aFlags;
     return NS_OK;
 }
 
 NS_IMETHODIMP
-nsWebBrowserPersistLocalDocument::GetPersistFlags(uint32_t* aFlags)
+WebBrowserPersistLocalDocument::GetPersistFlags(uint32_t* aFlags)
 {
     *aFlags = mPersistFlags;
     return NS_OK;
 }
 
 NS_IMETHODIMP
-nsWebBrowserPersistLocalDocument::GetIsPrivate(bool* aIsPrivate)
+WebBrowserPersistLocalDocument::GetIsPrivate(bool* aIsPrivate)
 {
     nsCOMPtr<nsILoadContext> privacyContext = mDocument->GetLoadContext();
     *aIsPrivate = privacyContext && privacyContext->UsePrivateBrowsing();
@@ -107,7 +105,7 @@ nsWebBrowserPersistLocalDocument::GetIsPrivate(bool* aIsPrivate)
 }
 
 NS_IMETHODIMP
-nsWebBrowserPersistLocalDocument::GetDocumentURI(nsACString& aURISpec)
+WebBrowserPersistLocalDocument::GetDocumentURI(nsACString& aURISpec)
 {
     nsCOMPtr<nsIURI> uri = mDocument->GetDocumentURI();
     if (!uri) {
@@ -117,7 +115,7 @@ nsWebBrowserPersistLocalDocument::GetDocumentURI(nsACString& aURISpec)
 }
 
 NS_IMETHODIMP
-nsWebBrowserPersistLocalDocument::GetBaseURI(nsACString& aURISpec)
+WebBrowserPersistLocalDocument::GetBaseURI(nsACString& aURISpec)
 {
     nsCOMPtr<nsIURI> uri = GetBaseURI();
     if (!uri) {
@@ -127,7 +125,7 @@ nsWebBrowserPersistLocalDocument::GetBaseURI(nsACString& aURISpec)
 }
 
 NS_IMETHODIMP
-nsWebBrowserPersistLocalDocument::GetContentType(nsACString& aContentType)
+WebBrowserPersistLocalDocument::GetContentType(nsACString& aContentType)
 {
     nsAutoString utf16Type;
     nsresult rv;
@@ -139,14 +137,14 @@ nsWebBrowserPersistLocalDocument::GetContentType(nsACString& aContentType)
 }
 
 NS_IMETHODIMP
-nsWebBrowserPersistLocalDocument::GetCharacterSet(nsACString& aCharSet)
+WebBrowserPersistLocalDocument::GetCharacterSet(nsACString& aCharSet)
 {
     aCharSet = GetCharacterSet();
     return NS_OK;
 }
 
 NS_IMETHODIMP
-nsWebBrowserPersistLocalDocument::GetTitle(nsAString& aTitle)
+WebBrowserPersistLocalDocument::GetTitle(nsAString& aTitle)
 {
     nsAutoString titleBuffer;
     mDocument->GetTitle(titleBuffer);
@@ -155,14 +153,14 @@ nsWebBrowserPersistLocalDocument::GetTitle(nsAString& aTitle)
 }
 
 NS_IMETHODIMP
-nsWebBrowserPersistLocalDocument::GetReferrer(nsAString& aReferrer)
+WebBrowserPersistLocalDocument::GetReferrer(nsAString& aReferrer)
 {
     mDocument->GetReferrer(aReferrer);
     return NS_OK;
 }
 
 NS_IMETHODIMP
-nsWebBrowserPersistLocalDocument::GetContentDisposition(nsAString& aCD)
+WebBrowserPersistLocalDocument::GetContentDisposition(nsAString& aCD)
 {
     nsCOMPtr<nsIDOMWindow> window = mDocument->GetDefaultView();
     NS_ENSURE_STATE(window);
@@ -173,7 +171,7 @@ nsWebBrowserPersistLocalDocument::GetContentDisposition(nsAString& aCD)
 }
 
 NS_IMETHODIMP
-nsWebBrowserPersistLocalDocument::GetCacheKey(uint32_t* aKey)
+WebBrowserPersistLocalDocument::GetCacheKey(uint32_t* aKey)
 {
     nsCOMPtr<nsISHEntry> history;
     nsresult rv = GetHistory(getter_AddRefs(history));
@@ -195,7 +193,7 @@ nsWebBrowserPersistLocalDocument::GetCacheKey(uint32_t* aKey)
 }
 
 NS_IMETHODIMP
-nsWebBrowserPersistLocalDocument::GetPostData(nsIInputStream** aStream)
+WebBrowserPersistLocalDocument::GetPostData(nsIInputStream** aStream)
 {
     nsCOMPtr<nsISHEntry> history;
     nsresult rv = GetHistory(getter_AddRefs(history));
@@ -205,7 +203,7 @@ nsWebBrowserPersistLocalDocument::GetPostData(nsIInputStream** aStream)
 }
 
 nsresult
-nsWebBrowserPersistLocalDocument::GetHistory(nsISHEntry** aHistory)
+WebBrowserPersistLocalDocument::GetHistory(nsISHEntry** aHistory)
 {
     nsCOMPtr<nsIDOMWindow> window = mDocument->GetDefaultView();
     NS_ENSURE_STATE(window);
@@ -223,20 +221,20 @@ nsWebBrowserPersistLocalDocument::GetHistory(nsISHEntry** aHistory)
 }
 
 const nsCString&
-nsWebBrowserPersistLocalDocument::GetCharacterSet() const
+WebBrowserPersistLocalDocument::GetCharacterSet() const
 {
     return mDocument->GetDocumentCharacterSet();
 }
 
 uint32_t
-nsWebBrowserPersistLocalDocument::GetPersistFlags() const
+WebBrowserPersistLocalDocument::GetPersistFlags() const
 {
     return mPersistFlags;
 }
 
 
 already_AddRefed<nsIURI>
-nsWebBrowserPersistLocalDocument::GetBaseURI() const
+WebBrowserPersistLocalDocument::GetBaseURI() const
 {
     return mDocument->GetBaseURI();
 }
@@ -247,7 +245,7 @@ namespace {
 // Helper class for ReadResources().
 class ResourceReader final : public nsIWebBrowserPersistDocumentReceiver {
 public:
-    ResourceReader(nsWebBrowserPersistLocalDocument* aParent,
+    ResourceReader(WebBrowserPersistLocalDocument* aParent,
                    nsIWebBrowserPersistResourceVisitor* aVisitor);
     nsresult OnWalkDOMNode(nsIDOMNode* aNode);
 
@@ -261,7 +259,7 @@ public:
     NS_DECL_ISUPPORTS
 
 private:
-    nsRefPtr<nsWebBrowserPersistLocalDocument> mParent;
+    nsRefPtr<WebBrowserPersistLocalDocument> mParent;
     nsCOMPtr<nsIWebBrowserPersistResourceVisitor> mVisitor;
     nsCOMPtr<nsIURI> mCurrentBaseURI;
     uint32_t mPersistFlags;
@@ -292,7 +290,7 @@ private:
 
 NS_IMPL_ISUPPORTS(ResourceReader, nsIWebBrowserPersistDocumentReceiver)
 
-ResourceReader::ResourceReader(nsWebBrowserPersistLocalDocument* aParent,
+ResourceReader::ResourceReader(WebBrowserPersistLocalDocument* aParent,
                                nsIWebBrowserPersistResourceVisitor* aVisitor)
 : mParent(aParent)
 , mVisitor(aVisitor)
@@ -626,7 +624,7 @@ ResourceReader::OnWalkDOMNode(nsIDOMNode* aNode)
 // Helper class for node rewriting in writeContent().
 class PersistNodeFixup final : public nsIDocumentEncoderNodeFixup {
 public:
-    PersistNodeFixup(nsWebBrowserPersistLocalDocument* aParent,
+    PersistNodeFixup(WebBrowserPersistLocalDocument* aParent,
                      nsIWebBrowserPersistURIMap* aMap,
                      nsIURI* aTargetURI);
 
@@ -634,7 +632,7 @@ public:
     NS_DECL_NSIDOCUMENTENCODERNODEFIXUP
 private:
     virtual ~PersistNodeFixup() { }
-    nsRefPtr<nsWebBrowserPersistLocalDocument> mParent;
+    nsRefPtr<WebBrowserPersistLocalDocument> mParent;
     nsClassHashtable<nsCStringHashKey, nsCString> mMap;
     nsCOMPtr<nsIURI> mCurrentBaseURI;
     nsCOMPtr<nsIURI> mTargetBaseURI;
@@ -657,7 +655,7 @@ private:
 
 NS_IMPL_ISUPPORTS(PersistNodeFixup, nsIDocumentEncoderNodeFixup)
 
-PersistNodeFixup::PersistNodeFixup(nsWebBrowserPersistLocalDocument* aParent,
+PersistNodeFixup::PersistNodeFixup(WebBrowserPersistLocalDocument* aParent,
                                    nsIWebBrowserPersistURIMap* aMap,
                                    nsIURI* aTargetURI)
 : mParent(aParent)
@@ -955,8 +953,7 @@ PersistNodeFixup::FixupNode(nsIDOMNode *aNodeIn,
         nsCOMPtr<nsIDOMHTMLBaseElement> nodeAsBase = do_QueryInterface(aNodeIn);
         if (nodeAsBase) {
             nsCOMPtr<nsIDOMDocument> ownerDocument;
-            HTMLSharedElement* base =
-                static_cast<HTMLSharedElement*>(nodeAsBase.get());
+            auto* base = static_cast<dom::HTMLSharedElement*>(nodeAsBase.get());
             base->GetOwnerDocument(getter_AddRefs(ownerDocument));
             if (ownerDocument) {
                 nsAutoString href;
@@ -1139,7 +1136,7 @@ PersistNodeFixup::FixupNode(nsIDOMNode *aNodeIn,
             }
             // Unset the codebase too, since we'll correctly relativize the
             // code and archive paths.
-            static_cast<HTMLSharedObjectElement*>(newApplet.get())->
+            static_cast<dom::HTMLSharedObjectElement*>(newApplet.get())->
               RemoveAttribute(NS_LITERAL_STRING("codebase"));
             FixupAttribute(*aNodeOut, "code");
             FixupAttribute(*aNodeOut, "archive");
@@ -1200,8 +1197,8 @@ PersistNodeFixup::FixupNode(nsIDOMNode *aNodeIn,
             NS_NAMED_LITERAL_STRING(valueAttr, "value");
             // Update element node attributes with user-entered form state
             nsCOMPtr<nsIContent> content = do_QueryInterface(*aNodeOut);
-            nsRefPtr<HTMLInputElement> outElt =
-              HTMLInputElement::FromContentOrNull(content);
+            nsRefPtr<dom::HTMLInputElement> outElt =
+              dom::HTMLInputElement::FromContentOrNull(content);
             nsCOMPtr<nsIFormControl> formControl = do_QueryInterface(*aNodeOut);
             switch (formControl->GetType()) {
                 case NS_FORM_INPUT_EMAIL:
@@ -1267,7 +1264,7 @@ PersistNodeFixup::FixupNode(nsIDOMNode *aNodeIn,
 } // unnamed namespace
 
 NS_IMETHODIMP
-nsWebBrowserPersistLocalDocument::ReadResources(nsIWebBrowserPersistResourceVisitor* aVisitor)
+WebBrowserPersistLocalDocument::ReadResources(nsIWebBrowserPersistResourceVisitor* aVisitor)
 {
     nsresult rv = NS_OK;
     nsCOMPtr<nsIWebBrowserPersistResourceVisitor> visitor = aVisitor;
@@ -1363,7 +1360,7 @@ ContentTypeEncoderExists(const nsACString& aType)
 }
 
 void
-nsWebBrowserPersistLocalDocument::DecideContentType(nsACString& aContentType)
+WebBrowserPersistLocalDocument::DecideContentType(nsACString& aContentType)
 {
     if (aContentType.IsEmpty()) {
         if (NS_WARN_IF(NS_FAILED(GetContentType(aContentType)))) {
@@ -1380,7 +1377,7 @@ nsWebBrowserPersistLocalDocument::DecideContentType(nsACString& aContentType)
 }
 
 nsresult
-nsWebBrowserPersistLocalDocument::GetDocEncoder(const nsACString& aContentType,
+WebBrowserPersistLocalDocument::GetDocEncoder(const nsACString& aContentType,
                                            uint32_t aEncoderFlags,
                                            nsIDocumentEncoder** aEncoder)
 {
@@ -1408,7 +1405,7 @@ nsWebBrowserPersistLocalDocument::GetDocEncoder(const nsACString& aContentType,
 
 
 NS_IMETHODIMP
-nsWebBrowserPersistLocalDocument::WriteContent(
+WebBrowserPersistLocalDocument::WriteContent(
     nsIOutputStream* aStream,
     nsIWebBrowserPersistURIMap* aMap,
     const nsACString& aRequestedContentType,
@@ -1450,3 +1447,5 @@ nsWebBrowserPersistLocalDocument::WriteContent(
     aCompletion->OnFinish(this, aStream, contentType, rv);
     return NS_OK;
 }
+
+} // namespace mozilla

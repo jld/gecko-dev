@@ -95,7 +95,7 @@
 #include "ImageOps.h"
 #include "UnitTransforms.h"
 #include <algorithm>
-#include "nsWebBrowserPersistDocumentParent.h"
+#include "mozilla/WebBrowserPersistDocumentParent.h"
 
 using namespace mozilla::dom;
 using namespace mozilla::ipc;
@@ -3350,7 +3350,7 @@ TabParent::AsyncPanZoomEnabled() const
 PWebBrowserPersistDocumentParent*
 TabParent::AllocPWebBrowserPersistDocumentParent()
 {
-  return new nsWebBrowserPersistDocumentParent();
+  return new WebBrowserPersistDocumentParent();
 }
 
 bool
@@ -3363,7 +3363,7 @@ TabParent::DeallocPWebBrowserPersistDocumentParent(PWebBrowserPersistDocumentPar
 NS_IMETHODIMP
 TabParent::StartPersistence(nsIWebBrowserPersistDocumentReceiver* aRecv)
 {
-  auto* actor = new nsWebBrowserPersistDocumentParent();
+  auto* actor = new WebBrowserPersistDocumentParent();
   actor->SetOnReady(aRecv);
   return SendPWebBrowserPersistDocumentConstructor(actor)
     ? NS_OK : NS_ERROR_FAILURE;

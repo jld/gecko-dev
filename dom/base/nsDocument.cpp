@@ -235,7 +235,6 @@
 #include "gfxPrefs.h"
 
 #include "nsISpeculativeConnect.h"
-#include "nsWebBrowserPersistLocalDocument.h"
 
 #ifdef MOZ_MEDIA_NAVIGATOR
 #include "mozilla/MediaManager.h"
