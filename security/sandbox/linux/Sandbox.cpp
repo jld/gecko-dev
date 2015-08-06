@@ -190,30 +190,49 @@ InstallSigSysHandler(void)
 }
 
 /**
- * This function installs the syscall filter, a.k.a. seccomp.
- * PR_SET_NO_NEW_PRIVS ensures that it is impossible to grant more
- * syscalls to the process beyond this point (even after fork()).
+ * This function installs the syscall filter, a.k.a. seccomp.  The
+ * aUseTSync flag indicates whether this should apply to all threads
+ * in the process -- which will fail if the kernel doesn't support
+ * that -- or only the current thread.
+ *
  * SECCOMP_MODE_FILTER is the "bpf" mode of seccomp which allows
  * to pass a bpf program (in our case, it contains a syscall
  * whitelist).
  *
- * Reports failure by crashing.
+ * PR_SET_NO_NEW_PRIVS ensures that it is impossible to grant more
+ * syscalls to the process beyond this point (even after fork()), and
+ * prevents gaining capabilities (e.g., by exec'ing a setuid root
+ * program).  The kernel won't allow seccomp-bpf without doing this,
+ * because otherwise it could be used for privilege escalation attacks.
  *
- * @see sock_fprog (the seccomp_prog).
+ * Returns false (and sets errno) on failure.
+ *
+ * @see SandboxInfo
+ * @see BroadcastSetThreadSandbox
  */
-static void
-InstallSyscallFilter(const sock_fprog *prog)
+static bool MOZ_WARN_UNUSED_RESULT
+InstallSyscallFilter(const sock_fprog *aProg, bool aUseTSync)
 {
   if (prctl(PR_SET_NO_NEW_PRIVS, 1, 0, 0, 0)) {
     SANDBOX_LOG_ERROR("prctl(PR_SET_NO_NEW_PRIVS) failed: %s", strerror(errno));
     MOZ_CRASH("prctl(PR_SET_NO_NEW_PRIVS)");
   }
 
-  if (prctl(PR_SET_SECCOMP, SECCOMP_MODE_FILTER, (unsigned long)prog, 0, 0)) {
-    SANDBOX_LOG_ERROR("prctl(PR_SET_SECCOMP, SECCOMP_MODE_FILTER) failed: %s",
-                      strerror(errno));
-    MOZ_CRASH("prctl(PR_SET_SECCOMP, SECCOMP_MODE_FILTER)");
+  if (aUseTSync) {
+    if (syscall(__NR_seccomp, SECCOMP_SET_MODE_FILTER,
+                SECCOMP_FILTER_FLAG_TSYNC, aProg) != 0) {
+      SANDBOX_LOG_ERROR("thread-synchronized seccomp failed: %s",
+                        strerror(errno));
+      return false;
+    }
+  } else {
+    if (prctl(PR_SET_SECCOMP, SECCOMP_MODE_FILTER, (unsigned long)aProg, 0, 0)) {
+      SANDBOX_LOG_ERROR("prctl(PR_SET_SECCOMP, SECCOMP_MODE_FILTER) failed: %s",
+                        strerror(errno));
+      return false;
+    }
   }
+  return true;
 }
 
 // Use signals for permissions that need to be set per-thread.
@@ -250,7 +269,9 @@ static bool
 SetThreadSandbox()
 {
   if (prctl(PR_GET_SECCOMP, 0, 0, 0, 0) == 0) {
-    InstallSyscallFilter(&gSetSandboxFilter);
+    if (!InstallSyscallFilter(&gSetSandboxFilter, false)) {
+      MOZ_CRASH("prctl(PR_SET_SECCOMP, SECCOMP_MODE_FILTER)");
+    }
     return true;
   }
   return false;
@@ -273,6 +294,15 @@ SetThreadSandboxHandler(int signum)
 }
 
 static void
+InitFProg(sock_fprog *aProg, sock_filter* aFilter, size_t aFilterLen)
+{
+  aProg->filter = aFilter;
+  aProg->len = static_cast<unsigned short>(aFilterLen);
+  // Check for integer overflow (shouldn't happen):
+  MOZ_RELEASE_ASSERT(static_cast<size_t>(aProg->len) == aFilterLen);
+}
+
+static void
 BroadcastSetThreadSandbox(UniquePtr<sock_filter[]> aProgram, size_t aProgLen)
 {
   int signum;
@@ -283,9 +313,7 @@ BroadcastSetThreadSandbox(UniquePtr<sock_filter[]> aProgram, size_t aProgLen)
   // Note: this is an unsafe copy of the unique pointer, but it's
   // zeroed (and the signal handler that would access it is removed)
   // before the end of this function.
-  gSetSandboxFilter.filter = aProgram.get();
-  gSetSandboxFilter.len = static_cast<unsigned short>(aProgLen);
-  MOZ_RELEASE_ASSERT(static_cast<size_t>(gSetSandboxFilter.len) == aProgLen);
+  InitFProg(&gSetSandboxFilter, aProgram.get(), aProgLen);
 
   static_assert(sizeof(mozilla::Atomic<int>) == sizeof(int),
                 "mozilla::Atomic<int> isn't represented by an int");
@@ -450,6 +478,27 @@ SetCurrentProcessSandbox(UniquePtr<sandbox::bpf_dsl::Policy> aPolicy)
     flatProgram[i - program->begin()] = *i;
   }
 
+
+  const SandboxInfo info = SandboxInfo::Get();
+  if (info.Test(SandboxInfo::kHasSeccompTSync)) {
+    if (info.Test(SandboxInfo::kVerbose)) {
+      SANDBOX_LOG_ERROR("using seccomp tsync");
+    }
+    sock_fprog fprog;
+    InitFProg(&fprog, flatProgram.get(), program->size());
+    if (InstallSyscallFilter(&fprog, true)) {
+      return;
+    }
+    // If SandboxInfo detected tsync support but it didn't work, then
+    // something is seriously wrong and we want to know what.
+    MOZ_DIAGNOSTIC_ASSERT(false,
+                          "seccomp+tsync failed, but kernel supports tsync");
+    // On non-debug release builds, fall though to the signal
+    // broadcast code (which should still work) instead of crashing.
+  }
+  if (info.Test(SandboxInfo::kVerbose)) {
+    SANDBOX_LOG_ERROR("no tsync support; using signal broadcast");
+  }
   BroadcastSetThreadSandbox(Move(flatProgram), program->size());
 }
 
