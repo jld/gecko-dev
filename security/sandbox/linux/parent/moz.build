@@ -1,4 +1,4 @@
-# -*- Mode: python; c-basic-offset: 4; indent-tabs-mode: nil; tab-width: 40 -*-
+# -*- Mode: python; python-indent: 4; indent-tabs-mode: nil; tab-width: 40 -*-
 # vim: set filetype=python:
 # This Source Code Form is subject to the terms of the Mozilla Public
 # License, v. 2.0. If a copy of the MPL was not distributed with this
@@ -6,19 +6,21 @@
 
 FAIL_ON_WARNINGS = True
 
-Library('sandboxtest')
-
-# Note: ../parent/moz.build already builds ../SandboxUtil.cpp into libxul.
-SOURCES = [
-    'TestSandboxUtil.cpp',
+EXPORTS.mozilla += [
+    'SandboxParent.h',
 ]
 
+SOURCES += [
+    '../SandboxUtil.cpp',
+    'SandboxParent.cpp',
+]
+
+include('/ipc/chromium/chromium-config.mozbuild')
+
 LOCAL_INCLUDES += [
+    '/security/sandbox/chromium',
     '/security/sandbox/linux',
     '/security/sandbox/linux/common',
 ]
-LOCAL_INCLUDES += [
-    '/security/sandbox/chromium',
-]
 
-FINAL_LIBRARY = 'xul-gtest'
+FINAL_LIBRARY = 'xul'

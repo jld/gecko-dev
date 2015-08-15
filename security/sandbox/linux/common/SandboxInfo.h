@@ -39,7 +39,9 @@ public:
     kHasPrivilegedUserNamespaces = 1 << 6,
   };
 
-  bool Test(Flags aFlag) const { return (mFlags & aFlag) == aFlag; }
+  // Given a set of flags, returns whether all of them are set.
+  // (Takes an int so that Test(kFlag | kOtherFlag) type-checks.)
+  bool Test(int aFlag) const { return (mFlags & aFlag) == aFlag; }
 
   // Returns true if SetContentProcessSandbox may be called.
   bool CanSandboxContent() const
