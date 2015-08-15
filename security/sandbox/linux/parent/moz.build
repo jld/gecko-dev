@@ -15,8 +15,6 @@ SOURCES += [
     'SandboxParent.cpp',
 ]
 
-include('/ipc/chromium/chromium-config.mozbuild')
-
 LOCAL_INCLUDES += [
     '/security/sandbox/chromium',
     '/security/sandbox/linux',

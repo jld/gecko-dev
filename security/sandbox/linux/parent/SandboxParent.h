@@ -9,11 +9,9 @@
 
 #include <sys/types.h>
 
-#include "base/process_util.h"
-
 namespace mozilla {
 
-pid_t SandboxFork(base::ChildPrivileges privs);
+pid_t SandboxFork();
 
 } // namespace mozilla
 

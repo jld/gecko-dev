@@ -6,13 +6,18 @@
 
 #include "SandboxParent.h"
 
+#include "LinuxSched.h"
 #include "SandboxLogging.h"
 #include "SandboxInfo.h"
 #include "SandboxUtil.h"
 
-#include <linux/sched.h>
+#include "mozilla/Assertions.h"
+#include "mozilla/Attributes.h"
+
+#include <errno.h>
 #include <sched.h>
 #include <setjmp.h>
+#include <signal.h>
 
 namespace mozilla {
 
@@ -115,25 +120,23 @@ pid_t ForkWithFlags(unsigned long flags,
   return 0;
 }
 
-pid_t SandboxFork(base::ChildPrivileges aPrivs)
+pid_t SandboxFork()
 {
-  pid_t pid = -1;
-  if (aPrivs == base::PRIVILEGES_UNPRIVILEGED &&
-      SandboxInfo::Get().Test(SandboxInfo::kHasSeccompTSync |
-			      SandboxInfo::kHasUserNamespaces)) {
-    uid_t uid = getuid();
-    gid_t gid = getgid();
-    pid = ForkWithFlags(CLONE_NEWUSER | CLONE_NEWPID | SIGCHLD);
-    if (pid == 0) {
-      SetUpUserNamespace(uid, gid);
-    } else if (pid < 0) {
-      SANDBOX_LOG_ERROR("clone(CLONE_NEWUSER|CLONE_NEWPID): %s",
-			strerror(errno));
-      MOZ_DIAGNOSTIC_ASSERT(false, "CONFIG_USER_NS=y but CONFIG_PID_NS=n?");
-    }
+  if (!SandboxInfo::Get().Test(SandboxInfo::kHasSeccompTSync |
+			       SandboxInfo::kHasUserNamespaces)) {
+    errno = ENOSYS;
+    return -1;
   }
-  if (pid < 0) {
-    pid = fork();
+
+  uid_t uid = getuid();
+  gid_t gid = getgid();
+  pid_t pid = ForkWithFlags(CLONE_NEWUSER | CLONE_NEWPID | SIGCHLD);
+  if (pid == 0) {
+    SetUpUserNamespace(uid, gid);
+  } else if (pid < 0) {
+    SANDBOX_LOG_ERROR("clone(CLONE_NEWUSER|CLONE_NEWPID): %s",
+		      strerror(errno));
+    MOZ_DIAGNOSTIC_ASSERT(false, "CONFIG_USER_NS=y but CONFIG_PID_NS=n?");
   }
   return pid;
 }

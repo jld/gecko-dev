@@ -244,11 +244,15 @@ bool LaunchApp(const std::vector<std::string>& argv,
     return false;
   }
 
+  pid_t pid = -1;
 #ifdef MOZ_SANDBOX
-  pid_t pid = mozilla::SandboxFork(privs);
-#else
-  pid_t pid = fork();
+  if (privs == PRIVILEGES_UNPRIVILEGED) {
+    pid = mozilla::SandboxFork();
+  }
 #endif
+  if (pid < 0) {
+     pid = fork();
+  }
   if (pid < 0) {
     return false;
   }
