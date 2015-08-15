@@ -376,7 +376,7 @@ bool Channel::ChannelImpl::EnqueueHelloMessage() {
   mozilla::UniquePtr<Message> msg(new Message(MSG_ROUTING_NONE,
                                               HELLO_MESSAGE_TYPE,
                                               IPC::Message::PRIORITY_NORMAL));
-  if (!msg->WriteInt(base::GetCurrentProcId())) {
+  if (!msg->WriteInt(base::GetCurrentOuterProcId())) {
     Close();
     return false;
   }

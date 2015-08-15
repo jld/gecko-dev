@@ -20,6 +20,7 @@
 #include "base/string_tokenizer.h"
 #include "base/string_util.h"
 #include "nsLiteralString.h"
+#include "mozilla/Atomics.h"
 #include "mozilla/UniquePtr.h"
 
 #include "prenv.h"
@@ -348,6 +349,31 @@ void SetCurrentProcessPrivileges(ChildPrivileges privs) {
   if (chdir("/") != 0)
     gProcessLog.print("==> could not chdir()\n");
 #endif
+}
+
+ProcessId GetCurrentOuterProcId() {
+#ifdef MOZ_SANDBOX
+  static mozilla::Atomic<ProcessId> outerPid(0);
+  ProcessId rv = outerPid;
+  if (rv == 0) {
+    char buf[sizeof("2147483647")];
+    if (readlink("/proc/self", buf, sizeof(buf)) > 0) {
+      rv = atoi(buf);
+    } else {
+      int theErrno = errno;
+      DLOG(ERROR) << "FAILED TO readlink() /proc/self: " << strerror(theErrno);
+    }
+    if (rv > 0) {
+      // It doesn't matter if some other thread already got here,
+      // because all stores should be of the same value.
+      outerPid = rv;
+    }
+  }
+  if (rv > 0) {
+    return rv;
+  }
+#endif // MOZ_SANDBOX
+  return GetCurrentProcId();
 }
 
 }  // namespace base

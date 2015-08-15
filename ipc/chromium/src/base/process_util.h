@@ -135,6 +135,14 @@ void SetAllFDsToCloseOnExec();
 void CloseSuperfluousFds(const base::InjectiveMultimap& saved_map);
 #endif
 
+#if defined(OS_LINUX)
+ProcessId GetCurrentOuterProcId();
+#else
+inline ProcessId GetCurrentOuterProcId() {
+	return GetCurrentProcId();
+}
+#endif
+
 enum ChildPrivileges {
   PRIVILEGES_DEFAULT,
   PRIVILEGES_UNPRIVILEGED,
