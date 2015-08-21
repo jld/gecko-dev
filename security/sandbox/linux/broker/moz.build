@@ -19,7 +19,8 @@ SOURCES += [
 ]
 
 LOCAL_INCLUDES += [
-    '/security/sandbox/linux/broker',
+    '/security/sandbox/linux', # SandboxLogging.h
+    '/security/sandbox/linux/common', # SandboxInfo.h
 ]
 
 # Need this for mozilla::ipc::FileDescriptor etc.

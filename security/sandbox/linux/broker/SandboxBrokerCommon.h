@@ -35,7 +35,9 @@ public:
     // SCM_RIGHTS attached for successful open.
   };
 
-  // FIXME: what's the right number?
+  // This doesn't need to be the system's maximum path length, just
+  // the largest path that would be allowed by any policy.  (It's used
+  // to size a stack-allocated buffer.)
   static const size_t kMaxPathLen = 4096;
 
   static ssize_t RecvWithFd(int aFd, const iovec* aIO, size_t aNumIO,

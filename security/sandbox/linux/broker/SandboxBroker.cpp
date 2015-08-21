@@ -5,7 +5,8 @@
  * You can obtain one at http://mozilla.org/MPL/2.0/. */
 
 #include "SandboxBroker.h"
-#include "../SandboxLogging.h"
+#include "SandboxInfo.h"
+#include "SandboxLogging.h"
 
 #include <dirent.h>
 #include <errno.h>
@@ -121,7 +122,9 @@ SandboxBroker::Policy::AddPath(int aPerms, const char* aPath,
   } else {
     MOZ_ASSERT(perms & MAY_ACCESS);
   }
-  // SANDBOX_LOG_ERROR("policy for %s: %d -> %d", aPath, perms, perms | aPerms);
+  if (SandboxInfo::Get().Test(SandboxInfo::kVerbose)) {
+    SANDBOX_LOG_ERROR("policy for %s: %d -> %d", aPath, perms, perms | aPerms);
+  }
   perms |= aPerms;
   mMap.Put(path, perms);
 }
@@ -201,10 +204,17 @@ AllowAccess(int aReqFlags, int aPerms)
   return (aPerms & needed) == needed;
 }
 
-// FIXME: should these move to Common?
+// These flags are added to all opens to prevent possible side-effects
+// on this process.  These shouldn't be relevant to the child process
+// in any case due to the sandboxing restrictions on it.  (See also
+// the use of MSG_CMSG_CLOEXEC in SandboxBrokerCommon.cpp).
 static const int kRequiredOpenFlags = O_CLOEXEC | O_NOCTTY;
 
-// FIXME: explain more
+// Linux originally assigned a flag bit to O_SYNC but implemented the
+// semantics standardized as O_DSYNC; later, that bit was renamed and
+// a new bit was assigned to the full O_SYNC, and O_SYNC was redefined
+// to be both bits.  As a result, this #define is needed to compensate
+// for outdated kernel headers like Android's.
 #define O_SYNC_NEW 04010000
 static const int kAllowedOpenFlags =
   O_APPEND | O_ASYNC | O_DIRECT | O_DIRECTORY | O_EXCL | O_LARGEFILE
@@ -284,20 +294,30 @@ SandboxBroker::ThreadMain(void)
 
     const ssize_t recvd = RecvWithFd(mFileDesc, ios, 2, &respfd);
     if (recvd == 0) {
-      // SANDBOX_LOG_ERROR("EOF from pid %d", mChildPid);
+      if (SandboxInfo::Get().Test(SandboxInfo::kVerbose)) {
+        SANDBOX_LOG_ERROR("EOF from pid %d", mChildPid);
+      }
+      break;
+    }
+    // Errors and short reads could be recovered from, at least in
+    // some cases, but protocol violation indicates a hostile client,
+    // so we terminate the broker instead.
+    if (recvd < 0) {
+      SANDBOX_LOG_ERROR("bad read from pid %d: %s",
+                        mChildPid, strerror(errno));
+      shutdown(mFileDesc, SHUT_RDWR);
       break;
     }
     if (recvd < static_cast<ssize_t>(sizeof(req))) {
-      SANDBOX_LOG_ERROR("bad read from pid %d (%zd < %zu)",
+      SANDBOX_LOG_ERROR("bad read from pid %d (%d < %d)",
                         mChildPid, recvd, sizeof(req));
-      // Error or short read.
-      // (FIXME: distinguish expected errors to prevent infinite loop.)
-      continue;
+      shutdown(mFileDesc, SHUT_RDWR);
+      break;
     }
-    if (respfd == -1) { 
+    if (respfd == -1) {
       SANDBOX_LOG_ERROR("no response fd from pid %d", mChildPid);
-      // FIXME: warn?
-      continue;
+      shutdown(mFileDesc, SHUT_RDWR);
+      break;
     }
 
     memset(&resp, 0, sizeof(resp));
