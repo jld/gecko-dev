@@ -62,8 +62,10 @@ protected:
   
   virtual void SetUp() {
     ipc::FileDescriptor fd;
-    
-    mServer.reset(new SandboxBroker(GetPolicy(), getpid(), fd));
+
+    mServer = SandboxBroker::Create(GetPolicy(), getpid(), fd);
+    ASSERT_NE(mServer, nullptr);
+    ASSERT_TRUE(fd.IsValid());
     mClient.reset(new SandboxBrokerClient(dup(fd.PlatformHandle())));
   }
 

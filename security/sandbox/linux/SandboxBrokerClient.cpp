@@ -5,6 +5,7 @@
  * You can obtain one at http://mozilla.org/MPL/2.0/. */
 
 #include "SandboxBrokerClient.h"
+#include "SandboxInfo.h"
 #include "SandboxLogging.h"
 
 #include <errno.h>
@@ -52,8 +53,9 @@ SandboxBrokerClient::DoCall(const Request* aReq, const char* aPath,
       base::strings::SafeSPrintf(rewrittenPath, "/proc/%d/%s",
                                  getpid(), aPath + kProcSelfLen);
     if (static_cast<size_t>(len) < sizeof(rewrittenPath)) {
-      // FIXME: this one definitely needs to be verbose-gated for landing.
-      SANDBOX_LOG_ERROR("rewriting %s -> %s", aPath, rewrittenPath);
+      if (SandboxInfo::Get().Test(SandboxInfo::kVerbose)) {
+        SANDBOX_LOG_ERROR("rewriting %s -> %s", aPath, rewrittenPath);
+      }
       path = rewrittenPath;
     } else {
       SANDBOX_LOG_ERROR("not rewriting unexpectedly long path %s", aPath);
@@ -115,9 +117,14 @@ SandboxBrokerClient::DoCall(const Request* aReq, const char* aPath,
   if (resp.mError == 0) {
     return 0;
   }
-  // FIXME: verbose?
-  SANDBOX_LOG_ERROR("Rejected errno %d op %d flags 0%o path %s",
-                    resp.mError, aReq->mOp, aReq->mFlags, path);
+  if (SandboxInfo::Get().Test(SandboxInfo::kVerbose)) {
+    // Keep in mind that "rejected" files can include ones that don't
+    // actually exist, if it's something that's optional or part of a
+    // search path (e.g., shared libraries).  In those cases, this
+    // error message is expected.
+    SANDBOX_LOG_ERROR("Rejected errno %d op %d flags 0%o path %s",
+                      resp.mError, aReq->mOp, aReq->mFlags, path);
+  }
   if (aOpenedFd && *aOpenedFd >= 0) {
     close(*aOpenedFd);
     *aOpenedFd = -1;

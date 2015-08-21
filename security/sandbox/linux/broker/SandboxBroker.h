@@ -9,8 +9,7 @@
 
 #include "mozilla/SandboxBrokerCommon.h"
 
-#include <pthread.h>
-
+#include "base/platform_thread.h"
 #include "mozilla/Attributes.h"
 #include "mozilla/UniquePtr.h"
 #include "nsDataHashtable.h"
@@ -23,7 +22,10 @@ namespace ipc {
 class FileDescriptor;
 }
 
-class SandboxBroker final : private SandboxBrokerCommon {
+class SandboxBroker final
+  : private SandboxBrokerCommon
+  , public PlatformThread::Delegate
+{
  public:
   enum Perms {
     MAY_ACCESS = 1 << 0,
@@ -52,18 +54,27 @@ class SandboxBroker final : private SandboxBrokerCommon {
     }
   };
 
-  SandboxBroker(UniquePtr<const Policy> aPolicy, int aPid,
-                ipc::FileDescriptor& aClientFd);
-  ~SandboxBroker();
-  ipc::FileDescriptor Start();
+  // Constructing a broker involves creating a socketpair and a
+  // background thread to handle requests, so it can fail.  If this
+  // returns nullptr, do not use the value of aClientFdOut.
+  static UniquePtr<SandboxBroker>
+    Create(UniquePtr<const Policy> aPolicy, int aChildPid,
+           ipc::FileDescriptor& aClientFdOut);
+  virtual ~SandboxBroker();
+
  private:
-  pthread_t mThread;
+  PlatformThreadHandle mThread;
   int mFileDesc;
-  const int mPid;
+  const int mChildPid;
   const UniquePtr<const Policy> mPolicy;
 
-  void Main(void);
-  static void* ThreadMain(void*);
+  SandboxBroker(UniquePtr<const Policy> aPolicy, int aChildPid,
+                int& aClientFd);
+  void ThreadMain(void) override;
+
+  // Holding a UniquePtr should disallow implicit copy, but also:
+  SandboxBroker(const SandboxBroker&) = delete;
+  void operator=(const SandboxBroker&) = delete;
 };
 
 } // namespace mozilla

@@ -2585,19 +2585,24 @@ ContentParent::InitInternal(ProcessPriority aInitialPriority,
         shouldSandbox = false;
     }
 #endif
-    MaybeFileDesc broker = void_t();
+    MaybeFileDesc brokerFd = void_t();
 #ifdef XP_LINUX
     if (shouldSandbox) {
         MOZ_ASSERT(!mSandboxBroker);
-        broker = FileDescriptor();
+        brokerFd = FileDescriptor();
         auto policy = sSandboxBrokerPolicyFactory->GetContentPolicy(Pid());
         if (policy) {
-            mSandboxBroker =
-                MakeUnique<SandboxBroker>(Move(policy), Pid(), broker);
+            mSandboxBroker = SandboxBroker::Create(Move(policy), Pid(),
+                                                   brokerFd);
+            if (!mSandboxBroker) {
+                KillHard("SandboxBroker::Create failed");
+                return;
+            }
+            MOZ_ASSERT(static_cast<const FileDescriptor&>(brokerFd).IsValid());
         }
     }
 #endif
-    if (shouldSandbox && !SendSetProcessSandbox(broker)) {
+    if (shouldSandbox && !SendSetProcessSandbox(brokerFd)) {
         KillHard("SandboxInitFailed");
     }
 #endif

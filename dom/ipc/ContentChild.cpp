@@ -1185,6 +1185,10 @@ ContentChild::RecvSetProcessSandbox(const MaybeFileDesc& aBroker)
     int brokerFd = -1;
     if (aBroker.type() == MaybeFileDesc::TFileDescriptor) {
         brokerFd = aBroker.get_FileDescriptor().PlatformHandle();
+        // brokerFd < 0 means to allow direct filesystem access, so
+        // make absolutely sure that doesn't happen if the parent
+        // didn't intend it.
+        MOZ_RELEASE_ASSERT(brokerFd >= 0);
 #ifdef MOZ_WIDGET_GONK
         mozilla::gl::sEGLLibrary.EnsureInitialized();
 #endif

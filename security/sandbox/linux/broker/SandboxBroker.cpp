@@ -26,42 +26,66 @@
 
 #include "mozilla/Assertions.h"
 #include "mozilla/DebugOnly.h"
+#include "mozilla/Move.h"
 #include "mozilla/NullPtr.h"
 #include "mozilla/ipc/FileDescriptor.h"
 
 namespace mozilla {
 
-/* static */ void*
-SandboxBroker::ThreadMain(void *arg)
-{
-  static_cast<SandboxBroker*>(arg)->Main();
-  return nullptr;
-}
-
-SandboxBroker::SandboxBroker(UniquePtr<const Policy> aPolicy, int aPid,
-                             ipc::FileDescriptor& aClientFd)
-  : mPid(aPid), mPolicy(Move(aPolicy))
+// This constructor signals failure by setting mFileDesc and aClientFd to -1.
+SandboxBroker::SandboxBroker(UniquePtr<const Policy> aPolicy, int aChildPid,
+                             int& aClientFd)
+  : mChildPid(aChildPid), mPolicy(Move(aPolicy))
 {
   int fds[2];
   if (0 != socketpair(AF_UNIX, SOCK_SEQPACKET, 0, fds)) {
-    // ???
-    aClientFd = ipc::FileDescriptor();
+    SANDBOX_LOG_ERROR("SandboxBroker: socketpair failed: %s", strerror(errno));
+    mFileDesc = -1;
+    aClientFd = -1;
+    return;
   }
   mFileDesc = fds[0];
-  aClientFd = ipc::FileDescriptor(fds[1]);
-  close(fds[1]);
+  aClientFd = fds[1];
 
-  // FIXME: can this use an existing thread class?
-  pthread_create(&mThread, nullptr, ThreadMain, this);
+  if (!PlatformThread::Create(0, this, &mThread)) {
+    SANDBOX_LOG_ERROR("SandboxBroker: thread creation failed: %s",
+                      strerror(errno));
+    close(mFileDesc);
+    close(aClientFd);
+    mFileDesc = -1;
+    aClientFd = -1;
+  }
+}
+
+UniquePtr<SandboxBroker>
+SandboxBroker::Create(UniquePtr<const Policy> aPolicy, int aChildPid,
+                      ipc::FileDescriptor& aClientFdOut)
+{
+  int clientFd;
+  // Can't use MakeUnique here because the constructor is private.
+  UniquePtr<SandboxBroker> rv(new SandboxBroker(Move(aPolicy), aChildPid,
+                                                clientFd));
+  if (clientFd < 0) {
+    rv = nullptr;
+  } else {
+    aClientFdOut = ipc::FileDescriptor(clientFd);
+  }
+  return Move(rv);
 }
 
 SandboxBroker::~SandboxBroker() {
+  // If the constructor failed, there's nothing to be done here.
+  if (mFileDesc < 0) {
+    return;
+  }
+
   shutdown(mFileDesc, SHUT_RD);
   // The thread will now get EOF even if the client hasn't exited.
-  pthread_join(mThread, nullptr);
-  // The fd will no longer be accessed.
+  PlatformThread::Join(mThread);
+  // Now that the thread has exited, the fd will no longer be accessed.
   close(mFileDesc);
-  // Nor will this object.
+  // Having ensured that this object outlives the thread, this
+  // destructor can now return.
 }
 
 SandboxBroker::Policy::Policy() { }
@@ -224,13 +248,11 @@ DoStat(const char* aPath, struct stat* aStat, int aFlags)
 }
 
 void
-SandboxBroker::Main(void)
+SandboxBroker::ThreadMain(void)
 {
-#ifdef XP_LINUX
   char threadName[16];
-  snprintf(threadName, sizeof(threadName), "FileProxy %d", mPid);
-  prctl(PR_SET_NAME, threadName);
-#endif
+  snprintf(threadName, sizeof(threadName), "FS Broker %d", mChildPid);
+  PlatformThread::SetName(threadName);
 
 #ifdef MOZ_WIDGET_GONK
 #ifdef __NR_setreuid32
@@ -240,8 +262,8 @@ SandboxBroker::Main(void)
   static const long nr_setreuid = __NR_setreuid;
   static const long nr_setregid = __NR_setregid;
 #endif
-  if (syscall(nr_setregid, getgid(), AID_APP + mPid) != 0 ||
-      syscall(nr_setreuid, getuid(), AID_APP + mPid) != 0) {
+  if (syscall(nr_setregid, getgid(), AID_APP + mChildPid) != 0 ||
+      syscall(nr_setreuid, getuid(), AID_APP + mChildPid) != 0) {
     MOZ_CRASH("SandboxBroker: failed to drop privileges");
   }
 #endif
@@ -262,18 +284,18 @@ SandboxBroker::Main(void)
 
     const ssize_t recvd = RecvWithFd(mFileDesc, ios, 2, &respfd);
     if (recvd == 0) {
-      // SANDBOX_LOG_ERROR("EOF from pid %d", mPid);
+      // SANDBOX_LOG_ERROR("EOF from pid %d", mChildPid);
       break;
     }
     if (recvd < static_cast<ssize_t>(sizeof(req))) {
       SANDBOX_LOG_ERROR("bad read from pid %d (%zd < %zu)",
-                        mPid, recvd, sizeof(req));
+                        mChildPid, recvd, sizeof(req));
       // Error or short read.
       // (FIXME: distinguish expected errors to prevent infinite loop.)
       continue;
     }
     if (respfd == -1) { 
-      SANDBOX_LOG_ERROR("no response fd from pid %d", mPid);
+      SANDBOX_LOG_ERROR("no response fd from pid %d", mChildPid);
       // FIXME: warn?
       continue;
     }
