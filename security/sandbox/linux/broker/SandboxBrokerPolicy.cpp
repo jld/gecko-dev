@@ -10,6 +10,7 @@
 #include "nsPrintfCString.h"
 #include "nsString.h"
 #include "nsThreadUtils.h"
+#include "nsXULAppAPI.h"
 
 namespace mozilla {
 
@@ -82,8 +83,8 @@ SandboxBrokerPolicyFactory::GetContentPolicy(int aPid)
   UniquePtr<SandboxBroker::Policy>
     policy(new SandboxBroker::Policy(*mCommonContentPolicy));
 
-  // FIXME, maybe: don't hardcode 2 (== GeckoProcessType_Content).
-  nsPrintfCString profilerLogPath("/data/local/tmp/profile_2_%d.txt", aPid);
+  nsPrintfCString profilerLogPath("/data/local/tmp/profile_%d_%d.txt",
+                                  GeckoProcessType_Content, aPid);
   policy->AddPath(wrlog, profilerLogPath.get()); // bug 1029337
 
   // No bug yet: memory reporting.
