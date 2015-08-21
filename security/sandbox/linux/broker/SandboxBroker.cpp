@@ -340,8 +340,11 @@ SandboxBroker::ThreadMain(void)
       switch(req.mOp) {
       case SANDBOX_FILE_OPEN:
         if (AllowOpen(req.mFlags, perms)) {
-          // O_CREAT is forbidden, but pass 0 as mode just in case.
-          openedFd = open(pathBuf, req.mFlags | kRequiredOpenFlags, 0);
+          // Permissions for O_CREAT hardwired to 0600; if that's
+          // ever a problem we can change the protocol (but really we
+          // should be trying to remove uses of MAY_CREATE, not add
+          // new ones).
+          openedFd = open(pathBuf, req.mFlags | kRequiredOpenFlags, 0600);
           if (openedFd >= 0) {
             resp.mError = 0;
           } else {
