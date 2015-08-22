@@ -46,6 +46,7 @@ SandboxBrokerPolicyFactory::SandboxBrokerPolicyFactory()
   // Things known to be in /system/b2g and used in content:
   // * NSS libraries
   // * Possibly web apps, depending on build type
+  // ** Bug 1119692 will fix this one.
   // * Reftest data
   // * Speech recognition models
   // Given that people are probably going to keep throwing stuff

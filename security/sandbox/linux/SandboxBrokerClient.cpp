@@ -35,7 +35,7 @@ SandboxBrokerClient::~SandboxBrokerClient()
 
 int
 SandboxBrokerClient::DoCall(const Request* aReq, const char* aPath,
-				struct stat* aStat, int* aOpenedFd)
+                            struct stat* aStat, bool expectFd)
 {
   // Remap /proc/self to the actual pid, so that the broker can open
   // it.  This happens here instead of in the broker to follow the
@@ -70,18 +70,18 @@ SandboxBrokerClient::DoCall(const Request* aReq, const char* aPath,
   ios[1].iov_base = const_cast<char*>(path);
   ios[1].iov_len = strlen(path);
   if (ios[1].iov_len > kMaxPathLen) {
-    errno = ENAMETOOLONG;
-    return -1;
+    return -ENAMETOOLONG;
   }
 
   socketpair(AF_UNIX, SOCK_SEQPACKET, 0, respFds);
   const ssize_t sent = SendWithFd(mFileDesc, ios, 2, respFds[1]);
+  const int sendErrno = errno;
   MOZ_ASSERT(sent < 0 ||
 	     static_cast<size_t>(sent) == ios[0].iov_len + ios[1].iov_len);
   close(respFds[1]);
   if (sent < 0) {
     close(respFds[0]);
-    return -1;
+    return -sendErrno;
   }
 
   Response resp;
@@ -95,18 +95,18 @@ SandboxBrokerClient::DoCall(const Request* aReq, const char* aPath,
     ios[1].iov_len = 0;
   }
 
-  const ssize_t recvd = RecvWithFd(respFds[0], ios, aStat ? 2 : 1, aOpenedFd);
+  int openedFd = -1;
+  const ssize_t recvd = RecvWithFd(respFds[0], ios, aStat ? 2 : 1,
+                                   expectFd ? &openedFd : nullptr);
   const int recvErrno = errno;
   close(respFds[0]);
   if (recvd < 0) {
-    errno = recvErrno;
-    return -1;
+    return -recvErrno;
   }
   if (recvd == 0) {
     SANDBOX_LOG_ERROR("Unexpected EOF, op %d flags 0%o path %s",
                       aReq->mOp, aReq->mFlags, path);
-    errno = EIO;
-    return -1;
+    return -EIO;
   }
   if (resp.mError != 0) {
     // If the operation fails, the return payload will be empty;
@@ -115,6 +115,11 @@ SandboxBrokerClient::DoCall(const Request* aReq, const char* aPath,
   }
   MOZ_ASSERT(static_cast<size_t>(recvd) == ios[0].iov_len + ios[1].iov_len);
   if (resp.mError == 0) {
+    // Success!
+    if (expectFd) {
+      MOZ_ASSERT(openedFd >= 0);
+      return openedFd;
+    }
     return 0;
   }
   if (SandboxInfo::Get().Test(SandboxInfo::kVerbose)) {
@@ -125,46 +130,38 @@ SandboxBrokerClient::DoCall(const Request* aReq, const char* aPath,
     SANDBOX_LOG_ERROR("Rejected errno %d op %d flags 0%o path %s",
                       resp.mError, aReq->mOp, aReq->mFlags, path);
   }
-  if (aOpenedFd && *aOpenedFd >= 0) {
-    close(*aOpenedFd);
-    *aOpenedFd = -1;
+  if (openedFd >= 0) {
+    close(openedFd);
   }
-  errno = resp.mError;
-  return -1;
+  return -resp.mError;
 }
 
 int
 SandboxBrokerClient::Open(const char* aPath, int aFlags)
 {
   Request req = { SANDBOX_FILE_OPEN, aFlags };
-  int openedFd;
-
-  if (DoCall(&req, aPath, nullptr, &openedFd) < 0) {
-    MOZ_ASSERT(openedFd < 0);
-    return -1;
-  }
-  return openedFd;
+  return DoCall(&req, aPath, nullptr, true);
 }
 
 int
 SandboxBrokerClient::Access(const char* aPath, int aMode)
 {
   Request req = { SANDBOX_FILE_ACCESS, aMode };
-  return DoCall(&req, aPath, nullptr, nullptr);
+  return DoCall(&req, aPath, nullptr, false);
 }
 
 int
 SandboxBrokerClient::Stat(const char* aPath, struct stat* aStat)
 {
   Request req = { SANDBOX_FILE_STAT, 0 };
-  return DoCall(&req, aPath, aStat, nullptr);
+  return DoCall(&req, aPath, aStat, false);
 }
 
 int
 SandboxBrokerClient::LStat(const char* aPath, struct stat* aStat)
 {
   Request req = { SANDBOX_FILE_STAT, O_NOFOLLOW };
-  return DoCall(&req, aPath, aStat, nullptr);
+  return DoCall(&req, aPath, aStat, false);
 }
 
 } // namespace mozilla

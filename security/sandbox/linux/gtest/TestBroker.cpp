@@ -118,14 +118,11 @@ TEST_F(SandboxBrokerTest, OpenForRead)
   ASSERT_GE(fd, 0) << "Opening /dev/zero failed.";
   close(fd);
   fd = Open("/var/empty/qwertyuiop", O_RDONLY);
-  EXPECT_EQ(-1, fd) << "Opening allowed but nonexistent file succeeded.";
-  EXPECT_EQ(ENOENT, errno);
+  EXPECT_EQ(-ENOENT, fd) << "Opening allowed but nonexistent file succeeded.";
   fd = Open("/proc/self", O_RDONLY);
-  EXPECT_EQ(-1, fd) << "Opening stat-only file for read succeeded.";
-  EXPECT_EQ(EACCES, errno);
+  EXPECT_EQ(-EACCES, fd) << "Opening stat-only file for read succeeded.";
   fd = Open("/proc/self/stat", O_RDONLY);
-  EXPECT_EQ(-1, fd) << "Opening disallowed file succeeded.";
-  EXPECT_EQ(EACCES, errno);
+  EXPECT_EQ(-EACCES, fd) << "Opening disallowed file succeeded.";
 }
 
 TEST_F(SandboxBrokerTest, OpenForWrite)
@@ -139,11 +136,9 @@ TEST_F(SandboxBrokerTest, OpenForWrite)
   ASSERT_GE(fd, 0) << "Opening /dev/null read/write failed.";
   close(fd);
   fd = Open("/dev/zero", O_WRONLY);
-  ASSERT_EQ(-1, fd) << "Opening read-only-by-policy file write-only succeeded.";
-  EXPECT_EQ(EACCES, errno);
+  ASSERT_EQ(-EACCES, fd) << "Opening read-only-by-policy file write-only succeeded.";
   fd = Open("/dev/zero", O_RDWR);
-  ASSERT_EQ(-1, fd) << "Opening read-only-by-policy file read/write succeeded.";
-  EXPECT_EQ(EACCES, errno);
+  ASSERT_EQ(-EACCES, fd) << "Opening read-only-by-policy file read/write succeeded.";
 }
 
 TEST_F(SandboxBrokerTest, SimpleRead)
@@ -167,28 +162,20 @@ TEST_F(SandboxBrokerTest, Access)
   EXPECT_EQ(0, Access("/dev/null", R_OK));
   EXPECT_EQ(0, Access("/dev/null", W_OK));
   EXPECT_EQ(0, Access("/dev/null", R_OK|W_OK));
-  EXPECT_EQ(-1, Access("/dev/null", X_OK));
-  EXPECT_EQ(EACCES, errno);
-  EXPECT_EQ(-1, Access("/dev/null", R_OK|X_OK));
-  EXPECT_EQ(EACCES, errno);
+  EXPECT_EQ(-EACCES, Access("/dev/null", X_OK));
+  EXPECT_EQ(-EACCES, Access("/dev/null", R_OK|X_OK));
 
   EXPECT_EQ(0, Access("/dev/zero", R_OK));
-  EXPECT_EQ(-1, Access("/dev/zero", W_OK));
-  EXPECT_EQ(EACCES, errno);
-  EXPECT_EQ(-1, Access("/dev/zero", R_OK|W_OK));
-  EXPECT_EQ(EACCES, errno);
+  EXPECT_EQ(-EACCES, Access("/dev/zero", W_OK));
+  EXPECT_EQ(-EACCES, Access("/dev/zero", R_OK|W_OK));
 
-  EXPECT_EQ(-1, Access("/var/empty/qwertyuiop", R_OK));
-  EXPECT_EQ(ENOENT, errno);
-  EXPECT_EQ(-1, Access("/var/empty/qwertyuiop", W_OK));
-  EXPECT_EQ(EACCES, errno);
+  EXPECT_EQ(-ENOENT, Access("/var/empty/qwertyuiop", R_OK));
+  EXPECT_EQ(-EACCES, Access("/var/empty/qwertyuiop", W_OK));
 
   EXPECT_EQ(0, Access("/proc/self", F_OK));
-  EXPECT_EQ(-1, Access("/proc/self", R_OK));
-  EXPECT_EQ(EACCES, errno);
+  EXPECT_EQ(-EACCES, Access("/proc/self", R_OK));
 
-  EXPECT_EQ(-1, Access("/proc/self/stat", F_OK));
-  EXPECT_EQ(EACCES, errno);
+  EXPECT_EQ(-EACCES, Access("/proc/self/stat", F_OK));
 }
 
 TEST_F(SandboxBrokerTest, Stat)
@@ -199,10 +186,8 @@ TEST_F(SandboxBrokerTest, Stat)
   EXPECT_EQ(realStat.st_ino, brokeredStat.st_ino);
   EXPECT_EQ(realStat.st_rdev, brokeredStat.st_rdev);
 
-  EXPECT_EQ(-1, Stat("/var/empty/qwertyuiop", &brokeredStat));
-  EXPECT_EQ(ENOENT, errno);
-  EXPECT_EQ(-1, Stat("/dev", &brokeredStat));
-  EXPECT_EQ(EACCES, errno);
+  EXPECT_EQ(-ENOENT, Stat("/var/empty/qwertyuiop", &brokeredStat));
+  EXPECT_EQ(-EACCES, Stat("/dev", &brokeredStat));
 
   EXPECT_EQ(0, Stat("/proc/self", &brokeredStat));
   EXPECT_TRUE(S_ISDIR(brokeredStat.st_mode));
@@ -216,10 +201,8 @@ TEST_F(SandboxBrokerTest, LStat)
   EXPECT_EQ(realStat.st_ino, brokeredStat.st_ino);
   EXPECT_EQ(realStat.st_rdev, brokeredStat.st_rdev);
 
-  EXPECT_EQ(-1, LStat("/var/empty/qwertyuiop", &brokeredStat));
-  EXPECT_EQ(ENOENT, errno);
-  EXPECT_EQ(-1, LStat("/dev", &brokeredStat));
-  EXPECT_EQ(EACCES, errno);
+  EXPECT_EQ(-ENOENT, LStat("/var/empty/qwertyuiop", &brokeredStat));
+  EXPECT_EQ(-EACCES, LStat("/dev", &brokeredStat));
 
   EXPECT_EQ(0, LStat("/proc/self", &brokeredStat));
   EXPECT_TRUE(S_ISLNK(brokeredStat.st_mode));

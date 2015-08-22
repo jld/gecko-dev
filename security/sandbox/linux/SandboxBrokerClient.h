@@ -29,7 +29,7 @@ class SandboxBrokerClient final : private SandboxBrokerCommon {
   int mFileDesc;
 
   int DoCall(const Request* aReq, const char* aPath, struct stat* aStat,
-             int* aOpenedFd);
+             bool expectFd);
 };
 
 } // namespace mozilla
