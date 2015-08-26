@@ -32,6 +32,7 @@ class SandboxBroker final
     MAY_READ = 1 << 1,
     MAY_WRITE = 1 << 2,
     MAY_CREATE = 1 << 3,
+    CRASH_INSTEAD = 1 << 4,
   };
   // C++ requires casts to use an enum as a bitmask, so just use int:
   typedef nsDataHashtable<nsCStringHashKey, int> PathMap;

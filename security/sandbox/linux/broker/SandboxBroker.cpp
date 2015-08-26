@@ -336,7 +336,9 @@ SandboxBroker::ThreadMain(void)
     if (!memchr(pathBuf, '\0', pathLen)) {
       perms = mPolicy->Lookup(nsDependentCString(pathBuf, pathLen));
     }
-    if (perms & MAY_ACCESS) {
+    if (perms & CRASH_INSTEAD) {
+      resp.mError = ENOSYS;
+    } else if (perms & MAY_ACCESS) {
       switch(req.mOp) {
       case SANDBOX_FILE_OPEN:
         if (AllowOpen(req.mFlags, perms)) {
