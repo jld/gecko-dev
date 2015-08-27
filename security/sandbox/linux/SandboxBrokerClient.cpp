@@ -146,7 +146,14 @@ int
 SandboxBrokerClient::Open(const char* aPath, int aFlags)
 {
   Request req = { SANDBOX_FILE_OPEN, aFlags };
-  return DoCall(&req, aPath, nullptr, true);
+  int maybeFd = DoCall(&req, aPath, nullptr, true);
+  if (maybeFd >= 0) {
+    // NSPR has opinions about file flags.  Fix O_CLOEXEC.
+    if ((aFlags & O_CLOEXEC) == 0) {
+      fcntl(maybeFd, F_SETFD, 0);
+    }
+  }
+  return maybeFd;
 }
 
 int
