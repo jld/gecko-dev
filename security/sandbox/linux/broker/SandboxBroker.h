@@ -32,9 +32,10 @@ class SandboxBroker final
     MAY_READ = 1 << 1,
     MAY_WRITE = 1 << 2,
     MAY_CREATE = 1 << 3,
-    CRASH_INSTEAD = 1 << 4,
+    CRASH_INSTEAD = 1 << 4, // for testing; overrides other flags
   };
-  // C++ requires casts to use an enum as a bitmask, so just use int:
+  // Bitwise operations on enum values return ints, so just use int in
+  // the hash table type (and below) to avoid cluttering code with casts.
   typedef nsDataHashtable<nsCStringHashKey, int> PathMap;
 
   class Policy {

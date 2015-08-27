@@ -7,19 +7,37 @@
 #include "SandboxBrokerPolicy.h"
 
 #include "mozilla/ClearOnShutdown.h"
+#include "mozilla/Preferences.h"
 #include "nsPrintfCString.h"
 #include "nsString.h"
 #include "nsThreadUtils.h"
 #include "nsXULAppAPI.h"
 
+#ifdef ANDROID
+#include "cutils/properties.h"
+#endif
+
 namespace mozilla {
+
+/* static */ bool
+SandboxBrokerPolicyFactory::IsSystemSupported() {
+#ifdef ANDROID
+  char hardware[PROPERTY_VALUE_MAX];
+  int length = property_get("ro.hardware", hardware, nullptr);
+  // "goldfish" -> emulator.  Other devices can be added when we're
+  // reasonably sure they work.  Eventually this won't be needed....
+  if (length > 0 && strcmp(hardware, "goldfish") == 0) {
+    return true;
+  }
+#endif
+  return false;
+}
 
 namespace {
 static const int rdonly = SandboxBroker::MAY_READ;
 static const int wronly = SandboxBroker::MAY_WRITE;
 static const int rdwr = rdonly | wronly;
 static const int wrlog = wronly | SandboxBroker::MAY_CREATE;
-static const int nope = SandboxBroker::CRASH_INSTEAD;
 }
 
 SandboxBrokerPolicyFactory::SandboxBrokerPolicyFactory()
@@ -79,6 +97,12 @@ SandboxBrokerPolicyFactory::SandboxBrokerPolicyFactory()
 UniquePtr<SandboxBroker::Policy>
 SandboxBrokerPolicyFactory::GetContentPolicy(int aPid)
 {
+  // Allow overriding "unsupported"ness with a pref, for testing.
+  if (!IsSystemSupported() &&
+      Preferences::GetInt("security.sandbox.content.level") <= 0) {
+    return nullptr;
+  }
+
   // Policy entries that vary per-process (currently the only reason
   // that can happen is because they contain the pid) are added here.
 #if defined(MOZ_WIDGET_GONK)

@@ -299,9 +299,9 @@ SandboxBroker::ThreadMain(void)
       }
       break;
     }
-    // Errors and short reads could be recovered from, at least in
-    // some cases, but protocol violation indicates a hostile client,
-    // so we terminate the broker instead.
+    // It could be possible to continue after errors and short reads,
+    // at least in some cases, but protocol violation indicates a
+    // hostile client, so terminate the broker instead.
     if (recvd < 0) {
       SANDBOX_LOG_ERROR("bad read from pid %d: %s",
                         mChildPid, strerror(errno));
