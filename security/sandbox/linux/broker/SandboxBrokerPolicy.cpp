@@ -43,15 +43,7 @@ SandboxBrokerPolicyFactory::SandboxBrokerPolicyFactory()
   policy->AddPath(rdonly, "/etc/media_codecs.xml"); // bug 1198460
   policy->AddTree(rdonly, "/system/fonts"); // bug 1026063
 
-  // Things known to be in /system/b2g and used in content:
-  // * NSS libraries
-  // * Possibly web apps, depending on build type
-  // ** Bug 1119692 will fix this one.
-  // * Reftest data
-  // * Speech recognition models
-  // Given that people are probably going to keep throwing stuff
-  // into this directory, the whole thing gets whitelisted for now.
-  // (For future reference: crossplatformly, this is NS_GRE_DIR.)
+  // Bug 1199051 (crossplatformly, this is NS_GRE_DIR).
   policy->AddTree(rdonly, "/system/b2g");
 
   // Bug 1026356: dynamic library loading from assorted frameworks we
