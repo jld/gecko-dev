@@ -11,6 +11,9 @@
 
 #include "mozilla/Attributes.h"
 
+// FIXME: perfunctory comment goes here, maybe mention what the fd is
+// vs. the broker class.
+
 struct stat;
 
 namespace mozilla {

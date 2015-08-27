@@ -305,21 +305,22 @@ SandboxBroker::ThreadMain(void)
     if (recvd < 0) {
       SANDBOX_LOG_ERROR("bad read from pid %d: %s",
                         mChildPid, strerror(errno));
-      shutdown(mFileDesc, SHUT_RDWR);
+      shutdown(mFileDesc, SHUT_RD);
       break;
     }
     if (recvd < static_cast<ssize_t>(sizeof(req))) {
       SANDBOX_LOG_ERROR("bad read from pid %d (%d < %d)",
                         mChildPid, recvd, sizeof(req));
-      shutdown(mFileDesc, SHUT_RDWR);
+      shutdown(mFileDesc, SHUT_RD);
       break;
     }
     if (respfd == -1) {
       SANDBOX_LOG_ERROR("no response fd from pid %d", mChildPid);
-      shutdown(mFileDesc, SHUT_RDWR);
+      shutdown(mFileDesc, SHUT_RD);
       break;
     }
 
+    // FIXME: add more comments, starting around here.
     memset(&resp, 0, sizeof(resp));
     memset(&statBuf, 0, sizeof(statBuf));
     resp.mError = EACCES;
@@ -330,7 +331,9 @@ SandboxBroker::ThreadMain(void)
     int openedFd = -1;
 
     pathLen = recvd - sizeof(req);
-    MOZ_ASSERT(pathLen <= kMaxPathLen);
+    // It shouldn't be possible for recvmsg to violate this assertion,
+    // but one more predictable branch shouldn't have much perf impact.
+    MOZ_RELEASE_ASSERT(pathLen <= kMaxPathLen);
     pathBuf[pathLen] = '\0';
     int perms = 0;
     if (!memchr(pathBuf, '\0', pathLen)) {

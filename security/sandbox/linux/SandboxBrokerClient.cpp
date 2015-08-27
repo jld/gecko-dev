@@ -65,6 +65,7 @@ SandboxBrokerClient::DoCall(const Request* aReq, const char* aPath,
   struct iovec ios[2];
   int respFds[2];
 
+  // FIXME: more comments for this wall of code.
   ios[0].iov_base = const_cast<Request*>(aReq);
   ios[0].iov_len = sizeof(*aReq);
   ios[1].iov_base = const_cast<char*>(path);
@@ -73,6 +74,7 @@ SandboxBrokerClient::DoCall(const Request* aReq, const char* aPath,
     return -ENAMETOOLONG;
   }
 
+  // FIXME: error check.
   socketpair(AF_UNIX, SOCK_SEQPACKET, 0, respFds);
   const ssize_t sent = SendWithFd(mFileDesc, ios, 2, respFds[1]);
   const int sendErrno = errno;
