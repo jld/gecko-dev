@@ -61,6 +61,8 @@ SandboxBrokerPolicyFactory::SandboxBrokerPolicyFactory()
   policy->AddPath(rdonly, "/etc/media_codecs.xml"); // bug 1198460
   policy->AddTree(rdonly, "/system/fonts"); // bug 1026063
 
+  policy->AddTree(wronly, "/dev/log"); // bug 1199857
+
   // Bug 1199051 (crossplatformly, this is NS_GRE_DIR).
   policy->AddTree(rdonly, "/system/b2g");
 
@@ -72,6 +74,10 @@ SandboxBrokerPolicyFactory::SandboxBrokerPolicyFactory()
   policy->AddTree(rdonly, "/system/lib");
   policy->AddTree(rdonly, "/vendor/lib");
   policy->AddPath(rdonly, "/system/bin/linker"); // (profiler only)
+
+  // Bug 1199866: EGL/WebGL.
+  policy->AddPath(rdonly, "/system/lib/egl");
+  policy->AddPath(rdonly, "/vendor/lib/egl");
 
   // Bug 1198401: timezones.  Yes, we need both of these; see bug.
   policy->AddTree(rdonly, "/system/usr/share/zoneinfo");

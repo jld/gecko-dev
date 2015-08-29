@@ -1189,9 +1189,6 @@ ContentChild::RecvSetProcessSandbox(const MaybeFileDesc& aBroker)
         // make absolutely sure that doesn't happen if the parent
         // didn't intend it.
         MOZ_RELEASE_ASSERT(brokerFd >= 0);
-#ifdef MOZ_WIDGET_GONK
-        mozilla::gl::sEGLLibrary.EnsureInitialized();
-#endif
     }
     SetContentProcessSandbox(brokerFd);
 #elif defined(XP_WIN)
