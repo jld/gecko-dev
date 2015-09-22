@@ -65,7 +65,7 @@ SandboxBrokerClient::DoCall(const Request* aReq, const char* aPath,
   struct iovec ios[2];
   int respFds[2];
 
-  // FIXME: more comments for this wall of code.
+  // Set up iovecs for request + path.
   ios[0].iov_base = const_cast<Request*>(aReq);
   ios[0].iov_len = sizeof(*aReq);
   ios[1].iov_base = const_cast<char*>(path);
@@ -74,8 +74,10 @@ SandboxBrokerClient::DoCall(const Request* aReq, const char* aPath,
     return -ENAMETOOLONG;
   }
 
-  // FIXME: error check.
-  socketpair(AF_UNIX, SOCK_SEQPACKET, 0, respFds);
+  // Create response socket and send request.
+  if (socketpair(AF_UNIX, SOCK_SEQPACKET, 0, respFds) < 0) {
+    return -errno;
+  }
   const ssize_t sent = SendWithFd(mFileDesc, ios, 2, respFds[1]);
   const int sendErrno = errno;
   MOZ_ASSERT(sent < 0 ||
@@ -86,6 +88,7 @@ SandboxBrokerClient::DoCall(const Request* aReq, const char* aPath,
     return -sendErrno;
   }
 
+  // Set up iovecs for response.
   Response resp;
   ios[0].iov_base = &resp;
   ios[0].iov_len = sizeof(resp);
@@ -97,6 +100,7 @@ SandboxBrokerClient::DoCall(const Request* aReq, const char* aPath,
     ios[1].iov_len = 0;
   }
 
+  // Wait for response and return appropriately.
   int openedFd = -1;
   const ssize_t recvd = RecvWithFd(respFds[0], ios, aStat ? 2 : 1,
                                    expectFd ? &openedFd : nullptr);

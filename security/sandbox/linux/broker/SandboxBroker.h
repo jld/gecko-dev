@@ -22,9 +22,26 @@ namespace ipc {
 class FileDescriptor;
 }
 
-// FIXME: write about the broker, mention that the policy is just a
-// map from strings, that it currently runs on threads in the parent,
-// etc.
+// This class implements a broker for filesystem operations requested
+// by a sandboxed child process -- opening files and accessing their
+// metadata.  (This is necessary in order to restrict access by path;
+// seccomp-bpf can filter only on argument register values, not
+// parameters passed in memory like pathnames.)
+//
+// The policy is currently just a map from strings to sets of
+// permissions; the broker doesn't attempt to interpret or
+// canonicalize pathnames.  This makes the broker simpler, and thus
+// less likely to contain vulnerabilities a compromised client could
+// exploit.  (This might need to change in the future if we need to
+// whitelist a set of files that could change after policy
+// construction, like hotpluggable devices.)
+//
+// The broker currently runs on a thread in the parent process (with
+// effective uid changed on B2G), which is for memory efficiency
+// (compared to forking a process) and simplicity (compared to having
+// a separate executable and serializing/deserializing the policy).
+//
+// See also ../SandboxBrokerClient.h for the corresponding client.
 
 class SandboxBroker final
   : private SandboxBrokerCommon
@@ -36,7 +53,11 @@ class SandboxBroker final
     MAY_READ = 1 << 1,
     MAY_WRITE = 1 << 2,
     MAY_CREATE = 1 << 3,
-    CRASH_INSTEAD = 1 << 4, // for testing; overrides other flags
+    // This flag is for testing policy changes -- when the client is
+    // used with the seccomp-bpf integration, an access to this file
+    // will invoke a crash dump with the context of the syscall.
+    // (This overrides all other flags.)
+    CRASH_INSTEAD = 1 << 4,
   };
   // Bitwise operations on enum values return ints, so just use int in
   // the hash table type (and below) to avoid cluttering code with casts.
@@ -86,7 +107,7 @@ class SandboxBroker final
                 int& aClientFd);
   void ThreadMain(void) override;
 
-  // Holding a UniquePtr should disallow implicit copy, but also:
+  // Holding a UniquePtr should disallow copying, but to make that explicit:
   SandboxBroker(const SandboxBroker&) = delete;
   void operator=(const SandboxBroker&) = delete;
 };

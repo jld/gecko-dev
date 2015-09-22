@@ -320,7 +320,7 @@ SandboxBroker::ThreadMain(void)
       break;
     }
 
-    // FIXME: add more comments, starting around here.
+    // Initialize the response with the default failure.
     memset(&resp, 0, sizeof(resp));
     memset(&statBuf, 0, sizeof(statBuf));
     resp.mError = EACCES;
@@ -330,16 +330,20 @@ SandboxBroker::ThreadMain(void)
     ios[1].iov_len = 0;
     int openedFd = -1;
 
+    // Look up the pathname.
     pathLen = recvd - sizeof(req);
     // It shouldn't be possible for recvmsg to violate this assertion,
-    // but one more predictable branch shouldn't have much perf impact.
+    // but one more predictable branch shouldn't have much perf impact:
     MOZ_RELEASE_ASSERT(pathLen <= kMaxPathLen);
     pathBuf[pathLen] = '\0';
     int perms = 0;
     if (!memchr(pathBuf, '\0', pathLen)) {
       perms = mPolicy->Lookup(nsDependentCString(pathBuf, pathLen));
     }
+
+    // And now perform the operation if allowed.
     if (perms & CRASH_INSTEAD) {
+      // This is somewhat nonmodular, but it works.
       resp.mError = ENOSYS;
     } else if (perms & MAY_ACCESS) {
       switch(req.mOp) {

@@ -301,7 +301,7 @@ class ContentSandboxPolicy : public SandboxPolicyCommon {
   SandboxBrokerClient* mBroker;
 
   // Trap handlers for filesystem brokering.
-  // FIXME, hopefully: there's too much code duplication here.
+  // (The amount of code duplication here could be improved....)
 #ifdef __NR_open
   static intptr_t OpenTrap(ArgsRef aArgs, void* aux) {
     auto broker = static_cast<SandboxBrokerClient*>(aux);

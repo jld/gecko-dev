@@ -11,6 +11,16 @@
 
 struct iovec;
 
+// This file defines the protocol between the filesystem broker,
+// described in SandboxBroker.h, and its client, described in
+// ../SandboxBrokerClient.h; and it defines some utility functions
+// used by both.
+//
+// In order to keep the client simple while allowing it to be thread
+// safe and async signal safe, the main broker socket is used only for
+// requests; responses arrive on a per-request socketpair sent with
+// the request.  (This technique is also used by Chromium and Breakpad.)
+
 namespace mozilla {
 
 class SandboxBrokerCommon {

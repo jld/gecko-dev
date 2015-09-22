@@ -11,8 +11,14 @@
 
 #include "mozilla/Attributes.h"
 
-// FIXME: perfunctory comment goes here, maybe mention what the fd is
-// vs. the broker class.
+// This is the client for the sandbox broker described in
+// broker/SandboxBroker.h; its constructor takes the file descriptor
+// returned by SandboxBroker::Create, passed to the child over IPC.
+//
+// The operations exposed here can be called from any thread and in
+// async signal handlers, like the corresponding system calls.  The
+// intended use is from a seccomp-bpf SIGSYS handler, to transparently
+// replace those syscalls, but they could also be used directly.
 
 struct stat;
 
