@@ -33,12 +33,14 @@ SandboxBrokerPolicyFactory::IsSystemSupported() {
   return false;
 }
 
+#if defined(MOZ_CONTENT_SANDBOX) && defined(MOZ_WIDGET_GONK)
 namespace {
 static const int rdonly = SandboxBroker::MAY_READ;
 static const int wronly = SandboxBroker::MAY_WRITE;
 static const int rdwr = rdonly | wronly;
 static const int wrlog = wronly | SandboxBroker::MAY_CREATE;
 }
+#endif
 
 SandboxBrokerPolicyFactory::SandboxBrokerPolicyFactory()
 {
