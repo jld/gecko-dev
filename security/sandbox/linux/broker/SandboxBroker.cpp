@@ -92,16 +92,10 @@ SandboxBroker::~SandboxBroker() {
 SandboxBroker::Policy::Policy() { }
 SandboxBroker::Policy::~Policy() { }
 
-static PLDHashOperator HashCopyCallback(nsCStringHashKey::KeyType aKey,
-                                        int aData,
-                                        void *aContext)
-{
-  static_cast<SandboxBroker::PathMap*>(aContext)->Put(aKey, aData);
-  return PL_DHASH_NEXT;
-}
-
 SandboxBroker::Policy::Policy(const Policy& aOther) {
-  aOther.mMap.EnumerateRead(HashCopyCallback, &mMap);
+  for (auto iter = aOther.mMap.ConstIter(); !iter.Done(); iter.Next()) {
+    mMap.Put(iter.Key(), iter.Data());
+  }
 }
 
 void
