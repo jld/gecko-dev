@@ -135,11 +135,10 @@ SandboxBroker::Policy::AddTree(int aPerms, const char* aPath)
     AddPath(aPerms, aPath, AddAlways);
   } else {
     DIR* dirp = opendir(aPath);
-    struct dirent* de;
     if (!dirp) {
       return;
     }
-    while ((de = readdir(dirp))) {
+    while (struct dirent* de = readdir(dirp)) {
       if (strcmp(de->d_name, ".") == 0 || strcmp(de->d_name, "..") == 0) {
         continue;
       }
