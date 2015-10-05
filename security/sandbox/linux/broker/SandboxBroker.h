@@ -69,19 +69,25 @@ class SandboxBroker final
     Policy();
     Policy(const Policy& aOther);
     ~Policy();
+
+    enum AddCondition {
+      AddIfExistsNow,
+      AddAlways,
+    };
     // Typically, files that don't exist at policy creation time don't
     // need to be whitelisted, but this allows adding entries for
-    // files that don't exist.  See also the overload below.
-    void AddPath(int aPerms, const char* aPath, bool aMightNotExist);
+    // them if they'll exist later.  See also the overload below.
+    void AddPath(int aPerms, const char* aPath, AddCondition aCond);
     // This adds all regular files (not directories) in the tree
     // rooted at the given path.
     void AddTree(int aPerms, const char* aPath);
     // All files in a directory with a given prefix; useful for devices.
     void AddPrefix(int aPerms, const char* aDir, const char* aPrefix);
-    // Default: require file to already exist when creating policy,
-    // unless we're conferring permission to create it (log files, etc.).
+    // Default: add file if it exists when creating policy or if we're
+    // conferring permission to create it (log files, etc.).
     void AddPath(int aPerms, const char* aPath) {
-      AddPath(aPerms, aPath, aPerms & MAY_CREATE);
+      AddPath(aPerms, aPath,
+              (aPerms & MAY_CREATE) ? AddAlways : AddIfExistsNow);
     }
     int Lookup(const nsACString& aPath) const;
     int Lookup(const char* aPath) const {

@@ -32,6 +32,7 @@ static const int MAY_ACCESS = SandboxBroker::MAY_ACCESS;
 static const int MAY_READ = SandboxBroker::MAY_READ;
 static const int MAY_WRITE = SandboxBroker::MAY_WRITE;
 //static const int MAY_CREATE = SandboxBroker::MAY_CREATE;
+static const auto AddAlways = SandboxBroker::Policy::AddAlways;
 
 class SandboxBrokerTest : public ::testing::Test
 {
@@ -99,10 +100,10 @@ SandboxBrokerTest::GetPolicy() const
 {
   UniquePtr<SandboxBroker::Policy> policy(new SandboxBroker::Policy());
 
-  policy->AddPath(MAY_READ | MAY_WRITE, "/dev/null", true);
-  policy->AddPath(MAY_READ, "/dev/zero", true);
-  policy->AddPath(MAY_READ, "/var/empty/qwertyuiop", true);
-  policy->AddPath(MAY_ACCESS, "/proc/self", true); // Warning: Linux-specific.
+  policy->AddPath(MAY_READ | MAY_WRITE, "/dev/null", AddAlways);
+  policy->AddPath(MAY_READ, "/dev/zero", AddAlways);
+  policy->AddPath(MAY_READ, "/var/empty/qwertyuiop", AddAlways);
+  policy->AddPath(MAY_ACCESS, "/proc/self", AddAlways); // Warning: Linux-specific.
 
   return Move(policy);
 }

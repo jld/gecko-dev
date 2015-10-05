@@ -14,11 +14,12 @@ static const int MAY_ACCESS = SandboxBroker::MAY_ACCESS;
 static const int MAY_READ = SandboxBroker::MAY_READ;
 static const int MAY_WRITE = SandboxBroker::MAY_WRITE;
 //static const int MAY_CREATE = SandboxBroker::MAY_CREATE;
+static const auto AddAlways = SandboxBroker::Policy::AddAlways;
 
 TEST(SandboxBrokerPolicyLookup, Simple)
 {
   SandboxBroker::Policy p;
-  p.AddPath(MAY_READ, "/dev/urandom", true);
+  p.AddPath(MAY_READ, "/dev/urandom", AddAlways);
 
   EXPECT_NE(0, p.Lookup("/dev/urandom")) << "Added path not found.";
   EXPECT_EQ(MAY_ACCESS | MAY_READ, p.Lookup("/dev/urandom"))
@@ -29,10 +30,10 @@ TEST(SandboxBrokerPolicyLookup, Simple)
 TEST(SandboxBrokerPolicyLookup, CopyCtor)
 {
   SandboxBroker::Policy psrc;
-  psrc.AddPath(MAY_READ | MAY_WRITE, "/dev/null", true);
+  psrc.AddPath(MAY_READ | MAY_WRITE, "/dev/null", AddAlways);
   SandboxBroker::Policy pdst(psrc);
-  psrc.AddPath(MAY_READ, "/dev/zero", true);
-  pdst.AddPath(MAY_READ, "/dev/urandom", true);
+  psrc.AddPath(MAY_READ, "/dev/zero", AddAlways);
+  pdst.AddPath(MAY_READ, "/dev/urandom", AddAlways);
 
   EXPECT_EQ(MAY_ACCESS | MAY_READ | MAY_WRITE, psrc.Lookup("/dev/null"))
     << "Common path absent in copy source.";

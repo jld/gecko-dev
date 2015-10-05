@@ -95,7 +95,7 @@ SandboxBrokerPolicyFactory::SandboxBrokerPolicyFactory()
   }
 
   policy->AddPath(rdonly, "/data/local/tmp/profiler.options",
-                  /* might not exist yet: */ true); // bug 1029337
+                  SandboxBroker::Policy::AddAlways); // bug 1029337
 
   mCommonContentPolicy.reset(policy);
 #endif

@@ -100,12 +100,12 @@ SandboxBroker::Policy::Policy(const Policy& aOther) {
 
 void
 SandboxBroker::Policy::AddPath(int aPerms, const char* aPath,
-                               bool aMightNotExist)
+                               AddCondition aCond)
 {
   nsDependentCString path(aPath);
   MOZ_ASSERT(path.Length() <= kMaxPathLen);
   int perms;
-  if (!aMightNotExist) {
+  if (aCond == AddIfExistsNow) {
     struct stat statBuf;
     if (lstat(aPath, &statBuf) != 0) {
       return;
@@ -132,7 +132,7 @@ SandboxBroker::Policy::AddTree(int aPerms, const char* aPath)
     return;
   }
   if (!S_ISDIR(statBuf.st_mode)) {
-    AddPath(aPerms, aPath, /* skip redundant lstat */ true);
+    AddPath(aPerms, aPath, AddAlways);
   } else {
     DIR* dirp = opendir(aPath);
     struct dirent* de;
@@ -170,7 +170,7 @@ SandboxBroker::Policy::AddPrefix(int aPerms, const char* aDir,
       subPath.Assign(aDir);
       subPath.Append('/');
       subPath.Append(de->d_name);
-      AddPath(aPerms, subPath.get(), /* skip redundant lstat */ true);
+      AddPath(aPerms, subPath.get(), AddAlways);
     }
   }
   closedir(dirp);
