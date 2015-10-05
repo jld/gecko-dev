@@ -49,10 +49,27 @@ SandboxBrokerPolicyFactory::SandboxBrokerPolicyFactory()
 #if defined(MOZ_CONTENT_SANDBOX) && defined(MOZ_WIDGET_GONK)
   SandboxBroker::Policy* policy = new SandboxBroker::Policy;
 
+  // Devices that need write access:
   policy->AddPath(rdwr, "/dev/genlock");  // bug 980924
-  policy->AddPath(rdwr, "/dev/ashmem");   // bug 980947 (dangerous!)
+  policy->AddPath(rdwr, "/dev/ashmem");   // bug 980947
+  policy->AddTree(wronly, "/dev/log"); // bug 1199857
+  // Graphics devices are a significant source of attack surface, but
+  // there's not much we can do about it without proxying (which is
+  // very difficult and a perforamnce hit).
   policy->AddPrefix(rdwr, "/dev", "kgsl");  // bug 995072
   policy->AddPath(rdwr, "/dev/qemu_pipe"); // but 1198410: goldfish gralloc.
+
+  // Bug 1198475: mochitest logs.  (This is actually passed in via URL
+  // query param to the mochitest page, and is configurable, so this
+  // isn't enough in general, but hopefully it's good enough for B2G.)
+  // Conditional on tests being run, using the same check seen in
+  // DirectoryProvider.js to set ProfD.
+  if (access("/data/local/tests/profile", R_OK) == 0) {
+    policy->AddPath(wrlog, "/data/local/tests/log/mochitest.log");
+  }
+
+  // Read-only items below this line.
+
   policy->AddPath(rdonly, "/dev/urandom");  // bug 964500, bug 995069
   policy->AddPath(rdonly, "/dev/ion");      // bug 980937
   policy->AddPath(rdonly, "/proc/cpuinfo"); // bug 995067
@@ -62,8 +79,6 @@ SandboxBrokerPolicyFactory::SandboxBrokerPolicyFactory()
   policy->AddPath(rdonly, "/etc/media_profiles.xml"); // bug 1198419
   policy->AddPath(rdonly, "/etc/media_codecs.xml"); // bug 1198460
   policy->AddTree(rdonly, "/system/fonts"); // bug 1026063
-
-  policy->AddTree(wronly, "/dev/log"); // bug 1199857
 
   // Bug 1199051 (crossplatformly, this is NS_GRE_DIR).
   policy->AddTree(rdonly, "/system/b2g");
@@ -84,15 +99,6 @@ SandboxBrokerPolicyFactory::SandboxBrokerPolicyFactory()
   // Bug 1198401: timezones.  Yes, we need both of these; see bug.
   policy->AddTree(rdonly, "/system/usr/share/zoneinfo");
   policy->AddTree(rdonly, "/system//usr/share/zoneinfo");
-
-  // Bug 1198475: mochitest logs.  (This is actually passed in via URL
-  // query param to the mochitest page, and is configurable, so this
-  // isn't enough in general, but hopefully it's good enough for B2G.)
-  // Conditional on tests being run, using the same check seen in
-  // DirectoryProvider.js to set ProfD.
-  if (access("/data/local/tests/profile", R_OK) == 0) {
-    policy->AddPath(wrlog, "/data/local/tests/log/mochitest.log");
-  }
 
   policy->AddPath(rdonly, "/data/local/tmp/profiler.options",
                   SandboxBroker::Policy::AddAlways); // bug 1029337
