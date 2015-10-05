@@ -60,7 +60,7 @@ protected:
   int LStat(const char* aPath, struct stat* aStat) {
     return mClient->LStat(aPath, aStat);
   }
-  
+
   virtual void SetUp() {
     ipc::FileDescriptor fd;
 
