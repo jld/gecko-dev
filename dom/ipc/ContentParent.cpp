@@ -2604,9 +2604,10 @@ ContentParent::InitInternal(ProcessPriority aInitialPriority,
 #ifdef XP_LINUX
     if (shouldSandbox) {
         MOZ_ASSERT(!mSandboxBroker);
-        brokerFd = FileDescriptor();
-        auto policy = sSandboxBrokerPolicyFactory->GetContentPolicy(Pid());
+        UniquePtr<SandboxBroker::Policy> policy =
+            sSandboxBrokerPolicyFactory->GetContentPolicy(Pid());
         if (policy) {
+            brokerFd = FileDescriptor();
             mSandboxBroker = SandboxBroker::Create(Move(policy), Pid(),
                                                    brokerFd);
             if (!mSandboxBroker) {
