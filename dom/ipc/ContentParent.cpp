@@ -2391,9 +2391,13 @@ ContentParent::ContentParent(mozIApplication* aApp,
 #endif
 
     NS_ASSERTION(NS_IsMainThread(), "Wrong thread!");
+#ifdef MOZ_CONTENT_SANDBOX
+    ChildPrivileges privs = base::PRIVILEGES_INHERIT;
+#else
     ChildPrivileges privs = aIsNuwaProcess
         ? base::PRIVILEGES_INHERIT
         : base::PRIVILEGES_DEFAULT;
+#endif
     mSubprocess = new GeckoChildProcessHost(GeckoProcessType_Content, privs);
 
     IToplevelProtocol::SetTransport(mSubprocess->GetChannel());

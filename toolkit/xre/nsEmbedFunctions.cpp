@@ -95,6 +95,10 @@ using mozilla::_ipdltest::IPDLUnitTestProcessChild;
 #include "nsXREAppData.h"
 #endif
 
+#if defined(MOZ_SANDBOX) && defined(MOZ_NUWA_PROCESS)
+#include "ipc/Nuwa.h"
+#endif
+
 using namespace mozilla;
 
 using mozilla::ipc::BrowserProcessSubThread;
@@ -302,6 +306,18 @@ XRE_InitChildProcess(int aArgc,
   NS_ENSURE_ARG_MIN(aArgc, 2);
   NS_ENSURE_ARG_POINTER(aArgv);
   NS_ENSURE_ARG_POINTER(aArgv[0]);
+
+#if defined(MOZ_SANDBOX) && defined(MOZ_WIDGET_GONK)
+  bool dropPrivileges = true;
+#ifdef MOZ_NUWA_PROCESS
+  if (IsNuwaProcess()) {
+    dropPrivileges = false;
+  }
+#endif
+  if (dropPrivileges) {
+    base::SetCurrentProcessPrivileges(base::PRIVILEGES_DEFAULT);
+  }
+#endif
 
 #ifdef HAS_DLL_BLOCKLIST
   DllBlocklist_Initialize();

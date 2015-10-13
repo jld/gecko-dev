@@ -26,7 +26,7 @@ SandboxBrokerPolicyFactory::IsSystemSupported() {
   int length = property_get("ro.hardware", hardware, nullptr);
   // "goldfish" -> emulator.  Other devices can be added when we're
   // reasonably sure they work.  Eventually this won't be needed....
-  if (length > 0 && strcmp(hardware, "goldfish") == 0) {
+  if (length > 0 && (strcmp(hardware, "goldfish") == 0) {
     return true;
   }
 #endif

@@ -84,8 +84,13 @@ OpenDeletedDirectory()
   // still be used, and /tmp is sometimes not that; e.g., aufs(5),
   // often used for containers, will cause the chroot() to fail with
   // ESTALE (bug 1162965).  So this uses /dev/shm if possible instead.
+#ifdef ANDROID
+  char tmpPath[] = "/data/local/tmp/mozsandbox.XXXXXX";
+  char shmPath[] = "/dev/mozsandbox.XXXXXX";
+#else
   char tmpPath[] = "/tmp/mozsandbox.XXXXXX";
   char shmPath[] = "/dev/shm/mozsandbox.XXXXXX";
+#endif
   char* path;
   if (mkdtemp(shmPath)) {
     path = shmPath;

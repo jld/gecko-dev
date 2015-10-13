@@ -548,8 +548,12 @@ SandboxEarlyInit(GeckoProcessType aType, bool aIsNuwa)
     canChroot = info.Test(SandboxInfo::kHasSeccompBPF);
     break;
 #endif
-    // In the future, content processes will be able to use some of
-    // these.
+#if defined(MOZ_CONTENT_SANDBOX) && defined(MOZ_WIDGET_GONK)
+  case GeckoProcessType_Content:
+    // Need seccomp-bpf to intercept open().
+    canChroot = info.Test(SandboxInfo::kHasSeccompBPF);
+    break;
+#endif
   default:
     // Other cases intentionally left blank.
     break;
@@ -560,6 +564,7 @@ SandboxEarlyInit(GeckoProcessType aType, bool aIsNuwa)
     return;
   }
 
+#ifndef MOZ_WIDGET_GONK
   {
     LinuxCapabilities existingCaps;
     if (existingCaps.GetCurrent() && existingCaps.AnyEffective()) {
@@ -594,6 +599,7 @@ SandboxEarlyInit(GeckoProcessType aType, bool aIsNuwa)
   }
   // No early returns after this point!  We need to drop the
   // capabilities that were gained by unsharing the user namesapce.
+#endif // MOZ_WIDGET_GONK
 
   if (canUnshareIPC && syscall(__NR_unshare, CLONE_NEWIPC) != 0) {
     SANDBOX_LOG_ERROR("unshare(CLONE_NEWIPC): %s", strerror(errno));
@@ -613,10 +619,12 @@ SandboxEarlyInit(GeckoProcessType aType, bool aIsNuwa)
     }
   }
 
+#ifndef MOZ_WIDGET_GONK
   if (!LinuxCapabilities().SetCurrent()) {
     SANDBOX_LOG_ERROR("dropping capabilities: %s", strerror(errno));
     MOZ_CRASH("can't drop capabilities");
   }
+#endif
 }
 
 #ifdef MOZ_CONTENT_SANDBOX
@@ -640,6 +648,8 @@ SetContentProcessSandbox(int aBrokerFd)
   static Maybe<SandboxBrokerClient> sBroker;
   if (aBrokerFd >= 0) {
     sBroker.emplace(aBrokerFd);
+  } else {
+    gChrootHelper = nullptr;
   }
 
   SetCurrentProcessSandbox(GetContentSandboxPolicy(sBroker.ptrOr(nullptr)));
