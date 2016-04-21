@@ -34,10 +34,12 @@ LOCAL_INCLUDES += [
 
 DELAYLOAD_DLLS += [
     'mozglue.dll',
+    'xul.dll',
 ]
 
 USE_LIBS += [
     'mozglue',
+    'xul',
 ]
 
 if CONFIG['_MSC_VER']:
