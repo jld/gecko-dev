@@ -30,14 +30,12 @@
 #include "nsStringGlue.h"
 
 #ifdef XP_WIN
-// we want a wmain entry point
 #ifdef MOZ_ASAN
 // ASAN requires firefox.exe to be built with -MD, and it's OK if we don't
 // support Windows XP SP2 in ASAN builds.
 #define XRE_DONT_SUPPORT_XPSP2
 #endif
 #define XRE_WANT_ENVIRON
-#include "nsWindowsWMain.cpp"
 #if defined(_MSC_VER) && (_MSC_VER < 1900)
 #define snprintf _snprintf
 #endif
@@ -49,6 +47,8 @@
 
 #include "mozilla/Telemetry.h"
 #include "mozilla/WindowsDllBlocklist.h"
+
+#include "../../ipc/contentproc/plugin-container.cpp"
 
 using namespace mozilla;
 
@@ -125,6 +125,9 @@ XRE_StartupTimelineRecordType XRE_StartupTimelineRecord;
 XRE_mainType XRE_main;
 XRE_StopLateWriteChecksType XRE_StopLateWriteChecks;
 XRE_XPCShellMainType XRE_XPCShellMain;
+XRE_GetProcessTypeType XRE_GetProcessType;
+XRE_SetProcessTypeType XRE_SetProcessType;
+XRE_InitChildProcessType XRE_InitChildProcess;
 
 static const nsDynamicFunctionLoad kXULFuncs[] = {
     { "XRE_GetFileFromPath", (NSFuncPtr*) &XRE_GetFileFromPath },
@@ -135,6 +138,9 @@ static const nsDynamicFunctionLoad kXULFuncs[] = {
     { "XRE_main", (NSFuncPtr*) &XRE_main },
     { "XRE_StopLateWriteChecks", (NSFuncPtr*) &XRE_StopLateWriteChecks },
     { "XRE_XPCShellMain", (NSFuncPtr*) &XRE_XPCShellMain },
+    { "XRE_GetProcessType", (NSFuncPtr*) &XRE_GetProcessType },
+    { "XRE_SetProcessType", (NSFuncPtr*) &XRE_SetProcessType },
+    { "XRE_InitChildProcess", (NSFuncPtr*) &XRE_InitChildProcess },
     { nullptr, nullptr }
 };
 
@@ -293,6 +299,18 @@ sizeof(XPCOM_DLL) - 1))
 
 int main(int argc, char* argv[], char* envp[])
 {
+  // We are launching as a content process, delegate to the appropriate
+  // main
+  if (argc > 1 && IsArg(argv[1], "contentproc")) {
+    nsIFile *xreDirectory;
+    nsresult rv = InitXPCOMGlue(argv[0], &xreDirectory);
+    if (NS_FAILED(rv)) {
+      return 255;
+    }
+
+    return content_process_main(argc, argv);
+  }
+
   mozilla::TimeStamp start = mozilla::TimeStamp::Now();
 
 #ifdef XP_MACOSX

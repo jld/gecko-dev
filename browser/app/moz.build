@@ -77,3 +77,10 @@ if CONFIG['GNU_CXX']:
 for icon in ('firefox', 'document', 'newwindow', 'newtab', 'pbmode'):
     DEFINES[icon.upper() + '_ICO'] = '"%s/dist/branding/%s.ico"' % (
         TOPOBJDIR, icon)
+
+if CONFIG['MOZ_SANDBOX'] and CONFIG['OS_TARGET'] == 'Linux':
+    USE_LIBS += [
+        'mozsandbox',
+    ]
+
+    LDFLAGS += ['-Wl,-rpath,$ORIGIN']
