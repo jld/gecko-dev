@@ -4,19 +4,18 @@
 # License, v. 2.0. If a copy of the MPL was not distributed with this
 # file, You can obtain one at http://mozilla.org/MPL/2.0/.
 
-# WARNING: On desktop Linux, SandboxHooks.cpp must be statically compiled
-# into the main executable in order to function properly.
-# This is currently the case, but if mozsandbox is moved to its own
-# shared library, something needs to change regarding SandboxHooks.cpp.
-# See Bug 1176099 for further details.
+# WARNING: In order for the symbol interceptions in SandboxHooks.cpp
+# to work, libmozsandbox.so must precede libc.so in the library search
+# path.  If the executable is linked directly against libmozsandbox.so
+# (and uses symbols from it) then that satisfies that requirement.
+#
+# See bug 1176099 and bug 1268733 comment #1 for further details.
 
-if CONFIG['OS_TARGET'] == 'Android':
-    SharedLibrary('mozsandbox')
-    USE_LIBS += [
-        'mozglue',
-    ]
-else:
-    Library('mozsandbox')
+SharedLibrary('mozsandbox')
+
+USE_LIBS += [
+    'mozglue',
+]
 
 EXPORTS.mozilla += [
     'Sandbox.h',
@@ -105,6 +104,7 @@ if CONFIG['OS_TARGET'] != 'Android':
 
 USE_LIBS += [
     'mfbt',
+    'nspr',
 ]
 
 DIRS += [

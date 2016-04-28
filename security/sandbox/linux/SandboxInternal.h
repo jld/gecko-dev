@@ -14,10 +14,8 @@
 namespace mozilla {
 
 // SandboxCrash() has to be in libxul to use internal interfaces, but
-// its caller in the sandbox code is elsewhere:
-// * Desktop: defined in libxul; referenced in plugin-container.
-// * Mobile: defined in libmozsandbox; referenced in libxul.
-// See also bug 1101170.
+// its caller is in libmozsandbox, so it's indirected through this
+// variable.
 
 typedef void (*SandboxCrashFunc)(int, siginfo_t*, void*);
 extern MOZ_EXPORT SandboxCrashFunc gSandboxCrashFunc;

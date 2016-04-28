@@ -784,6 +784,8 @@
 #if defined(WOW_HELPER)
 @BINPATH@/wow_helper.exe
 #endif
+#elif defined(XP_LINUX)
+@BINPATH@/@DLL_PREFIX@mozsandbox@DLL_SUFFIX@
 #endif
 #endif
 
