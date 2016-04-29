@@ -11,6 +11,7 @@ SOURCES = [
     '../SandboxUtil.cpp',
     'TestBroker.cpp',
     'TestBrokerPolicy.cpp',
+    'TestInterceptions.cpp', # FIXME rename
     'TestSandboxUtil.cpp',
 ]
 
