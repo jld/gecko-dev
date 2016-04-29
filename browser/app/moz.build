@@ -42,6 +42,12 @@ USE_LIBS += [
     'xul',
 ]
 
+if CONFIG['MOZ_SANDBOX'] and CONFIG['OS_TARGET'] == 'Linux':
+    USE_LIBS += [
+        'mozsandbox',
+    ]
+    LDFLAGS += ['-Wl,-rpath,$ORIGIN']
+
 if CONFIG['_MSC_VER']:
     # Always enter a Windows program through wmain, whether or not we're
     # a console application.
