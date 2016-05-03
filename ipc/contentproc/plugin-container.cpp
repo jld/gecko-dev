@@ -9,9 +9,10 @@
 #include "nsAutoPtr.h"
 
 // FIXME/cjones testing
-#if !defined(XP_WIN)
+#if !defined(OS_WIN)
 #include <unistd.h>
 #endif
+
 #ifdef XP_WIN
 #include <windows.h>
 // we want a wmain entry point
@@ -221,11 +222,11 @@ content_process_main(int argc, char* argv[])
     // the details.
     if (XRE_GetProcessType() != GeckoProcessType_Plugin) {
         mozilla::SanitizeEnvironmentVariables();
-        SetDllDirectoryW(L"");
+        SetDllDirectory(L"");
     }
 #endif
     nsAutoPtr<mozilla::gmp::GMPLoader> loader;
-#if !defined(MOZ_WIDGET_ANDROID) && !defined(MOZ_WIDGET_GONK) && defined(MOZ_CHILD_PROCESS)
+#if !defined(MOZ_WIDGET_ANDROID) && !defined(MOZ_WIDGET_GONK)
     // On desktop, the GMPLoader lives in plugin-container, so that its
     // code can be covered by an EME/GMP vendor's voucher.
     nsAutoPtr<mozilla::gmp::SandboxStarter> starter(MakeSandboxStarter());

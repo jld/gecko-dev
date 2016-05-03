@@ -34,12 +34,10 @@ LOCAL_INCLUDES += [
 
 DELAYLOAD_DLLS += [
     'mozglue.dll',
-    'xul.dll',
 ]
 
 USE_LIBS += [
     'mozglue',
-    'xul',
 ]
 
 if CONFIG['MOZ_SANDBOX'] and CONFIG['OS_TARGET'] == 'Linux':
