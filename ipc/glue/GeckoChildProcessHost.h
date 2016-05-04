@@ -134,6 +134,8 @@ public:
   // for deletion when all actors have cleared their associations.
   void DissociateActor();
 
+  static void EnableSameExecutableForContentProc() { sRunSelfAsContentProc = true; }
+
 protected:
   GeckoProcessType mProcessType;
   ChildPrivileges mPrivileges;
@@ -216,6 +218,8 @@ private:
   Atomic<int32_t> mAssociatedActors;
 
   static uint32_t sNextUniqueID;
+
+  static bool sRunSelfAsContentProc;
 };
 
 #ifdef MOZ_NUWA_PROCESS

@@ -128,6 +128,7 @@ XRE_XPCShellMainType XRE_XPCShellMain;
 XRE_GetProcessTypeType XRE_GetProcessType;
 XRE_SetProcessTypeType XRE_SetProcessType;
 XRE_InitChildProcessType XRE_InitChildProcess;
+XRE_EnableSameExecutableForContentProcType XRE_EnableSameExecutableForContentProc;
 
 static const nsDynamicFunctionLoad kXULFuncs[] = {
     { "XRE_GetFileFromPath", (NSFuncPtr*) &XRE_GetFileFromPath },
@@ -141,6 +142,7 @@ static const nsDynamicFunctionLoad kXULFuncs[] = {
     { "XRE_GetProcessType", (NSFuncPtr*) &XRE_GetProcessType },
     { "XRE_SetProcessType", (NSFuncPtr*) &XRE_SetProcessType },
     { "XRE_InitChildProcess", (NSFuncPtr*) &XRE_InitChildProcess },
+    { "XRE_EnableSameExecutableForContentProc", (NSFuncPtr*) &XRE_EnableSameExecutableForContentProc },
     { nullptr, nullptr }
 };
 
@@ -374,6 +376,10 @@ int main(int argc, char* argv[], char* envp[])
   #error "Unknown platform"  // having this here keeps cppcheck happy
 #endif
   }
+
+#if !defined(MOZ_WIDGET_COCOA) && !defined(MOZ_WIDGET_ANDROID)
+  XRE_EnableSameExecutableForContentProc();
+#endif
 
   int result = do_main(argc, argv, envp, xreDirectory);
 

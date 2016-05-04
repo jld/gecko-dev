@@ -146,19 +146,17 @@ GeckoChildProcessHost::~GeckoChildProcessHost()
 void
 GeckoChildProcessHost::GetPathToBinary(FilePath& exePath, GeckoProcessType processType)
 {
-#if !defined(MOZ_WIDGET_ANDROID) && !defined(MOZ_WIDGET_COCOA)
-  if (processType != GeckoProcessType_Plugin &&
-      processType != GeckoProcessType_GMPlugin) {
+  if (sRunSelfAsContentProc &&
+      processType == GeckoProcessType_Content) {
 #if defined(OS_WIN)
     exePath = FilePath(WideToUTF8(CommandLine::ForCurrentProcess()->program()));
 #elif defined(OS_POSIX)
     exePath = FilePath(CommandLine::ForCurrentProcess()->argv()[0]);
 #else
-#  error Sorry
+#  error Sorry; target OS not supported yet.
 #endif
     return;
   }
-#endif // !MOZ_WIDGET_ANDROID && !MOZ_WIDGET_COCOA
 
   if (ShouldHaveDirectoryService()) {
     MOZ_ASSERT(gGREBinPath);
@@ -832,12 +830,10 @@ GeckoChildProcessHost::PerformAsyncLaunchInternal(std::vector<std::string>& aExt
 
   childArgv.push_back(exePath.value());
 
-#ifndef MOZ_WIDGET_COCOA
-  if (mProcessType != GeckoProcessType_Plugin &&
-      mProcessType != GeckoProcessType_GMPlugin) {
+  if (sRunSelfAsContentProc &&
+      mProcessType == GeckoProcessType_Content) {
     childArgv.push_back("-contentproc");
   }
-#endif
 
   childArgv.insert(childArgv.end(), aExtraOpts.begin(), aExtraOpts.end());
 
@@ -979,8 +975,8 @@ GeckoChildProcessHost::PerformAsyncLaunchInternal(std::vector<std::string>& aExt
 
   CommandLine cmdLine(exePath.ToWStringHack());
 
-  if (mProcessType != GeckoProcessType_Plugin &&
-      mProcessType != GeckoProcessType_GMPlugin) {
+  if (sRunSelfAsContentProc &&
+      mProcessType == GeckoProcessType_Content) {
     cmdLine.AppendLooseValue(UTF8ToWide("-contentproc"));
   }
 
@@ -1226,6 +1222,8 @@ GeckoChildProcessHost::OnWaitableEventSignaled(base::WaitableEvent *event)
   }
   ChildProcessHost::OnWaitableEventSignaled(event);
 }
+
+bool GeckoChildProcessHost::sRunSelfAsContentProc(false);
 
 #ifdef MOZ_NUWA_PROCESS
 
