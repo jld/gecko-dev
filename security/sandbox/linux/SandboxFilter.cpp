@@ -517,11 +517,6 @@ public:
     : mBroker(aBroker),
       mSyscallWhitelist(aSyscallWhitelist) {}
   ~ContentSandboxPolicy() override = default;
-  ResultExpr PrctlPolicy() const override {
-    // Ideally this should be restricted to a whitelist, but content
-    // uses enough things that it's not trivial to determine it.
-    return Allow();
-  }
   Maybe<ResultExpr> EvaluateSocketCall(int aCall) const override {
     switch(aCall) {
     case SYS_RECVFROM:
@@ -783,9 +778,6 @@ public:
     case __NR_wait4:
 #ifdef __NR_waitpid
     case __NR_waitpid:
-#endif
-#ifdef __NR_arch_prctl
-    case __NR_arch_prctl:
 #endif
       return Allow();
 
