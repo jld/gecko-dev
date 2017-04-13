@@ -694,11 +694,12 @@ public:
 #endif
       return Allow();
 
-    case __NR_ioctl:
-      // ioctl() is for GL. Remove when GL proxy is implemented.
-      // Additionally ioctl() might be a place where we want to have
-      // argument filtering
-      return Allow();
+    case __NR_ioctl: {
+      // See bug 1302711 for details.
+      Arg<unsigned long> request(1);
+      return If((request & 0xff00) != 0x5400, Allow())
+        .Else(SandboxPolicyCommon::EvaluateSyscall(sysno));
+    }
 
     CASES_FOR_fcntl:
       // Some fcntls have significant side effects like sending
