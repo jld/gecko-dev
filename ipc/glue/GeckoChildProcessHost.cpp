@@ -864,7 +864,13 @@ GeckoChildProcessHost::PerformAsyncLaunchInternal(std::vector<std::string>& aExt
     // isn't retaining a pointer to the nsCString's buffer.
     newEnvVars["LD_PRELOAD"] = std::string(preload.get());
   }
-#endif
+#ifndef ANDROID
+  // Use an rtld-audit(7) module to filter out injected libraries that
+  // would conflict with sandboxing, because that's the only thing
+  // that takes precedence over /etc/ld.so.preload.
+  newEnvVars["LD_AUDIT"] = "libmozlibfilter.so";
+#endif // !ANDROID
+#endif // LINUX && SANDBOX
 
   // remap the IPC socket fd to a well-known int, as the OS does for
   // STDOUT_FILENO, for example
