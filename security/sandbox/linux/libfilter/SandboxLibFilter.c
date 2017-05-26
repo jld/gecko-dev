@@ -8,12 +8,36 @@
 #include "mozilla/ArrayUtils.h"
 
 #include <stdint.h>
-#include <string.h>
 #include <link.h>
 
 static const char *kBlockList[] = {
   "libesets_pac.so",
 };
+
+static const char *
+my_strrchr(const char *s, char c)
+{
+  const char *found = NULL;
+
+  for (; *s; s++) {
+    if (*s == c) {
+      found = s;
+    }
+  }
+  return found;
+}
+
+static int
+my_strcmp(const char *a, const char *b)
+{
+  for (; *a || *b; a++, b++) {
+    int diff = (int)*a - (int)*b;
+    if (diff != 0) {
+      return diff;
+    }
+  }
+  return 0;
+}
 
 MOZ_EXPORT unsigned
 la_version(unsigned version)
@@ -27,7 +51,7 @@ la_objsearch(const char *name, uintptr_t *cookie, unsigned flag)
   const char *last_slash, *basename;
   size_t i;
 
-  last_slash = strrchr(name, '/');
+  last_slash = my_strrchr(name, '/');
   if (last_slash == NULL) {
     basename = name;
   } else {
@@ -35,7 +59,7 @@ la_objsearch(const char *name, uintptr_t *cookie, unsigned flag)
   }
 
   for (i = 0; i < MOZ_ARRAY_LENGTH(kBlockList); ++i) {
-    if (strcmp(basename, kBlockList[i]) == 0) {
+    if (my_strcmp(basename, kBlockList[i]) == 0) {
       return NULL;
     }
   }
