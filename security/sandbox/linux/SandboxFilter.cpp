@@ -24,6 +24,7 @@
 #include <linux/prctl.h>
 #include <linux/sched.h>
 #include <string.h>
+#include <sys/ioctl.h>
 #include <sys/mman.h>
 #include <sys/socket.h>
 #include <sys/syscall.h>
@@ -697,8 +698,16 @@ public:
     case __NR_ioctl: {
       // See bug 1302711 for details.
       Arg<unsigned long> request(1);
-      return If((request & 0xff00) != 0x5400, Allow())
-        .Else(SandboxPolicyCommon::EvaluateSyscall(sysno));
+      auto shifted_type = request & 0xff00;
+      static_assert((TIOCSTI & 0xff00) == 0x5400, "TIOCSTI would be blocked");
+      return Switch(shifted_type)
+        .CASES((0x6400,  // DRI
+                0x4600,  // NVidia GL
+                0x6d00,  // NVidia modesetting
+                0x0700,  // nvidia-uvm?
+                0x0000), // nvidia-uvm?
+               Allow())
+        .Default(SandboxPolicyCommon::EvaluateSyscall(sysno));
     }
 
     CASES_FOR_fcntl:
