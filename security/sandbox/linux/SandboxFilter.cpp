@@ -551,8 +551,6 @@ public:
 #else // #ifdef DESKTOP
     case SYS_RECV:
     case SYS_SEND:
-    case SYS_SOCKET: // DANGEROUS
-    case SYS_CONNECT: // DANGEROUS
     case SYS_GETSOCKOPT:
     case SYS_SETSOCKOPT:
     case SYS_GETSOCKNAME:

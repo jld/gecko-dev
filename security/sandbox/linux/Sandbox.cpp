@@ -576,8 +576,16 @@ SandboxEarlyInit(GeckoProcessType aType)
     canChroot = info.Test(SandboxInfo::kHasSeccompBPF);
     break;
 #endif
-    // In the future, content processes will be able to use some of
-    // these.
+#ifdef MOZ_CONTENT_SANDBOX
+  case GeckoProcessType_Content:
+    if (!info.Test(SandboxInfo::kEnabledForContent)) {
+      break;
+    }
+    canUnshareNet = true;
+    // Need seccomp-bpf to intercept open() et al.
+    canChroot = info.Test(SandboxInfo::kHasSeccompBPF);
+    break;
+#endif
   default:
     // Other cases intentionally left blank.
     break;
