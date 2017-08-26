@@ -576,6 +576,7 @@ SandboxEarlyInit(GeckoProcessType aType)
     canChroot = info.Test(SandboxInfo::kHasSeccompBPF);
     break;
 #endif
+#if 0
 #ifdef MOZ_CONTENT_SANDBOX
   case GeckoProcessType_Content:
     if (!info.Test(SandboxInfo::kEnabledForContent)) {
@@ -585,6 +586,7 @@ SandboxEarlyInit(GeckoProcessType aType)
     // Need seccomp-bpf to intercept open() et al.
     canChroot = info.Test(SandboxInfo::kHasSeccompBPF);
     break;
+#endif
 #endif
   default:
     // Other cases intentionally left blank.
