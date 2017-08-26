@@ -622,17 +622,17 @@ public:
       CASES_FOR_fstatat:
         return Trap(StatAtTrap, mBroker);
       case __NR_chmod:
-        return Trap(ChmodTrap, mBroker);
+        return IfAudio(Trap(ChmodTrap, mBroker));
       case __NR_link:
         return Trap(LinkTrap, mBroker);
       case __NR_mkdir:
-        return Trap(MkdirTrap, mBroker);
+        return IfAudio(Trap(MkdirTrap, mBroker));
       case __NR_symlink:
-        return Trap(SymlinkTrap, mBroker);
+        return IfAudio(Trap(SymlinkTrap, mBroker));
       case __NR_rename:
         return Trap(RenameTrap, mBroker);
       case __NR_rmdir:
-        return Trap(RmdirTrap, mBroker);
+        return IfAudio(Trap(RmdirTrap, mBroker));
       case __NR_unlink:
         return Trap(UnlinkTrap, mBroker);
       case __NR_readlink:
