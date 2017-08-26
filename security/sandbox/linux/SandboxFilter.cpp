@@ -354,6 +354,10 @@ private:
   SandboxBrokerClient* mBroker;
   ContentSandboxConfig mCfg;
 
+  ResultExpr IfAudio(ResultExpr handler) const {
+    return mCfg.mAudioRemoted ? InvalidSyscall() : handler;
+  }
+
   // Trap handlers for filesystem brokering.
   // (The amount of code duplication here could be improved....)
 #ifdef __NR_open
@@ -540,7 +544,8 @@ public:
                      Switch(type & ~SOCK_CLOEXEC)
                      .Case(SOCK_STREAM, Allow())
                      .Case(SOCK_SEQPACKET, Allow())
-                     .Case(SOCK_DGRAM, Trap(SocketpairDatagramTrap, nullptr))
+                     .Case(SOCK_DGRAM,
+                           IfAudio(Trap(SocketpairDatagramTrap, nullptr)))
                      .Default(InvalidSyscall()))
                   .Else(InvalidSyscall()));
     }
@@ -551,10 +556,7 @@ public:
 #else // #ifdef DESKTOP
     case SYS_SOCKET:
     case SYS_CONNECT:
-      if (mCfg.mAudioRemoted) {
-        return SandboxPolicyCommon::EvaluateSocketCall(aCall);
-      }
-      return Some(Allow());
+      return Some(IfAudio(Allow()));
 
     case SYS_RECV:
     case SYS_SEND:
@@ -669,10 +671,13 @@ public:
     CASES_FOR_statfs:
     CASES_FOR_fstatfs:
     case __NR_quotactl:
-    CASES_FOR_fchown:
-    case __NR_fchmod:
     case __NR_flock:
       return Allow();
+
+    CASES_FOR_fchown:
+    case __NR_fchmod:
+    case __NR_umask:
+      return IfAudio(Allow());
 
       // Bug 1354731: proprietary GL drivers try to mknod() their devices
     case __NR_mknod: {
@@ -789,7 +794,6 @@ public:
         .Else(InvalidSyscall());
     }
 
-    case __NR_umask:
     case __NR_kill:
     case __NR_wait4:
 #ifdef __NR_waitpid
