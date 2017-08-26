@@ -684,8 +684,8 @@ SandboxEarlyInit(GeckoProcessType aType)
  * Will normally make the process exit on failure.
 */
 bool
-SetContentProcessSandbox(int aBrokerFd, bool aFileProcess,
-                         std::vector<int>& aSyscallWhitelist)
+SetContentProcessSandbox(int aBrokerFd,
+                         ContentSandboxConfig&& aCfg)
 {
   if (!SandboxInfo::Get().Test(SandboxInfo::kEnabledForContent)) {
     if (aBrokerFd >= 0) {
@@ -694,8 +694,9 @@ SetContentProcessSandbox(int aBrokerFd, bool aFileProcess,
     return false;
   }
 
-  gSandboxReporterClient.emplace(aFileProcess ? SandboxReport::ProcType::FILE
-                                              : SandboxReport::ProcType::CONTENT);
+  gSandboxReporterClient.emplace(aCfg.mFileProcess
+                                 ? SandboxReport::ProcType::FILE
+                                 : SandboxReport::ProcType::CONTENT);
 
   // This needs to live until the process exits.
   static Maybe<SandboxBrokerClient> sBroker;
@@ -704,7 +705,7 @@ SetContentProcessSandbox(int aBrokerFd, bool aFileProcess,
   }
 
   SetCurrentProcessSandbox(GetContentSandboxPolicy(sBroker.ptrOr(nullptr),
-                                                   aSyscallWhitelist));
+                                                   Move(aCfg)));
   return true;
 }
 #endif // MOZ_CONTENT_SANDBOX

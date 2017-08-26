@@ -352,7 +352,7 @@ public:
 class ContentSandboxPolicy : public SandboxPolicyCommon {
 private:
   SandboxBrokerClient* mBroker;
-  std::vector<int> mSyscallWhitelist;
+  ContentSandboxConfig mCfg;
 
   // Trap handlers for filesystem brokering.
   // (The amount of code duplication here could be improved....)
@@ -513,9 +513,9 @@ private:
 
 public:
   explicit ContentSandboxPolicy(SandboxBrokerClient* aBroker,
-                                const std::vector<int>& aSyscallWhitelist)
+                                ContentSandboxConfig&& aCfg)
     : mBroker(aBroker),
-      mSyscallWhitelist(aSyscallWhitelist) {}
+      mCfg(Move(aCfg)) { }
   ~ContentSandboxPolicy() override = default;
   ResultExpr PrctlPolicy() const override {
     // Ideally this should be restricted to a whitelist, but content
@@ -549,6 +549,13 @@ public:
     case SYS_SOCKET:
       return Some(Error(EACCES));
 #else // #ifdef DESKTOP
+    case SYS_SOCKET:
+    case SYS_CONNECT:
+      if (mCfg.mAudioRemoted) {
+        return SandboxPolicyCommon::EvaluateSocketCall(aCall);
+      }
+      return Some(Allow());
+
     case SYS_RECV:
     case SYS_SEND:
     case SYS_GETSOCKOPT:
@@ -587,8 +594,9 @@ public:
 
   ResultExpr EvaluateSyscall(int sysno) const override {
     // Straight allow for anything that got overriden via prefs
-    if (std::find(mSyscallWhitelist.begin(), mSyscallWhitelist.end(), sysno)
-        != mSyscallWhitelist.end()) {
+    const auto& whitelist = mCfg.mSyscallWhitelist;
+    if (std::find(whitelist.begin(), whitelist.end(), sysno)
+        != whitelist.end()) {
       if (SandboxInfo::Get().Test(SandboxInfo::kVerbose)) {
         SANDBOX_LOG_ERROR("Allowing syscall nr %d via whitelist", sysno);
       }
@@ -870,9 +878,9 @@ public:
 
 UniquePtr<sandbox::bpf_dsl::Policy>
 GetContentSandboxPolicy(SandboxBrokerClient* aMaybeBroker,
-                        const std::vector<int>& aSyscallWhitelist)
+                        ContentSandboxConfig&& aCfg)
 {
-  return MakeUnique<ContentSandboxPolicy>(aMaybeBroker, aSyscallWhitelist);
+  return MakeUnique<ContentSandboxPolicy>(aMaybeBroker, Move(aCfg));
 }
 #endif // MOZ_CONTENT_SANDBOX
 

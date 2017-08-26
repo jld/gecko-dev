@@ -12,6 +12,8 @@
 #include "mozilla/Range.h"
 #include "mozilla/UniquePtr.h"
 
+#include "Sandbox.h"
+
 namespace sandbox {
 namespace bpf_dsl {
 class Policy;
@@ -24,7 +26,7 @@ namespace mozilla {
 class SandboxBrokerClient;
 
 UniquePtr<sandbox::bpf_dsl::Policy> GetContentSandboxPolicy(SandboxBrokerClient* aMaybeBroker,
-                                                            const std::vector<int>& aSyscallWhitelist);
+                                                            ContentSandboxConfig&& aSyscallWhitelist);
 #endif
 
 #ifdef MOZ_GMP_SANDBOX

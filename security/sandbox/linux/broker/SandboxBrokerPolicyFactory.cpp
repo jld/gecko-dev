@@ -75,6 +75,7 @@ SandboxBrokerPolicyFactory::SandboxBrokerPolicyFactory()
 
 #ifdef MOZ_ALSA
   // Bug 1309098: ALSA support
+  // FIXME: is this conditional on media.cubeb.remoting now?
   policy->AddDir(rdwr, "/dev/snd");
 #endif
 
@@ -85,13 +86,6 @@ SandboxBrokerPolicyFactory::SandboxBrokerPolicyFactory()
     nsPrintfCString shmPath("%s/dconf/", userDir);
     policy->AddPrefix(rdwrcr, shmPath.get());
     policy->AddAncestors(shmPath.get());
-#ifdef MOZ_PULSEAUDIO
-    // PulseAudio, if it can't get server info from X11, will break
-    // unless it can open this directory (or create it, but in our use
-    // case we know it already exists).  See bug 1335329.
-    nsPrintfCString pulsePath("%s/pulse", userDir);
-    policy->AddPath(rdonly, pulsePath.get());
-#endif // MOZ_PULSEAUDIO
   }
 #endif // MOZ_WIDGET_GTK
 
@@ -119,13 +113,6 @@ SandboxBrokerPolicyFactory::SandboxBrokerPolicyFactory()
 
   // Bug 1385715: NVIDIA PRIME support
   policy->AddPath(rdonly, "/proc/modules");
-
-#ifdef MOZ_PULSEAUDIO
-  // See bug 1384986 comment #1.
-  if (const auto xauth = PR_GetEnv("XAUTHORITY")) {
-    policy->AddPath(rdonly, xauth);
-  }
-#endif
 
   // Configuration dirs in the homedir that we want to allow read
   // access to.
@@ -264,6 +251,28 @@ SandboxBrokerPolicyFactory::GetContentPolicy(int aPid, bool aFileProcess)
     // Policy::FixRecursivePermissions, so there's no need to
     // early-return here.
   }
+
+#ifdef MOZ_PULSEAUDIO
+  bool audioRemoted = false;
+#ifdef MOZ_CUBEB_REMOTING
+  audioRemoted = Preferences::GetBool("media.cubeb.sandbox");
+#endif // MOZ_CUBEB_REMOTING
+  if (!audioRemoted) {
+#ifdef MOZ_WIDGET_GTK
+    if (const auto userDir = g_get_user_runtime_dir()) {
+      // PulseAudio, if it can't get server info from X11, will break
+      // unless it can open this directory (or create it, but in our use
+      // case we know it already exists).  See bug 1335329.
+      nsPrintfCString pulsePath("%s/pulse", userDir);
+      policy->AddPath(rdonly, pulsePath.get());
+    }
+#endif // MOZ_WIDGET_GTK
+    // See bug 1384986 comment #1.
+    if (const auto xauth = PR_GetEnv("XAUTHORITY")) {
+      policy->AddPath(rdonly, xauth);
+    }
+  }
+#endif // MOZ_PULSEAUDIO
 
   // Bug 1198550: the profiler's replacement for dl_iterate_phdr
   policy->AddPath(rdonly, nsPrintfCString("/proc/%d/maps", aPid).get());

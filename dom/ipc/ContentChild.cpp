@@ -1659,7 +1659,7 @@ ContentChild::RecvSetProcessSandbox(const MaybeFileDesc& aBroker)
       MOZ_RELEASE_ASSERT(brokerFd >= 0);
     }
     // Allow user overrides of seccomp-bpf syscall filtering
-    std::vector<int> syscallWhitelist;
+    ContentSandboxConfig cfg;
     nsAutoCString extraSyscalls;
     nsresult rv =
       Preferences::GetCString("security.sandbox.content.syscall_whitelist",
@@ -1668,14 +1668,18 @@ ContentChild::RecvSetProcessSandbox(const MaybeFileDesc& aBroker)
       for (const nsACString& callNrString : extraSyscalls.Split(',')) {
         int callNr = PromiseFlatCString(callNrString).ToInteger(&rv);
         if (NS_SUCCEEDED(rv)) {
-          syscallWhitelist.push_back(callNr);
+          cfg.mSyscallWhitelist.push_back(callNr);
         }
       }
     }
     ContentChild* cc = ContentChild::GetSingleton();
-    bool isFileProcess = cc->GetRemoteType().EqualsLiteral(FILE_REMOTE_TYPE);
-    sandboxEnabled = SetContentProcessSandbox(brokerFd, isFileProcess,
-                                              syscallWhitelist);
+    cfg.mFileProcess = cc->GetRemoteType().EqualsLiteral(FILE_REMOTE_TYPE);
+#ifdef MOZ_CUBEB_REMOTING
+    cfg.mAudioRemoted = Preferences::GetBool("media.cubeb.sandbox");
+#else
+    cfg.mAudioRemoted = false;
+#endif
+    sandboxEnabled = SetContentProcessSandbox(brokerFd, Move(cfg));
   }
 #elif defined(XP_WIN)
   mozilla::SandboxTarget::Instance()->StartSandbox();
