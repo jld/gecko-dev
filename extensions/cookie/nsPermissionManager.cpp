@@ -2256,7 +2256,7 @@ nsPermissionManager::CommonTestPermissionInternal(nsIPrincipal* aPrincipal,
     return NS_OK;
   }
 
-#ifdef DEBUG
+#ifdef DEBUG_ACTUALLY_NO
   {
     nsCOMPtr<nsIPrincipal> prin = aPrincipal;
     if (!prin) {
