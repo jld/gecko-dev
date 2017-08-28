@@ -258,7 +258,7 @@ struct BitFlagsEnumSerializer
 template <>
 struct ParamTraits<base::ChildPrivileges>
   : public ContiguousEnumSerializer<base::ChildPrivileges,
-                                    base::PRIVILEGES_DEFAULT,
+                                    base::PRIVILEGES_INHERIT,
                                     base::PRIVILEGES_LAST>
 { };
 

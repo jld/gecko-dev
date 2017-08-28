@@ -10,11 +10,11 @@
 namespace base {
 
 enum ChildPrivileges {
-  PRIVILEGES_DEFAULT,
-  PRIVILEGES_UNPRIVILEGED,
   PRIVILEGES_INHERIT,
-  // PRIVILEGES_DEFAULT plus file read permissions, used for file content process.
+  PRIVILEGES_CONTENT,
+  // PRIVILEGES_CONTENT plus file read permissions, used for file content process.
   PRIVILEGES_FILEREAD,
+  PRIVILEGES_MEDIA,
   PRIVILEGES_LAST
 };
 

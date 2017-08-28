@@ -23,13 +23,6 @@
 
 #include "prenv.h"
 
-/*
- * We fall back to an arbitrary UID. This is generally the UID for user
- * `nobody', albeit it is not always the case.
- */
-# define CHILD_UNPRIVILEGED_UID 65534
-# define CHILD_UNPRIVILEGED_GID 65534
-
 namespace {
 
 static mozilla::EnvironmentLog gProcessLog("MOZ_PROCESS_LOG");
@@ -176,8 +169,6 @@ bool LaunchApp(const std::vector<std::string>& argv,
       argv_cstr[i] = const_cast<char*>(argv[i].c_str());
     argv_cstr[argv.size()] = NULL;
 
-    SetCurrentProcessPrivileges(privs);
-
     execve(argv_cstr[0], argv_cstr.get(), envp);
     // if we get here, we're in serious trouble and should complain loudly
     // NOTE: This is async signal unsafe; it could deadlock instead.  (But
@@ -202,25 +193,6 @@ bool LaunchApp(const CommandLine& cl,
                ProcessHandle* process_handle) {
   file_handle_mapping_vector no_files;
   return LaunchApp(cl.argv(), no_files, wait, process_handle);
-}
-
-void SetCurrentProcessPrivileges(ChildPrivileges privs) {
-  if (privs == PRIVILEGES_INHERIT) {
-    return;
-  }
-
-  gid_t gid = CHILD_UNPRIVILEGED_GID;
-  uid_t uid = CHILD_UNPRIVILEGED_UID;
-  if (setgid(gid) != 0) {
-    DLOG(ERROR) << "FAILED TO setgid() CHILD PROCESS";
-    _exit(127);
-  }
-  if (setuid(uid) != 0) {
-    DLOG(ERROR) << "FAILED TO setuid() CHILD PROCESS";
-    _exit(127);
-  }
-  if (chdir("/") != 0)
-    gProcessLog.print("==> could not chdir()\n");
 }
 
 }  // namespace base

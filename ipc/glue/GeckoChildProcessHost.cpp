@@ -75,22 +75,10 @@ using mozilla::ipc::GeckoChildProcessHost;
 #include "mozilla/jni/Utils.h"
 #endif
 
-// We currently don't drop privileges on any platform, because we have to worry
-// about plugins and extensions breaking.
-static const bool kLowRightsSubprocesses = false;
-
 static bool
 ShouldHaveDirectoryService()
 {
   return GeckoProcessType_Default == XRE_GetProcessType();
-}
-
-/*static*/
-base::ChildPrivileges
-GeckoChildProcessHost::DefaultChildPrivileges()
-{
-  return (kLowRightsSubprocesses ?
-          base::PRIVILEGES_UNPRIVILEGED : base::PRIVILEGES_INHERIT);
 }
 
 GeckoChildProcessHost::GeckoChildProcessHost(GeckoProcessType aProcessType,
@@ -732,11 +720,6 @@ GeckoChildProcessHost::PerformAsyncLaunchInternal(std::vector<std::string>& aExt
 
 #if defined(OS_LINUX) || defined(OS_MACOSX) || defined(OS_BSD) || defined(OS_SOLARIS)
   base::environment_map newEnvVars;
-  ChildPrivileges privs = mPrivileges;
-  if (privs == base::PRIVILEGES_DEFAULT ||
-      privs == base::PRIVILEGES_FILEREAD) {
-    privs = DefaultChildPrivileges();
-  }
 
 #if defined(MOZ_WIDGET_GTK)
   if (mProcessType == GeckoProcessType_Content) {
@@ -910,7 +893,7 @@ GeckoChildProcessHost::PerformAsyncLaunchInternal(std::vector<std::string>& aExt
 #else
   base::LaunchApp(childArgv, mFileMap,
 #if defined(OS_LINUX) || defined(OS_MACOSX) || defined(OS_BSD) || defined(OS_SOLARIS)
-                  newEnvVars, privs,
+                  newEnvVars, mPrivileges,
 #endif
                   false, &process, arch);
 #endif // defined(MOZ_WIDGET_ANDROID)

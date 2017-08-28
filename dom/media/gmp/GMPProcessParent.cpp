@@ -29,7 +29,7 @@ namespace mozilla {
 namespace gmp {
 
 GMPProcessParent::GMPProcessParent(const std::string& aGMPPath)
-: GeckoChildProcessHost(GeckoProcessType_GMPlugin),
+: GeckoChildProcessHost(GeckoProcessType_GMPlugin, base::PRIVILEGES_MEDIA),
   mGMPPath(aGMPPath)
 {
   MOZ_COUNT_CTOR(GMPProcessParent);
