@@ -119,6 +119,7 @@ DIRS += [
     'glue',
     'interfaces',
     'reporter',
+    'wrapper',
 ]
 
 TEST_DIRS += [

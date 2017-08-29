@@ -57,6 +57,7 @@
 
 #if defined(XP_LINUX) && defined(MOZ_SANDBOX)
 #include "mozilla/SandboxReporter.h"
+#include "mozilla/SandboxLaunch.h"
 #endif
 
 #include "nsTArray.h"
@@ -891,6 +892,12 @@ GeckoChildProcessHost::PerformAsyncLaunchInternal(std::vector<std::string>& aExt
 #endif
 
   childArgv.push_back(childProcessType);
+
+#if defined(XP_LINUX) && defined(MOZ_SANDBOX)
+  // Final adjustments for the wrapper executable; this should be
+  // immediately before LaunchApp.
+  SandboxLaunchAdjust(&childArgv, &newEnvVars, mProcessType);
+#endif
 
 #if defined(MOZ_WIDGET_ANDROID)
   LaunchAndroidService(childProcessType, childArgv, mFileMap, &process);
