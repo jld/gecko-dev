@@ -33,7 +33,7 @@ WaitAndExit(pid_t pid)
 
   do {
     wpid = waitpid(pid, &status, 0);
-  } while (wpid == -1 && errno == EAGAIN);
+  } while (wpid == -1 && errno == EINTR);
 
   if (wpid == -1) {
     perror("waitpid");
