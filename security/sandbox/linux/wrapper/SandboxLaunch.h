@@ -19,8 +19,6 @@ void SandboxLaunchAdjust(std::vector<std::string>* aArgv,
                          base::environment_map* aEnv,
                          GeckoProcessType aType);
 
-base::ProcessId SandboxWrapperPid();
-
 } // namespace mozilla
 
 #endif // mozilla_SandboxLaunch_h

@@ -43,23 +43,4 @@ SandboxLaunchAdjust(std::vector<std::string>* aArgv,
   // TODO: env vars, etc.
 }
 
-base::ProcessId
-SandboxWrapperPid()
-{
-  static const pid_t wrapperPid = []() {
-    if (const char* pidstr = PR_GetEnv(kSandboxWrapperPidEnvVar)) {
-      // IPC assumes pid_t <= int32_t, but might as well check:
-      static_assert(sizeof(int) >= sizeof(pid_t),
-                    "atoi is wide enough for pid_t");
-      return atoi(pidstr);
-    }
-    return 0;
-  }();
-
-  if (wrapperPid) {
-    return wrapperPid;
-  }
-  return getpid();
-}
-
 } // namespace mozilla

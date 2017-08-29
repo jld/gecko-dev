@@ -11,7 +11,7 @@
 namespace mozilla {
 #endif
 
-static const char kSandboxWrapperPidEnvVar[] = "SBX_WRAPPER_PID";
+// TODO: Definitions go here.
 
 #ifdef __cplusplus
 } // namespace mozilla

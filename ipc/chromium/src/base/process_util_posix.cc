@@ -30,20 +30,12 @@
 
 #include "mozilla/UniquePtr.h"
 
-#if defined(XP_LINUX) && defined(MOZ_SANDBOX)
-#include "mozilla/SandboxLaunch.h"
-#endif
-
 const int kMicrosecondsPerSecond = 1000000;
 
 namespace base {
 
 ProcessId GetCurrentProcId() {
-#if defined(XP_LINUX) && defined(MOZ_SANDBOX)
-  return mozilla::SandboxWrapperPid();
-#else
   return getpid();
-#endif
 }
 
 ProcessHandle GetCurrentProcessHandle() {

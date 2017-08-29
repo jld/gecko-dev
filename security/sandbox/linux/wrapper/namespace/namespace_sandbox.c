@@ -78,17 +78,6 @@ InstallSignalForwarders(pid_t pid)
   signal(SIGABRT, ForwardSignal);
 }
 
-static void
-SetIntEnv(const char* name, int64_t val)
-{
-  char buf[sizeof("9223372036854775807")];
-  int len;
-
-  len = snprintf(buf, sizeof(buf), "%" PRId64, val);
-  assert((size_t)len < sizeof(buf));
-  setenv(name, buf, /* overwrite: */ 1);
-}
-
 // Fork a child process, wait for it while forwarding terminal
 // signals, and exit; returns in the child process.  (When this is
 // finished it will be clone() instead.)
@@ -96,8 +85,6 @@ static void
 DoFork()
 {
   pid_t pid;
-
-  SetIntEnv(kSandboxWrapperPidEnvVar, getpid());
 
   pid = fork();
   if (pid < 0) {
@@ -113,6 +100,8 @@ DoFork()
   // wrapper process).  Unfortunately, this doesn't work if the parent
   // has already died, so there's a race window.
   prctl(PR_SET_PDEATHSIG, SIGKILL);
+
+  // TODO: close extra file descriptors.
 }
 
 int
