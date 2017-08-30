@@ -3105,6 +3105,9 @@ ContentParent::OnGenerateMinidumpComplete(bool aDumpResult)
   }
 
   if (mSubprocess) {
+#if defined(XP_LINUX) && defined(MOZ_SANDBOX)
+    otherProcessHandle = mSubprocess->GetChildWaitHandle();
+#endif
     mSubprocess->SetAlreadyDead();
   }
 

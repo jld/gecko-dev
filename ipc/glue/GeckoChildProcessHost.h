@@ -106,6 +106,15 @@ public:
     return mProcessType;
   }
 
+  // COMMENTME
+  ProcessHandle GetChildWaitHandle() {
+#if defined(XP_LINUX) && defined(MOZ_SANDBOX)
+    return mChildWaitHandle;
+#else
+    return mChildProcessHandle;
+#endif
+  }
+
 #ifdef XP_MACOSX
   task_t GetChildTask() {
     return mChildTask;
@@ -167,6 +176,9 @@ protected:
 #endif
 
   ProcessHandle mChildProcessHandle;
+#if defined(XP_LINUX) && defined(MOZ_SANDBOX)
+  ProcessHandle mChildWaitHandle;
+#endif
 #if defined(OS_MACOSX)
   task_t mChildTask;
 #endif

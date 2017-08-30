@@ -123,7 +123,7 @@ GeckoChildProcessHost::~GeckoChildProcessHost()
 #if defined(MOZ_WIDGET_COCOA)
     SharedMemoryBasic::CleanupForPid(mChildProcessHandle);
 #endif
-    ProcessWatcher::EnsureProcessTerminated(mChildProcessHandle
+    ProcessWatcher::EnsureProcessTerminated(GetChildWaitHandle()
 #ifdef NS_FREE_PERMANENT_DATA
     // If we're doing leak logging, shutdown can be slow.
                                             , false // don't "force"
@@ -510,7 +510,7 @@ GeckoChildProcessHost::Join()
   }
 
   // If this fails, there's nothing we can do.
-  base::KillProcess(mChildProcessHandle, 0, /*wait*/true);
+  base::KillProcess(GetChildWaitHandle(), 0, /*wait*/true);
   SetAlreadyDead();
 }
 
@@ -523,6 +523,9 @@ GeckoChildProcessHost::SetAlreadyDead()
   }
 
   mChildProcessHandle = 0;
+#if defined(XP_LINUX) && defined(MOZ_SANDBOX)
+  mChildWaitHandle = 0;
+#endif
 }
 
 int32_t GeckoChildProcessHost::mChildCounter = 0;
@@ -1176,12 +1179,26 @@ GeckoChildProcessHost::PerformAsyncLaunchInternal(std::vector<std::string>& aExt
 bool
 GeckoChildProcessHost::OpenPrivilegedHandle(base::ProcessId aPid)
 {
+#if defined(XP_LINUX) && defined(MOZ_SANDBOX)
+  if (!mChildProcessHandle) {
+    // First call, from LaunchApp: this is the immediate child
+    mChildProcessHandle = mChildWaitHandle = aPid;
+  } else if (mChildProcessHandle == mChildWaitHandle) {
+    // Second call, from OnChannelConnected: the real child
+    mChildProcessHandle = aPid;
+  } else {
+    // Third+ call: ?????
+    MOZ_ASSERT(aPid == mChildProcessHandle);
+  }
+  return true;
+#else
   if (mChildProcessHandle) {
     MOZ_ASSERT(aPid == base::GetProcId(mChildProcessHandle));
     return true;
   }
 
   return base::OpenPrivilegedProcessHandle(aPid, &mChildProcessHandle);
+#endif
 }
 
 void
