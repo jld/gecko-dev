@@ -295,7 +295,13 @@ void Channel::ChannelImpl::ResetFileDescriptor(int fd) {
 bool Channel::ChannelImpl::EnqueueHelloMessage() {
   mozilla::UniquePtr<Message> msg(new Message(MSG_ROUTING_NONE,
                                               HELLO_MESSAGE_TYPE));
-  if (!msg->WriteInt(base::GetCurrentProcId())) {
+  base::ProcessId helloPid;
+#if defined(XP_LINUX) && defined(MOZ_SANDBOX)
+  helloPid = getpid();
+#else
+  helloPid = base::GetCurrentProcId();
+#endif
+  if (!msg->WriteInt(helloPid)) {
     Close();
     return false;
   }

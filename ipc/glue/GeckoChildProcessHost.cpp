@@ -105,6 +105,9 @@ GeckoChildProcessHost::GeckoChildProcessHost(GeckoProcessType aProcessType,
     mSandboxLevel(0),
 #endif
     mChildProcessHandle(0)
+#if defined(XP_LINUX) && defined(MOZ_SANDBOX)
+  , mRealProcessId(0)
+#endif
 #if defined(MOZ_WIDGET_COCOA)
   , mChildTask(MACH_PORT_NULL)
 #endif
@@ -1177,7 +1180,19 @@ bool
 GeckoChildProcessHost::OpenPrivilegedHandle(base::ProcessId aPid)
 {
   if (mChildProcessHandle) {
+#if defined(XP_LINUX) && defined(MOZ_SANDBOX)
+    // The first call is from LaunchApp and sets mChildProcessHandle to
+    // the direct child.  The second call is from OnChannelConnected and
+    // has the actual process's pid, which we need for crash reporting.
+    if (mRealProcessId) {
+      // FIXME: find out what, if anything, the third call is.
+      MOZ_ASSERT(aPid == mRealProcessId);
+    } else {
+      mRealProcessId = aPid;
+    }
+#else
     MOZ_ASSERT(aPid == base::GetProcId(mChildProcessHandle));
+#endif
     return true;
   }
 

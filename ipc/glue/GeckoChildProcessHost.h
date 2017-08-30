@@ -37,6 +37,7 @@ protected:
 public:
   typedef base::ChildPrivileges ChildPrivileges;
   typedef base::ProcessHandle ProcessHandle;
+  typedef base::ProcessId ProcessId;
 
   static ChildPrivileges DefaultChildPrivileges();
 
@@ -100,6 +101,13 @@ public:
   // by this function must not be closed by the caller.
   ProcessHandle GetChildProcessHandle() {
     return mChildProcessHandle;
+  }
+  ProcessId GetRealProcessId() {
+#if defined(XP_LINUX) && defined(MOZ_SANDBOX)
+    return mRealProcessId;
+#else
+    return base::GetProcId(mChildProcessHandle);
+#endif
   }
 
   GeckoProcessType GetProcessType() {
@@ -167,6 +175,9 @@ protected:
 #endif
 
   ProcessHandle mChildProcessHandle;
+#if defined(XP_LINUX) && defined(MOZ_SANDBOX)
+  ProcessId mRealProcessId;
+#endif
 #if defined(OS_MACOSX)
   task_t mChildTask;
 #endif
