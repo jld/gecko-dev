@@ -15,6 +15,7 @@
 
 #include "LinuxCapabilities.h"
 #include "LinuxSched.h"
+#include "SandboxChrootProto.h"
 #include "SandboxInfo.h"
 #include "SandboxLogging.h"
 #include "mozilla/Attributes.h"
@@ -92,8 +93,7 @@ SandboxForker::~SandboxForker() {
 void
 SandboxForker::RegisterFileDescriptors(base::file_handle_mapping_vector* aMap)
 {
-  // FIXME: constants
-  aMap->push_back(std::pair<int, int>(mChrootClient, 6));
+  aMap->push_back(std::pair<int, int>(mChrootClient, kSandboxChrootClientFd));
 }
 
 // FIXME: better error messages throughout.
@@ -189,6 +189,15 @@ ConfigureUserNamespace(uid_t uid, gid_t gid)
   }
 }
 
+static void
+DropAllCaps()
+{
+  if (!LinuxCapabilities().SetCurrent()) {
+    SANDBOX_LOG_ERROR("capset (drop all): %s", strerror(errno));
+  }
+
+}
+
 pid_t
 SandboxForker::Fork() {
   if (mFlags == 0) {
@@ -219,9 +228,7 @@ SandboxForker::Fork() {
     StartChrootServer();
   }
 
-  if (!LinuxCapabilities().SetCurrent()) {
-    SANDBOX_LOG_ERROR("capset (drop all): %s", strerror(errno));
-  }
+  DropAllCaps();
   return 0;
 }
 
@@ -250,16 +257,20 @@ SandboxForker::StartChrootServer()
     _exit(0);
   }
   MOZ_RELEASE_ASSERT(msgLen == 1);
-  // FIXME: constants
-  MOZ_RELEASE_ASSERT(msg == 'C');
+  MOZ_RELEASE_ASSERT(msg == kSandboxChrootRequest);
 
   int rv = chroot("/proc/self/fdinfo");
   MOZ_RELEASE_ASSERT(rv == 0);
+
+  // Drop CAP_SYS_CHROOT ASAP.  This *must* happen before responding;
+  // the main child won't be able to waitpid(), so it could start
+  // handling hostile content before this process finishes exiting.
+  DropAllCaps();
+
   rv = chdir("/");
   MOZ_RELEASE_ASSERT(rv == 0);
 
-  // FIXME: constants
-  msg = 'O';
+  msg = kSandboxChrootResponse;
   msgLen = HANDLE_EINTR(write(mChrootServer, &msg, 1));
   MOZ_RELEASE_ASSERT(msgLen == 1);
   _exit(0);
