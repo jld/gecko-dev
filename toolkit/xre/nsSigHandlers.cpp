@@ -27,6 +27,7 @@
 #include <unistd.h>
 #include <stdlib.h> // atoi
 #include <sys/prctl.h>
+#include <sys/syscall.h>
 #ifndef ANDROID // no Android impl
 #  include <ucontext.h>
 #endif
@@ -226,6 +227,14 @@ static void fpehandler(int signum, siginfo_t *si, void *context)
 }
 #endif
 
+#if defined(XP_LINUX) && (MOZ_SANDBOX)
+static void
+TerminalSignalHandler(int aSignal)
+{
+  _exit(128 | aSignal);
+}
+#endif
+
 void InstallSignalHandlers(const char *aProgname)
 {
 #if defined(CRAWL_STACK_ON_SIGSEGV)
@@ -272,6 +281,14 @@ void InstallSignalHandlers(const char *aProgname)
      * so the child isn't killed.
      */
     signal(SIGINT, SIG_IGN);
+
+#if defined(XP_LINUX) && (MOZ_SANDBOX)
+    if (syscall(__NR_getpid) == 1) {
+      signal(SIGTERM, TerminalSignalHandler);
+      signal(SIGHUP, TerminalSignalHandler);
+      signal(SIGQUIT, TerminalSignalHandler);
+    }
+#endif
   }
 
 #if defined(DEBUG) && defined(LINUX)
