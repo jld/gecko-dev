@@ -160,7 +160,7 @@ class SandboxPolicyCommon : public SandboxPolicyBase {
   static intptr_t TKillCompatTrap(ArgsRef aArgs, void* aux) {
     auto tid = static_cast<pid_t>(aArgs.args[0]);
     auto sig = static_cast<int>(aArgs.args[1]);
-    return DoSyscall(__NR_tgkill, getpid(), tid, sig);
+    return DoSyscall(__NR_tgkill, syscall(__NR_getpid), tid, sig);
   }
 
   static intptr_t SetNoNewPrivsTrap(ArgsRef& aArgs, void* aux) {
@@ -626,7 +626,8 @@ class SandboxPolicyCommon : public SandboxPolicyBase {
         // Send signals within the process (raise(), profiling, etc.)
       case __NR_tgkill: {
         Arg<pid_t> tgid(0);
-        return If(tgid == getpid(), Allow()).Else(InvalidSyscall());
+        const pid_t innerPid = syscall(__NR_getpid);
+        return If(tgid == innerPid, Allow()).Else(InvalidSyscall());
       }
 
         // Polyfill with tgkill; see above.
@@ -1279,7 +1280,7 @@ class ContentSandboxPolicy : public SandboxPolicyCommon {
         // Only allow to send signals within the process.
       case __NR_rt_tgsigqueueinfo: {
         Arg<pid_t> tgid(0);
-        return If(tgid == getpid(), Allow()).Else(InvalidSyscall());
+        return If(tgid == syscall(__NR_getpid), Allow()).Else(InvalidSyscall());
       }
 #  endif
 

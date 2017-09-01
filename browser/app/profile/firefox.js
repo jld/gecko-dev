@@ -1128,21 +1128,23 @@ pref("dom.ipc.shims.enabledWarnings", false);
   // 2 -> "seccomp-bpf + write file broker"
   // 3 -> "seccomp-bpf + read/write file brokering"
   // 4 -> all of the above + network/socket restrictions + chroot
+  // 5 -> all of the above + pid namespace isolation (if available)
   //
   // The purpose of this setting is to allow Linux users or distros to disable
   // the sandbox while we fix their problems, or to allow running Firefox with
   // exotic configurations we can't reasonably support out of the box.
   //
-  pref("security.sandbox.content.level", 4);
+  pref("security.sandbox.content.level", 5);
+  pref("security.sandbox.content.write_path_whitelist", "");
+  pref("security.sandbox.content.read_path_whitelist", "");
+  pref("security.sandbox.content.syscall_whitelist", "");
+
   // Introduced as part of bug 1608558.  Linux is currently the only platform
   // that uses a sandbox level for the socket process.  There are currently
   // only 2 levels:
   // 0 -> "no sandbox"
   // 1 -> "sandboxed, allows socket operations and reading necessary certs"
   pref("security.sandbox.socket.process.level", 1);
-  pref("security.sandbox.content.write_path_whitelist", "");
-  pref("security.sandbox.content.read_path_whitelist", "");
-  pref("security.sandbox.content.syscall_whitelist", "");
 #endif
 
 #if defined(XP_OPENBSD) && defined(MOZ_SANDBOX)
