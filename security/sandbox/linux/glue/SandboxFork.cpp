@@ -10,7 +10,7 @@
 #include <sched.h>
 #include <signal.h>
 #include <sys/socket.h>
-#include <syscall.h>
+#include <sys/syscall.h>
 #include <unistd.h>
 
 #include "LinuxCapabilities.h"
@@ -39,8 +39,14 @@ SandboxForker::SandboxForker(base::ChildPrivileges aPrivs) {
     canChroot = info.Test(SandboxInfo::kHasSeccompBPF);
     mFlags |= CLONE_NEWNET | CLONE_NEWIPC;
     break;
+    // FOR TESTING; BREAKS STUFF; DO NOT SHIP.
+  case base::PRIVILEGES_CONTENT:
+  case base::PRIVILEGES_FILEREAD:
+    canChroot = info.Test(SandboxInfo::kHasSeccompBPF);
+    mFlags |= CLONE_NEWNET | CLONE_NEWIPC;
+    break;
   default:
-    /* Nothing yet. */;
+    /* Nothing yet. */
     break;
   }
 
@@ -98,17 +104,26 @@ BlockAllSignals(sigset_t* aOldSigs)
   sigset_t allSigs;
   int rv = sigfillset(&allSigs);
   MOZ_RELEASE_ASSERT(rv == 0);
-  rv = syscall(__NR_rt_sigprocmask, SIG_BLOCK, &allSigs, aOldSigs,
-               sizeof(sigset_t));
-  MOZ_RELEASE_ASSERT(rv == 0);
+  // This will probably mask off a few libc-internal signals (for
+  // glibc, SIGCANCEL and SIGSETXID).  In theory that should be fine.
+  rv = pthread_sigmask(SIG_BLOCK, &allSigs, aOldSigs);
+  if (rv != 0) {
+    SANDBOX_LOG_ERROR("pthread_sigmask (block all): %s", strerror(rv));
+    MOZ_CRASH("pthread_sigmask");
+  }
 }
 
 static void
 RestoreSignals(const sigset_t* aOldSigs)
 {
-  int rv = syscall(__NR_rt_sigprocmask, SIG_SETMASK, aOldSigs, nullptr,
-                   sizeof(sigset_t));
-  MOZ_RELEASE_ASSERT(rv == 0);
+  // Assuming that pthread_sigmask is a thin layer over rt_sigprocmask
+  // and doesn't try to touch TLS, which may be in an "interesting"
+  // state right now:
+  int rv = pthread_sigmask(SIG_SETMASK, aOldSigs, nullptr);
+  if (rv != 0) {
+    SANDBOX_LOG_ERROR("pthread_sigmask (restore): %s", strerror(-rv));
+    MOZ_CRASH("pthread_sigmask");
+  }
 }
 
 static void
@@ -116,7 +131,7 @@ ResetSignalHandlers()
 {
   for (int signum = 1; signum <= SIGRTMAX; ++signum) {
     if (signal(signum, SIG_DFL) == SIG_ERR) {
-      MOZ_DIAGNOSTIC_ASSERT(signum == EINVAL);
+      MOZ_DIAGNOSTIC_ASSERT(errno == EINVAL);
     }
   }
 }
@@ -155,7 +170,7 @@ ConfigureUserNamespace(uid_t uid, gid_t gid)
   char buf[sizeof("18446744073709551615 18446744073709551615 1")];
   size_t len;
 
-  len = static_cast<size_t>(SafeSPrintf(buf, "%u %u 1", uid, uid));
+  len = static_cast<size_t>(SafeSPrintf(buf, "%d %d 1", uid, uid));
   MOZ_ASSERT(len < sizeof(buf));
   if (!WriteStringToFile("/proc/self/uid_map", buf, len)) {
     MOZ_CRASH("Failed to write /proc/self/uid_map");
@@ -167,7 +182,7 @@ ConfigureUserNamespace(uid_t uid, gid_t gid)
   // added in the same set of patches.
   Unused << WriteStringToFile("/proc/self/setgroups", "deny", 4);
 
-  len = static_cast<size_t>(SafeSPrintf(buf, "%u %u 1", gid, gid));
+  len = static_cast<size_t>(SafeSPrintf(buf, "%d %d 1", gid, gid));
   MOZ_ASSERT(len < sizeof(buf));
   if (!WriteStringToFile("/proc/self/gid_map", buf, len)) {
     MOZ_CRASH("Failed to write /proc/self/gid_map");
@@ -204,8 +219,9 @@ SandboxForker::Fork() {
     StartChrootServer();
   }
 
-  // FIXME: linkage problems.
-  // LinuxCapabilities().SetCurrent();
+  if (!LinuxCapabilities().SetCurrent()) {
+    SANDBOX_LOG_ERROR("capset (drop all): %s", strerror(errno));
+  }
   return 0;
 }
 
@@ -218,16 +234,12 @@ SandboxForker::StartChrootServer()
     return;
   }
 
-  // FIXME: linkage problems
-#if 0
   LinuxCapabilities caps;
   caps.Effective(CAP_SYS_CHROOT) = true;
   if (!caps.SetCurrent()) {
-    SANDBOX_LOG_ERROR("capset: %s", strerror(errno));
-    // FIXME: does this need to be a crash?
-    MOZ_CRASH("Can't limit chroot helper's capabilities");
+    SANDBOX_LOG_ERROR("capset (chroot helper): %s", strerror(errno));
+    MOZ_DIAGNOSTIC_ASSERT(false);
   }
-#endif
 
   CloseSuperfluousFds(mChrootMap);
 
