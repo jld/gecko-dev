@@ -23,6 +23,8 @@ private:
   int mChrootClient;
   // For CloseSuperfluousFds in the chroot helper process:
   base::InjectiveMultimap mChrootMap;
+
+  void StartChrootServer();
 };
 
 } // namespace mozilla

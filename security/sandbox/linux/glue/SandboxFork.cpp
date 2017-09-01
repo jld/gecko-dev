@@ -6,16 +6,21 @@
 
 #include "SandboxFork.h"
 
+#include <fcntl.h>
+#include <sched.h>
+#include <signal.h>
+#include <sys/socket.h>
+#include <syscall.h>
+#include <unistd.h>
+
 #include "LinuxCapabilities.h"
 #include "LinuxSched.h"
 #include "SandboxInfo.h"
 #include "SandboxLogging.h"
 #include "mozilla/Attributes.h"
-
-#include <fcntl.h>
-#include <sched.h>
-#include <sys/socket.h>
-#include <unistd.h>
+#include "mozilla/Unused.h"
+#include "base/strings/safe_sprintf.h"
+#include "sandbox/linux/system_headers/linux_syscalls.h"
 
 namespace mozilla {
 
@@ -33,6 +38,9 @@ SandboxForker::SandboxForker(base::ChildPrivileges aPrivs) {
     canChroot = info.Test(SandboxInfo::kHasSeccompBPF);
     mFlags |= CLONE_NEWNET | CLONE_NEWIPC;
     break;
+  default:
+    /* Nothing yet. */;
+    break;
   }
 
   if (canChroot || mFlags != 0) {
@@ -48,6 +56,10 @@ SandboxForker::SandboxForker(base::ChildPrivileges aPrivs) {
     }
     mChrootClient = fds[0];
     mChrootServer = fds[1];
+    // Do this here because the child process won't be able to malloc.
+    mChrootMap.push_back(base::InjectionArc(mChrootServer,
+                                            mChrootServer,
+                                            false));
   } else {
     int fds[2];
     int rv = pipe2(fds, O_CLOEXEC);
@@ -70,12 +82,127 @@ SandboxForker::~SandboxForker() {
   }
 }
 
+static void
+BlockAllSignals(sigset_t* aOldSigs)
+{
+  sigset_t allSigs;
+  int rv = sigfillset(&allSigs);
+  MOZ_RELEASE_ASSERT(rv == 0);
+  rv = syscall(__NR_rt_sigprocmask, SIG_BLOCK, &allSigs, aOldSigs,
+               sizeof(sigset_t));
+  // FIXME: better error message here?
+  MOZ_RELEASE_ASSERT(rv == 0);
+}
+
+static void
+RestoreSignals(const sigset_t* aOldSigs)
+{
+  int rv = syscall(__NR_rt_sigprocmask, SIG_SETMASK, aOldSigs, nullptr,
+                   sizeof(sigset_t));
+  MOZ_RELEASE_ASSERT(rv == 0);
+}
+
+static void
+ResetSignalHandlers()
+{
+  for (int signum = 1; signum <= SIGRTMAX; ++signum) {
+    if (signal(signum, SIG_DFL) == SIG_ERR) {
+      MOZ_DIAGNOSTIC_ASSERT(signum == EINVAL);
+    }
+  }
+}
+
+static pid_t
+DoClone(int aFlags)
+{
+  // FIXME: s390
+  return syscall(__NR_clone, aFlags | SIGCHLD,
+                      nullptr, nullptr, nullptr, nullptr);
+}
+
+static bool
+WriteStringToFile(const char* aPath, const char* aStr, const size_t aLen)
+{
+  int fd = open(aPath, O_WRONLY);
+  if (fd < 0) {
+    return false;
+  }
+  ssize_t written = write(fd, aStr, aLen);
+  if (close(fd) != 0 || written != ssize_t(aLen)) {
+    return false;
+  }
+  return true;
+}
+
+// This function sets up uid/gid mappings that preserve the
+// process's previous ids.  Mapping the uid/gid to something is
+// necessary in order to nest user namespaces (not currently being
+// used, but could be useful), and leaving the ids unchanged is
+// likely to minimize unexpected side-effects.
+static void
+ConfigureUserNamespace(uid_t uid, gid_t gid)
+{
+  using base::strings::SafeSPrintf;
+  char buf[sizeof("18446744073709551615 18446744073709551615 1")];
+  size_t len;
+
+  len = static_cast<size_t>(SafeSPrintf(buf, "%u %u 1", uid, uid));
+  MOZ_ASSERT(len < sizeof(buf));
+  if (!WriteStringToFile("/proc/self/uid_map", buf, len)) {
+    MOZ_CRASH("Failed to write /proc/self/uid_map");
+  }
+
+  // In recent kernels (3.19, 3.18.2, 3.17.8), for security reasons,
+  // establishing gid mappings will fail unless the process first
+  // revokes its ability to call setgroups() by using a /proc node
+  // added in the same set of patches.
+  Unused << WriteStringToFile("/proc/self/setgroups", "deny", 4);
+
+  len = static_cast<size_t>(SafeSPrintf(buf, "%u %u 1", gid, gid));
+  MOZ_ASSERT(len < sizeof(buf));
+  if (!WriteStringToFile("/proc/self/gid_map", buf, len)) {
+    MOZ_CRASH("Failed to write /proc/self/gid_map");
+  }
+}
+
 pid_t
 SandboxForker::Fork() {
   if (mFlags == 0) {
     return fork();
   }
 
+  uid_t uid = getuid();
+  gid_t gid = getgid();
+
+  sigset_t oldSigs;
+  BlockAllSignals(&oldSigs);
+  pid_t pid = DoClone(mFlags);
+  if (pid < 0) {
+    RestoreSignals(&oldSigs);
+    errno = -pid;
+    return -1;
+  }
+  if (pid > 0) {
+    RestoreSignals(&oldSigs);
+    return pid;
+  }
+
+  ResetSignalHandlers();
+  RestoreSignals(&oldSigs);
+  ConfigureUserNamespace(uid, gid);
+
+  if (mChrootServer >= 0) {
+    StartChrootServer();
+  }
+
+  // FIXME: linkage problems.
+  // LinuxCapabilities().SetCurrent();
+  return 0;
+}
+
+void
+SandboxForker::StartChrootServer()
+{
   MOZ_CRASH("FIXME");
 }
 
