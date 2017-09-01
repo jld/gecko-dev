@@ -103,7 +103,7 @@ SandboxLogCStack()
 static void
 SandboxCrash(int nr, siginfo_t *info, void *void_context)
 {
-  pid_t pid = getpid(), tid = syscall(__NR_gettid);
+  pid_t pid = syscall(__NR_getpid), tid = syscall(__NR_gettid);
   bool dumped = CrashReporter::WriteMinidumpForSigInfo(nr, info, void_context);
 
   if (!dumped) {

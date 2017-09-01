@@ -119,7 +119,11 @@ private:
   {
     auto tid = static_cast<pid_t>(aArgs.args[0]);
     auto sig = static_cast<int>(aArgs.args[1]);
-    return DoSyscall(__NR_tgkill, getpid(), tid, sig);
+    return DoSyscall(__NR_tgkill, syscall(__NR_getpid), tid, sig);
+  }
+
+  static intptr_t TGKillRemapTrap(ArgsRef& aArgs, void* aux) {
+    return syscall(__NR_tgkill, syscall(__NR_getpid), aArgs.args[1], aArgs.args[2]);
   }
 
   static intptr_t SetNoNewPrivsTrap(ArgsRef& aArgs, void* aux) {
@@ -257,8 +261,15 @@ public:
       // Send signals within the process (raise(), profiling, etc.)
     case __NR_tgkill: {
       Arg<pid_t> tgid(0);
-      return If(tgid == getpid(), Allow())
-        .Else(InvalidSyscall());
+      const pid_t outerPid = getpid();
+      const pid_t innerPid = syscall(__NR_getpid);
+      auto fallback = InvalidSyscall();
+      if (outerPid != innerPid) {
+        fallback = If(tgid == outerPid, Trap(TGKillRemapTrap, nullptr))
+          .Else(fallback);
+      }
+      return If(tgid == innerPid, Allow())
+        .Else(fallback);
     }
 
       // Polyfill with tgkill; see above.
@@ -936,7 +947,7 @@ public:
       // Only allow to send signals within the process.
     case __NR_rt_tgsigqueueinfo: {
       Arg<pid_t> tgid(0);
-      return If(tgid == getpid(), Allow())
+      return If(tgid == syscall(__NR_getpid), Allow())
         .Else(InvalidSyscall());
     }
 #endif

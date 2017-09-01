@@ -4,14 +4,19 @@
  * License, v. 2.0. If a copy of the MPL was not distributed with this file,
  * You can obtain one at http://mozilla.org/MPL/2.0/. */
 
+#include "mozilla/Assertions.h"
 #include "mozilla/Types.h"
+#include "SandboxLogging.h"
 
 #include <dlfcn.h>
 #include <signal.h>
 #include <errno.h>
 #include <stdio.h>
 #include <stdlib.h>
+#include <string.h>
 #include <sys/inotify.h>
+#include <sys/syscall.h>
+#include <unistd.h>
 
 // Signal number used to enable seccomp on each thread.
 extern int gSeccompTsyncBroadcastSignum;
@@ -83,4 +88,35 @@ inotify_init1(int flags)
 {
   errno = ENOSYS;
   return -1;
+}
+
+extern "C" MOZ_EXPORT pid_t
+getpid()
+{
+  pid_t realPid = syscall(__NR_getpid);
+  if (realPid != 1) {
+    return realPid;
+  }
+
+  static const pid_t outerPid = []() {
+    char buf[sizeof("18446744073709551615")];
+    ssize_t len = readlink("/proc/self", buf, sizeof(buf) - 1);
+    if (len < 0) {
+      SANDBOX_LOG_ERROR("readlink /proc/self: %s", strerror(errno));
+      MOZ_DIAGNOSTIC_ASSERT(false);
+      return 1;
+    }
+    buf[len] = 0;
+    static_assert(sizeof(int) >= sizeof(pid_t),
+                  "atoi is wide enough for pid_t");
+    pid_t pid = atoi(buf);
+    if (pid == 0) {
+      SANDBOX_LOG_ERROR("/proc/self -> %s (not a number?)", buf);
+      MOZ_DIAGNOSTIC_ASSERT(false);
+      return 1;
+    }
+    return pid;
+  }();
+
+  return outerPid;
 }
