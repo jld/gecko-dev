@@ -19,6 +19,7 @@
 #include "SandboxLogging.h"
 #include "mozilla/Attributes.h"
 #include "mozilla/Unused.h"
+#include "base/eintr_wrapper.h"
 #include "base/strings/safe_sprintf.h"
 #include "sandbox/linux/system_headers/linux_syscalls.h"
 
@@ -51,7 +52,7 @@ SandboxForker::SandboxForker(base::ChildPrivileges aPrivs) {
     int fds[2];
     int rv = socketpair(AF_UNIX, SOCK_STREAM | SOCK_CLOEXEC, 0, fds);
     if (rv != 0) {
-      SANDBOX_LOG_ERROR("socketpair: %s", strerror(errno)); 
+      SANDBOX_LOG_ERROR("socketpair: %s", strerror(errno));
       MOZ_CRASH("socketpair failed");
     }
     mChrootClient = fds[0];
@@ -64,7 +65,7 @@ SandboxForker::SandboxForker(base::ChildPrivileges aPrivs) {
     int fds[2];
     int rv = pipe2(fds, O_CLOEXEC);
     if (rv != 0) {
-      SANDBOX_LOG_ERROR("pipe2: %s", strerror(errno)); 
+      SANDBOX_LOG_ERROR("pipe2: %s", strerror(errno));
       MOZ_CRASH("pipe2 failed");
     }
     close(fds[0]);
@@ -82,6 +83,8 @@ SandboxForker::~SandboxForker() {
   }
 }
 
+// FIXME: better error messages throughout.
+
 static void
 BlockAllSignals(sigset_t* aOldSigs)
 {
@@ -90,7 +93,6 @@ BlockAllSignals(sigset_t* aOldSigs)
   MOZ_RELEASE_ASSERT(rv == 0);
   rv = syscall(__NR_rt_sigprocmask, SIG_BLOCK, &allSigs, aOldSigs,
                sizeof(sigset_t));
-  // FIXME: better error message here?
   MOZ_RELEASE_ASSERT(rv == 0);
 }
 
@@ -203,7 +205,43 @@ SandboxForker::Fork() {
 void
 SandboxForker::StartChrootServer()
 {
-  MOZ_CRASH("FIXME");
+  pid_t pid = DoClone(CLONE_FS);
+  MOZ_RELEASE_ASSERT(pid >= 0);
+  if (pid > 0) {
+    return;
+  }
+
+  // FIXME: linkage problems
+#if 0
+  LinuxCapabilities caps;
+  caps.Effective(CAP_SYS_CHROOT) = true;
+  if (!caps.SetCurrent()) {
+    SANDBOX_LOG_ERROR("capset: %s", strerror(errno));
+    // FIXME: does this need to be a crash?
+    MOZ_CRASH("Can't limit chroot helper's capabilities");
+  }
+#endif
+
+  CloseSuperfluousFds(mChrootMap);
+
+  char msg;
+  ssize_t msgLen = HANDLE_EINTR(read(mChrootServer, &msg, 1));
+  if (msgLen == 0) {
+    // Process exited before chrooting (or chose not to chroot?).
+    _exit(0);
+  }
+  MOZ_RELEASE_ASSERT(msgLen == 1);
+  MOZ_RELEASE_ASSERT(msg == 'C');
+
+  int rv = chroot("/proc/self/fdinfo");
+  MOZ_RELEASE_ASSERT(rv == 0);
+  rv = chdir("/");
+  MOZ_RELEASE_ASSERT(rv == 0);
+
+  msg = 'O';
+  msgLen = HANDLE_EINTR(write(mChrootServer, &msg, 1));
+  MOZ_RELEASE_ASSERT(msgLen == 1);
+  _exit(0);
 }
 
 } // namespace mozilla
