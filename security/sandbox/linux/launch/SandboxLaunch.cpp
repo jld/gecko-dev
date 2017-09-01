@@ -148,7 +148,7 @@ SandboxLaunchPrepare(GeckoProcessType aType,
   case GeckoProcessType_GMPlugin:
     if (level >= 1) {
       canChroot = true;
-      flags |= CLONE_NEWNET | CLONE_NEWIPC;
+      flags |= CLONE_NEWPID | CLONE_NEWNET | CLONE_NEWIPC;
     }
     break;
 #endif
@@ -167,6 +167,10 @@ SandboxLaunchPrepare(GeckoProcessType aType,
         flags |= CLONE_NEWNET;
       }
     }
+    if (level >= 5) {
+      flags |= CLONE_NEWPID;
+    }
+
     // Hidden pref to allow testing user namespaces separately, even
     // if there's nothing that would require them.
     if (Preferences::GetBool("security.sandbox.content.force-namespace", false)) {
@@ -177,6 +181,12 @@ SandboxLaunchPrepare(GeckoProcessType aType,
   default:
     // Nothing yet.
     break;
+  }
+
+  if (const auto envVar = PR_GetEnv("MOZ_NO_PID_SANDBOX")) {
+    if (envVar[0] != '\0' && envVar[0] != '0') {
+      flags &= ~CLONE_NEWPID;
+    }
   }
 
   if (canChroot || flags != 0) {
