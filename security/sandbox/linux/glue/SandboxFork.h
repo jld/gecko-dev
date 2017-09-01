@@ -15,6 +15,8 @@ class SandboxForker {
 public:
   explicit SandboxForker(base::ChildPrivileges aPrivs);
   ~SandboxForker();
+
+  void RegisterFileDescriptors(base::file_handle_mapping_vector* aMap);
   pid_t Fork();
 
 private:

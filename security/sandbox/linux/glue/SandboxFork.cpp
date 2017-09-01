@@ -83,6 +83,13 @@ SandboxForker::~SandboxForker() {
   }
 }
 
+void
+SandboxForker::RegisterFileDescriptors(base::file_handle_mapping_vector* aMap)
+{
+  // FIXME: constants
+  aMap->push_back(std::pair<int, int>(mChrootClient, 6));
+}
+
 // FIXME: better error messages throughout.
 
 static void
@@ -231,6 +238,7 @@ SandboxForker::StartChrootServer()
     _exit(0);
   }
   MOZ_RELEASE_ASSERT(msgLen == 1);
+  // FIXME: constants
   MOZ_RELEASE_ASSERT(msg == 'C');
 
   int rv = chroot("/proc/self/fdinfo");
@@ -238,6 +246,7 @@ SandboxForker::StartChrootServer()
   rv = chdir("/");
   MOZ_RELEASE_ASSERT(rv == 0);
 
+  // FIXME: constants
   msg = 'O';
   msgLen = HANDLE_EINTR(write(mChrootServer, &msg, 1));
   MOZ_RELEASE_ASSERT(msgLen == 1);

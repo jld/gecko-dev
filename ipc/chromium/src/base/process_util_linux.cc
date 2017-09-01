@@ -19,6 +19,9 @@
 #include "base/logging.h"
 #include "base/string_util.h"
 #include "nsLiteralString.h"
+#ifdef MOZ_SANDBOX
+#include "mozilla/SandboxFork.h"
+#endif
 #include "mozilla/UniquePtr.h"
 
 #include "prenv.h"
@@ -130,11 +133,19 @@ bool LaunchApp(const std::vector<std::string>& argv,
 }
 
 bool LaunchApp(const std::vector<std::string>& argv,
-               const file_handle_mapping_vector& fds_to_remap,
+               const file_handle_mapping_vector& fds_to_remap_in,
                const environment_map& env_vars_to_set,
                ChildPrivileges privs,
                bool wait, ProcessHandle* process_handle,
                ProcessArchitecture arch) {
+#ifdef MOZ_SANDBOX
+  mozilla::SandboxForker forker(privs);
+  file_handle_mapping_vector fds_to_remap = fds_to_remap_in;
+  forker.RegisterFileDescriptors(&fds_to_remap);
+#else
+  const file_handle_mapping_vector& fds_to_remap = fds_to_remap_in;
+#endif
+
   mozilla::UniquePtr<char*[]> argv_cstr(new char*[argv.size() + 1]);
   // Illegal to allocate memory after fork and before execvp
   InjectiveMultimap fd_shuffle1, fd_shuffle2;
@@ -149,7 +160,11 @@ bool LaunchApp(const std::vector<std::string>& argv,
     return false;
   }
 
+#ifdef MOZ_SANDBOX
+  pid_t pid = forker.Fork();
+#else
   pid_t pid = fork();
+#endif
   if (pid < 0)
     return false;
 
