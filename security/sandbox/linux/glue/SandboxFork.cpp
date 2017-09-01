@@ -10,16 +10,14 @@
 #include "LinuxSched.h"
 #include "SandboxInfo.h"
 #include "SandboxLogging.h"
-#include "base/launch_posix.h"
 #include "mozilla/Attributes.h"
 
+#include <fcntl.h>
 #include <sched.h>
 #include <sys/socket.h>
 #include <unistd.h>
 
 namespace mozilla {
-
-namespace {
 
 SandboxForker::SandboxForker(base::ChildPrivileges aPrivs) {
   const auto& info = SandboxInfo::Get();
@@ -31,7 +29,7 @@ SandboxForker::SandboxForker(base::ChildPrivileges aPrivs) {
   }
 
   switch (aPrivs) {
-  case PRIVILEGES_MEDIA:
+  case base::PRIVILEGES_MEDIA:
     canChroot = info.Test(SandboxInfo::kHasSeccompBPF);
     mFlags |= CLONE_NEWNET | CLONE_NEWIPC;
     break;
@@ -78,7 +76,7 @@ SandboxForker::Fork() {
     return fork();
   }
 
-  
+  MOZ_CRASH("FIXME");
 }
 
-}
+} // namespace mozilla
