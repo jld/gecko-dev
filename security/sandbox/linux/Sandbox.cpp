@@ -344,7 +344,7 @@ BroadcastSetThreadSandbox(const sock_fprog* aFilter)
 
   static_assert(sizeof(mozilla::Atomic<int>) == sizeof(int),
                 "mozilla::Atomic<int> isn't represented by an int");
-  pid = getpid();
+  pid = syscall(__NR_getpid);
   myTid = syscall(__NR_gettid);
   taskdp = opendir("/proc/self/task");
   if (taskdp == nullptr) {
@@ -542,9 +542,8 @@ SetCurrentProcessSandbox(UniquePtr<sandbox::bpf_dsl::Policy> aPolicy)
   SandboxInitMisc();
 
   // Auto-collect child processes -- mainly the chroot helper if
-  // present, but also anything setns()ed into the pid namespace (not
-  // yet implemented).  We won't be able to waitpid them under the
-  // seccomp-bpf policy.
+  // present, but also anything setns()ed into the pid namespace.  We
+  // won't be able to waitpid them under the seccomp-bpf policy.
   signal(SIGCHLD, SIG_IGN);
 
   // Note: PolicyCompiler borrows the policy and registry for its

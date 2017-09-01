@@ -38,13 +38,13 @@ SandboxForker::SandboxForker(base::ChildPrivileges aPrivs) {
   switch (aPrivs) {
   case base::PRIVILEGES_MEDIA:
     canChroot = info.Test(SandboxInfo::kHasSeccompBPF);
-    mFlags |= CLONE_NEWNET | CLONE_NEWIPC;
+    mFlags |= CLONE_NEWPID | CLONE_NEWNET | CLONE_NEWIPC;
     break;
     // FOR TESTING; BREAKS STUFF; DO NOT SHIP.
   case base::PRIVILEGES_CONTENT:
   case base::PRIVILEGES_FILEREAD:
     canChroot = info.Test(SandboxInfo::kHasSeccompBPF);
-    mFlags |= CLONE_NEWNET | CLONE_NEWIPC;
+    mFlags |= CLONE_NEWPID | CLONE_NEWNET | CLONE_NEWIPC;
     break;
   default:
     /* Nothing yet. */
