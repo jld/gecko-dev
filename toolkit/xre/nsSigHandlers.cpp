@@ -27,11 +27,15 @@
 #include <unistd.h>
 #include <stdlib.h> // atoi
 #include <sys/prctl.h>
-#include <sys/syscall.h>
 #ifndef ANDROID // no Android impl
 #  include <ucontext.h>
-#endif
-#endif
+#endif // ANDROID
+#ifdef MOZ_SANDBOX
+#include <sys/syscall.h>
+#include "mozilla/Assertions.h"
+#include "mozilla/Array.h"
+#endif // MOZ_SANDBOX
+#endif // LINUX
 
 #if defined(SOLARIS)
 #include <sys/resource.h>
@@ -229,14 +233,43 @@ static void fpehandler(int signum, siginfo_t *si, void *context)
 
 #if defined(XP_LINUX) && (MOZ_SANDBOX)
 static void
-TerminalSignalHandler(int aSignal)
+ExitOnSignal(int aSignal)
 {
+  // The exact value probably doesn't matter, but this encodes the
+  // signal and is likely distinguishable from normal exits.
   _exit(128 | aSignal);
 }
 #endif
 
 void InstallSignalHandlers(const char *aProgname)
 {
+#if defined(XP_LINUX) && (MOZ_SANDBOX)
+  // A child process launched in a new pid namespace has pid 1 within
+  // that namespace, and as a result it follows the traditional Unix
+  // behavior that pid 1 ignores all unhandled signals (other than
+  // SIGKILL and SIGSTOP).
+  if (syscall(__NR_getpid) == 1) {
+    // Some of these signal handlers may be overridden later in this
+    // function, but catch them all anyway.
+    static const Array<int, 10> kKillSignals = {
+      // Normally sent with kill() or raise(), so we need to be sure
+      // to exit.
+      SIGTERM, SIGHUP, SIGINT, SIGQUIT, SIGABRT,
+      // Normally synchronous faults from erroneous machine
+      // instructions, but backstop them anyway.
+      SIGSEGV, SIGBUS, SIGILL, SIGTRAP, SIGFPE
+    };
+    for (int sig : kKillSignals) {
+      auto oldHandler = signal(sig, ExitOnSignal);
+      if (oldHandler != SIG_DFL) {
+        fprintf(stderr, "InstallSignalHandlers: unexpected handler %p for"
+                " signal %d\n", (void*)oldHandler, sig);
+        MOZ_DIAGNOSTIC_ASSERT(oldHandler == SIG_DFL);
+      }
+    }
+  }
+#endif
+
 #if defined(CRAWL_STACK_ON_SIGSEGV)
   const char* tmp = PL_strdup(aProgname);
   if (tmp) {
@@ -281,14 +314,6 @@ void InstallSignalHandlers(const char *aProgname)
      * so the child isn't killed.
      */
     signal(SIGINT, SIG_IGN);
-
-#if defined(XP_LINUX) && (MOZ_SANDBOX)
-    if (syscall(__NR_getpid) == 1) {
-      signal(SIGTERM, TerminalSignalHandler);
-      signal(SIGHUP, TerminalSignalHandler);
-      signal(SIGQUIT, TerminalSignalHandler);
-    }
-#endif
   }
 
 #if defined(DEBUG) && defined(LINUX)
