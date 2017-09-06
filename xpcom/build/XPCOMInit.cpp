@@ -157,6 +157,10 @@ extern nsresult nsStringInputStreamConstructor(nsISupports*, REFNSIID, void**);
 #include "unicode/putil.h"
 #endif
 
+#if defined(XP_LINUX) && defined(MOZ_SANDBOX)
+#include "mozilla/SandboxFork.h"
+#endif
+
 using namespace mozilla;
 using base::AtExitManager;
 using mozilla::ipc::BrowserProcessSubThread;
@@ -744,6 +748,12 @@ NS_InitXPCOM2(nsIServiceManager** aResult,
     loop->thread_name().c_str(),
     loop->transient_hang_timeout(),
     loop->permanent_hang_timeout());
+
+#if defined(XP_LINUX) && defined(MOZ_SANDBOX)
+  if (XRE_IsParentProcess()) {
+    mozilla::SandboxForker::InitStatic();
+  }
+#endif
 
   return NS_OK;
 }

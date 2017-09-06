@@ -13,6 +13,10 @@ namespace mozilla {
 
 class SandboxForker {
 public:
+  // Call this on the main thread, after the preference service is
+  // available, to set up pref caches.
+  static void InitStatic();
+
   explicit SandboxForker(base::ChildPrivileges aPrivs);
   ~SandboxForker();
 

@@ -18,35 +18,117 @@
 #include "SandboxChrootProto.h"
 #include "SandboxInfo.h"
 #include "SandboxLogging.h"
+#include "nsThreadUtils.h"
+#include "nsXULAppAPI.h"
 #include "mozilla/Attributes.h"
+#include "mozilla/DebugOnly.h"
+#include "mozilla/Preferences.h"
+#include "mozilla/SandboxSettings.h"
 #include "mozilla/Unused.h"
 #include "base/eintr_wrapper.h"
 #include "base/strings/safe_sprintf.h"
+#include "prenv.h"
 #include "sandbox/linux/system_headers/linux_syscalls.h"
 
 namespace mozilla {
 
-SandboxForker::SandboxForker(base::ChildPrivileges aPrivs) {
+namespace {
+
+static DebugOnly<bool> gInited;
+static const char kMediaPidPrefName[] = "security.sandbox.media.isolate-pid";
+static Atomic<bool, Relaxed> gMediaPidPref;
+static const char kLevelPrefName[] = "security.sandbox.level";
+static Atomic<uint32_t, Relaxed> gLevelPref;
+
+} // anonymous namespace
+
+/* static */ void
+SandboxForker::InitStatic() {
+  MOZ_ASSERT(XRE_IsParentProcess());
+  MOZ_ASSERT(NS_IsMainThread());
+  MOZ_ASSERT(!gInited);
+  gInited = true;
+  nsresult rv;
+  rv = Preferences::AddAtomicBoolVarCache(&gMediaPidPref, kMediaPidPrefName,
+                                          true);
+  MOZ_ASSERT(NS_SUCCEEDED(rv));
+  rv = Preferences::AddAtomicUintVarCache(&gLevelPref, kLevelPrefName);
+  MOZ_ASSERT(NS_SUCCEEDED(rv));
+}
+
+SandboxForker::SandboxForker(base::ChildPrivileges aPrivs)
+: mFlags(0)
+, mChrootServer(-1)
+, mChrootClient(-1)
+{
+  // LaunchApp gets used for weird stuff like AnnotateLSBRelease in
+  // nsAppRunner.cpp, so (1) do as few unexpected things as possible
+  // in the "just fork" case, and (2) also the module initializer
+  // above may not have been run yet.
+  if (aPrivs == base::PRIVILEGES_INHERIT) {
+    return;
+  }
+
+  MOZ_ASSERT(XRE_IsParentProcess());
+  MOZ_ASSERT(gInited);
   const auto& info = SandboxInfo::Get();
   bool canChroot = false;
-  mFlags = 0;
 
-  if (!info.Test(SandboxInfo::kHasUserNamespaces)) {
+  if (!info.Test(SandboxInfo::kHasUserNamespaces) ||
+      // This doesn't all require seccomp-bpf, but most of
+      // it does, and kernels with user namespaces but no
+      // seccomp-bpf are probably nonexistent.
+      !info.Test(SandboxInfo::kHasSeccompBPF)) {
     return;
   }
 
   switch (aPrivs) {
   case base::PRIVILEGES_MEDIA:
-    canChroot = info.Test(SandboxInfo::kHasSeccompBPF);
-    mFlags |= CLONE_NEWPID | CLONE_NEWNET | CLONE_NEWIPC;
+    if (info.Test(SandboxInfo::kEnabledForMedia)) {
+      canChroot = true;
+      mFlags |= CLONE_NEWNET | CLONE_NEWIPC;
+      if (gMediaPidPref) {
+        mFlags |= CLONE_NEWPID;
+      }
+    }
     break;
-    // Unsure of breakage; let's find out?
   case base::PRIVILEGES_CONTENT:
   case base::PRIVILEGES_FILEREAD:
-    mFlags |= CLONE_NEWPID;
+    if (info.Test(SandboxInfo::kEnabledForContent)) {
+      const uint32_t level = gLevelPref;
+      // Undocumented level 4: cut off all access to sockets,
+      // including named Unix-domain sockets (by chrooting).  This
+      // will break PulseAudio and maybe other things.  (Note that
+      // this doesn't prevent exploits based on bug 1129492.)
+      if (level >= 4) {
+        canChroot = true;
+        // Can't unshare net if the X11 server might be remote.
+        // ($DISPLAY is putenv'ed into nsAppRunner.cpp, so this should
+        // work even if the display is set on the command line.)
+        //
+        // With a local X server it will prefer "abstract namespace"
+        // sockets, which are controlled by the network namespace
+        // instead of the filesystem, but will fall back to regular
+        // named sockets, which will work because the process won't be
+        // chrooted yet.
+        const auto display = PR_GetEnv("DISPLAY");
+        if (display && display[0] == ':') {
+          mFlags |= CLONE_NEWNET;
+        }
+      }
+      // Undocumented level 5: pid namespace isolation.  Treating this
+      // as a "higher" level than FS/net is somewhat arbitrary.  This
+      // also breaks PulseAudio; some of the breakage is due to the
+      // client deleting in-use shared memory files because it can't
+      // see the owning processes, but there is other breakage of
+      // uncertain nature.
+      if (level >= 5) {
+        mFlags |= CLONE_NEWPID;
+      }
+    }
     break;
   default:
-    /* Nothing yet. */
+    // Nothing yet.
     break;
   }
 
@@ -76,7 +158,6 @@ SandboxForker::SandboxForker(base::ChildPrivileges aPrivs) {
     }
     close(fds[0]);
     mChrootClient = fds[1];
-    mChrootServer = -1;
   }
 }
 
@@ -92,7 +173,10 @@ SandboxForker::~SandboxForker() {
 void
 SandboxForker::RegisterFileDescriptors(base::file_handle_mapping_vector* aMap)
 {
-  aMap->push_back(std::pair<int, int>(mChrootClient, kSandboxChrootClientFd));
+  if (mChrootClient >= 0) {
+    aMap->push_back(std::pair<int, int>(mChrootClient,
+                                        kSandboxChrootClientFd));
+  }
 }
 
 // FIXME: better error messages throughout.
