@@ -34,7 +34,7 @@ namespace mozilla {
 
 namespace {
 
-static DebugOnly<bool> gInited;
+static bool gInited;
 static const char kMediaPidPrefName[] = "security.sandbox.media.isolate-pid";
 static Atomic<bool, Relaxed> gMediaPidPref;
 static const char kLevelPrefName[] = "security.sandbox.level";
@@ -48,7 +48,7 @@ SandboxForker::InitStatic() {
   MOZ_ASSERT(NS_IsMainThread());
   MOZ_ASSERT(!gInited);
   gInited = true;
-  nsresult rv;
+  DebugOnly<nsresult> rv;
   rv = Preferences::AddAtomicBoolVarCache(&gMediaPidPref, kMediaPidPrefName,
                                           true);
   MOZ_ASSERT(NS_SUCCEEDED(rv));
