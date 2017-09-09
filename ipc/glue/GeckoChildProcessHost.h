@@ -16,6 +16,7 @@
 #include "mozilla/ipc/FileDescriptor.h"
 #include "mozilla/Monitor.h"
 #include "mozilla/StaticPtr.h"
+#include "mozilla/UniquePtr.h"
 
 #include "nsCOMPtr.h"
 #include "nsXULAppAPI.h"        // for GeckoProcessType
@@ -51,8 +52,7 @@ public:
   // Block until the IPC channel for our subprocess is initialized,
   // but no longer.  The child process may or may not have been
   // created when this method returns.
-  bool AsyncLaunch(StringVector aExtraOpts=StringVector(),
-                   base::ProcessArchitecture arch=base::GetCurrentProcessArchitecture());
+  bool AsyncLaunch(StringVector aExtraOpts=StringVector());
 
   virtual bool WaitUntilConnected(int32_t aTimeoutMs = 0);
 
@@ -74,11 +74,9 @@ public:
   // the IPC channel, meaning it's fully initialized.  (Or until an
   // error occurs.)
   bool SyncLaunch(StringVector aExtraOpts=StringVector(),
-                  int32_t timeoutMs=0,
-                  base::ProcessArchitecture arch=base::GetCurrentProcessArchitecture());
+                  int32_t timeoutMs=0);
 
-  virtual bool PerformAsyncLaunch(StringVector aExtraOpts=StringVector(),
-                                  base::ProcessArchitecture aArch=base::GetCurrentProcessArchitecture());
+  virtual bool PerformAsyncLaunch(StringVector aExtraOpts=StringVector());
 
   virtual void OnChannelConnected(int32_t peer_pid);
   virtual void OnMessageReceived(IPC::Message&& aMsg);
@@ -103,6 +101,10 @@ public:
     return mProcessType;
   }
 
+  void SetProcessArchitecture(base::ProcessArchitecture aArch) {
+    mLaunchOptions->arch = aArch;
+  }
+
 #ifdef XP_MACOSX
   task_t GetChildTask() {
     return mChildTask;
@@ -125,6 +127,11 @@ protected:
   bool mIsFileContent;
   Monitor mMonitor;
   FilePath mProcessPath;
+  // GeckoChildProcessHost holds the launch options so they can be set
+  // up on the main thread using main-thread-only APIs like prefs, and
+  // then used for the actual launch on another thread.  This pointer
+  // is set to null to free the options after the child is launched.
+  UniquePtr<base::LaunchOptions> mLaunchOptions;
 
   // This value must be accessed while holding mMonitor.
   enum {
@@ -159,10 +166,6 @@ protected:
 #endif
 #endif // XP_WIN
 
-#if defined(OS_POSIX)
-  base::file_handle_mapping_vector mFileMap;
-#endif
-
   ProcessHandle mChildProcessHandle;
 #if defined(OS_MACOSX)
   task_t mChildTask;
@@ -174,11 +177,10 @@ private:
   DISALLOW_EVIL_CONSTRUCTORS(GeckoChildProcessHost);
 
   // Does the actual work for AsyncLaunch, on the IO thread.
-  bool PerformAsyncLaunchInternal(std::vector<std::string>& aExtraOpts,
-                                  base::ProcessArchitecture arch);
+  bool PerformAsyncLaunchInternal(std::vector<std::string>& aExtraOpts);
 
-  bool RunPerformAsyncLaunch(StringVector aExtraOpts=StringVector(),
-                             base::ProcessArchitecture aArch=base::GetCurrentProcessArchitecture());
+
+  bool RunPerformAsyncLaunch(StringVector aExtraOpts=StringVector());
 
   enum class BinaryPathType {
     Self,

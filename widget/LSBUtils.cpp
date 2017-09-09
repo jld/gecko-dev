@@ -34,12 +34,11 @@ GetLSBRelease(nsACString& aDistributor,
     gLsbReleasePath, "-idrc"
   };
 
-  std::vector<std::pair<int, int>> fdMap = {
-    { pipefd[1], STDOUT_FILENO }
-  };
+  base::LaunchOptions options;
+  options.fds_to_remap.push_back({ pipefd[1], STDOUT_FILENO });
 
   base::ProcessHandle process;
-  base::LaunchApp(argv, fdMap, true, &process);
+  base::LaunchApp(argv, options, &process);
   close(pipefd[1]);
   if (!process) {
     NS_WARNING("Failed to spawn lsb_release!");

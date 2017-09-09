@@ -105,7 +105,8 @@ PluginProcessParent::Launch(mozilla::UniquePtr<LaunchCompleteTask> aLaunchComple
     vector<string> args;
     args.push_back(MungePluginDsoPath(mPluginFilePath));
 
-    bool result = AsyncLaunch(args, selectedArchitecture);
+    SetProcessArchitecture(selectedArchitecture);
+    bool result = AsyncLaunch(args);
     if (!result) {
         mLaunchCompleteTask = nullptr;
     }

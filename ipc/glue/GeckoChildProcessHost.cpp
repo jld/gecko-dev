@@ -86,6 +86,7 @@ GeckoChildProcessHost::GeckoChildProcessHost(GeckoProcessType aProcessType,
   : mProcessType(aProcessType),
     mIsFileContent(aIsFileContent),
     mMonitor("mozilla.ipc.GeckChildProcessHost.mMonitor"),
+    mLaunchOptions(MakeUnique<base::LaunchOptions>()),
     mProcessState(CREATING_CHANNEL),
 #if defined(MOZ_SANDBOX) && defined(XP_WIN)
     mEnableSandboxLogging(false),
@@ -372,39 +373,34 @@ void GeckoChildProcessHost::InitWindowsGroupID()
 #endif
 
 bool
-GeckoChildProcessHost::SyncLaunch(std::vector<std::string> aExtraOpts, int aTimeoutMs, base::ProcessArchitecture arch)
+GeckoChildProcessHost::SyncLaunch(std::vector<std::string> aExtraOpts, int aTimeoutMs)
 {
   PrepareLaunch();
 
   MessageLoop* ioLoop = XRE_GetIOMessageLoop();
   NS_ASSERTION(MessageLoop::current() != ioLoop, "sync launch from the IO thread NYI");
 
-  ioLoop->PostTask(NewNonOwningRunnableMethod<std::vector<std::string>,
-                                              base::ProcessArchitecture>(
+  ioLoop->PostTask(NewNonOwningRunnableMethod<std::vector<std::string>>(
     "ipc::GeckoChildProcessHost::RunPerformAsyncLaunch",
     this,
     &GeckoChildProcessHost::RunPerformAsyncLaunch,
-    aExtraOpts,
-    arch));
+    aExtraOpts));
 
   return WaitUntilConnected(aTimeoutMs);
 }
 
 bool
-GeckoChildProcessHost::AsyncLaunch(std::vector<std::string> aExtraOpts,
-                                   base::ProcessArchitecture arch)
+GeckoChildProcessHost::AsyncLaunch(std::vector<std::string> aExtraOpts)
 {
   PrepareLaunch();
 
   MessageLoop* ioLoop = XRE_GetIOMessageLoop();
 
-  ioLoop->PostTask(NewNonOwningRunnableMethod<std::vector<std::string>,
-                                              base::ProcessArchitecture>(
+  ioLoop->PostTask(NewNonOwningRunnableMethod<std::vector<std::string>>(
     "ipc::GeckoChildProcessHost::RunPerformAsyncLaunch",
     this,
     &GeckoChildProcessHost::RunPerformAsyncLaunch,
-    aExtraOpts,
-    arch));
+    aExtraOpts));
 
   // This may look like the sync launch wait, but we only delay as
   // long as it takes to create the channel.
@@ -460,13 +456,11 @@ GeckoChildProcessHost::LaunchAndWaitForProcessHandle(StringVector aExtraOpts)
   PrepareLaunch();
 
   MessageLoop* ioLoop = XRE_GetIOMessageLoop();
-  ioLoop->PostTask(NewNonOwningRunnableMethod<std::vector<std::string>,
-                                              base::ProcessArchitecture>(
+  ioLoop->PostTask(NewNonOwningRunnableMethod<std::vector<std::string>>(
     "ipc::GeckoChildProcessHost::RunPerformAsyncLaunch",
     this,
     &GeckoChildProcessHost::RunPerformAsyncLaunch,
-    aExtraOpts,
-    base::GetCurrentProcessArchitecture()));
+    aExtraOpts));
 
   MonitorAutoLock lock(mMonitor);
   while (mProcessState < PROCESS_CREATED) {
@@ -558,7 +552,7 @@ GeckoChildProcessHost::SetChildLogName(const char* varName, const char* origLogN
 }
 
 bool
-GeckoChildProcessHost::PerformAsyncLaunch(std::vector<std::string> aExtraOpts, base::ProcessArchitecture arch)
+GeckoChildProcessHost::PerformAsyncLaunch(std::vector<std::string> aExtraOpts)
 {
   AutoSetProfilerEnvVarsForChildProcess profilerEnvironment;
 
@@ -603,7 +597,7 @@ GeckoChildProcessHost::PerformAsyncLaunch(std::vector<std::string> aExtraOpts, b
     PR_SetEnv(rustLog.get());
   }
 
-  bool retval = PerformAsyncLaunchInternal(aExtraOpts, arch);
+  bool retval = PerformAsyncLaunchInternal(aExtraOpts);
 
   // Revert to original value
   if (origNSPRLogName) {
@@ -620,12 +614,11 @@ GeckoChildProcessHost::PerformAsyncLaunch(std::vector<std::string> aExtraOpts, b
 }
 
 bool
-GeckoChildProcessHost::RunPerformAsyncLaunch(std::vector<std::string> aExtraOpts,
-                                             base::ProcessArchitecture aArch)
+GeckoChildProcessHost::RunPerformAsyncLaunch(std::vector<std::string> aExtraOpts)
 {
   InitializeChannel();
 
-  bool ok = PerformAsyncLaunch(aExtraOpts, aArch);
+  bool ok = PerformAsyncLaunch(aExtraOpts);
   if (!ok) {
     // WaitUntilConnected might be waiting for us to signal.
     // If something failed let's set the error state and notify.
@@ -692,7 +685,7 @@ AddAppDirToCommandLine(std::vector<std::string>& aCmdLine)
 }
 
 bool
-GeckoChildProcessHost::PerformAsyncLaunchInternal(std::vector<std::string>& aExtraOpts, base::ProcessArchitecture arch)
+GeckoChildProcessHost::PerformAsyncLaunchInternal(std::vector<std::string>& aExtraOpts)
 {
   // We rely on the fact that InitializeChannel() has already been processed
   // on the IO thread before this point is reached.
@@ -719,17 +712,16 @@ GeckoChildProcessHost::PerformAsyncLaunchInternal(std::vector<std::string>& aExt
   // we split the logic here.
 
 #if defined(OS_LINUX) || defined(OS_MACOSX) || defined(OS_BSD) || defined(OS_SOLARIS)
-  base::environment_map newEnvVars;
 
 #if defined(MOZ_WIDGET_GTK)
   if (mProcessType == GeckoProcessType_Content) {
     // disable IM module to avoid sandbox violation
-    newEnvVars["GTK_IM_MODULE"] = "gtk-im-context-simple";
+    mLaunchOptions->environ["GTK_IM_MODULE"] = "gtk-im-context-simple";
 
     // Disable ATK accessibility code in content processes because it conflicts
     // with the sandbox, and we proxy that information through the main process
     // anyway.
-    newEnvVars["NO_AT_BRIDGE"] = "1";
+    mLaunchOptions->environ["NO_AT_BRIDGE"] = "1";
   }
 #endif
 
@@ -755,10 +747,10 @@ GeckoChildProcessHost::PerformAsyncLaunchInternal(std::vector<std::string>& aExt
       new_ld_lib_path.Append(':');
       new_ld_lib_path.Append(ld_library_path);
     }
-    newEnvVars["LD_LIBRARY_PATH"] = new_ld_lib_path.get();
+    mLaunchOptions->environ["LD_LIBRARY_PATH"] = new_ld_lib_path.get();
 
 # elif OS_MACOSX
-    newEnvVars["DYLD_LIBRARY_PATH"] = path.get();
+    mLaunchOptions->environ["DYLD_LIBRARY_PATH"] = path.get();
     // XXX DYLD_INSERT_LIBRARIES should only be set when launching a plugin
     //     process, and has no effect on other subprocesses (the hooks in
     //     libplugin_child_interpose.dylib become noops).  But currently it
@@ -777,7 +769,7 @@ GeckoChildProcessHost::PerformAsyncLaunchInternal(std::vector<std::string>& aExt
     }
     interpose.Append(path.get());
     interpose.AppendLiteral("/libplugin_child_interpose.dylib");
-    newEnvVars["DYLD_INSERT_LIBRARIES"] = interpose.get();
+    mLaunchOptions->environ["DYLD_INSERT_LIBRARIES"] = interpose.get();
 # endif  // OS_LINUX
   }
 #endif  // OS_LINUX || OS_MACOSX
@@ -802,7 +794,7 @@ GeckoChildProcessHost::PerformAsyncLaunchInternal(std::vector<std::string>& aExt
     }
     // Explicitly construct the std::string to make it clear that this
     // isn't retaining a pointer to the nsCString's buffer.
-    newEnvVars["LD_PRELOAD"] = std::string(preload.get());
+    mLaunchOptions->environ["LD_PRELOAD"] = std::string(preload.get());
   }
 #endif
 
@@ -810,7 +802,8 @@ GeckoChildProcessHost::PerformAsyncLaunchInternal(std::vector<std::string>& aExt
   // STDOUT_FILENO, for example
   int srcChannelFd, dstChannelFd;
   channel().GetClientFileDescriptorMapping(&srcChannelFd, &dstChannelFd);
-  mFileMap.push_back(std::pair<int,int>(srcChannelFd, dstChannelFd));
+  mLaunchOptions->fds_to_remap
+    .push_back(std::pair<int,int>(srcChannelFd, dstChannelFd));
 
   // no need for kProcessChannelID, the child process inherits the
   // other end of the socketpair() from us
@@ -853,7 +846,8 @@ GeckoChildProcessHost::PerformAsyncLaunchInternal(std::vector<std::string>& aExt
         &childCrashFd, &childCrashRemapFd))
     return false;
   if (0 <= childCrashFd) {
-    mFileMap.push_back(std::pair<int,int>(childCrashFd, childCrashRemapFd));
+    mLaunchOptions->fds_to_remap
+      .push_back(std::pair<int,int>(childCrashFd, childCrashRemapFd));
     // "true" == crash reporting enabled
     childArgv.push_back("true");
   }
@@ -871,7 +865,7 @@ GeckoChildProcessHost::PerformAsyncLaunchInternal(std::vector<std::string>& aExt
     int srcFd, dstFd;
     SandboxReporter::Singleton()
       ->GetClientFileDescriptorMapping(&srcFd, &dstFd);
-    mFileMap.push_back(std::make_pair(srcFd, dstFd));
+    mLaunchOptions->fds_to_remap.push_back(std::make_pair(srcFd, dstFd));
   }
 #endif
 
@@ -889,13 +883,10 @@ GeckoChildProcessHost::PerformAsyncLaunchInternal(std::vector<std::string>& aExt
   childArgv.push_back(childProcessType);
 
 #if defined(MOZ_WIDGET_ANDROID)
-  LaunchAndroidService(childProcessType, childArgv, mFileMap, &process);
+  LaunchAndroidService(childProcessType, childArgv,
+                       mLaunchOptions->fds_to_remap, &process);
 #else
-  base::LaunchApp(childArgv, mFileMap,
-#if defined(OS_LINUX) || defined(OS_MACOSX) || defined(OS_BSD) || defined(OS_SOLARIS)
-                  newEnvVars,
-#endif
-                  false, &process, arch);
+  base::LaunchApp(childArgv, *mLaunchOptions, &process);
 #endif // defined(MOZ_WIDGET_ANDROID)
 
   // We're in the parent and the child was launched. Close the child FD in the
@@ -1112,7 +1103,7 @@ GeckoChildProcessHost::PerformAsyncLaunchInternal(std::vector<std::string>& aExt
   } else
 #endif
   {
-    base::LaunchApp(cmdLine, false, false, &process);
+    base::LaunchApp(cmdLine, *mLaunchOptions, &process);
 
 #ifdef MOZ_SANDBOX
     // We need to be able to duplicate handles to some types of non-sandboxed
@@ -1159,6 +1150,7 @@ GeckoChildProcessHost::PerformAsyncLaunchInternal(std::vector<std::string>& aExt
   mProcessState = PROCESS_CREATED;
   lock.Notify();
 
+  mLaunchOptions = nullptr;
   return true;
 }
 
