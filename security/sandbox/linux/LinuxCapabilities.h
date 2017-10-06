@@ -62,12 +62,12 @@ public:
   // Get the current thread's capability sets and assign them to this
   // object.  Returns whether it succeeded and sets errno on failure.
   // Shouldn't fail unless the kernel is very old.
-  bool GetCurrent();
+  MOZ_EXPORT bool GetCurrent();
 
   // Try to set the current thread's capability sets to those
   // specified in this object.  Returns whether it succeeded and sets
   // errno on failure.
-  bool SetCurrentRaw() const;
+  MOZ_EXPORT bool SetCurrentRaw() const;
 
   // The capability model requires that the permitted set always be a
   // superset of the effective and inheritable sets.  This method

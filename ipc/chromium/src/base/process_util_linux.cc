@@ -36,7 +36,7 @@ bool LaunchApp(const std::vector<std::string>& argv,
 
   EnvironmentArray envp = BuildEnvironmentArray(options.environ);
 
-  pid_t pid = fork();
+  pid_t pid = options.fork_delegate ? options.fork_delegate->Fork() : fork();
   if (pid < 0)
     return false;
 

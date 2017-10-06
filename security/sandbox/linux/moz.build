@@ -13,6 +13,11 @@ if CONFIG['OS_TARGET'] == 'Android':
         'mozglue',
     ]
 
+USE_LIBS += [
+    # For PR_GetEnv
+    'nspr',
+]
+
 EXPORTS.mozilla += [
     'Sandbox.h',
     'SandboxInfo.h',

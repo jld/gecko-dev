@@ -27,6 +27,7 @@
 #include <mach/mach.h>
 #endif
 
+#include <functional>
 #include <map>
 #include <string>
 #include <vector>
@@ -117,6 +118,16 @@ struct LaunchOptions {
   // A mapping of (src fd -> dest fd) to propagate into the child
   // process.  All other fds will be closed, except std{in,out,err}.
   file_handle_mapping_vector fds_to_remap;
+#endif
+
+#if defined(OS_LINUX)
+  struct ForkDelegate {
+    virtual ~ForkDelegate() { }
+    virtual pid_t Fork() = 0;
+  };
+
+  // If non-null, the fork delegate will be called instead of fork().
+  mozilla::UniquePtr<ForkDelegate> fork_delegate = nullptr;
 #endif
 };
 

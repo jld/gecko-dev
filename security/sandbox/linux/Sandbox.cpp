@@ -10,6 +10,7 @@
 #include "LinuxSched.h"
 #include "SandboxBrokerClient.h"
 #include "SandboxChroot.h"
+#include "SandboxChrootProto.h"
 #include "SandboxFilter.h"
 #include "SandboxInternal.h"
 #include "SandboxLogging.h"
@@ -44,6 +45,8 @@
 #include "mozilla/Span.h"
 #include "mozilla/UniquePtr.h"
 #include "mozilla/Unused.h"
+#include "prenv.h"
+#include "base/posix/eintr_wrapper.h"
 #include "sandbox/linux/bpf_dsl/codegen.h"
 #include "sandbox/linux/bpf_dsl/dump_bpf.h"
 #include "sandbox/linux/bpf_dsl/policy.h"
@@ -303,11 +306,24 @@ SetThreadSandboxHandler(int signum)
 static void
 EnterChroot()
 {
-  if (gChrootHelper) {
-    gChrootHelper->Invoke();
-    gChrootHelper = nullptr;
+  if (!PR_GetEnv(kSandboxChrootEnvFlag)) {
+    if (gChrootHelper) {
+      gChrootHelper->Invoke();
+      gChrootHelper = nullptr;
+    }
+    return;
   }
+  MOZ_RELEASE_ASSERT(!gChrootHelper);
+
+  char msg = kSandboxChrootRequest;
+  ssize_t msg_len = HANDLE_EINTR(write(kSandboxChrootClientFd, &msg, 1));
+  MOZ_RELEASE_ASSERT(msg_len == 1);
+  msg_len = HANDLE_EINTR(read(kSandboxChrootClientFd, &msg, 1));
+  MOZ_RELEASE_ASSERT(msg_len == 1);
+  MOZ_RELEASE_ASSERT(msg == kSandboxChrootResponse);
+  close(kSandboxChrootClientFd);
 }
+
 
 static void
 BroadcastSetThreadSandbox(const sock_fprog* aFilter)
@@ -330,6 +346,11 @@ BroadcastSetThreadSandbox(const sock_fprog* aFilter)
     MOZ_CRASH();
   }
 
+  // TODO, when the chroot thread is no longer a thing: move this
+  // below the sandbox startup.  It needs to be here so the chroot
+  // thread won't get the seccomp policy, but this really needs to
+  // happen *after* all the threads have brokering and other
+  // interceptions applied.
   EnterChroot();
 
   // In case this races with a not-yet-deprivileged thread cloning
@@ -461,6 +482,12 @@ SetCurrentProcessSandbox(UniquePtr<sandbox::bpf_dsl::Policy> aPolicy)
 {
   MOZ_ASSERT(gSandboxCrashFunc);
   MOZ_RELEASE_ASSERT(gSandboxReporterClient != nullptr);
+
+  // Auto-collect child processes -- mainly the chroot helper if
+  // present, but also anything setns()ed into the pid namespace (not
+  // yet implemented).  We won't be able to waitpid them under the
+  // seccomp-bpf policy.
+  signal(SIGCHLD, SIG_IGN);
 
   // Note: PolicyCompiler borrows the policy and registry for its
   // lifetime, but does not take ownership of them.
