@@ -259,8 +259,19 @@ SigprofHandler(int aSignal, siginfo_t* aInfo, void* aContext)
   errno = savedErrno;
 }
 
+static pid_t
+real_getpid()
+{
+#ifdef XP_LINUX
+  // FIXME: should this be defined in platform.h?
+  return static_cast<pid_t>(syscall(SYS_getpid));
+#else
+  return getpid();
+#endif
+}
+
 Sampler::Sampler(PSLockRef aLock)
-  : mMyPid(getpid())
+  : mMyPid(real_getpid())
   // We don't know what the sampler thread's ID will be until it runs, so set
   // mSamplerTid to a dummy value and fill it in for real in
   // SuspendAndSampleAndResumeThread().
