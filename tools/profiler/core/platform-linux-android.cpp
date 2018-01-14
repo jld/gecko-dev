@@ -74,7 +74,13 @@
 
 using namespace mozilla;
 
-int profiler_current_process_id() { return getpid(); }
+int profiler_current_process_id() {
+#if defined(MOZ_SANDBOX)
+  return static_cast<int>(static_cast<pid_t>(syscall(SYS_getpid)));
+#else
+  return getpid();
+#endif
+}
 
 int profiler_current_thread_id() {
 #if defined(GP_OS_linux) || defined(GP_OS_android)
