@@ -158,6 +158,7 @@ SandboxLaunchPrepare(GeckoProcessType aType,
     // once the XShm detection shim is fixed.
 
     if (level >= 4) {
+      canChroot = true;
       // Unshare network namespace if X11 server is local.  (The
       // display name is copied to the environment in XRE_mainStartup,
       // even if it was specified as a command-line option.)
