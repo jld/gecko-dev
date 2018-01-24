@@ -157,15 +157,18 @@ SandboxLaunchPrepare(GeckoProcessType aType,
     // TODO: CLONE_NEWIPC (bug 1376910) if not fglrx and level >= 1,
     // once the XShm detection shim is fixed.
 
+    if (level >= 4) {
+      // Unshare network namespace if X11 server is local.  (The
+      // display name is copied to the environment in XRE_mainStartup,
+      // even if it was specified as a command-line option.)
+      const auto display = PR_GetEnv("DISPLAY");
+      if (display && display[0] == ':') {
+        flags |= CLONE_NEWNET;
+      }
+    }
     // Hidden pref to allow testing user namespaces separately, even
     // if there's nothing that would require them.
-    if (Preferences::GetBool("security.sandbox.content.force-namespace",
-#ifdef NIGHTLY_BUILD
-                             true
-#else
-                             false
-#endif
-          )) {
+    if (Preferences::GetBool("security.sandbox.content.force-namespace", false)) {
       flags |= CLONE_NEWUSER;
     }
     break;
