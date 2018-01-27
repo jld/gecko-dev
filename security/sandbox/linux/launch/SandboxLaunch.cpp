@@ -21,6 +21,7 @@
 #include "SandboxLogging.h"
 #include "base/eintr_wrapper.h"
 #include "base/strings/safe_sprintf.h"
+#include "mozilla/Array.h"
 #include "mozilla/ArrayUtils.h"
 #include "mozilla/Assertions.h"
 #include "mozilla/Attributes.h"
@@ -28,7 +29,10 @@
 #include "mozilla/Preferences.h"
 #include "mozilla/SandboxReporter.h"
 #include "mozilla/SandboxSettings.h"
+#include "mozilla/Services.h"
 #include "mozilla/Unused.h"
+#include "nsCOMPtr.h"
+#include "nsIGfxInfo.h"
 #include "nsString.h"
 #include "nsThreadUtils.h"
 #include "prenv.h"
@@ -96,6 +100,33 @@ IsDisplayLocal()
   // Assume that other backends (e.g., Wayland) will not use the
   // network namespace.
   return true;
+}
+
+// Content processes may need direct access to SysV IPC in certain
+// uncommon use cases: if using fglrx GPU drivers (officially obsolete
+// but still in use), or the ALSA dmix plugin without cubeb remoting.
+static bool
+ContentNeedsSysVIPC()
+{
+#ifdef MOZ_ALSA
+  if (!Preferences::GetBool("media.cubeb.sandbox")) {
+    return true;
+  }
+#endif
+  nsCOMPtr<nsIGfxInfo> gfxInfo = services::GetGfxInfo();
+  nsAutoString vendorID;
+  static const Array<nsresult (nsIGfxInfo::*)(nsAString&), 2> kMethods = {
+    &nsIGfxInfo::GetAdapterVendorID,
+    &nsIGfxInfo::GetAdapterVendorID2,
+  };
+  for (const auto method : kMethods) {
+    if (NS_SUCCEEDED((gfxInfo->*method)(vendorID))) {
+      if (vendorID.EqualsLiteral("ATI Technologies Inc.")) {
+        return true;
+      }
+    }
+  }
+  return false;
 }
 
 static void
@@ -216,8 +247,16 @@ SandboxLaunchPrepare(GeckoProcessType aType,
 #endif
 #ifdef MOZ_CONTENT_SANDBOX
   case GeckoProcessType_Content:
-    // TODO: CLONE_NEWIPC (bug 1376910) if not fglrx and level >= 1,
-    // once the XShm detection shim is fixed.
+    if (level >= 1) {
+      static const bool needSysV = ContentNeedsSysVIPC();
+      if (needSysV) {
+        // Tell the child process so it can adjust its seccomp-bpf
+        // policy.
+        aOptions->env_map["MOZ_SANDBOX_ALLOW_SYSV"] = "1";
+      } else {
+        flags |= CLONE_NEWIPC;
+      }
+    }
 
     if (level >= 4) {
       canChroot = true;
