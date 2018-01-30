@@ -35,7 +35,7 @@ public:
   using ResultExpr = sandbox::bpf_dsl::ResultExpr;
 
   virtual ResultExpr EvaluateSyscall(int aSysno) const override;
-  virtual Maybe<ResultExpr> EvaluateSocketCall(int aCall) const {
+  virtual Maybe<ResultExpr> EvaluateSocketCall(int aCall, bool aHasArgs) const {
     return Nothing();
   }
 #ifndef ANDROID
@@ -44,17 +44,6 @@ public:
   virtual Maybe<ResultExpr> EvaluateIpcCall(int aCall) const {
     return Nothing();
   }
-#endif
-
-#ifdef __NR_socketcall
-  // socketcall(2) takes the actual call's arguments via a pointer, so
-  // seccomp-bpf can't inspect them; ipc(2) takes them at different indices.
-  static const bool kSocketCallHasArgs = false;
-  static const bool kIpcCallNormalArgs = false;
-#else
-  // Otherwise, the bpf_dsl Arg<> class can be used normally.
-  static const bool kSocketCallHasArgs = true;
-  static const bool kIpcCallNormalArgs = true;
 #endif
 };
 
