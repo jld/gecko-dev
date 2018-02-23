@@ -691,10 +691,12 @@ public:
   Maybe<ResultExpr> EvaluateIpcCall(int aCall) const override {
     switch(aCall) {
       // These are a problem: SysV shared memory follows the Unix
-      // "same uid policy" and can't be restricted/brokered like file
-      // access.  But the graphics layer might not be using them
-      // anymore; this needs to be studied.
+      // "same uid policy" and can't be selectively restricted or
+      // brokered like file access.  See bug 1376910.
     case SHMGET:
+      // Bug 1438401: quietly dissuade Cairo from using shm,
+      // regardless of its choice of X11 client library.
+      return Some(mAllowSysV ? Allow() : Error(EPERM));
     case SHMCTL:
     case SHMAT:
     case SHMDT:
