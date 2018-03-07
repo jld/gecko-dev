@@ -796,6 +796,9 @@ public:
         // ffmpeg, and anything else that calls isatty(), will be told
         // that nothing is a typewriter:
         .ElseIf(request == TCGETS, Error(ENOTTY))
+        // Bug 1408498: libgio uses FIONREAD on inotify fds.
+        // (We should stop using inotify: bug 1408497.)
+        .ElseIf(request == FIONREAD, Allow())
         // Allow anything that isn't a tty ioctl, for now; bug 1302711
         // will cover changing this to a default-deny policy.
         .ElseIf(shifted_type != kTtyIoctls, Allow())
@@ -929,14 +932,11 @@ public:
       // fork() fails; see bug 227246 and bug 1299581.
       return Error(ECHILD);
 
-      // inotify_{add,rm}_watch take filesystem paths.  Pretend the
-      // kernel doesn't support inotify; note that this could make
-      // libgio attempt network connections for FAM.
+    case __NR_eventfd2:
     case __NR_inotify_init:
     case __NR_inotify_init1:
-      return Error(ENOSYS);
-
-    case __NR_eventfd2:
+    case __NR_inotify_add_watch:
+    case __NR_inotify_rm_watch:
       return Allow();
 
 #ifdef __NR_memfd_create
