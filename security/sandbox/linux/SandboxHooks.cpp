@@ -13,7 +13,6 @@
 #include <signal.h>
 #include <stdio.h>
 #include <stdlib.h>
-#include <sys/inotify.h>
 
 // Signal number used to enable seccomp on each thread.
 extern mozilla::Atomic<int> gSeccompTsyncBroadcastSignum;
@@ -107,17 +106,4 @@ sigaction(int signum, const struct sigaction* act, struct sigaction* oldact)
   struct sigaction newact = *act;
   SigSetFixup(&newact.sa_mask);
   return sRealFunc(signum, &newact, oldact);
-}
-
-extern "C" MOZ_EXPORT int
-inotify_init(void)
-{
-  return inotify_init1(0);
-}
-
-extern "C" MOZ_EXPORT int
-inotify_init1(int flags)
-{
-  errno = ENOSYS;
-  return -1;
 }
