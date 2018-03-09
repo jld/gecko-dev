@@ -66,6 +66,84 @@ function callOpen(args) {
   return (fd);
 }
 
+// Calls the native socket/connect syscalls.
+function callConnect(args) {
+  ChromeUtils.import("resource://gre/modules/ctypes.jsm");
+  let {lib, display} = args;
+  let libc = ctypes.open(lib);
+
+  // Warning: these definitions are Linux-specific.
+  const sockaddr_un = new ctypes.StructType("sockaddr_un",
+    [{ "sun_family": ctypes.uint16_t },
+     { "sun_path":  ctypes.char.array(108) }]);
+  const socklen_t = ctypes.uint32_t;
+  const AF_UNIX = 1;
+  const SOCK_STREAM = 1;
+  const EINTR = 4;
+
+  let socket = libc.declare("socket", ctypes.default_abi,
+                            ctypes.int, ctypes.int, ctypes.int, ctypes.int);
+  let connect = libc.declare("connect", ctypes.default_abi,
+                             ctypes.int, ctypes.int,
+                             sockaddr_un.ptr, socklen_t);
+  let close = libc.declare("close", ctypes.default_abi,
+                           ctypes.int, ctypes.int);
+  let strerror = libc.declare("strerror", ctypes.default_abi,
+                              ctypes.char.ptr, ctypes.int);
+  let strncpy = libc.declare("strncpy", ctypes.default_abi,
+                             ctypes.char.ptr, ctypes.char.ptr,
+                             ctypes.char.ptr, ctypes.size_t);
+
+  function handle_eintr(f) {
+    let rv;
+    do {
+      rv = f();
+    } while (rv < 0 && ctypes.errno == EINTR);
+    return rv;
+  }
+
+  // The target is the running X server, because it's allowed by the
+  // default policy and the listener already exists.
+  let dispnum = display.split(":")[1].split(".")[0];
+  let fd = socket(AF_UNIX, SOCK_STREAM, 0);
+  if (fd < 0) {
+    libc.close();
+    return "socket failed: " + strerror(ctypes.errno).readString();
+  }
+  let addr = new sockaddr_un();
+  addr.sun_family = AF_UNIX;
+  strncpy(addr.sun_path.addressOfElement(0),
+          "/tmp/.X11-unix/X" + dispnum,
+          addr.sun_path.length);
+  let rv = handle_eintr(() => connect(fd, addr.address(), sockaddr_un.size));
+  if (rv < 0) {
+    libc.close();
+    return "connect failed: " + strerror(ctypes.errno).readString();
+  }
+  close(fd);
+  return "";
+}
+
+// Test connect() via libX11, to make sure the API subset used by Xlib
+// works.
+function callXOpenDisplay(args) {
+  ChromeUtils.import("resource://gre/modules/ctypes.jsm");
+  let {lib} = args;
+  let libX11 = ctypes.open(lib);
+  let XOpenDisplay = libX11.declare("XOpenDisplay", ctypes.default_abi,
+                                    ctypes.voidptr_t, ctypes.char.ptr);
+  let XCloseDisplay = libX11.declare("XCloseDisplay", ctypes.default_abi,
+                                    ctypes.int, ctypes.voidptr_t);
+  let disp = XOpenDisplay(null);
+  if (disp.isNull()) {
+    libX11.close();
+    return false;
+  }
+  XCloseDisplay(disp);
+  libX11.close();
+  return true;
+}
+
 // open syscall flags
 function openWriteCreateFlags() {
   Assert.ok(isMac() || isLinux());
@@ -211,6 +289,21 @@ add_task(async function() {
   if (isLinux() || isMac()) {
     let rv = await ContentTask.spawn(browser, {lib}, callFork);
     ok(rv == -1, "calling fork is not permitted");
+  }
+
+  // use connect syscall, directly and via Xlib
+  if (isLinux()) {
+    let env = Cc["@mozilla.org/process/environment;1"].
+              getService(Ci.nsIEnvironment);
+    let display = env.get("DISPLAY");
+    if (display.startsWith(":") || display.startsWith("unix:")) {
+      let maybeErr = await ContentTask.spawn(browser, {lib, display}, callConnect);
+      is(maybeErr, "", "connection to X11 socket is allowed");
+      let isOk = await ContentTask.spawn(browser, {lib: "libX11.so.6"}, callXOpenDisplay);
+      ok(isOk, "Xlib connecting to X11 socket is allowed");
+    } else {
+      info("X11 display is remote; not testing connect()");
+    }
   }
 
   // On macOS before 10.10 the |sysctl-name| predicate didn't exist for
