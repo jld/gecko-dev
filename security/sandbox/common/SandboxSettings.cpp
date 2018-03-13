@@ -10,6 +10,7 @@
 #include "mozilla/Preferences.h"
 
 #include "prenv.h"
+#include <stdio.h>
 
 namespace mozilla {
 
