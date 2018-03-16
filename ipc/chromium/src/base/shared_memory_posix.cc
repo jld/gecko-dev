@@ -16,6 +16,9 @@
 #include "base/logging.h"
 #include "base/platform_thread.h"
 #include "base/string_util.h"
+#if defined(XP_LINUX) && defined(MOZ_SANDBOX)
+#include "mozilla/Sandbox.h"
+#endif
 #include "mozilla/UniquePtr.h"
 
 namespace base {
@@ -63,13 +66,33 @@ class ScopedFILEClose {
 
 typedef mozilla::UniquePtr<FILE, ScopedFILEClose> ScopedFILE;
 
+static int CreateViaSandbox(size_t size) {
+#if defined(XP_LINUX) && defined(MOZ_SANDBOX)
+  int rv = mozilla::SandboxSharedMemoryCreate(size);
+  if (rv < 0) {
+    DCHECK_EQ(-rv, ENOTCONN);
+    return -1;
+  }
+  return rv;
+#else
+  return -1;
+#endif
 }
+
+} // anonymous namespace
 
 bool SharedMemory::Create(size_t size) {
   read_only_ = false;
 
   DCHECK(size > 0);
   DCHECK(mapped_file_ == -1);
+
+  // Check for sandboxing and attempt brokered file creation.
+  mapped_file_ = CreateViaSandbox(size);
+  if (mapped_file_ >= 0) {
+    max_size_ = size;
+    return true;
+  }
 
   ScopedFILE file_closer;
   FILE *fp;
@@ -82,8 +105,17 @@ bool SharedMemory::Create(size_t size) {
   // the last fd is closed, it is truly freed).
   file_util::Delete(path);
 
-  if (fp == NULL)
+  if (fp == NULL) {
+    // Handle possible race condition: CreateViaSandbox fails because
+    // sandbox isn't started, then sandbox is started, then filesystem
+    // access is attemped and fails.
+    mapped_file_ = CreateViaSandbox(size);
+    if (mapped_file_ >= 0) {
+      max_size_ = size;
+      return true;
+    }
     return false;
+  }
   file_closer.reset(fp);  // close when we go out of scope
 
   // Set the file size.
