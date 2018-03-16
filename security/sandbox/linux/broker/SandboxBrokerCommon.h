@@ -37,6 +37,7 @@ public:
     SANDBOX_FILE_RMDIR,
     SANDBOX_FILE_UNLINK,
     SANDBOX_FILE_READLINK,
+    SANDBOX_FILE_SHM_CREATE,
     SANDBOX_SOCKET_CONNECT,
   };
   // String versions of the above

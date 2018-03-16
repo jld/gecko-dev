@@ -23,6 +23,7 @@
 #endif
 
 #include "base/string_util.h"
+#include "base/shared_memory.h"
 #include "mozilla/Assertions.h"
 #include "mozilla/DebugOnly.h"
 #include "mozilla/Move.h"
@@ -507,6 +508,19 @@ DoLink(const char* aPath, const char* aPath2,
 }
 
 static int
+GetSharedMemory(size_t aSize)
+{
+  base::SharedMemory shm;
+  if (shm.Create(aSize)) {
+    base::FileDescriptor fd;
+    if (shm.GiveToProcess(/* pid; not used */ 0, &fd)) {
+      return fd.fd;
+    }
+  }
+  return -1;
+}
+
+static int
 DoConnect(const char* aPath, size_t aLen, int aType)
 {
   // Deny SOCK_DGRAM for the same reason it's denied for socketpair.
@@ -836,6 +850,11 @@ SandboxBroker::ThreadMain(void)
       perms = 0;
     }
 
+    // SHM_CREATE doesn't take a path, so bypass the policy check for it.
+    if (req.mOp == SANDBOX_FILE_SHM_CREATE) {
+      perms |= MAY_ACCESS;
+    }
+
     // And now perform the operation if allowed.
     if (perms & CRASH_INSTEAD) {
       // This is somewhat nonmodular, but it works.
@@ -1006,6 +1025,15 @@ SandboxBroker::ThreadMain(void)
           }
         } else {
           AuditDenial(req.mOp, req.mFlags, perms, pathBuf);
+        }
+        break;
+
+      case SANDBOX_FILE_SHM_CREATE:
+        openedFd = GetSharedMemory(req.mBufSize);
+        if (openedFd >= 0) {
+          resp.mError = 0;
+        } else {
+          resp.mError = -errno;
         }
         break;
 
