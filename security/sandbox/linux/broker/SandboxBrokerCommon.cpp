@@ -42,6 +42,7 @@ const char* SandboxBrokerCommon::OperationDescription[] = {
   "rmdir",
   "unlink",
   "readlink",
+  "shm_create",
   "connect"
 };
 

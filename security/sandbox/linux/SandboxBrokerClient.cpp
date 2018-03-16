@@ -246,6 +246,13 @@ SandboxBrokerClient::Readlink(const char* aPath, void* aBuff, size_t aSize)
 }
 
 int
+SandboxBrokerClient::ShmCreate(size_t aSize)
+{
+  const Request req = { SANDBOX_FILE_SHM_CREATE, 0, aSize };
+  return DoCall(&req, "", nullptr, nullptr, true);
+}
+
+int
 SandboxBrokerClient::Connect(const sockaddr_un* aAddr, size_t aLen, int aType)
 {
   static const size_t maxLen = sizeof(aAddr->sun_path);

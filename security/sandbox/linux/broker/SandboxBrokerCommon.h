@@ -37,6 +37,7 @@ public:
     SANDBOX_FILE_RMDIR,
     SANDBOX_FILE_UNLINK,
     SANDBOX_FILE_READLINK,
+    SANDBOX_FILE_SHM_CREATE,
     SANDBOX_SOCKET_CONNECT,
   };
   // String versions of the above
@@ -47,17 +48,22 @@ public:
     // For open, flags; for access, "mode"; for stat, O_NOFOLLOW for lstat.
     // For connect, the socket type.
     int mFlags;
-    // Size of return value buffer, if any
+    // For SANDBOX_FILE_READLINK, the size of the return buffer.
+    // For SANDBOX_FILE_SHM_CREATE, the size of the file to create.
     size_t mBufSize;
-    // The rest of the packet is the pathname.
-    // SCM_RIGHTS for response socket attached.
+    // The rest of the packet is the pathname(s), null-terminated; see
+    // the comments in SandboxBroker::ThreadMain.
+    //
+    // For SANDBOX_FILE_SHM_CREATE the pathname is ignored and should be empty.
+    //
+    // A SCM_RIGHTS message containing the reponse socket is attached.
   };
 
   struct Response {
     // Syscall result, -errno if failure, or 0 for no error
     int mError;
     // Followed by struct stat for stat/lstat.
-    // SCM_RIGHTS attached for successful open.
+    // SHM_RIGHTS attached for successful open / shm_create.
   };
 
   // This doesn't need to be the system's maximum path length, just

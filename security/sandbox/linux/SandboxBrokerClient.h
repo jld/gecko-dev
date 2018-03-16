@@ -43,6 +43,7 @@ class SandboxBrokerClient final : private SandboxBrokerCommon {
   int Unlink(const char* aPath);
   int Rmdir(const char* aPath);
   int Readlink(const char* aPath, void* aBuf, size_t aBufSize);
+  int ShmCreate(size_t aSize);
   int Connect(const struct sockaddr_un* aAddr, size_t aLen, int aType);
 
  private:

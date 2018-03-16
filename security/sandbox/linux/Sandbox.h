@@ -61,6 +61,12 @@ MOZ_EXPORT bool SetContentProcessSandbox(ContentProcessSandboxParams&& aParams);
 MOZ_EXPORT void SetMediaPluginSandbox(const char *aFilePath);
 #endif
 
+// Create a new anonymous shared memory file of the given size if this
+// process has a SandboxBrokerClient.  Returns the fd if successful,
+// or -1 and sets errno on error; errno may be ENOTCONN if there is no
+// broker client, or an error returned by the broker client.
+MOZ_EXPORT int SandboxSharedMemoryCreate(size_t aSize);
+
 } // namespace mozilla
 
 #endif // mozilla_Sandbox_h

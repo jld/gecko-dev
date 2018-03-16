@@ -87,7 +87,8 @@ static bool gSandboxCrashOnError = false;
 // This is initialized by SandboxSetCrashFunc().
 SandboxCrashFunc gSandboxCrashFunc;
 
-static SandboxReporterClient* gSandboxReporterClient;
+static Atomic<SandboxReporterClient*> gSandboxReporterClient;
+static Atomic<SandboxBrokerClient*> gSandboxBrokerClient;
 static void (*gChromiumSigSysHandler)(int, siginfo_t*, void*);
 
 // Test whether a ucontext, interpreted as the state after a syscall,
@@ -139,7 +140,8 @@ SigSysHandler(int nr, siginfo_t *info, void *void_context)
     return;
   }
 
-  SandboxReport report = gSandboxReporterClient->MakeReportAndSend(&savedCtx);
+  SandboxReporterClient* client = gSandboxReporterClient;
+  SandboxReport report = client->MakeReportAndSend(&savedCtx);
 
   // TODO, someday when this is enabled on MIPS: include the two extra
   // args in the error message.
@@ -624,13 +626,14 @@ SetContentProcessSandbox(ContentProcessSandboxParams&& aParams)
     : SandboxReport::ProcType::CONTENT;
   gSandboxReporterClient = new SandboxReporterClient(procType);
 
-  // This needs to live until the process exits.
-  static SandboxBrokerClient* sBroker;
+  SandboxBrokerClient* broker = nullptr;
   if (brokerFd >= 0) {
-    sBroker = new SandboxBrokerClient(brokerFd);
+    // This needs to live until the process exits.
+    broker = new SandboxBrokerClient(brokerFd);
   }
+  gSandboxBrokerClient = broker;
 
-  SetCurrentProcessSandbox(GetContentSandboxPolicy(sBroker, Move(aParams)));
+  SetCurrentProcessSandbox(GetContentSandboxPolicy(broker, Move(aParams)));
   return true;
 }
 #endif // MOZ_CONTENT_SANDBOX
@@ -679,5 +682,15 @@ SetMediaPluginSandbox(const char *aFilePath)
   SetCurrentProcessSandbox(GetMediaSandboxPolicy(files));
 }
 #endif // MOZ_GMP_SANDBOX
+
+int
+SandboxSharedMemoryCreate(size_t aSize)
+{
+  SandboxBrokerClient* client = gSandboxBrokerClient;
+  if (client == nullptr) {
+    return -ENOTCONN;
+  }
+  return client->ShmCreate(aSize);
+}
 
 } // namespace mozilla
