@@ -134,17 +134,24 @@ bool SharedMemory::Unmap() {
 bool SharedMemory::ShareToProcessCommon(ProcessId processId,
                                         SharedMemoryHandle *new_handle,
                                         bool close_self) {
-  const int new_fd = dup(mapped_file_);
-  DCHECK(new_fd >= -1);
+  DCHECK(mapped_file_ >= 0);
+
+  int new_fd;
+  if (close_self) {
+    new_fd = mapped_file_;
+    mapped_file_ = -1;
+    Close();
+  } else {
+    new_fd = dup(mapped_file_);
+  }
+  if (new_fd < 0) {
+    return false;
+  }
+
   new_handle->fd = new_fd;
   new_handle->auto_close = true;
-
-  if (close_self)
-    Close();
-
   return true;
 }
-
 
 void SharedMemory::Close(bool unmap_view) {
   if (unmap_view) {
