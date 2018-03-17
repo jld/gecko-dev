@@ -185,7 +185,6 @@ SandboxBrokerPolicyFactory::SandboxBrokerPolicyFactory()
   // are cached over the lifetime of the factory.
 #if defined(MOZ_CONTENT_SANDBOX)
   SandboxBroker::Policy* policy = new SandboxBroker::Policy;
-  policy->AddDir(rdwrcr, "/dev/shm");
   // Write permssions
   //
   // Bug 1308851: NVIDIA proprietary driver when using WebGL
