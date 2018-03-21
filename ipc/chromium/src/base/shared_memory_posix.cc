@@ -12,14 +12,12 @@
 #include <sys/stat.h>
 #include <unistd.h>
 
-#include "base/file_util.h"
 #include "base/logging.h"
-#include "base/platform_thread.h"
 #include "base/string_util.h"
+#include "mozilla/Atomics.h"
 #if defined(XP_LINUX) && defined(MOZ_SANDBOX)
 #include "mozilla/Sandbox.h"
 #endif
-#include "mozilla/UniquePtr.h"
 
 namespace base {
 
@@ -64,8 +62,6 @@ class ScopedFILEClose {
   }
 };
 
-typedef mozilla::UniquePtr<FILE, ScopedFILEClose> ScopedFILE;
-
 static int CreateViaSandbox(size_t size) {
 #if defined(XP_LINUX) && defined(MOZ_SANDBOX)
   int rv = mozilla::SandboxSharedMemoryCreate(size);
@@ -78,6 +74,17 @@ static int CreateViaSandbox(size_t size) {
   return -1;
 #endif
 }
+
+#ifndef SHM_ANON
+static std::string GenerateShmName() {
+  static mozilla::Atomic<size_t> sCounter;
+  // This is no longer Chromium code, but keep the "org.chromium"
+  // prefix to not break anyone's AppArmor policies.  (FIXME: lightdm
+  // doesn't do that; snap does but they'd probably take PRs.  Change?)
+  // (Also mention that this doesn't have to be exactly unique.)
+  return StringPrintf("/org.chromium.%d.%zu", (int)getpid(), sCounter++);
+}
+#endif // !SHM_ANON
 
 } // anonymous namespace
 
@@ -94,18 +101,29 @@ bool SharedMemory::Create(size_t size) {
     return true;
   }
 
-  ScopedFILE file_closer;
-  FILE *fp;
+#ifdef SHM_ANON
+  const char* const name = SHM_ANON;
+#else
+  const auto nameString = GenerateShmName();
+  const char* const name = nameString.c_str();
+#endif
 
-  FilePath path;
-  fp = file_util::CreateAndOpenTemporaryShmemFile(&path);
+  do {
+    mapped_file_ = shm_open(name, O_RDWR | O_CREAT | O_TRUNC | O_EXCL, 0600);
+  } while (mapped_file_ < 0 && (errno == EEXIST || errno == EINTR));
 
-  // Deleting the file prevents anyone else from mapping it in
-  // (making it private), and prevents the need for cleanup (once
-  // the last fd is closed, it is truly freed).
-  file_util::Delete(path);
-
-  if (fp == NULL) {
+  if (mapped_file_ >= 0) {
+#ifndef SHM_ANON
+    // Deleting the file prevents anyone else from mapping it in
+    // (making it private), and prevents the need for cleanup (once
+    // the last fd is closed, it is truly freed).
+    if (shm_unlink(name) != 0) {
+      DCHECK(false) << "shm_unlink failed: " << strerror(errno);
+      Close();
+      return false;
+    }
+#endif
+  } else {
     // Handle possible race condition: CreateViaSandbox fails because
     // sandbox isn't started, then sandbox is started, then filesystem
     // access is attemped and fails.
@@ -116,7 +134,6 @@ bool SharedMemory::Create(size_t size) {
     }
     return false;
   }
-  file_closer.reset(fp);  // close when we go out of scope
 
   // Set the file size.
   //
@@ -125,14 +142,10 @@ bool SharedMemory::Create(size_t size) {
   // edition it's required for everything.  (Linux documents that this
   // may fail on non-"native" filesystems like FAT, but /dev/shm
   // should always be tmpfs.)
-  if (ftruncate(fileno(fp), size) != 0)
+  if (ftruncate(mapped_file_, size) != 0) {
+    Close();
     return false;
-  // This probably isn't needed.
-  if (fseeko(fp, size, SEEK_SET) != 0)
-    return false;
-
-  mapped_file_ = dup(fileno(fp));
-  DCHECK(mapped_file_ >= 0);
+  }
 
   max_size_ = size;
   return true;
