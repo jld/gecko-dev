@@ -9,19 +9,30 @@
 #include <fcntl.h>
 #include <unistd.h>
 
-#include "base/file_util.h"
 #include "base/logging.h"
 
 namespace base {
+
+static bool ReadFromFD(int fd, char* buffer, size_t bytes) {
+  size_t total_read = 0;
+  while (total_read < bytes) {
+    ssize_t bytes_read =
+        HANDLE_EINTR(read(fd, buffer + total_read, bytes - total_read));
+    if (bytes_read <= 0)
+      break;
+    total_read += bytes_read;
+  }
+  return total_read == bytes;
+}
 
 uint64_t RandUint64() {
   uint64_t number;
 
   int urandom_fd = open("/dev/urandom", O_RDONLY);
   CHECK(urandom_fd >= 0);
-  bool success = file_util::ReadFromFD(urandom_fd,
-                                       reinterpret_cast<char*>(&number),
-                                       sizeof(number));
+  bool success = ReadFromFD(urandom_fd,
+                            reinterpret_cast<char*>(&number),
+                            sizeof(number));
   CHECK(success);
   close(urandom_fd);
 
