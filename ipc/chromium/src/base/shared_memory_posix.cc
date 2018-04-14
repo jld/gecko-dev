@@ -16,11 +16,37 @@
 #include <linux/ashmem.h>
 #endif
 
+#ifdef OS_LINUX
+#include <sys/syscall.h>
+#endif
+
 #include "base/eintr_wrapper.h"
 #include "base/logging.h"
 #include "base/string_util.h"
 #include "mozilla/Atomics.h"
 #include "prenv.h"
+
+#ifdef OS_LINUX
+// memfd_create ABI.
+// Need to build with old headers, so can't require <sys/memfd.h>...
+# ifndef MFD_CLOEXEC
+#  define MFD_CLOEXEC 0x0001U
+# endif
+// ...or the syscall number definition.
+# ifndef __NR_memfd_create
+#  if defined(__x86_64__)
+#   define __NR_memfd_create 319
+#  elif defined(__i386__)
+#   define __NR_memfd_create 356
+#  elif defined(__aarch64__)
+#   define __NR_memfd_create 279
+#  elif defined(__arm__)
+#   define __NR_memfd_create 385
+#  else
+#   warning "memfd_create syscall number unknown"
+#  endif // arch
+# endif // ifndef __NR_memfd_create
+#endif // OS_LINUX
 
 namespace base {
 
@@ -53,12 +79,54 @@ SharedMemoryHandle SharedMemory::NULLHandle() {
   return SharedMemoryHandle();
 }
 
+#ifdef __NR_memfd_create
+static int
+MemFdCreate()
+{
+  return syscall(__NR_memfd_create, "mozilla-ipc", MFD_CLOEXEC);
+}
+
+static bool
+HaveMemFdCreate()
+{
+  static const bool kValue = []{
+    int fd = MemFdCreate();
+    if (fd >= 0) {
+      close(fd);
+      return true;
+    }
+    DCHECK(errno == ENOSYS);
+    return false;
+  }();
+  return kValue;
+}
+#else
+// No memfd_create; use stub definitions to reduce ifdef clutter.
+static int
+MemFdCreate()
+{
+  CHROMIUM_LOG(FATAL) << "unreachable";
+  // Return something so the compiler is happy.
+  return -1;
+}
+
+static bool
+HaveMemFdCreate()
+{
+  return false;
+}
+#endif
+
 // static
 bool SharedMemory::AppendPosixShmPrefix(std::string* str, pid_t pid)
 {
 #if defined(ANDROID) || defined(SHM_ANON)
   return false;
 #else
+  if (HaveMemFdCreate()) {
+    return false;
+  }
+
   *str += '/';
 #ifdef OS_LINUX
   // The Snap package environment doesn't provide a private /dev/shm
@@ -86,44 +154,54 @@ bool SharedMemory::Create(size_t size) {
   int fd;
   bool needs_truncate = true;
 
+  if (HaveMemFdCreate()) {
+    fd = MemFdCreate();
+    // If this fails, fallback to named shm_open won't work:
+    // AppendPosixShmPrefix will return false, and that also means
+    // that the sandbox policy wasn't set up to allow it (if this is a
+    // content process).  ashmem would work in theory, but if
+    // memfd_create fails transiently it's probably something like
+    // EMFILE that would also affect ashmem.
+  } else {
 #ifdef ANDROID
-  // Android has its own shared memory facility:
-  fd = open("/" ASHMEM_NAME_DEF, O_RDWR, 0600);
-  if (fd < 0) {
-    CHROMIUM_LOG(WARNING) << "failed to open shm: " << strerror(errno);
-    return false;
-  }
-  if (ioctl(fd, ASHMEM_SET_SIZE, size) != 0) {
-    CHROMIUM_LOG(WARNING) << "failed to set shm size: " << strerror(errno);
-    close(fd);
-    return false;
-  }
-  needs_truncate = false;
-#elif defined(SHM_ANON)
-  // FreeBSD (or any other Unix that might decide to implement this
-  // nice, simple API):
-  fd = shm_open(SHM_ANON, O_RDWR, 0600);
-#else
-  // Generic Unix: shm_open + shm_unlink
-  do {
-    // The names don't need to be unique, but it saves time if they
-    // usually are.
-    static mozilla::Atomic<size_t> sNameCounter;
-    std::string name;
-    CHECK(AppendPosixShmPrefix(&name, getpid()));
-    StringAppendF(&name, "%zu", sNameCounter++);
-    // O_EXCL means the names being predictable shouldn't be a problem.
-    fd = HANDLE_EINTR(shm_open(name.c_str(), O_RDWR | O_CREAT | O_EXCL, 0600));
-    if (fd >= 0) {
-      if (shm_unlink(name.c_str()) != 0) {
-        // This shouldn't happen, but if it does: assume the file is
-        // in fact leaked, and bail out now while it's still 0-length.
-        DLOG(FATAL) << "failed to unlink shm: " << strerror(errno);
-        return false;
-      }
+    // Android has its own shared memory facility:
+    fd = open("/" ASHMEM_NAME_DEF, O_RDWR, 0600);
+    if (fd < 0) {
+      CHROMIUM_LOG(WARNING) << "failed to open shm: " << strerror(errno);
+      return false;
     }
-  } while (fd < 0 && errno == EEXIST);
+    if (ioctl(fd, ASHMEM_SET_SIZE, size) != 0) {
+      CHROMIUM_LOG(WARNING) << "failed to set shm size: " << strerror(errno);
+      close(fd);
+      return false;
+    }
+    needs_truncate = false;
+#elif defined(SHM_ANON)
+    // FreeBSD (or any other Unix that might decide to implement this
+    // nice, simple API):
+    fd = shm_open(SHM_ANON, O_RDWR, 0600);
+#else
+    // Generic Unix: shm_open + shm_unlink
+    do {
+      // The names don't need to be unique, but it saves time if they
+      // usually are.
+      static mozilla::Atomic<size_t> sNameCounter;
+      std::string name;
+      CHECK(AppendPosixShmPrefix(&name, getpid()));
+      StringAppendF(&name, "%zu", sNameCounter++);
+      // O_EXCL means the names being predictable shouldn't be a problem.
+      fd = HANDLE_EINTR(shm_open(name.c_str(), O_RDWR | O_CREAT | O_EXCL, 0600));
+      if (fd >= 0) {
+        if (shm_unlink(name.c_str()) != 0) {
+          // This shouldn't happen, but if it does: assume the file is
+          // in fact leaked, and bail out now while it's still 0-length.
+          DLOG(FATAL) << "failed to unlink shm: " << strerror(errno);
+          return false;
+        }
+      }
+    } while (fd < 0 && errno == EEXIST);
 #endif
+  }
 
   if (fd < 0) {
     CHROMIUM_LOG(WARNING) << "failed to open shm: " << strerror(errno);
