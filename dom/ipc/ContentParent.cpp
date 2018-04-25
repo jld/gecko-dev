@@ -2039,7 +2039,9 @@ ContentParent::LaunchSubprocess(ProcessPriority aInitialPriority /* = PROCESS_PR
   // Note: on Android, AddFdToRemap() sets up the fd to be passed via a Parcel,
   // and the fixed fd isn't used. However, we still need to mark it for
   // remapping so it doesn't get closed in the child.
-  mSubprocess->AddFdToRemap(shm.handle().fd, kPrefsFileDescriptor);
+  const int prefsFd = shm.handle().fd;
+  mSubprocess->AddFdToRemap(prefsFd, prefsFd);
+  mSubprocess->AddEnvVar("MOZ_PREFS_FD", nsPrintfCString("%d", prefsFd).get());
 #endif
 
   // Pass the length via a command flag.

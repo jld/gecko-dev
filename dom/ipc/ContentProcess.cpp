@@ -188,8 +188,9 @@ ContentProcess::Init(int aArgc, char* aArgv[])
   MOZ_RELEASE_ASSERT(gPrefsFd != -1);
   prefsHandle = Some(base::FileDescriptor(gPrefsFd, /* auto_close */ true));
 #elif XP_UNIX
-  prefsHandle = Some(base::FileDescriptor(kPrefsFileDescriptor,
-                                          /* auto_close */ true));
+  int prefsFd = atoi(PR_GetEnv("MOZ_PREFS_FD"));
+  MOZ_RELEASE_ASSERT(prefsFd > 0);
+  prefsHandle = Some(base::FileDescriptor(prefsFd, /* auto_close */ true));
 #endif
 
   // Did we find all the mandatory flags?

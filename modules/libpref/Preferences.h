@@ -41,11 +41,6 @@ class PrefValue;
 
 struct PrefsSizes;
 
-#ifdef XP_UNIX
-// XXX: bug 1440207 is about improving how fixed fds such as this are used.
-static const int kPrefsFileDescriptor = 8;
-#endif
-
 // Keep this in sync with PrefType in parser/src/lib.rs.
 enum class PrefValueKind : uint8_t
 {

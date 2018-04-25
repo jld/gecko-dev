@@ -113,6 +113,9 @@ public:
   void AddFdToRemap(int aSrcFd, int aDstFd) {
     mLaunchOptions->fds_to_remap.push_back(std::make_pair(aSrcFd, aDstFd));
   }
+  void AddEnvVar(const char* aName, const char* aValue) {
+    mLaunchOptions->env_map[aName] = aValue;
+  }
 #endif
 
   /**
