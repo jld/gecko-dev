@@ -1034,6 +1034,11 @@ SandboxBroker::ThreadMain(void)
       SANDBOX_LOG_ERROR("failed to send broker response to pid %d: %s", mChildPid,
                         strerror(errno));
     }
+
+    memset(&resp, 0, sizeof(resp));
+    resp.mError = -4095;
+    SendWithFd(respfd, ios, 1, -1);
+
     close(respfd);
     MOZ_ASSERT(sent < 0 ||
                static_cast<size_t>(sent) == ios[0].iov_len + ios[1].iov_len);
