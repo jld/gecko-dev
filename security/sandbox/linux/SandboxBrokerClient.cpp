@@ -122,7 +122,7 @@ SandboxBrokerClient::DoCall(const Request* aReq, const char* aPath,
   const ssize_t recvd = RecvWithFd(respFds[0], ios, aResponseBuff ? 2 : 1,
                                    expectFd ? &openedFd : nullptr);
   const int recvErrno = errno;
-  MOZ_RELEASE_ASSERT(RecvWithFd(respFds[0], ios, 1, nullptr) == 0);
+//  MOZ_RELEASE_ASSERT(RecvWithFd(respFds[0], ios, 1, nullptr) == 0);
   MOZ_RELEASE_ASSERT(IGNORE_EINTR(close(respFds[0])) == 0);
   if (recvd < 0) {
     return -recvErrno;
