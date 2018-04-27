@@ -92,7 +92,7 @@ SandboxBrokerClient::DoCall(const Request* aReq, const char* aPath,
   if (socketpair(AF_UNIX, SOCK_SEQPACKET, 0, respFds) < 0) {
     return -errno;
   }
-  MOZ_RELEASE_ASSERT(shutdown(respFds[0], SHUT_WR) == 0);
+//  MOZ_RELEASE_ASSERT(shutdown(respFds[0], SHUT_WR) == 0);
   const ssize_t sent = SendWithFd(mFileDesc, ios, 3, respFds[1]);
   const int sendErrno = errno;
   MOZ_RELEASE_ASSERT(sent < 0 ||

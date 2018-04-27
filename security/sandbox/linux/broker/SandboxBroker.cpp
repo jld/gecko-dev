@@ -1042,8 +1042,8 @@ SandboxBroker::ThreadMain(void)
     SendWithFd(respfd, ios, 1, -1);
 #endif
 
-    MOZ_RELEASE_ASSERT(shutdown(respfd, SHUT_WR) == 0);
-    MOZ_RELEASE_ASSERT(RecvWithFd(respfd, ios, 1, nullptr) == 0);
+    // MOZ_RELEASE_ASSERT(shutdown(respfd, SHUT_WR) == 0);
+    // MOZ_RELEASE_ASSERT(RecvWithFd(respfd, ios, 1, nullptr) == 0);
     MOZ_RELEASE_ASSERT(IGNORE_EINTR(close(respfd)) == 0);
 
     MOZ_RELEASE_ASSERT(sent < 0 ||
