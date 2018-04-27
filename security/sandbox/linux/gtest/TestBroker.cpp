@@ -481,18 +481,18 @@ void SandboxBrokerTest::MultiThreadMkdirWorker() {
     int mkdirResult = Mkdir(name.get(), 0700);
     if (mkdirResult == -EIO) {
       ++mkdirFaults;
-      continue;
+    } else {
+      ASSERT_EQ(0, mkdirResult)
+        << "Loop " << i << "/" << kNumLoops;
     }
-    ASSERT_EQ(0, mkdirResult)
-      << "Loop " << i << "/" << kNumLoops;
 
     int rmdirResult = Rmdir(name.get());
     if (rmdirResult == -EIO) {
       ++rmdirFaults;
-      continue;
+    } else {
+      ASSERT_EQ(0, rmdirResult)
+        << "Loop " << i << "/" << kNumLoops;
     }
-    ASSERT_EQ(0, rmdirResult)
-      << "Loop " << i << "/" << kNumLoops;
   }
   EXPECT_EQ(0, mkdirFaults);
   EXPECT_EQ(0, rmdirFaults);
@@ -511,20 +511,22 @@ void SandboxBrokerTest::MultiThreadCreatWorker() {
     int maybeFd = Open(name.get(), O_RDWR | O_CREAT | O_EXCL);
     if (maybeFd == -EIO) {
       ++creatFaults;
-      continue;
+    } else {
+      ASSERT_GE(maybeFd, 0)
+        << "Loop " << i << "/" << kNumLoops;
     }
-    ASSERT_GE(maybeFd, 0)
-      << "Loop " << i << "/" << kNumLoops;
 
     int unlinkResult = Unlink(name.get());
     if (unlinkResult == -EIO) {
       ++unlinkFaults;
-      continue;
+    } else {
+      ASSERT_EQ(0, unlinkResult)
+        << "Loop " << i << "/" << kNumLoops;
     }
-    ASSERT_EQ(0, unlinkResult)
-      << "Loop " << i << "/" << kNumLoops;
 
-    close(maybeFd);
+    if (maybeFd >= 0) {
+      close(maybeFd);
+    }
   }
   EXPECT_EQ(0, creatFaults);
   EXPECT_EQ(0, unlinkFaults);
