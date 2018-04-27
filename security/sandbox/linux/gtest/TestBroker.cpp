@@ -473,7 +473,7 @@ TEST_F(SandboxBrokerTest, MultiThreadMkdir) {
                    &SandboxBrokerTest::MultiThreadMkdirWorker>();
 }
 void SandboxBrokerTest::MultiThreadMkdirWorker() {
-  static const int kNumLoops = 10000;
+  static const int kNumLoops = 100000;
   static Atomic<unsigned> sCounter;
   const auto name = Smprintf("/dev/shm/mozilla-sandbox-testdir.%d.%u", getpid(), sCounter++);
   int mkdirFaults = 0, rmdirFaults = 0;
@@ -503,9 +503,9 @@ TEST_F(SandboxBrokerTest, MultiThreadCreat) {
                    &SandboxBrokerTest::MultiThreadCreatWorker>();
 }
 void SandboxBrokerTest::MultiThreadCreatWorker() {
-  static const int kNumLoops = 10000;
+  static const int kNumLoops = 100000;
   static Atomic<unsigned> sCounter;
-  const auto name = Smprintf("/dev/shm/mozilla-sandbox-testdir.%d.%u", getpid(), sCounter++);
+  const auto name = Smprintf("/dev/shm/mozilla-sandbox-testfile.%d.%u", getpid(), sCounter++);
   int creatFaults = 0, unlinkFaults = 0;
   for (int i = 1; i <= kNumLoops; ++i) {
     int maybeFd = Open(name.get(), O_RDWR | O_CREAT | O_EXCL);
@@ -515,7 +515,6 @@ void SandboxBrokerTest::MultiThreadCreatWorker() {
     }
     ASSERT_GE(maybeFd, 0)
       << "Loop " << i << "/" << kNumLoops;
-    close(maybeFd);
 
     int unlinkResult = Unlink(name.get());
     if (unlinkResult == -EIO) {
@@ -524,6 +523,8 @@ void SandboxBrokerTest::MultiThreadCreatWorker() {
     }
     ASSERT_EQ(0, unlinkResult)
       << "Loop " << i << "/" << kNumLoops;
+
+    close(maybeFd);
   }
   EXPECT_EQ(0, creatFaults);
   EXPECT_EQ(0, unlinkFaults);
