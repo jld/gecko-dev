@@ -20,7 +20,6 @@
 
 #include "mozilla/Assertions.h"
 #include "mozilla/NullPtr.h"
-#include "base/posix/eintr_wrapper.h"
 #include "base/strings/safe_sprintf.h"
 
 namespace mozilla {
@@ -92,14 +91,13 @@ SandboxBrokerClient::DoCall(const Request* aReq, const char* aPath,
   if (socketpair(AF_UNIX, SOCK_SEQPACKET, 0, respFds) < 0) {
     return -errno;
   }
-//  MOZ_RELEASE_ASSERT(shutdown(respFds[0], SHUT_WR) == 0);
   const ssize_t sent = SendWithFd(mFileDesc, ios, 3, respFds[1]);
   const int sendErrno = errno;
-  MOZ_RELEASE_ASSERT(sent < 0 ||
+  MOZ_ASSERT(sent < 0 ||
              static_cast<size_t>(sent) == ios[0].iov_len
                                         + ios[1].iov_len
                                         + ios[2].iov_len);
-  MOZ_RELEASE_ASSERT(IGNORE_EINTR(close(respFds[1])) == 0);
+  close(respFds[1]);
   if (sent < 0) {
     close(respFds[0]);
     return -sendErrno;
@@ -122,8 +120,7 @@ SandboxBrokerClient::DoCall(const Request* aReq, const char* aPath,
   const ssize_t recvd = RecvWithFd(respFds[0], ios, aResponseBuff ? 2 : 1,
                                    expectFd ? &openedFd : nullptr);
   const int recvErrno = errno;
-//  MOZ_RELEASE_ASSERT(RecvWithFd(respFds[0], ios, 1, nullptr) == 0);
-  MOZ_RELEASE_ASSERT(IGNORE_EINTR(close(respFds[0])) == 0);
+  close(respFds[0]);
   if (recvd < 0) {
     return -recvErrno;
   }
@@ -132,7 +129,7 @@ SandboxBrokerClient::DoCall(const Request* aReq, const char* aPath,
                       aReq->mOp, aReq->mFlags, path);
     return -EIO;
   }
-  MOZ_RELEASE_ASSERT(static_cast<size_t>(recvd) <= ios[0].iov_len + ios[1].iov_len);
+  MOZ_ASSERT(static_cast<size_t>(recvd) <= ios[0].iov_len + ios[1].iov_len);
   // Some calls such as readlink return a size if successful
   if (resp.mError >= 0) {
     // Success!

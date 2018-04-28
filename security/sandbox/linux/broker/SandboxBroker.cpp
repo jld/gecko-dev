@@ -22,7 +22,6 @@
 #include <sys/prctl.h>
 #endif
 
-#include "base/eintr_wrapper.h"
 #include "base/string_util.h"
 #include "mozilla/Assertions.h"
 #include "mozilla/DebugOnly.h"
@@ -1036,17 +1035,12 @@ SandboxBroker::ThreadMain(void)
                         strerror(errno));
     }
 
-#if 0
     memset(&resp, 0, sizeof(resp));
     resp.mError = -4095;
     SendWithFd(respfd, ios, 1, -1);
-#endif
 
-    // MOZ_RELEASE_ASSERT(shutdown(respfd, SHUT_WR) == 0);
-    // MOZ_RELEASE_ASSERT(RecvWithFd(respfd, ios, 1, nullptr) == 0);
-    MOZ_RELEASE_ASSERT(IGNORE_EINTR(close(respfd)) == 0);
-
-    MOZ_RELEASE_ASSERT(sent < 0 ||
+    close(respfd);
+    MOZ_ASSERT(sent < 0 ||
                static_cast<size_t>(sent) == ios[0].iov_len + ios[1].iov_len);
 
     if (openedFd >= 0) {
