@@ -1035,11 +1035,13 @@ SandboxBroker::ThreadMain(void)
                         strerror(errno));
     }
 
+#if 0
     fcntl(respfd, F_SETFL, O_NONBLOCK | fcntl(respfd, F_GETFL));
     memset(&resp, 0, sizeof(resp));
     resp.mError = -4095;
     while (SendWithFd(respfd, ios, 1, -1) == static_cast<ssize_t>(sizeof(resp)))
       /* loop */;
+#endif
 
     close(respfd);
     MOZ_ASSERT(sent < 0 ||

@@ -503,7 +503,7 @@ TEST_F(SandboxBrokerTest, MultiThreadCreat) {
                    &SandboxBrokerTest::MultiThreadCreatWorker>();
 }
 void SandboxBrokerTest::MultiThreadCreatWorker() {
-  static const int kNumLoops = 100000;
+  static const int kNumLoops = 200000;
   static Atomic<unsigned> sCounter;
   const auto name = Smprintf("/dev/shm/mozilla-sandbox-testfile.%d.%u", getpid(), sCounter++);
   int creatFaults = 0, unlinkFaults = 0;
