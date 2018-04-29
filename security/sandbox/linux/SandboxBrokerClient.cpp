@@ -67,10 +67,11 @@ SandboxBrokerClient::DoCall(const Request* aReq, const char* aPath,
 
   struct iovec ios[3];
   int respFds[2];
+  Request req = *aReq;
 
   // Set up iovecs for request + path.
-  ios[0].iov_base = const_cast<Request*>(aReq);
-  ios[0].iov_len = sizeof(*aReq);
+  ios[0].iov_base = &req;
+  ios[0].iov_len = sizeof(req);
   ios[1].iov_base = const_cast<char*>(path);
   ios[1].iov_len = strlen(path) + 1;
   if (aPath2 != nullptr) {
@@ -91,6 +92,9 @@ SandboxBrokerClient::DoCall(const Request* aReq, const char* aPath,
   if (socketpair(AF_UNIX, SOCK_SEQPACKET, 0, respFds) < 0) {
     return -errno;
   }
+  struct stat respStat;
+  MOZ_RELEASE_ASSERT(0 == fstat(respFds[1], &respStat));
+  req.mRespSockInode = respStat.st_ino;
   const ssize_t sent = SendWithFd(mFileDesc, ios, 3, respFds[1]);
   const int sendErrno = errno;
   MOZ_ASSERT(sent < 0 ||

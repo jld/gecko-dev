@@ -1035,13 +1035,9 @@ SandboxBroker::ThreadMain(void)
                         strerror(errno));
     }
 
-#if 0
-    fcntl(respfd, F_SETFL, O_NONBLOCK | fcntl(respfd, F_GETFL));
-    memset(&resp, 0, sizeof(resp));
-    resp.mError = -4095;
-    while (SendWithFd(respfd, ios, 1, -1) == static_cast<ssize_t>(sizeof(resp)))
-      /* loop */;
-#endif
+    struct stat respStat;
+    MOZ_RELEASE_ASSERT(0 == fstat(respfd, &respStat));
+    MOZ_RELEASE_ASSERT(respStat.st_ino = req.mRespSockInode);
 
     close(respfd);
     MOZ_ASSERT(sent < 0 ||

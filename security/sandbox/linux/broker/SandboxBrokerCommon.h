@@ -51,6 +51,7 @@ public:
     size_t mBufSize;
     // The rest of the packet is the pathname.
     // SCM_RIGHTS for response socket attached.
+    ino_t mRespSockInode;
   };
 
   struct Response {
