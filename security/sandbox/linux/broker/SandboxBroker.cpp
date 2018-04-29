@@ -1037,7 +1037,7 @@ SandboxBroker::ThreadMain(void)
 
     struct stat respStat;
     MOZ_RELEASE_ASSERT(0 == fstat(respfd, &respStat));
-    MOZ_RELEASE_ASSERT(respStat.st_ino = req.mRespSockInode);
+    MOZ_RELEASE_ASSERT(respStat.st_ino == req.mRespSockInode);
 
     close(respfd);
     MOZ_ASSERT(sent < 0 ||
