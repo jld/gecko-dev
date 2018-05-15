@@ -4653,6 +4653,14 @@ XREMain::XRE_mainRun()
 
   CrashReporter::AnnotateCrashReport(
     NS_LITERAL_CSTRING("ContentSandboxCapabilities"), flagsString);
+
+  struct stat exeStat;
+  if (stat("/proc/self/exe", &exeStat) == 0) {
+    Telemetry::Accumulate(Telemetry::SANDBOX_INSTALLED_AS_ROOT,
+                          exeStat.st_uid == 0);
+  } else {
+    Output(false, "stat /proc/self/exe: %s", strerror(errno));
+  }
 #endif /* MOZ_SANDBOX && XP_LINUX */
 
 #if defined(MOZ_CONTENT_SANDBOX)
