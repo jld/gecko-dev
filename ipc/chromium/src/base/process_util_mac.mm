@@ -50,22 +50,19 @@ bool LaunchApp(const std::vector<std::string>& argv,
   });
 
   // Turn fds_to_remap array into a set of dup2 calls.
-  for (const auto& fd_map : options.fds_to_remap) {
+  mozilla::ipc::FileDescriptorShuffle shuffle;
+  if (!shuffle.Init(options.fds_to_remap)) {
+    return false;
+  }
+  for (const auto& fd_map : shuffle.Dup2Sequence()) {
     int src_fd = fd_map.first;
     int dest_fd = fd_map.second;
 
-    if (src_fd == dest_fd) {
-      int flags = fcntl(src_fd, F_GETFD);
-      if (flags != -1) {
-        fcntl(src_fd, F_SETFD, flags & ~FD_CLOEXEC);
-      }
-    } else {
-      if (posix_spawn_file_actions_adddup2(&file_actions, src_fd, dest_fd) != 0) {
+    if (posix_spawn_file_actions_adddup2(&file_actions, src_fd, dest_fd) != 0) {
 #ifdef ASYNC_CONTENTPROC_LAUNCH
-        MOZ_CRASH("base::LaunchApp: posix_spawn_file_actions_adddup2 failed");
+      MOZ_CRASH("base::LaunchApp: posix_spawn_file_actions_adddup2 failed");
 #endif
-        return false;
-      }
+      return false;
     }
   }
 
