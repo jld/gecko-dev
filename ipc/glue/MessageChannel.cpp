@@ -526,20 +526,24 @@ struct ChannelCounts {
 } // anonymous namespace
 
 static StaticMutex gChannelCountMutex;
-static nsDataHashtable<nsDepCharHashKey, ChannelCounts> gChannelCounts;
+static nsDataHashtable<nsDepCharHashKey, ChannelCounts>* gChannelCounts;
 
 static void
 ChannelCountInc(const char* aName)
 {
     StaticMutexAutoLock countLock(gChannelCountMutex);
-    gChannelCounts.GetOrInsert(aName).Inc();
+    if (!gChannelCounts) {
+        gChannelCounts = new nsDataHashtable<nsCharPtrHashKey, ChannelCounts>;
+    }
+    gChannelCounts->GetOrInsert(aName).Inc();
 }
 
 static void
 ChannelCountDec(const char* aName)
 {
     StaticMutexAutoLock countLock(gChannelCountMutex);
-    gChannelCounts.GetOrInsert(aName).Dec();
+    MOZ_ASSERT(gChannelCounts);
+    gChannelCounts->GetOrInsert(aName).Dec();
 }
 
 class ChannelCountReporter final : public nsIMemoryReporter
@@ -553,7 +557,10 @@ public:
                    bool aAnonymize) override
     {
         StaticMutexAutoLock countLock(gChannelCountMutex);
-        for (auto iter = gChannelCounts.Iter(); !iter.Done(); iter.Next()) {
+        if (!gChannelCounts) {
+            return NS_OK;
+        }
+        for (auto iter = gChannelCounts->Iter(); !iter.Done(); iter.Next()) {
             nsPrintfCString pathNow("ipc-channels/%s", iter.Key());
             nsPrintfCString pathMax("ipc-channels-peak/%s", iter.Key());
             nsPrintfCString descNow("Number of IPC channels for"
