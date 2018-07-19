@@ -527,6 +527,7 @@ struct ChannelCounts {
 
 static StaticMutex gChannelCountMutex;
 // FIXME is this a static ctor?
+// FIXME is it even worth counting the same-process channels?
 static nsDataHashtable<nsCharPtrHashKey, ChannelCounts> gChannelCounts[2];
 
 static void
@@ -558,8 +559,8 @@ public:
         for (size_t isCross = 0; isCross < 2; ++isCross) {
             const char* tag = kTags[isCross];
             for (auto iter = gChannelCounts[isCross].Iter(); !iter.Done(); iter.Next()) {
-                nsPrintfCString pathNow("ipc-transports/%s/%s", iter.Key(), tag);
-                nsPrintfCString pathMax("ipc-transports-peak/%s/%s", iter.Key(), tag);
+                nsPrintfCString pathNow("ipc-transports/%s/%s", tag, iter.Key());
+                nsPrintfCString pathMax("ipc-transports-peak/%s/%s", tag, iter.Key());
                 nsPrintfCString descNow("Number of %s IPC channels for"
                                         " top-level actor type %s", tag, iter.Key());
                 nsPrintfCString descMax("Peak number %s of IPC channels for"
