@@ -504,51 +504,34 @@ public:
 
 NS_IMPL_ISUPPORTS(PendingResponseReporter, nsIMemoryReporter)
 
-namespace {
-struct ChannelCounts {
-    size_t mNow;
-    size_t mMax;
-
-    ChannelCounts() : mNow(0), mMax(0) { }
-
-    void Inc() {
-        ++mNow;
-        if (mMax < mNow) {
-            mMax = mNow;
-        }
-    }
-
-    void Dec() {
-        MOZ_ASSERT(mNow > 0);
-        --mNow;
-    }
-};
-} // anonymous namespace
-
-static StaticMutex gChannelCountMutex;
-static nsDataHashtable<nsDepCharHashKey, ChannelCounts>* gChannelCounts;
-
-static void
-ChannelCountInc(const char* aName)
-{
-    StaticMutexAutoLock countLock(gChannelCountMutex);
-    if (!gChannelCounts) {
-        gChannelCounts = new nsDataHashtable<nsCharPtrHashKey, ChannelCounts>;
-    }
-    gChannelCounts->GetOrInsert(aName).Inc();
-}
-
-static void
-ChannelCountDec(const char* aName)
-{
-    StaticMutexAutoLock countLock(gChannelCountMutex);
-    MOZ_ASSERT(gChannelCounts);
-    gChannelCounts->GetOrInsert(aName).Dec();
-}
-
 class ChannelCountReporter final : public nsIMemoryReporter
 {
     ~ChannelCountReporter() = default;
+
+    struct ChannelCounts {
+        size_t mNow;
+        size_t mMax;
+
+        ChannelCounts() : mNow(0), mMax(0) { }
+
+        void Inc() {
+            ++mNow;
+            if (mMax < mNow) {
+                mMax = mNow;
+            }
+        }
+
+        void Dec() {
+            MOZ_ASSERT(mNow > 0);
+            --mNow;
+        }
+    };
+
+    using CountTable = nsDataHashtable<nsDepCharHashKey, ChannelCounts>;
+
+    static StaticMutex sChannelCountMutex;
+    static CountTable* sChannelCounts;
+
 public:
     NS_DECL_THREADSAFE_ISUPPORTS
 
@@ -556,11 +539,11 @@ public:
     CollectReports(nsIHandleReportCallback* aHandleReport, nsISupports* aData,
                    bool aAnonymize) override
     {
-        StaticMutexAutoLock countLock(gChannelCountMutex);
-        if (!gChannelCounts) {
+        StaticMutexAutoLock countLock(sChannelCountMutex);
+        if (!sChannelCounts) {
             return NS_OK;
         }
-        for (auto iter = gChannelCounts->Iter(); !iter.Done(); iter.Next()) {
+        for (auto iter = sChannelCounts->Iter(); !iter.Done(); iter.Next()) {
             nsPrintfCString pathNow("ipc-channels/%s", iter.Key());
             nsPrintfCString pathMax("ipc-channels-peak/%s", iter.Key());
             nsPrintfCString descNow("Number of IPC channels for"
@@ -568,14 +551,37 @@ public:
             nsPrintfCString descMax("Peak number of IPC channels for"
                                     " top-level actor type %s", iter.Key());
 
-            aHandleReport->Callback(EmptyCString(), pathNow, KIND_OTHER, UNITS_COUNT,
-                                    iter.Data().mNow, descNow, aData);
-            aHandleReport->Callback(EmptyCString(), pathMax, KIND_OTHER, UNITS_COUNT,
-                                    iter.Data().mMax, descMax, aData);
+            aHandleReport->Callback(EmptyCString(), pathNow, KIND_OTHER,
+                                    UNITS_COUNT, iter.Data().mNow, descNow,
+                                    aData);
+            aHandleReport->Callback(EmptyCString(), pathMax, KIND_OTHER,
+                                    UNITS_COUNT, iter.Data().mMax, descMax,
+                                    aData);
         }
         return NS_OK;
     }
+
+    static void
+    Increment(const char* aName)
+    {
+        StaticMutexAutoLock countLock(sChannelCountMutex);
+        if (!sChannelCounts) {
+            sChannelCounts = new CountTable;
+        }
+        sChannelCounts->GetOrInsert(aName).Inc();
+    }
+
+    static void
+    Decrement(const char* aName)
+    {
+        StaticMutexAutoLock countLock(sChannelCountMutex);
+        MOZ_ASSERT(sChannelCounts);
+        sChannelCounts->GetOrInsert(aName).Dec();
+    }
 };
+
+StaticMutex ChannelCountReporter::sChannelCountMutex;
+ChannelCountReporter::CountTable* ChannelCountReporter::sChannelCounts;
 
 NS_IMPL_ISUPPORTS(ChannelCountReporter, nsIMemoryReporter)
 
@@ -842,7 +848,7 @@ MessageChannel::Clear()
 
     mWorkerLoop = nullptr;
     if (mLink != nullptr && mIsCrossProcess) {
-        ChannelCountDec(mName);
+        ChannelCountReporter::Decrement(mName);
     }
     delete mLink;
     mLink = nullptr;
@@ -883,7 +889,7 @@ MessageChannel::Open(Transport* aTransport, MessageLoop* aIOLoop, Side aSide)
     link->Open(aTransport, aIOLoop, aSide); // :TODO: n.b.: sets mChild
     mLink = link;
     mIsCrossProcess = true;
-    ChannelCountInc(mName);
+    ChannelCountReporter::Increment(mName);
     return true;
 }
 
