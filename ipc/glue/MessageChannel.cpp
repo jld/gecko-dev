@@ -527,21 +527,20 @@ struct ChannelCounts {
 
 static StaticMutex gChannelCountMutex;
 // FIXME is this a static ctor?
-// FIXME is it even worth counting the same-process channels?
-static nsDataHashtable<nsCharPtrHashKey, ChannelCounts> gChannelCounts[2];
+static nsDataHashtable<nsCharPtrHashKey, ChannelCounts> gChannelCounts;
 
 static void
-ChannelCountInc(const char* aName, bool aIsCrossProcess)
+ChannelCountInc(const char* aName)
 {
     StaticMutexAutoLock countLock(gChannelCountMutex);
-    gChannelCounts[size_t(aIsCrossProcess)].GetOrInsert(aName).Inc();
+    gChannelCounts.GetOrInsert(aName).Inc();
 }
 
 static void
-ChannelCountDec(const char* aName, bool aIsCrossProcess)
+ChannelCountDec(const char* aName)
 {
     StaticMutexAutoLock countLock(gChannelCountMutex);
-    gChannelCounts[size_t(aIsCrossProcess)].GetOrInsert(aName).Dec();
+    gChannelCounts.GetOrInsert(aName).Dec();
 }
 
 class ChannelCountReporter final : public nsIMemoryReporter
@@ -554,23 +553,19 @@ public:
     CollectReports(nsIHandleReportCallback* aHandleReport, nsISupports* aData,
                    bool aAnonymize) override
     {
-        static const char kTags[2][14] = { "same-process", "cross-process" };
         StaticMutexAutoLock countLock(gChannelCountMutex);
-        for (size_t isCross = 0; isCross < 2; ++isCross) {
-            const char* tag = kTags[isCross];
-            for (auto iter = gChannelCounts[isCross].Iter(); !iter.Done(); iter.Next()) {
-                nsPrintfCString pathNow("ipc-transports/%s/%s", tag, iter.Key());
-                nsPrintfCString pathMax("ipc-transports-peak/%s/%s", tag, iter.Key());
-                nsPrintfCString descNow("Number of %s IPC channels for"
-                                        " top-level actor type %s", tag, iter.Key());
-                nsPrintfCString descMax("Peak number %s of IPC channels for"
-                                        " top-level actor type %s", tag, iter.Key());
+        for (auto iter = gChannelCounts.Iter(); !iter.Done(); iter.Next()) {
+            nsPrintfCString pathNow("ipc-channels/%s", iter.Key());
+            nsPrintfCString pathMax("ipc-channels-peak/%s", iter.Key());
+            nsPrintfCString descNow("Number of IPC channels for"
+                                    " top-level actor type %s", iter.Key());
+            nsPrintfCString descMax("Peak number of IPC channels for"
+                                    " top-level actor type %s", iter.Key());
 
-                aHandleReport->Callback(EmptyCString(), pathNow, KIND_OTHER, UNITS_COUNT,
-                                        iter.Data().mNow, descNow, aData);
-                aHandleReport->Callback(EmptyCString(), pathMax, KIND_OTHER, UNITS_COUNT,
-                                        iter.Data().mMax, descMax, aData);
-            }
+            aHandleReport->Callback(EmptyCString(), pathNow, KIND_OTHER, UNITS_COUNT,
+                                    iter.Data().mNow, descNow, aData);
+            aHandleReport->Callback(EmptyCString(), pathMax, KIND_OTHER, UNITS_COUNT,
+                                    iter.Data().mMax, descMax, aData);
         }
         return NS_OK;
     }
@@ -840,9 +835,8 @@ MessageChannel::Clear()
     mPendingResponses.clear();
 
     mWorkerLoop = nullptr;
-    if (mLink != nullptr) {
-        // FIXME: can mLink ever be null here?
-        ChannelCountDec(mName, mIsCrossProcess);
+    if (mLink != nullptr && mIsCrossProcess) {
+        ChannelCountDec(mName);
     }
     delete mLink;
     mLink = nullptr;
@@ -883,7 +877,7 @@ MessageChannel::Open(Transport* aTransport, MessageLoop* aIOLoop, Side aSide)
     link->Open(aTransport, aIOLoop, aSide); // :TODO: n.b.: sets mChild
     mLink = link;
     mIsCrossProcess = true;
-    ChannelCountInc(mName, mIsCrossProcess);
+    ChannelCountInc(mName);
     return true;
 }
 
@@ -963,8 +957,6 @@ MessageChannel::CommonThreadOpenInit(MessageChannel *aTargetChan, Side aSide)
 
     mLink = new ThreadLink(this, aTargetChan);
     mSide = aSide;
-    mIsCrossProcess = false;
-    ChannelCountInc(mName, mIsCrossProcess);
 }
 
 bool
