@@ -527,20 +527,20 @@ struct ChannelCounts {
 
 static StaticMutex gChannelCountMutex;
 // FIXME is this a static ctor?
-static nsDataHashtable<nsCharPtrHashKey, ChannelCounts> gChannelCounts;
+static nsDataHashtable<nsCharPtrHashKey, ChannelCounts> gChannelCounts[2];
 
 static void
-ChannelCountInc(const char* aName)
+ChannelCountInc(const char* aName, bool aIsCrossProcess)
 {
     StaticMutexAutoLock countLock(gChannelCountMutex);
-    gChannelCounts.GetOrInsert(aName).Inc();
+    gChannelCounts[size_t(aIsCrossProcess)].GetOrInsert(aName).Inc();
 }
 
 static void
-ChannelCountDec(const char* aName)
+ChannelCountDec(const char* aName, bool aIsCrossProcess)
 {
     StaticMutexAutoLock countLock(gChannelCountMutex);
-    gChannelCounts.GetOrInsert(aName).Dec();
+    gChannelCounts[size_t(aIsCrossProcess)].GetOrInsert(aName).Dec();
 }
 
 class ChannelCountReporter final : public nsIMemoryReporter
@@ -553,19 +553,23 @@ public:
     CollectReports(nsIHandleReportCallback* aHandleReport, nsISupports* aData,
                    bool aAnonymize) override
     {
+        static const char kTags[2][14] = { "same-process", "cross-process" };
         StaticMutexAutoLock countLock(gChannelCountMutex);
-        for (auto iter = gChannelCounts.Iter(); !iter.Done(); iter.Next()) {
-            nsPrintfCString pathNow("ipc-transports/%s", iter.Key());
-            nsPrintfCString pathMax("ipc-transports-peak/%s", iter.Key());
-            nsPrintfCString descNow("Number of IPC channels for"
-                                    " top-level actor type %s", iter.Key());
-            nsPrintfCString descMax("Peak number of IPC channels for"
-                                    " top-level actor type %s", iter.Key());
+        for (size_t isCross = 0; isCross < 2; ++isCross) {
+            const char* tag = kTags[isCross];
+            for (auto iter = gChannelCounts[isCross].Iter(); !iter.Done(); iter.Next()) {
+                nsPrintfCString pathNow("ipc-transports/%s/%s", iter.Key(), tag);
+                nsPrintfCString pathMax("ipc-transports-peak/%s/%s", iter.Key(), tag);
+                nsPrintfCString descNow("Number of %s IPC channels for"
+                                        " top-level actor type %s", tag, iter.Key());
+                nsPrintfCString descMax("Peak number %s of IPC channels for"
+                                        " top-level actor type %s", tag, iter.Key());
 
-            aHandleReport->Callback(EmptyCString(), pathNow, KIND_OTHER, UNITS_COUNT,
-                                    iter.Data().mNow, descNow, aData);
-            aHandleReport->Callback(EmptyCString(), pathMax, KIND_OTHER, UNITS_COUNT,
-                                    iter.Data().mMax, descMax, aData);
+                aHandleReport->Callback(EmptyCString(), pathNow, KIND_OTHER, UNITS_COUNT,
+                                        iter.Data().mNow, descNow, aData);
+                aHandleReport->Callback(EmptyCString(), pathMax, KIND_OTHER, UNITS_COUNT,
+                                        iter.Data().mMax, descMax, aData);
+            }
         }
         return NS_OK;
     }
@@ -597,6 +601,7 @@ MessageChannel::MessageChannel(const char* aName,
     mListener(aListener),
     mChannelState(ChannelClosed),
     mSide(UnknownSide),
+    mIsCrossProcess(false),
     mLink(nullptr),
     mWorkerLoop(nullptr),
     mChannelErrorTask(nullptr),
@@ -836,7 +841,7 @@ MessageChannel::Clear()
     mWorkerLoop = nullptr;
     if (mLink != nullptr) {
         // FIXME: can mLink ever be null here?
-        ChannelCountDec(mName);
+        ChannelCountDec(mName, mIsCrossProcess);
     }
     delete mLink;
     mLink = nullptr;
@@ -876,7 +881,8 @@ MessageChannel::Open(Transport* aTransport, MessageLoop* aIOLoop, Side aSide)
     ProcessLink *link = new ProcessLink(this);
     link->Open(aTransport, aIOLoop, aSide); // :TODO: n.b.: sets mChild
     mLink = link;
-    ChannelCountInc(mName);
+    mIsCrossProcess = true;
+    ChannelCountInc(mName, mIsCrossProcess);
     return true;
 }
 
@@ -956,7 +962,8 @@ MessageChannel::CommonThreadOpenInit(MessageChannel *aTargetChan, Side aSide)
 
     mLink = new ThreadLink(this, aTargetChan);
     mSide = aSide;
-    ChannelCountInc(mName);
+    mIsCrossProcess = false;
+    ChannelCountInc(mName, mIsCrossProcess);
 }
 
 bool
