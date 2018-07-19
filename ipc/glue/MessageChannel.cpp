@@ -13,16 +13,18 @@
 #include "mozilla/ipc/ProtocolUtils.h"
 #include "mozilla/Logging.h"
 #include "mozilla/Move.h"
+#include "mozilla/Mutex.h"
 #include "mozilla/ScopeExit.h"
 #include "mozilla/Sprintf.h"
 #include "mozilla/Telemetry.h"
 #include "mozilla/TimeStamp.h"
-#include "nsAppRunner.h"
 #include "mozilla/UniquePtr.h"
+#include "nsAppRunner.h"
 #include "nsAutoPtr.h"
+#include "nsContentUtils.h"
+#include "nsDataHashtable.h"
 #include "nsDebug.h"
 #include "nsISupportsImpl.h"
-#include "nsContentUtils.h"
 #include <math.h>
 
 #ifdef MOZ_TASK_TRACER
@@ -502,6 +504,65 @@ public:
 
 NS_IMPL_ISUPPORTS(PendingResponseReporter, nsIMemoryReporter)
 
+static StaticMutex gChannelCountMutex;
+// FIXME is this a static ctor?
+static nsDataHashtable<nsCharPtrHashKey, size_t> gChannelCounts;
+
+static void
+ChannelCountInc(const char* aName)
+{
+    StaticMutexAutoLock countLock(gChannelCountMutex);
+    gChannelCounts.GetOrInsert(aName)++;
+}
+
+static void
+ChannelCountDec(const char* aName)
+{
+    StaticMutexAutoLock countLock(gChannelCountMutex);
+    DebugOnly<size_t> remainder = gChannelCounts.GetOrInsert(aName)--;
+    MOZ_ASSERT(remainder > 0);
+}
+
+class ChannelCountReporter final : public nsIMemoryReporter
+{
+    ~ChannelCountReporter() = default;
+public:
+    NS_DECL_THREADSAFE_ISUPPORTS
+
+    NS_IMETHOD
+    CollectReports(nsIHandleReportCallback* aHandleReport, nsISupports* aData,
+                   bool aAnonymize) override
+    {
+        StaticMutexAutoLock countLock(gChannelCountMutex);
+        for (auto iter = gChannelCounts.Iter(); !iter.Done(); iter.Next()) {
+            nsPrintfCString path("ipc-transports/%s", iter.Key());
+            nsPrintfCString desc("Number of IPC transports for actor type %s", iter.Key());
+
+            aHandleReport->Callback(EmptyCString(), path, KIND_OTHER, UNITS_COUNT,
+                                    iter.Data(), desc, aData);
+        }
+        return NS_OK;
+    }
+};
+
+NS_IMPL_ISUPPORTS(ChannelCountReporter, nsIMemoryReporter)
+
+// In child processes, the first MessageChannel is created before
+// XPCOM is initialized enough to construct the memory reporter
+// manager.  This retries every time a MessageChannel is constructed,
+// which is good enough in practice.
+template<class Reporter>
+static void TryRegisterStrongMemoryReporter()
+{
+    static Atomic<bool> registered;
+    if (registered.compareExchange(false, true)) {
+        RefPtr<Reporter> reporter = new Reporter();
+        if (NS_FAILED(RegisterStrongMemoryReporter(reporter))) {
+            registered = false;
+        }
+    }
+}
+
 Atomic<size_t> MessageChannel::gUnresolvedResponses;
 
 MessageChannel::MessageChannel(const char* aName,
@@ -553,10 +614,8 @@ MessageChannel::MessageChannel(const char* aName,
     MOZ_RELEASE_ASSERT(mEvent, "CreateEvent failed! Nothing is going to work!");
 #endif
 
-    static Atomic<bool> registered;
-    if (registered.compareExchange(false, true)) {
-        RegisterStrongMemoryReporter(new PendingResponseReporter());
-    }
+    TryRegisterStrongMemoryReporter<PendingResponseReporter>();
+    TryRegisterStrongMemoryReporter<ChannelCountReporter>();
 }
 
 MessageChannel::~MessageChannel()
@@ -749,6 +808,10 @@ MessageChannel::Clear()
     mPendingResponses.clear();
 
     mWorkerLoop = nullptr;
+    if (mLink != nullptr) {
+        // FIXME: can mLink ever be null here?
+        ChannelCountDec(mName);
+    }
     delete mLink;
     mLink = nullptr;
 
@@ -787,6 +850,7 @@ MessageChannel::Open(Transport* aTransport, MessageLoop* aIOLoop, Side aSide)
     ProcessLink *link = new ProcessLink(this);
     link->Open(aTransport, aIOLoop, aSide); // :TODO: n.b.: sets mChild
     mLink = link;
+    ChannelCountInc(mName);
     return true;
 }
 
@@ -866,6 +930,7 @@ MessageChannel::CommonThreadOpenInit(MessageChannel *aTargetChan, Side aSide)
 
     mLink = new ThreadLink(this, aTargetChan);
     mSide = aSide;
+    ChannelCountInc(mName);
 }
 
 bool
