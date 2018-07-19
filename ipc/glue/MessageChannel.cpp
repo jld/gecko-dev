@@ -526,8 +526,7 @@ struct ChannelCounts {
 } // anonymous namespace
 
 static StaticMutex gChannelCountMutex;
-// FIXME is this a static ctor?
-static nsDataHashtable<nsCharPtrHashKey, ChannelCounts> gChannelCounts;
+static nsDataHashtable<nsDepCharHashKey, ChannelCounts> gChannelCounts;
 
 static void
 ChannelCountInc(const char* aName)
