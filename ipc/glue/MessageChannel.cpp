@@ -504,23 +504,43 @@ public:
 
 NS_IMPL_ISUPPORTS(PendingResponseReporter, nsIMemoryReporter)
 
+namespace {
+struct ChannelCounts {
+    size_t mNow;
+    size_t mMax;
+
+    ChannelCounts() : mNow(0), mMax(0) { }
+
+    void Inc() {
+        ++mNow;
+        if (mMax < mNow) {
+            mMax = mNow;
+        }
+    }
+
+    void Dec() {
+        MOZ_ASSERT(mNow > 0);
+        --mNow;
+    }
+};
+} // anonymous namespace
+
 static StaticMutex gChannelCountMutex;
 // FIXME is this a static ctor?
-static nsDataHashtable<nsCharPtrHashKey, size_t> gChannelCounts;
+static nsDataHashtable<nsCharPtrHashKey, ChannelCounts> gChannelCounts;
 
 static void
 ChannelCountInc(const char* aName)
 {
     StaticMutexAutoLock countLock(gChannelCountMutex);
-    gChannelCounts.GetOrInsert(aName)++;
+    gChannelCounts.GetOrInsert(aName).Inc();
 }
 
 static void
 ChannelCountDec(const char* aName)
 {
     StaticMutexAutoLock countLock(gChannelCountMutex);
-    DebugOnly<size_t> remainder = gChannelCounts.GetOrInsert(aName)--;
-    MOZ_ASSERT(remainder > 0);
+    gChannelCounts.GetOrInsert(aName).Dec();
 }
 
 class ChannelCountReporter final : public nsIMemoryReporter
@@ -535,11 +555,17 @@ public:
     {
         StaticMutexAutoLock countLock(gChannelCountMutex);
         for (auto iter = gChannelCounts.Iter(); !iter.Done(); iter.Next()) {
-            nsPrintfCString path("ipc-transports/%s", iter.Key());
-            nsPrintfCString desc("Number of IPC transports for actor type %s", iter.Key());
+            nsPrintfCString pathNow("ipc-transports/%s", iter.Key());
+            nsPrintfCString pathMax("ipc-transports-peak/%s", iter.Key());
+            nsPrintfCString descNow("Number of IPC channels for"
+                                    " top-level actor type %s", iter.Key());
+            nsPrintfCString descMax("Peak number of IPC channels for"
+                                    " top-level actor type %s", iter.Key());
 
-            aHandleReport->Callback(EmptyCString(), path, KIND_OTHER, UNITS_COUNT,
-                                    iter.Data(), desc, aData);
+            aHandleReport->Callback(EmptyCString(), pathNow, KIND_OTHER, UNITS_COUNT,
+                                    iter.Data().mNow, descNow, aData);
+            aHandleReport->Callback(EmptyCString(), pathMax, KIND_OTHER, UNITS_COUNT,
+                                    iter.Data().mMax, descMax, aData);
         }
         return NS_OK;
     }
