@@ -43,8 +43,9 @@ SharedMap::SharedMap()
 {}
 
 SharedMap::SharedMap(nsIGlobalObject* aGlobal, const FileDescriptor& aMapFile,
-                     size_t aMapSize)
+                     size_t aMapSize, nsTArray<RefPtr<BlobImpl>>&& aBlobs)
   : DOMEventTargetHelper(aGlobal)
+  , mBlobImpls(std::move(aBlobs))
 {
   mMapFile.reset(new FileDescriptor(aMapFile));
   mMapSize = aMapSize;
@@ -292,8 +293,9 @@ SharedMap*
 WritableSharedMap::GetReadOnly()
 {
   if (!mReadOnly) {
+    nsTArray<RefPtr<BlobImpl>> blobs(mBlobImpls);
     mReadOnly = new SharedMap(ProcessGlobal::Get(), CloneMapFile(),
-                              MapSize());
+                              MapSize(), std::move(blobs));
   }
   return mReadOnly;
 }
@@ -358,14 +360,15 @@ WritableSharedMap::Serialize()
   for (auto& entry : IterHash(mEntries)) {
     AlignTo(&offset, kStructuredCloneAlign);
 
-    entry->ExtractData(&ptr[offset], offset, blobImpls.Length());
+    size_t blobOffset = blobImpls.Length();
+    if (entry->BlobCount()) {
+      blobImpls.AppendElements(entry->Blobs());
+    }
+
+    entry->ExtractData(&ptr[offset], offset, blobOffset);
     entry->Code(header);
 
     offset += entry->Size();
-
-    if (entry->BlobCount()) {
-      mBlobImpls.AppendElements(entry->Blobs());
-    }
   }
 
   mBlobImpls = std::move(blobImpls);
@@ -384,6 +387,23 @@ WritableSharedMap::Serialize()
 }
 
 void
+WritableSharedMap::SendChanges(ContentParent* aParent)
+{
+    nsTArray<IPCBlob> blobs(mBlobImpls.Length());
+
+    for (auto& blobImpl : mBlobImpls) {
+      nsresult rv = IPCBlobUtils::Serialize(blobImpl, aParent,
+                                            *blobs.AppendElement());
+      if (NS_WARN_IF(NS_FAILED(rv))) {
+        continue;
+      }
+    }
+
+    Unused << aParent->SendUpdateSharedData(CloneMapFile(), mMap.size(),
+                                            blobs, mChangedKeys);
+}
+
+void
 WritableSharedMap::BroadcastChanges()
 {
   if (mChangedKeys.IsEmpty()) {
@@ -397,18 +417,7 @@ WritableSharedMap::BroadcastChanges()
   nsTArray<ContentParent*> parents;
   ContentParent::GetAll(parents);
   for (auto& parent : parents) {
-    nsTArray<IPCBlob> blobs(mBlobImpls.Length());
-
-    for (auto& blobImpl : mBlobImpls) {
-      nsresult rv = IPCBlobUtils::Serialize(blobImpl, parent,
-                                            *blobs.AppendElement());
-      if (NS_WARN_IF(NS_FAILED(rv))) {
-        continue;
-      }
-    }
-
-    Unused << parent->SendUpdateSharedData(CloneMapFile(), mMap.size(),
-                                           blobs, mChangedKeys);
+    SendChanges(parent);
   }
 
   if (mReadOnly) {

@@ -22,6 +22,9 @@ class nsIGlobalObject;
 
 namespace mozilla {
 namespace dom {
+
+class ContentParent;
+
 namespace ipc {
 
 /**
@@ -58,7 +61,8 @@ public:
 
   SharedMap();
 
-  SharedMap(nsIGlobalObject* aGlobal, const FileDescriptor&, size_t);
+  SharedMap(nsIGlobalObject* aGlobal, const FileDescriptor&, size_t,
+            nsTArray<RefPtr<BlobImpl>>&& aBlobs);
 
   // Returns true if the map contains the given (UTF-8) key.
   bool Has(const nsACString& name);
@@ -347,6 +351,10 @@ public:
   // Flushes any queued changes to a new snapshot, and broadcasts it to all
   // child SharedMap instances.
   void Flush();
+
+
+  // Sends the current set of shared map data to the given content process.
+  void SendChanges(ContentParent* aContentParent);
 
 
   /**
