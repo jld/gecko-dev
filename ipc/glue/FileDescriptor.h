@@ -95,22 +95,10 @@ public:
   operator==(const FileDescriptor& aOther) const;
 
 private:
-  void
-  Assign(const FileDescriptor& aOther);
-
-  void
-  Close();
-
-  static bool
-  IsValid(PlatformHandleType aHandle);
-
-  static PlatformHandleType
+  static UniqueFileHandle
   Clone(PlatformHandleType aHandle);
 
-  static void
-  Close(PlatformHandleType aHandle);
-
-  PlatformHandleType mHandle;
+  UniquePlatformHandle mHandle;
 };
 
 template<>
