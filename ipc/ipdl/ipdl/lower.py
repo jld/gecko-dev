@@ -297,11 +297,9 @@ def _makePromise(returns, side, resolver=False):
     else:
         resolvetype = returns[0].bareType(side)
 
-    needmove = not all(d.isCopyable() for d in returns)
-
     return _promise(resolvetype,
                     _ResponseRejectReason.Type(),
-                    ExprLiteral.TRUE if needmove else ExprLiteral.FALSE,
+                    ExprLiteral.TRUE, # isExclusive
                     resolver=resolver)
 
 
@@ -581,6 +579,8 @@ def _cxxRefType(ipdltype, side):
     t.ref = 1
     return t
 
+def _cxxIsRefcounted(ipdltype):
+    return ipdltype.isCxx() and ipdltype.isRefcounted()
 
 def _cxxConstRefType(ipdltype, side):
     t = _cxxBareType(ipdltype, side)
@@ -597,7 +597,7 @@ def _cxxConstRefType(ipdltype, side):
         t.const = _cxxConstRefType(ipdltype.basetype, side).const
         t.ref = 1
         return t
-    if ipdltype.isCxx() and ipdltype.isRefcounted():
+    if _cxxIsRefcounted(ipdltype):
         # Use T* instead of const RefPtr<T>&
         t = t.T
         t.ptr = 1
@@ -607,20 +607,17 @@ def _cxxConstRefType(ipdltype, side):
     return t
 
 
-def _cxxTypeNeedsMove(ipdltype):
-    return ipdltype.isIPDL() and (ipdltype.isArray() or
-                                  ipdltype.isShmem() or
-                                  ipdltype.isByteBuf() or
-                                  ipdltype.isEndpoint())
-
-
 def _cxxTypeCanMove(ipdltype):
     return not (ipdltype.isIPDL() and ipdltype.isActor())
 
 
+def _cxxTypeWantsMove(ipdltype):
+    return _cxxTypeCanMove(ipdltype) and not _cxxIsRefcounted(ipdltype)
+
+
 def _cxxMoveRefType(ipdltype, side):
     t = _cxxBareType(ipdltype, side)
-    if _cxxTypeNeedsMove(ipdltype):
+    if _cxxTypeWantsMove(ipdltype):
         t.ref = 2
         return t
     return _cxxConstRefType(ipdltype, side)
@@ -678,7 +675,7 @@ info needed by later passes, along with a basic name for the decl."""
         self.idnum = 0
 
     def isCopyable(self):
-        return not _cxxTypeNeedsMove(self.ipdltype)
+        return not _cxxTypeWantsMove(self.ipdltype)
 
     def var(self):
         return ExprVar(self.name)
