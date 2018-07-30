@@ -136,7 +136,7 @@ VideoDecoderParent::RecvInit()
 }
 
 mozilla::ipc::IPCResult
-VideoDecoderParent::RecvInput(const MediaRawDataIPDL& aData)
+VideoDecoderParent::RecvInput(MediaRawDataIPDL&& aData)
 {
   MOZ_ASSERT(OnManagerThread());
   // XXX: This copies the data into a buffer owned by the MediaRawData. Ideally
@@ -265,7 +265,7 @@ VideoDecoderParent::RecvShutdown()
 }
 
 mozilla::ipc::IPCResult
-VideoDecoderParent::RecvSetSeekThreshold(const int64_t& aTime)
+VideoDecoderParent::RecvSetSeekThreshold(int64_t&& aTime)
 {
   MOZ_ASSERT(!mDestroyed);
   MOZ_ASSERT(OnManagerThread());

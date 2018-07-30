@@ -228,8 +228,8 @@ GMPStorageChild::Close(const nsCString& aRecordName)
 }
 
 mozilla::ipc::IPCResult
-GMPStorageChild::RecvOpenComplete(const nsCString& aRecordName,
-                                  const GMPErr& aStatus)
+GMPStorageChild::RecvOpenComplete(nsCString&& aRecordName,
+                                  GMPErr&& aStatus)
 {
   // We don't need a lock to read |mShutdown| since it is only changed in
   // the GMP thread.
@@ -246,8 +246,8 @@ GMPStorageChild::RecvOpenComplete(const nsCString& aRecordName,
 }
 
 mozilla::ipc::IPCResult
-GMPStorageChild::RecvReadComplete(const nsCString& aRecordName,
-                                  const GMPErr& aStatus,
+GMPStorageChild::RecvReadComplete(nsCString&& aRecordName,
+                                  GMPErr&& aStatus,
                                   InfallibleTArray<uint8_t>&& aBytes)
 {
   if (mShutdown) {
@@ -263,8 +263,8 @@ GMPStorageChild::RecvReadComplete(const nsCString& aRecordName,
 }
 
 mozilla::ipc::IPCResult
-GMPStorageChild::RecvWriteComplete(const nsCString& aRecordName,
-                                   const GMPErr& aStatus)
+GMPStorageChild::RecvWriteComplete(nsCString&& aRecordName,
+                                   GMPErr&& aStatus)
 {
   if (mShutdown) {
     return IPC_OK();

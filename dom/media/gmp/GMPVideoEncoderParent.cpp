@@ -250,7 +250,7 @@ GMPVideoEncoderParent::ActorDestroy(ActorDestroyReason aWhy)
 }
 
 mozilla::ipc::IPCResult
-GMPVideoEncoderParent::RecvEncoded(const GMPVideoEncodedFrameData& aEncodedFrame,
+GMPVideoEncoderParent::RecvEncoded(GMPVideoEncodedFrameData&& aEncodedFrame,
                                    InfallibleTArray<uint8_t>&& aCodecSpecificInfo)
 {
   if (!mCallback) {
@@ -266,7 +266,7 @@ GMPVideoEncoderParent::RecvEncoded(const GMPVideoEncodedFrameData& aEncodedFrame
 }
 
 mozilla::ipc::IPCResult
-GMPVideoEncoderParent::RecvError(const GMPErr& aError)
+GMPVideoEncoderParent::RecvError(GMPErr&& aError)
 {
   if (!mCallback) {
     return IPC_FAIL_NO_REASON(this);
@@ -303,7 +303,7 @@ GMPVideoEncoderParent::RecvParentShmemForPool(Shmem&& aFrameBuffer)
 }
 
 mozilla::ipc::IPCResult
-GMPVideoEncoderParent::AnswerNeedShmem(const uint32_t& aEncodedBufferSize,
+GMPVideoEncoderParent::AnswerNeedShmem(uint32_t&& aEncodedBufferSize,
                                        Shmem* aMem)
 {
   ipc::Shmem mem;

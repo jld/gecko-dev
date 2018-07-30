@@ -21,36 +21,36 @@ SpeechSynthesisChild::~SpeechSynthesisChild()
 mozilla::ipc::IPCResult
 SpeechSynthesisChild::RecvInitialVoicesAndState(nsTArray<RemoteVoice>&& aVoices,
                                                 nsTArray<nsString>&& aDefaults,
-                                                const bool& aIsSpeaking)
+                                                bool&& aIsSpeaking)
 {
   nsSynthVoiceRegistry::RecvInitialVoicesAndState(aVoices, aDefaults, aIsSpeaking);
   return IPC_OK();
 }
 
 mozilla::ipc::IPCResult
-SpeechSynthesisChild::RecvVoiceAdded(const RemoteVoice& aVoice)
+SpeechSynthesisChild::RecvVoiceAdded(RemoteVoice&& aVoice)
 {
   nsSynthVoiceRegistry::RecvAddVoice(aVoice);
   return IPC_OK();
 }
 
 mozilla::ipc::IPCResult
-SpeechSynthesisChild::RecvVoiceRemoved(const nsString& aUri)
+SpeechSynthesisChild::RecvVoiceRemoved(nsString&& aUri)
 {
   nsSynthVoiceRegistry::RecvRemoveVoice(aUri);
   return IPC_OK();
 }
 
 mozilla::ipc::IPCResult
-SpeechSynthesisChild::RecvSetDefaultVoice(const nsString& aUri,
-                                          const bool& aIsDefault)
+SpeechSynthesisChild::RecvSetDefaultVoice(nsString&& aUri,
+                                          bool&& aIsDefault)
 {
   nsSynthVoiceRegistry::RecvSetDefaultVoice(aUri, aIsDefault);
   return IPC_OK();
 }
 
 mozilla::ipc::IPCResult
-SpeechSynthesisChild::RecvIsSpeakingChanged(const bool& aIsSpeaking)
+SpeechSynthesisChild::RecvIsSpeakingChanged(bool&& aIsSpeaking)
 {
   nsSynthVoiceRegistry::RecvIsSpeakingChanged(aIsSpeaking);
   return IPC_OK();
@@ -97,16 +97,16 @@ SpeechSynthesisRequestChild::~SpeechSynthesisRequestChild()
 }
 
 mozilla::ipc::IPCResult
-SpeechSynthesisRequestChild::RecvOnStart(const nsString& aUri)
+SpeechSynthesisRequestChild::RecvOnStart(nsString&& aUri)
 {
   mTask->DispatchStartImpl(aUri);
   return IPC_OK();
 }
 
 mozilla::ipc::IPCResult
-SpeechSynthesisRequestChild::RecvOnEnd(const bool& aIsError,
-                                       const float& aElapsedTime,
-                                       const uint32_t& aCharIndex)
+SpeechSynthesisRequestChild::RecvOnEnd(bool&& aIsError,
+                                       float&& aElapsedTime,
+                                       uint32_t&& aCharIndex)
 {
   SpeechSynthesisRequestChild* actor = mTask->mActor;
   mTask->mActor = nullptr;
@@ -123,36 +123,36 @@ SpeechSynthesisRequestChild::RecvOnEnd(const bool& aIsError,
 }
 
 mozilla::ipc::IPCResult
-SpeechSynthesisRequestChild::RecvOnPause(const float& aElapsedTime,
-                                         const uint32_t& aCharIndex)
+SpeechSynthesisRequestChild::RecvOnPause(float&& aElapsedTime,
+                                         uint32_t&& aCharIndex)
 {
   mTask->DispatchPauseImpl(aElapsedTime, aCharIndex);
   return IPC_OK();
 }
 
 mozilla::ipc::IPCResult
-SpeechSynthesisRequestChild::RecvOnResume(const float& aElapsedTime,
-                                          const uint32_t& aCharIndex)
+SpeechSynthesisRequestChild::RecvOnResume(float&& aElapsedTime,
+                                          uint32_t&& aCharIndex)
 {
   mTask->DispatchResumeImpl(aElapsedTime, aCharIndex);
   return IPC_OK();
 }
 
 mozilla::ipc::IPCResult
-SpeechSynthesisRequestChild::RecvOnBoundary(const nsString& aName,
-                                            const float& aElapsedTime,
-                                            const uint32_t& aCharIndex,
-                                            const uint32_t& aCharLength,
-                                            const uint8_t& argc)
+SpeechSynthesisRequestChild::RecvOnBoundary(nsString&& aName,
+                                            float&& aElapsedTime,
+                                            uint32_t&& aCharIndex,
+                                            uint32_t&& aCharLength,
+                                            uint8_t&& argc)
 {
   mTask->DispatchBoundaryImpl(aName, aElapsedTime, aCharIndex, aCharLength, argc);
   return IPC_OK();
 }
 
 mozilla::ipc::IPCResult
-SpeechSynthesisRequestChild::RecvOnMark(const nsString& aName,
-                                        const float& aElapsedTime,
-                                        const uint32_t& aCharIndex)
+SpeechSynthesisRequestChild::RecvOnMark(nsString&& aName,
+                                        float&& aElapsedTime,
+                                        uint32_t&& aCharIndex)
 {
   mTask->DispatchMarkImpl(aName, aElapsedTime, aCharIndex);
   return IPC_OK();

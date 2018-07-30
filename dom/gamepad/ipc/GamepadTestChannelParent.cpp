@@ -13,8 +13,8 @@ namespace mozilla {
 namespace dom {
 
 mozilla::ipc::IPCResult
-GamepadTestChannelParent::RecvGamepadTestEvent(const uint32_t& aID,
-                                               const GamepadChangeEvent& aEvent)
+GamepadTestChannelParent::RecvGamepadTestEvent(uint32_t&& aID,
+                                               GamepadChangeEvent&& aEvent)
 {
   mozilla::ipc::AssertIsOnBackgroundThread();
   RefPtr<GamepadPlatformService>  service =

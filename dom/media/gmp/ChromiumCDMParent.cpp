@@ -319,8 +319,8 @@ ChromiumCDMParent::Recv__delete__()
 }
 
 ipc::IPCResult
-ChromiumCDMParent::RecvOnResolvePromiseWithKeyStatus(const uint32_t& aPromiseId,
-                                                     const uint32_t& aKeyStatus)
+ChromiumCDMParent::RecvOnResolvePromiseWithKeyStatus(uint32_t&& aPromiseId,
+                                                     uint32_t&& aKeyStatus)
 {
   GMP_LOG("ChromiumCDMParent::RecvOnResolvePromiseWithKeyStatus(this=%p, pid=%u, "
           "keystatus=%u)",
@@ -337,8 +337,8 @@ ChromiumCDMParent::RecvOnResolvePromiseWithKeyStatus(const uint32_t& aPromiseId,
 }
 
 ipc::IPCResult
-ChromiumCDMParent::RecvOnResolveNewSessionPromise(const uint32_t& aPromiseId,
-                                                  const nsCString& aSessionId)
+ChromiumCDMParent::RecvOnResolveNewSessionPromise(uint32_t&& aPromiseId,
+                                                  nsCString&& aSessionId)
 {
   GMP_LOG("ChromiumCDMParent::RecvOnResolveNewSessionPromise(this=%p, pid=%u, "
           "sid=%s)",
@@ -365,8 +365,8 @@ ChromiumCDMParent::RecvOnResolveNewSessionPromise(const uint32_t& aPromiseId,
 }
 
 ipc::IPCResult
-ChromiumCDMParent::RecvResolveLoadSessionPromise(const uint32_t& aPromiseId,
-                                                 const bool& aSuccessful)
+ChromiumCDMParent::RecvResolveLoadSessionPromise(uint32_t&& aPromiseId,
+                                                 bool&& aSuccessful)
 {
   GMP_LOG("ChromiumCDMParent::RecvResolveLoadSessionPromise(this=%p, pid=%u, "
           "successful=%d)",
@@ -398,7 +398,7 @@ ChromiumCDMParent::ResolvePromise(uint32_t aPromiseId)
 }
 
 ipc::IPCResult
-ChromiumCDMParent::RecvOnResolvePromise(const uint32_t& aPromiseId)
+ChromiumCDMParent::RecvOnResolvePromise(uint32_t&& aPromiseId)
 {
   ResolvePromise(aPromiseId);
   return IPC_OK();
@@ -438,18 +438,18 @@ ToNsresult(uint32_t aException)
 }
 
 ipc::IPCResult
-ChromiumCDMParent::RecvOnRejectPromise(const uint32_t& aPromiseId,
-                                       const uint32_t& aError,
-                                       const uint32_t& aSystemCode,
-                                       const nsCString& aErrorMessage)
+ChromiumCDMParent::RecvOnRejectPromise(uint32_t&& aPromiseId,
+                                       uint32_t&& aError,
+                                       uint32_t&& aSystemCode,
+                                       nsCString&& aErrorMessage)
 {
   RejectPromise(aPromiseId, ToNsresult(aError), aErrorMessage);
   return IPC_OK();
 }
 
 ipc::IPCResult
-ChromiumCDMParent::RecvOnSessionMessage(const nsCString& aSessionId,
-                                        const uint32_t& aMessageType,
+ChromiumCDMParent::RecvOnSessionMessage(nsCString&& aSessionId,
+                                        uint32_t&& aMessageType,
                                         nsTArray<uint8_t>&& aMessage)
 {
   GMP_LOG("ChromiumCDMParent::RecvOnSessionMessage(this=%p, sid=%s)",
@@ -465,7 +465,7 @@ ChromiumCDMParent::RecvOnSessionMessage(const nsCString& aSessionId,
 
 ipc::IPCResult
 ChromiumCDMParent::RecvOnSessionKeysChange(
-  const nsCString& aSessionId,
+  nsCString&& aSessionId,
   nsTArray<CDMKeyInformation>&& aKeysInfo)
 {
   GMP_LOG("ChromiumCDMParent::RecvOnSessionKeysChange(this=%p)", this);
@@ -478,8 +478,8 @@ ChromiumCDMParent::RecvOnSessionKeysChange(
 }
 
 ipc::IPCResult
-ChromiumCDMParent::RecvOnExpirationChange(const nsCString& aSessionId,
-                                          const double& aSecondsSinceEpoch)
+ChromiumCDMParent::RecvOnExpirationChange(nsCString&& aSessionId,
+                                          double&& aSecondsSinceEpoch)
 {
   GMP_LOG("ChromiumCDMParent::RecvOnExpirationChange(this=%p) time=%lf",
           this,
@@ -493,7 +493,7 @@ ChromiumCDMParent::RecvOnExpirationChange(const nsCString& aSessionId,
 }
 
 ipc::IPCResult
-ChromiumCDMParent::RecvOnSessionClosed(const nsCString& aSessionId)
+ChromiumCDMParent::RecvOnSessionClosed(nsCString&& aSessionId)
 {
   GMP_LOG("ChromiumCDMParent::RecvOnSessionClosed(this=%p)", this);
   if (!mCDMCallback || mIsShutdown) {
@@ -505,10 +505,10 @@ ChromiumCDMParent::RecvOnSessionClosed(const nsCString& aSessionId)
 }
 
 ipc::IPCResult
-ChromiumCDMParent::RecvOnLegacySessionError(const nsCString& aSessionId,
-                                            const uint32_t& aError,
-                                            const uint32_t& aSystemCode,
-                                            const nsCString& aMessage)
+ChromiumCDMParent::RecvOnLegacySessionError(nsCString&& aSessionId,
+                                            uint32_t&& aError,
+                                            uint32_t&& aSystemCode,
+                                            nsCString&& aMessage)
 {
   GMP_LOG("ChromiumCDMParent::RecvOnLegacySessionError(this=%p)", this);
   if (!mCDMCallback || mIsShutdown) {
@@ -534,8 +534,8 @@ ToDecryptStatus(uint32_t aError)
 }
 
 ipc::IPCResult
-ChromiumCDMParent::RecvDecryptFailed(const uint32_t& aId,
-                                     const uint32_t& aStatus)
+ChromiumCDMParent::RecvDecryptFailed(uint32_t&& aId,
+                                     uint32_t&& aStatus)
 {
   GMP_LOG("ChromiumCDMParent::RecvDecryptFailed(this=%p, id=%u, status=%u)",
           this,
@@ -558,8 +558,8 @@ ChromiumCDMParent::RecvDecryptFailed(const uint32_t& aId,
 }
 
 ipc::IPCResult
-ChromiumCDMParent::RecvDecrypted(const uint32_t& aId,
-                                 const uint32_t& aStatus,
+ChromiumCDMParent::RecvDecrypted(uint32_t&& aId,
+                                 uint32_t&& aStatus,
                                  ipc::Shmem&& aShmem)
 {
   GMP_LOG("ChromiumCDMParent::RecvDecrypted(this=%p, id=%u, status=%u)",
@@ -705,7 +705,7 @@ ChromiumCDMParent::EnsureSufficientShmems(size_t aVideoFrameSize)
 }
 
 ipc::IPCResult
-ChromiumCDMParent::RecvDecodedData(const CDMVideoFrame& aFrame,
+ChromiumCDMParent::RecvDecodedData(CDMVideoFrame&& aFrame,
                                    nsTArray<uint8_t>&& aData)
 {
   GMP_LOG("ChromiumCDMParent::RecvDecodedData(this=%p) time=%" PRId64,
@@ -739,7 +739,7 @@ ChromiumCDMParent::RecvDecodedData(const CDMVideoFrame& aFrame,
 }
 
 ipc::IPCResult
-ChromiumCDMParent::RecvDecodedShmem(const CDMVideoFrame& aFrame,
+ChromiumCDMParent::RecvDecodedShmem(CDMVideoFrame&& aFrame,
                                     ipc::Shmem&& aShmem)
 {
   GMP_LOG("ChromiumCDMParent::RecvDecodedShmem(this=%p) time=%" PRId64
@@ -845,7 +845,7 @@ ChromiumCDMParent::CreateVideoFrame(const CDMVideoFrame& aFrame,
 }
 
 ipc::IPCResult
-ChromiumCDMParent::RecvDecodeFailed(const uint32_t& aStatus)
+ChromiumCDMParent::RecvDecodeFailed(uint32_t&& aStatus)
 {
   if (mIsShutdown) {
     MOZ_ASSERT(mDecodePromise.IsEmpty());
@@ -957,7 +957,7 @@ ChromiumCDMParent::InitializeVideoDecoder(
 }
 
 ipc::IPCResult
-ChromiumCDMParent::RecvOnDecoderInitDone(const uint32_t& aStatus)
+ChromiumCDMParent::RecvOnDecoderInitDone(uint32_t&& aStatus)
 {
   GMP_LOG("ChromiumCDMParent::RecvOnDecoderInitDone(this=%p, status=%u)",
           this,

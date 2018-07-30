@@ -171,11 +171,11 @@ private:
 };
 
 mozilla::ipc::IPCResult
-WyciwygChannelChild::RecvOnStartRequest(const nsresult& statusCode,
-                                        const int64_t& contentLength,
-                                        const int32_t& source,
-                                        const nsCString& charset,
-                                        const nsCString& securityInfo)
+WyciwygChannelChild::RecvOnStartRequest(nsresult&& statusCode,
+                                        int64_t&& contentLength,
+                                        int32_t&& source,
+                                        nsCString&& charset,
+                                        nsCString&& securityInfo)
 {
   mEventQ->RunOrEnqueue(new WyciwygStartRequestEvent(this, statusCode,
                                                      contentLength, source,
@@ -231,8 +231,8 @@ private:
 };
 
 mozilla::ipc::IPCResult
-WyciwygChannelChild::RecvOnDataAvailable(const nsCString& data,
-                                         const uint64_t& offset)
+WyciwygChannelChild::RecvOnDataAvailable(nsCString&& data,
+                                         uint64_t&& offset)
 {
   mEventQ->RunOrEnqueue(new WyciwygDataAvailableEvent(this, data, offset));
   return IPC_OK();
@@ -293,7 +293,7 @@ private:
 };
 
 mozilla::ipc::IPCResult
-WyciwygChannelChild::RecvOnStopRequest(const nsresult& statusCode)
+WyciwygChannelChild::RecvOnStopRequest(nsresult&& statusCode)
 {
   mEventQ->RunOrEnqueue(new WyciwygStopRequestEvent(this, statusCode));
   return IPC_OK();
@@ -346,7 +346,7 @@ class WyciwygCancelEvent : public NeckoTargetChannelEvent<WyciwygChannelChild>
 };
 
 mozilla::ipc::IPCResult
-WyciwygChannelChild::RecvCancelEarly(const nsresult& statusCode)
+WyciwygChannelChild::RecvCancelEarly(nsresult&& statusCode)
 {
   mEventQ->RunOrEnqueue(new WyciwygCancelEvent(this, statusCode));
   return IPC_OK();

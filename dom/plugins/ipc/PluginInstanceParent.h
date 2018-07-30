@@ -104,7 +104,7 @@ public:
     AnswerNPN_GetValue_NPNVprivateModeBool(bool* value, NPError* result) override;
 
     virtual mozilla::ipc::IPCResult
-    AnswerNPN_GetValue_DrawingModelSupport(const NPNVariable& model, bool* value) override;
+    AnswerNPN_GetValue_DrawingModelSupport(NPNVariable&& model, bool* value) override;
 
     virtual mozilla::ipc::IPCResult
     AnswerNPN_GetValue_NPNVdocumentOrigin(nsCString* value, NPError* result) override;
@@ -119,30 +119,30 @@ public:
     AnswerNPN_GetValue_PreferredDXGIAdapter(DxgiAdapterDesc* desc) override;
 
     virtual mozilla::ipc::IPCResult
-    AnswerNPN_SetValue_NPPVpluginWindow(const bool& windowed, NPError* result) override;
+    AnswerNPN_SetValue_NPPVpluginWindow(bool&& windowed, NPError* result) override;
     virtual mozilla::ipc::IPCResult
-    AnswerNPN_SetValue_NPPVpluginTransparent(const bool& transparent,
+    AnswerNPN_SetValue_NPPVpluginTransparent(bool&& transparent,
                                              NPError* result) override;
     virtual mozilla::ipc::IPCResult
-    AnswerNPN_SetValue_NPPVpluginUsesDOMForCursor(const bool& useDOMForCursor,
+    AnswerNPN_SetValue_NPPVpluginUsesDOMForCursor(bool&& useDOMForCursor,
                                                   NPError* result) override;
     virtual mozilla::ipc::IPCResult
-    AnswerNPN_SetValue_NPPVpluginDrawingModel(const int& drawingModel,
+    AnswerNPN_SetValue_NPPVpluginDrawingModel(int&& drawingModel,
                                               NPError* result) override;
     virtual mozilla::ipc::IPCResult
-    AnswerNPN_SetValue_NPPVpluginEventModel(const int& eventModel,
+    AnswerNPN_SetValue_NPPVpluginEventModel(int&& eventModel,
                                              NPError* result) override;
     virtual mozilla::ipc::IPCResult
-    AnswerNPN_SetValue_NPPVpluginIsPlayingAudio(const bool& isAudioPlaying,
+    AnswerNPN_SetValue_NPPVpluginIsPlayingAudio(bool&& isAudioPlaying,
                                                 NPError* result) override;
 
     virtual mozilla::ipc::IPCResult
-    AnswerNPN_GetURL(const nsCString& url, const nsCString& target,
+    AnswerNPN_GetURL(nsCString&& url, nsCString&& target,
                      NPError *result) override;
 
     virtual mozilla::ipc::IPCResult
-    AnswerNPN_PostURL(const nsCString& url, const nsCString& target,
-                      const nsCString& buffer, const bool& file,
+    AnswerNPN_PostURL(nsCString&& url, nsCString&& target,
+                      nsCString&& buffer, bool&& file,
                       NPError* result) override;
 
     virtual PStreamNotifyParent*
@@ -153,44 +153,44 @@ public:
 
     virtual mozilla::ipc::IPCResult
     AnswerPStreamNotifyConstructor(PStreamNotifyParent* actor,
-                                   const nsCString& url,
-                                   const nsCString& target,
-                                   const bool& post, const nsCString& buffer,
-                                   const bool& file,
+                                   nsCString&& url,
+                                   nsCString&& target,
+                                   bool&& post, nsCString&& buffer,
+                                   bool&& file,
                                    NPError* result) override;
 
     virtual bool
     DeallocPStreamNotifyParent(PStreamNotifyParent* notifyData) override;
 
     virtual mozilla::ipc::IPCResult
-    RecvNPN_InvalidateRect(const NPRect& rect) override;
+    RecvNPN_InvalidateRect(NPRect&& rect) override;
 
     virtual mozilla::ipc::IPCResult
     RecvRevokeCurrentDirectSurface() override;
 
     virtual mozilla::ipc::IPCResult
-    RecvInitDXGISurface(const gfx::SurfaceFormat& format,
-                         const gfx::IntSize& size,
+    RecvInitDXGISurface(gfx::SurfaceFormat&& format,
+                         gfx::IntSize&& size,
                          WindowsHandle* outHandle,
                          NPError* outError) override;
     virtual mozilla::ipc::IPCResult
-    RecvFinalizeDXGISurface(const WindowsHandle& handle) override;
+    RecvFinalizeDXGISurface(WindowsHandle&& handle) override;
 
     virtual mozilla::ipc::IPCResult
     RecvShowDirectBitmap(Shmem&& buffer,
-                         const gfx::SurfaceFormat& format,
-                         const uint32_t& stride,
-                         const gfx::IntSize& size,
-                         const gfx::IntRect& dirty) override;
+                         gfx::SurfaceFormat&& format,
+                         uint32_t&& stride,
+                         gfx::IntSize&& size,
+                         gfx::IntRect&& dirty) override;
 
     virtual mozilla::ipc::IPCResult
-    RecvShowDirectDXGISurface(const WindowsHandle& handle,
-                               const gfx::IntRect& rect) override;
+    RecvShowDirectDXGISurface(WindowsHandle&& handle,
+                               gfx::IntRect&& rect) override;
 
     // Async rendering
     virtual mozilla::ipc::IPCResult
-    RecvShow(const NPRect& updatedRect,
-             const SurfaceDescriptor& newSurface,
+    RecvShow(NPRect&& updatedRect,
+             SurfaceDescriptor&& newSurface,
              SurfaceDescriptor* prevSurface) override;
 
     virtual PPluginSurfaceParent*
@@ -202,28 +202,28 @@ public:
     DeallocPPluginSurfaceParent(PPluginSurfaceParent* s) override;
 
     virtual mozilla::ipc::IPCResult
-    AnswerNPN_PushPopupsEnabledState(const bool& aState) override;
+    AnswerNPN_PushPopupsEnabledState(bool&& aState) override;
 
     virtual mozilla::ipc::IPCResult
     AnswerNPN_PopPopupsEnabledState() override;
 
     virtual mozilla::ipc::IPCResult
-    AnswerNPN_GetValueForURL(const NPNURLVariable& variable,
-                             const nsCString& url,
+    AnswerNPN_GetValueForURL(NPNURLVariable&& variable,
+                             nsCString&& url,
                              nsCString* value, NPError* result) override;
 
     virtual mozilla::ipc::IPCResult
-    AnswerNPN_SetValueForURL(const NPNURLVariable& variable,
-                             const nsCString& url,
-                             const nsCString& value, NPError* result) override;
+    AnswerNPN_SetValueForURL(NPNURLVariable&& variable,
+                             nsCString&& url,
+                             nsCString&& value, NPError* result) override;
 
     virtual mozilla::ipc::IPCResult
-    AnswerNPN_ConvertPoint(const double& sourceX,
-                           const bool&   ignoreDestX,
-                           const double& sourceY,
-                           const bool&   ignoreDestY,
-                           const NPCoordinateSpace& sourceSpace,
-                           const NPCoordinateSpace& destSpace,
+    AnswerNPN_ConvertPoint(double&& sourceX,
+                           bool&& ignoreDestX,
+                           double&& sourceY,
+                           bool&& ignoreDestY,
+                           NPCoordinateSpace&& sourceSpace,
+                           NPCoordinateSpace&& destSpace,
                            double *destX,
                            double *destY,
                            bool *result) override;
@@ -232,7 +232,7 @@ public:
     RecvRedrawPlugin() override;
 
     virtual mozilla::ipc::IPCResult
-    RecvSetNetscapeWindowAsParent(const NativeWindowHandle& childWindow) override;
+    RecvSetNetscapeWindowAsParent(NativeWindowHandle&& childWindow) override;
 
     NPError NPP_SetWindow(const NPWindow* aWindow);
 
@@ -285,7 +285,7 @@ public:
     }
 
     virtual mozilla::ipc::IPCResult
-    AnswerPluginFocusChange(const bool& gotFocus) override;
+    AnswerPluginFocusChange(bool&& gotFocus) override;
 
     nsresult AsyncSetWindow(NPWindow* window);
     nsresult GetImageContainer(mozilla::layers::ImageContainer** aContainer);
@@ -312,15 +312,15 @@ public:
 
     // for IME hook
     virtual mozilla::ipc::IPCResult
-    RecvGetCompositionString(const uint32_t& aIndex,
+    RecvGetCompositionString(uint32_t&& aIndex,
                              nsTArray<uint8_t>* aBuffer,
                              int32_t* aLength) override;
     virtual mozilla::ipc::IPCResult
     RecvSetCandidateWindow(
-        const mozilla::widget::CandidateWindowPosition& aPosition) override;
+        mozilla::widget::CandidateWindowPosition&& aPosition) override;
     virtual mozilla::ipc::IPCResult
-    RecvRequestCommitOrCancel(const bool& aCommitted) override;
-    virtual mozilla::ipc::IPCResult RecvEnableIME(const bool& aEnable) override;
+    RecvRequestCommitOrCancel(bool&& aCommitted) override;
+    virtual mozilla::ipc::IPCResult RecvEnableIME(bool&& aEnable) override;
 
     // for reserved shortcut key handling with windowed plugin on Windows
     nsresult HandledWindowedPluginKeyEvent(
@@ -328,7 +328,7 @@ public:
       bool aIsConsumed);
     virtual mozilla::ipc::IPCResult
     RecvOnWindowedPluginKeyEvent(
-      const mozilla::NativeEventData& aKeyEventData) override;
+      mozilla::NativeEventData&& aKeyEventData) override;
 
 private:
     // Create an appropriate platform surface for a background of size

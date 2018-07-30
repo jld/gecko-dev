@@ -23,7 +23,7 @@ public:
 
   mozilla::ipc::IPCResult RecvEnterPresentLock() override;
   mozilla::ipc::IPCResult RecvLeavePresentLock() override;
-  mozilla::ipc::IPCResult RecvUpdateTransparency(const nsTransparencyMode& aMode) override;
+  mozilla::ipc::IPCResult RecvUpdateTransparency(nsTransparencyMode&& aMode) override;
   mozilla::ipc::IPCResult RecvClearTransparentWindow() override;
   void ActorDestroy(ActorDestroyReason aWhy) override;
 

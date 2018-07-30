@@ -306,144 +306,144 @@ public:
                           const ViewID& aViewId,
                           const Maybe<ZoomConstraints>& aConstraints) override;
 
-  virtual mozilla::ipc::IPCResult RecvLoadURL(const nsCString& aURI,
-                                              const ShowInfo& aInfo) override;
+  virtual mozilla::ipc::IPCResult RecvLoadURL(nsCString&& aURI,
+                                              ShowInfo&& aInfo) override;
   virtual mozilla::ipc::IPCResult
-  RecvShow(const ScreenIntSize& aSize,
-           const ShowInfo& aInfo,
-           const bool& aParentIsActive,
-           const nsSizeMode& aSizeMode) override;
+  RecvShow(ScreenIntSize&& aSize,
+           ShowInfo&& aInfo,
+           bool&& aParentIsActive,
+           nsSizeMode&& aSizeMode) override;
 
   virtual mozilla::ipc::IPCResult
-  RecvInitRendering(const TextureFactoryIdentifier& aTextureFactoryIdentifier,
-                    const layers::LayersId& aLayersId,
-                    const mozilla::layers::CompositorOptions& aCompositorOptions,
-                    const bool& aLayersConnected,
+  RecvInitRendering(TextureFactoryIdentifier&& aTextureFactoryIdentifier,
+                    layers::LayersId&& aLayersId,
+                    mozilla::layers::CompositorOptions&& aCompositorOptions,
+                    bool&& aLayersConnected,
                     PRenderFrameChild* aRenderFrame) override;
 
   virtual mozilla::ipc::IPCResult
-  RecvUpdateDimensions(const mozilla::dom::DimensionInfo& aDimensionInfo) override;
+  RecvUpdateDimensions(mozilla::dom::DimensionInfo&& aDimensionInfo) override;
   virtual mozilla::ipc::IPCResult
-  RecvSizeModeChanged(const nsSizeMode& aSizeMode) override;
+  RecvSizeModeChanged(nsSizeMode&& aSizeMode) override;
 
   mozilla::ipc::IPCResult RecvActivate();
 
   mozilla::ipc::IPCResult RecvDeactivate();
 
   MOZ_CAN_RUN_SCRIPT
-  virtual mozilla::ipc::IPCResult RecvMouseEvent(const nsString& aType,
-                                                 const float& aX,
-                                                 const float& aY,
-                                                 const int32_t& aButton,
-                                                 const int32_t& aClickCount,
-                                                 const int32_t& aModifiers,
-                                                 const bool& aIgnoreRootScrollFrame) override;
+  virtual mozilla::ipc::IPCResult RecvMouseEvent(nsString&& aType,
+                                                 float&& aX,
+                                                 float&& aY,
+                                                 int32_t&& aButton,
+                                                 int32_t&& aClickCount,
+                                                 int32_t&& aModifiers,
+                                                 bool&& aIgnoreRootScrollFrame) override;
 
-  virtual mozilla::ipc::IPCResult RecvRealMouseMoveEvent(const mozilla::WidgetMouseEvent& aEvent,
-                                                         const ScrollableLayerGuid& aGuid,
-                                                         const uint64_t& aInputBlockId) override;
-
-  virtual mozilla::ipc::IPCResult
-  RecvNormalPriorityRealMouseMoveEvent(const mozilla::WidgetMouseEvent& aEvent,
-                                       const ScrollableLayerGuid& aGuid,
-                                       const uint64_t& aInputBlockId) override;
-
-  virtual mozilla::ipc::IPCResult RecvSynthMouseMoveEvent(const mozilla::WidgetMouseEvent& aEvent,
-                                                          const ScrollableLayerGuid& aGuid,
-                                                          const uint64_t& aInputBlockId) override;
-  virtual mozilla::ipc::IPCResult
-  RecvNormalPrioritySynthMouseMoveEvent(const mozilla::WidgetMouseEvent& aEvent,
-                                        const ScrollableLayerGuid& aGuid,
-                                        const uint64_t& aInputBlockId) override;
-
-  virtual mozilla::ipc::IPCResult RecvRealMouseButtonEvent(const mozilla::WidgetMouseEvent& aEvent,
-                                                           const ScrollableLayerGuid& aGuid,
-                                                           const uint64_t& aInputBlockId) override;
-  virtual mozilla::ipc::IPCResult
-  RecvNormalPriorityRealMouseButtonEvent(const mozilla::WidgetMouseEvent& aEvent,
-                                         const ScrollableLayerGuid& aGuid,
-                                         const uint64_t& aInputBlockId) override;
-
-  virtual mozilla::ipc::IPCResult RecvRealDragEvent(const WidgetDragEvent& aEvent,
-                                                    const uint32_t& aDragAction,
-                                                    const uint32_t& aDropEffect,
-                                                    const nsCString& aPrincipalURISpec) override;
+  virtual mozilla::ipc::IPCResult RecvRealMouseMoveEvent(mozilla::WidgetMouseEvent&& aEvent,
+                                                         ScrollableLayerGuid&& aGuid,
+                                                         uint64_t&& aInputBlockId) override;
 
   virtual mozilla::ipc::IPCResult
-  RecvRealKeyEvent(const mozilla::WidgetKeyboardEvent& aEvent) override;
+  RecvNormalPriorityRealMouseMoveEvent(mozilla::WidgetMouseEvent&& aEvent,
+                                       ScrollableLayerGuid&& aGuid,
+                                       uint64_t&& aInputBlockId) override;
+
+  virtual mozilla::ipc::IPCResult RecvSynthMouseMoveEvent(mozilla::WidgetMouseEvent&& aEvent,
+                                                          ScrollableLayerGuid&& aGuid,
+                                                          uint64_t&& aInputBlockId) override;
+  virtual mozilla::ipc::IPCResult
+  RecvNormalPrioritySynthMouseMoveEvent(mozilla::WidgetMouseEvent&& aEvent,
+                                        ScrollableLayerGuid&& aGuid,
+                                        uint64_t&& aInputBlockId) override;
+
+  virtual mozilla::ipc::IPCResult RecvRealMouseButtonEvent(mozilla::WidgetMouseEvent&& aEvent,
+                                                           ScrollableLayerGuid&& aGuid,
+                                                           uint64_t&& aInputBlockId) override;
+  virtual mozilla::ipc::IPCResult
+  RecvNormalPriorityRealMouseButtonEvent(mozilla::WidgetMouseEvent&& aEvent,
+                                         ScrollableLayerGuid&& aGuid,
+                                         uint64_t&& aInputBlockId) override;
+
+  virtual mozilla::ipc::IPCResult RecvRealDragEvent(WidgetDragEvent&& aEvent,
+                                                    uint32_t&& aDragAction,
+                                                    uint32_t&& aDropEffect,
+                                                    nsCString&& aPrincipalURISpec) override;
 
   virtual mozilla::ipc::IPCResult
-  RecvNormalPriorityRealKeyEvent(const mozilla::WidgetKeyboardEvent& aEvent) override;
-
-  virtual mozilla::ipc::IPCResult RecvMouseWheelEvent(const mozilla::WidgetWheelEvent& aEvent,
-                                                      const ScrollableLayerGuid& aGuid,
-                                                      const uint64_t& aInputBlockId) override;
+  RecvRealKeyEvent(mozilla::WidgetKeyboardEvent&& aEvent) override;
 
   virtual mozilla::ipc::IPCResult
-  RecvNormalPriorityMouseWheelEvent(const mozilla::WidgetWheelEvent& aEvent,
-                                    const ScrollableLayerGuid& aGuid,
-                                    const uint64_t& aInputBlockId) override;
+  RecvNormalPriorityRealKeyEvent(mozilla::WidgetKeyboardEvent&& aEvent) override;
 
-  virtual mozilla::ipc::IPCResult RecvRealTouchEvent(const WidgetTouchEvent& aEvent,
-                                                     const ScrollableLayerGuid& aGuid,
-                                                     const uint64_t& aInputBlockId,
-                                                     const nsEventStatus& aApzResponse) override;
+  virtual mozilla::ipc::IPCResult RecvMouseWheelEvent(mozilla::WidgetWheelEvent&& aEvent,
+                                                      ScrollableLayerGuid&& aGuid,
+                                                      uint64_t&& aInputBlockId) override;
 
   virtual mozilla::ipc::IPCResult
-  RecvNormalPriorityRealTouchEvent(const WidgetTouchEvent& aEvent,
-                                   const ScrollableLayerGuid& aGuid,
-                                   const uint64_t& aInputBlockId,
-                                   const nsEventStatus& aApzResponse) override;
+  RecvNormalPriorityMouseWheelEvent(mozilla::WidgetWheelEvent&& aEvent,
+                                    ScrollableLayerGuid&& aGuid,
+                                    uint64_t&& aInputBlockId) override;
+
+  virtual mozilla::ipc::IPCResult RecvRealTouchEvent(WidgetTouchEvent&& aEvent,
+                                                     ScrollableLayerGuid&& aGuid,
+                                                     uint64_t&& aInputBlockId,
+                                                     nsEventStatus&& aApzResponse) override;
 
   virtual mozilla::ipc::IPCResult
-  RecvRealTouchMoveEvent(const WidgetTouchEvent& aEvent,
-                         const ScrollableLayerGuid& aGuid,
-                         const uint64_t& aInputBlockId,
-                         const nsEventStatus& aApzResponse) override;
+  RecvNormalPriorityRealTouchEvent(WidgetTouchEvent&& aEvent,
+                                   ScrollableLayerGuid&& aGuid,
+                                   uint64_t&& aInputBlockId,
+                                   nsEventStatus&& aApzResponse) override;
 
   virtual mozilla::ipc::IPCResult
-  RecvNormalPriorityRealTouchMoveEvent(const WidgetTouchEvent& aEvent,
-                                       const ScrollableLayerGuid& aGuid,
-                                       const uint64_t& aInputBlockId,
-                                       const nsEventStatus& aApzResponse) override;
-
-  virtual mozilla::ipc::IPCResult RecvNativeSynthesisResponse(const uint64_t& aObserverId,
-                                                              const nsCString& aResponse) override;
-
-  virtual mozilla::ipc::IPCResult RecvPluginEvent(const WidgetPluginEvent& aEvent) override;
+  RecvRealTouchMoveEvent(WidgetTouchEvent&& aEvent,
+                         ScrollableLayerGuid&& aGuid,
+                         uint64_t&& aInputBlockId,
+                         nsEventStatus&& aApzResponse) override;
 
   virtual mozilla::ipc::IPCResult
-  RecvCompositionEvent(const mozilla::WidgetCompositionEvent& aEvent) override;
+  RecvNormalPriorityRealTouchMoveEvent(WidgetTouchEvent&& aEvent,
+                                       ScrollableLayerGuid&& aGuid,
+                                       uint64_t&& aInputBlockId,
+                                       nsEventStatus&& aApzResponse) override;
+
+  virtual mozilla::ipc::IPCResult RecvNativeSynthesisResponse(uint64_t&& aObserverId,
+                                                              nsCString&& aResponse) override;
+
+  virtual mozilla::ipc::IPCResult RecvPluginEvent(WidgetPluginEvent&& aEvent) override;
+
+  virtual mozilla::ipc::IPCResult
+  RecvCompositionEvent(mozilla::WidgetCompositionEvent&& aEvent) override;
 
   virtual mozilla::ipc::IPCResult
   RecvNormalPriorityCompositionEvent(
-    const mozilla::WidgetCompositionEvent& aEvent) override;
+    mozilla::WidgetCompositionEvent&& aEvent) override;
 
   virtual mozilla::ipc::IPCResult
-  RecvSelectionEvent(const mozilla::WidgetSelectionEvent& aEvent) override;
+  RecvSelectionEvent(mozilla::WidgetSelectionEvent&& aEvent) override;
 
   virtual mozilla::ipc::IPCResult
   RecvNormalPrioritySelectionEvent(
-    const mozilla::WidgetSelectionEvent& aEvent) override;
+    mozilla::WidgetSelectionEvent&& aEvent) override;
 
   virtual mozilla::ipc::IPCResult
-  RecvPasteTransferable(const IPCDataTransfer& aDataTransfer,
-                        const bool& aIsPrivateData,
-                        const IPC::Principal& aRequestingPrincipal,
-                        const uint32_t& aContentPolicyType) override;
+  RecvPasteTransferable(IPCDataTransfer&& aDataTransfer,
+                        bool&& aIsPrivateData,
+                        IPC::Principal&& aRequestingPrincipal,
+                        uint32_t&& aContentPolicyType) override;
 
   virtual mozilla::ipc::IPCResult
-  RecvActivateFrameEvent(const nsString& aType, const bool& aCapture) override;
+  RecvActivateFrameEvent(nsString&& aType, bool&& aCapture) override;
 
-  virtual mozilla::ipc::IPCResult RecvLoadRemoteScript(const nsString& aURL,
-                                                       const bool& aRunInGlobalScope) override;
+  virtual mozilla::ipc::IPCResult RecvLoadRemoteScript(nsString&& aURL,
+                                                       bool&& aRunInGlobalScope) override;
 
-  virtual mozilla::ipc::IPCResult RecvAsyncMessage(const nsString& aMessage,
+  virtual mozilla::ipc::IPCResult RecvAsyncMessage(nsString&& aMessage,
                                                    InfallibleTArray<CpowEntry>&& aCpows,
-                                                   const IPC::Principal& aPrincipal,
-                                                   const ClonedMessageData& aData) override;
+                                                   IPC::Principal&& aPrincipal,
+                                                   ClonedMessageData&& aData) override;
   virtual mozilla::ipc::IPCResult
-  RecvSwappedWithOtherRemoteLoader(const IPCTabContext& aContext) override;
+  RecvSwappedWithOtherRemoteLoader(IPCTabContext&& aContext) override;
 
   virtual PDocAccessibleChild*
   AllocPDocAccessibleChild(PDocAccessibleChild*, const uint64_t&,
@@ -561,27 +561,27 @@ public:
     return GetFrom(docShell);
   }
 
-  virtual mozilla::ipc::IPCResult RecvUIResolutionChanged(const float& aDpi,
-                                                          const int32_t& aRounding,
-                                                          const double& aScale) override;
+  virtual mozilla::ipc::IPCResult RecvUIResolutionChanged(float&& aDpi,
+                                                          int32_t&& aRounding,
+                                                          double&& aScale) override;
 
   virtual mozilla::ipc::IPCResult
   RecvThemeChanged(nsTArray<LookAndFeelInt>&& aLookAndFeelIntCache) override;
 
   virtual mozilla::ipc::IPCResult
-  RecvHandleAccessKey(const WidgetKeyboardEvent& aEvent,
+  RecvHandleAccessKey(WidgetKeyboardEvent&& aEvent,
                       nsTArray<uint32_t>&& aCharCodes) override;
 
-  virtual mozilla::ipc::IPCResult RecvSetUseGlobalHistory(const bool& aUse) override;
+  virtual mozilla::ipc::IPCResult RecvSetUseGlobalHistory(bool&& aUse) override;
 
   virtual mozilla::ipc::IPCResult RecvHandledWindowedPluginKeyEvent(
-    const mozilla::NativeEventData& aKeyEventData,
-    const bool& aIsConsumed) override;
+    mozilla::NativeEventData&& aKeyEventData,
+    bool&& aIsConsumed) override;
 
-  virtual mozilla::ipc::IPCResult RecvPrint(const uint64_t& aOuterWindowID,
-                                            const PrintData& aPrintData) override;
+  virtual mozilla::ipc::IPCResult RecvPrint(uint64_t&& aOuterWindowID,
+                                            PrintData&& aPrintData) override;
 
-  virtual mozilla::ipc::IPCResult RecvUpdateNativeWindowHandle(const uintptr_t& aNewHandle) override;
+  virtual mozilla::ipc::IPCResult RecvUpdateNativeWindowHandle(uintptr_t&& aNewHandle) override;
 
   /**
    * Native widget remoting protocol for use with windowed plugins with e10s.
@@ -628,19 +628,19 @@ public:
   void SetTargetAPZC(uint64_t aInputBlockId,
                     const nsTArray<ScrollableLayerGuid>& aTargets) const;
   MOZ_CAN_RUN_SCRIPT
-  mozilla::ipc::IPCResult RecvHandleTap(const layers::GeckoContentController::TapType& aType,
-                                        const LayoutDevicePoint& aPoint,
-                                        const Modifiers& aModifiers,
-                                        const ScrollableLayerGuid& aGuid,
-                                        const uint64_t& aInputBlockId) override;
+  mozilla::ipc::IPCResult RecvHandleTap(layers::GeckoContentController::TapType&& aType,
+                                        LayoutDevicePoint&& aPoint,
+                                        Modifiers&& aModifiers,
+                                        ScrollableLayerGuid&& aGuid,
+                                        uint64_t&& aInputBlockId) override;
 
   MOZ_CAN_RUN_SCRIPT
   mozilla::ipc::IPCResult
-  RecvNormalPriorityHandleTap(const layers::GeckoContentController::TapType& aType,
-                              const LayoutDevicePoint& aPoint,
-                              const Modifiers& aModifiers,
-                              const ScrollableLayerGuid& aGuid,
-                              const uint64_t& aInputBlockId) override;
+  RecvNormalPriorityHandleTap(layers::GeckoContentController::TapType&& aType,
+                              LayoutDevicePoint&& aPoint,
+                              Modifiers&& aModifiers,
+                              ScrollableLayerGuid&& aGuid,
+                              uint64_t&& aInputBlockId) override;
 
   void SetAllowedTouchBehavior(uint64_t aInputBlockId,
                                const nsTArray<TouchBehaviorFlags>& aFlags) const;
@@ -730,31 +730,31 @@ protected:
 
   virtual mozilla::ipc::IPCResult RecvDestroy() override;
 
-  virtual mozilla::ipc::IPCResult RecvSetDocShellIsActive(const bool& aIsActive) override;
+  virtual mozilla::ipc::IPCResult RecvSetDocShellIsActive(bool&& aIsActive) override;
 
-  virtual mozilla::ipc::IPCResult RecvRenderLayers(const bool& aEnabled, const bool& aForce, const uint64_t& aLayerObserverEpoch) override;
+  virtual mozilla::ipc::IPCResult RecvRenderLayers(bool&& aEnabled, bool&& aForce, uint64_t&& aLayerObserverEpoch) override;
 
-  virtual mozilla::ipc::IPCResult RecvNavigateByKey(const bool& aForward,
-                                                    const bool& aForDocumentNavigation) override;
+  virtual mozilla::ipc::IPCResult RecvNavigateByKey(bool&& aForward,
+                                                    bool&& aForDocumentNavigation) override;
 
   virtual mozilla::ipc::IPCResult RecvRequestNotifyAfterRemotePaint() override;
 
-  virtual mozilla::ipc::IPCResult RecvSuppressDisplayport(const bool& aEnabled) override;
+  virtual mozilla::ipc::IPCResult RecvSuppressDisplayport(bool&& aEnabled) override;
 
-  virtual mozilla::ipc::IPCResult RecvParentActivated(const bool& aActivated) override;
+  virtual mozilla::ipc::IPCResult RecvParentActivated(bool&& aActivated) override;
 
-  virtual mozilla::ipc::IPCResult RecvSetKeyboardIndicators(const UIStateChangeType& aShowAccelerators,
-                                                            const UIStateChangeType& aShowFocusRings) override;
+  virtual mozilla::ipc::IPCResult RecvSetKeyboardIndicators(UIStateChangeType&& aShowAccelerators,
+                                                            UIStateChangeType&& aShowFocusRings) override;
 
   virtual mozilla::ipc::IPCResult RecvStopIMEStateManagement() override;
 
   virtual mozilla::ipc::IPCResult RecvAwaitLargeAlloc() override;
 
-  virtual mozilla::ipc::IPCResult RecvSetWindowName(const nsString& aName) override;
+  virtual mozilla::ipc::IPCResult RecvSetWindowName(nsString&& aName) override;
 
-  virtual mozilla::ipc::IPCResult RecvSetOriginAttributes(const OriginAttributes& aOriginAttributes) override;
+  virtual mozilla::ipc::IPCResult RecvSetOriginAttributes(OriginAttributes&& aOriginAttributes) override;
 
-  virtual mozilla::ipc::IPCResult RecvSetWidgetNativeData(const WindowsHandle& aWidgetNativeData) override;
+  virtual mozilla::ipc::IPCResult RecvSetWidgetNativeData(WindowsHandle&& aWidgetNativeData) override;
 
 private:
   void HandleDoubleTap(const CSSPoint& aPoint, const Modifiers& aModifiers,

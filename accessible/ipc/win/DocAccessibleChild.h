@@ -28,10 +28,10 @@ public:
   virtual void Shutdown() override;
 
   virtual ipc::IPCResult
-    RecvParentCOMProxy(const IDispatchHolder& aParentCOMProxy) override;
+    RecvParentCOMProxy(IDispatchHolder&& aParentCOMProxy) override;
   virtual ipc::IPCResult
-    RecvEmulatedWindow(const WindowsHandle& aEmulatedWindowHandle,
-                       const IDispatchHolder& aEmulatedWindowCOMProxy) override;
+    RecvEmulatedWindow(WindowsHandle&& aEmulatedWindowHandle,
+                       IDispatchHolder&& aEmulatedWindowCOMProxy) override;
   virtual ipc::IPCResult
     RecvRestoreFocus() override;
 

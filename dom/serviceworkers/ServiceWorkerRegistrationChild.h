@@ -27,7 +27,7 @@ class ServiceWorkerRegistrationChild final : public PServiceWorkerRegistrationCh
   ActorDestroy(ActorDestroyReason aReason) override;
 
   mozilla::ipc::IPCResult
-  RecvUpdateState(const IPCServiceWorkerRegistrationDescriptor& aDescriptor) override;
+  RecvUpdateState(IPCServiceWorkerRegistrationDescriptor&& aDescriptor) override;
 
   // WorkerHolderToken::Listener
   void

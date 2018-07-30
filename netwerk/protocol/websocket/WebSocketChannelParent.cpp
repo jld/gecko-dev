@@ -53,18 +53,18 @@ WebSocketChannelParent::RecvDeleteSelf()
 }
 
 mozilla::ipc::IPCResult
-WebSocketChannelParent::RecvAsyncOpen(const OptionalURIParams& aURI,
-                                      const nsCString& aOrigin,
-                                      const uint64_t& aInnerWindowID,
-                                      const nsCString& aProtocol,
-                                      const bool& aSecure,
-                                      const uint32_t& aPingInterval,
-                                      const bool& aClientSetPingInterval,
-                                      const uint32_t& aPingTimeout,
-                                      const bool& aClientSetPingTimeout,
-                                      const OptionalLoadInfoArgs& aLoadInfoArgs,
-                                      const OptionalTransportProvider& aTransportProvider,
-                                      const nsCString& aNegotiatedExtensions)
+WebSocketChannelParent::RecvAsyncOpen(OptionalURIParams&& aURI,
+                                      nsCString&& aOrigin,
+                                      uint64_t&& aInnerWindowID,
+                                      nsCString&& aProtocol,
+                                      bool&& aSecure,
+                                      uint32_t&& aPingInterval,
+                                      bool&& aClientSetPingInterval,
+                                      uint32_t&& aPingTimeout,
+                                      bool&& aClientSetPingTimeout,
+                                      OptionalLoadInfoArgs&& aLoadInfoArgs,
+                                      OptionalTransportProvider&& aTransportProvider,
+                                      nsCString&& aNegotiatedExtensions)
 {
   LOG(("WebSocketChannelParent::RecvAsyncOpen() %p\n", this));
 
@@ -149,7 +149,7 @@ fail:
 }
 
 mozilla::ipc::IPCResult
-WebSocketChannelParent::RecvClose(const uint16_t& code, const nsCString& reason)
+WebSocketChannelParent::RecvClose(uint16_t&& code, nsCString&& reason)
 {
   LOG(("WebSocketChannelParent::RecvClose() %p\n", this));
   if (mChannel) {
@@ -161,7 +161,7 @@ WebSocketChannelParent::RecvClose(const uint16_t& code, const nsCString& reason)
 }
 
 mozilla::ipc::IPCResult
-WebSocketChannelParent::RecvSendMsg(const nsCString& aMsg)
+WebSocketChannelParent::RecvSendMsg(nsCString&& aMsg)
 {
   LOG(("WebSocketChannelParent::RecvSendMsg() %p\n", this));
   if (mChannel) {
@@ -172,7 +172,7 @@ WebSocketChannelParent::RecvSendMsg(const nsCString& aMsg)
 }
 
 mozilla::ipc::IPCResult
-WebSocketChannelParent::RecvSendBinaryMsg(const nsCString& aMsg)
+WebSocketChannelParent::RecvSendBinaryMsg(nsCString&& aMsg)
 {
   LOG(("WebSocketChannelParent::RecvSendBinaryMsg() %p\n", this));
   if (mChannel) {
@@ -183,8 +183,8 @@ WebSocketChannelParent::RecvSendBinaryMsg(const nsCString& aMsg)
 }
 
 mozilla::ipc::IPCResult
-WebSocketChannelParent::RecvSendBinaryStream(const IPCStream& aStream,
-                                             const uint32_t& aLength)
+WebSocketChannelParent::RecvSendBinaryStream(IPCStream&& aStream,
+                                             uint32_t&& aLength)
 {
   LOG(("WebSocketChannelParent::RecvSendBinaryStream() %p\n", this));
   if (mChannel) {

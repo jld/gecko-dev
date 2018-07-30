@@ -256,7 +256,7 @@ GMPChild::Init(const nsAString& aPluginPath,
 }
 
 mozilla::ipc::IPCResult
-GMPChild::RecvProvideStorageId(const nsCString& aStorageId)
+GMPChild::RecvProvideStorageId(nsCString&& aStorageId)
 {
   LOGD("%s", __FUNCTION__);
   mStorageId = aStorageId;
@@ -276,7 +276,7 @@ GMPChild::GetAPI(const char* aAPIName,
 }
 
 mozilla::ipc::IPCResult
-GMPChild::RecvPreloadLibs(const nsCString& aLibs)
+GMPChild::RecvPreloadLibs(nsCString&& aLibs)
 {
 #ifdef XP_WIN
   // Pre-load DLLs that need to be used by the EME plugin but that can't be
@@ -554,7 +554,7 @@ ToCString(const nsTArray<Pair<nsCString, nsCString>>& aPairs)
 }
 
 mozilla::ipc::IPCResult
-GMPChild::AnswerStartPlugin(const nsString& aAdapter)
+GMPChild::AnswerStartPlugin(nsString&& aAdapter)
 {
   LOGD("%s", __FUNCTION__);
 

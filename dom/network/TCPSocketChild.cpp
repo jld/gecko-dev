@@ -157,17 +157,17 @@ TCPSocketChild::~TCPSocketChild()
 }
 
 mozilla::ipc::IPCResult
-TCPSocketChild::RecvUpdateBufferedAmount(const uint32_t& aBuffered,
-                                         const uint32_t& aTrackingNumber)
+TCPSocketChild::RecvUpdateBufferedAmount(uint32_t&& aBuffered,
+                                         uint32_t&& aTrackingNumber)
 {
   mSocket->UpdateBufferedAmount(aBuffered, aTrackingNumber);
   return IPC_OK();
 }
 
 mozilla::ipc::IPCResult
-TCPSocketChild::RecvCallback(const nsString& aType,
-                             const CallbackData& aData,
-                             const uint32_t& aReadyState)
+TCPSocketChild::RecvCallback(nsString&& aType,
+                             CallbackData&& aData,
+                             uint32_t&& aReadyState)
 {
   mSocket->UpdateReadyState(aReadyState);
 

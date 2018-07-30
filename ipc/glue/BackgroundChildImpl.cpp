@@ -71,7 +71,7 @@ protected:
 
 public:
   mozilla::ipc::IPCResult
-  Recv__delete__(const nsCString& aTestArg) override;
+  Recv__delete__(nsCString&& aTestArg) override;
 };
 
 } // namespace
@@ -757,7 +757,7 @@ BackgroundChildImpl::GetMessageSchedulerGroups(const Message& aMsg, SchedulerGro
 } // namespace mozilla
 
 mozilla::ipc::IPCResult
-TestChild::Recv__delete__(const nsCString& aTestArg)
+TestChild::Recv__delete__(nsCString&& aTestArg)
 {
   MOZ_RELEASE_ASSERT(aTestArg == mTestArg,
                      "BackgroundTest message was corrupted!");

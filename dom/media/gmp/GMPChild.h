@@ -46,10 +46,10 @@ private:
 
   bool GetUTF8LibPath(nsACString& aOutLibPath);
 
-  mozilla::ipc::IPCResult RecvProvideStorageId(const nsCString& aStorageId) override;
+  mozilla::ipc::IPCResult RecvProvideStorageId(nsCString&& aStorageId) override;
 
-  mozilla::ipc::IPCResult AnswerStartPlugin(const nsString& aAdapter) override;
-  mozilla::ipc::IPCResult RecvPreloadLibs(const nsCString& aLibs) override;
+  mozilla::ipc::IPCResult AnswerStartPlugin(nsString&& aAdapter) override;
+  mozilla::ipc::IPCResult RecvPreloadLibs(nsCString&& aLibs) override;
 
   PGMPTimerChild* AllocPGMPTimerChild() override;
   bool DeallocPGMPTimerChild(PGMPTimerChild* aActor) override;

@@ -189,7 +189,7 @@ GPUParent::DeallocPAPZInputBridgeParent(PAPZInputBridgeParent* aActor)
 mozilla::ipc::IPCResult
 GPUParent::RecvInit(nsTArray<GfxPrefSetting>&& prefs,
                     nsTArray<GfxVarUpdate>&& vars,
-                    const DevicePrefs& devicePrefs,
+                    DevicePrefs&& devicePrefs,
                     nsTArray<LayerTreeIdMapping>&& aMappings)
 {
   const nsTArray<gfxPrefs::Pref*>& globalPrefs = gfxPrefs::all();
@@ -307,7 +307,7 @@ GPUParent::RecvInitVRManager(Endpoint<PVRManagerParent>&& aEndpoint)
 }
 
 mozilla::ipc::IPCResult
-GPUParent::RecvInitUiCompositorController(const LayersId& aRootLayerTreeId, Endpoint<PUiCompositorControllerParent>&& aEndpoint)
+GPUParent::RecvInitUiCompositorController(LayersId&& aRootLayerTreeId, Endpoint<PUiCompositorControllerParent>&& aEndpoint)
 {
   UiCompositorControllerParent::Start(aRootLayerTreeId, std::move(aEndpoint));
   return IPC_OK();
@@ -323,7 +323,7 @@ GPUParent::RecvInitProfiler(Endpoint<PProfilerChild>&& aEndpoint)
 }
 
 mozilla::ipc::IPCResult
-GPUParent::RecvUpdatePref(const GfxPrefSetting& setting)
+GPUParent::RecvUpdatePref(GfxPrefSetting&& setting)
 {
   gfxPrefs::Pref* pref = gfxPrefs::all()[setting.index()];
   pref->SetCachedValue(setting.value());
@@ -331,7 +331,7 @@ GPUParent::RecvUpdatePref(const GfxPrefSetting& setting)
 }
 
 mozilla::ipc::IPCResult
-GPUParent::RecvUpdateVar(const GfxVarUpdate& aUpdate)
+GPUParent::RecvUpdateVar(GfxVarUpdate&& aUpdate)
 {
   gfxVars::ApplyUpdate(aUpdate);
   return IPC_OK();
@@ -427,14 +427,14 @@ GPUParent::RecvNewContentVideoDecoderManager(Endpoint<PVideoDecoderManagerParent
 }
 
 mozilla::ipc::IPCResult
-GPUParent::RecvAddLayerTreeIdMapping(const LayerTreeIdMapping& aMapping)
+GPUParent::RecvAddLayerTreeIdMapping(LayerTreeIdMapping&& aMapping)
 {
   LayerTreeOwnerTracker::Get()->Map(aMapping.layersId(), aMapping.ownerId());
   return IPC_OK();
 }
 
 mozilla::ipc::IPCResult
-GPUParent::RecvRemoveLayerTreeIdMapping(const LayerTreeIdMapping& aMapping)
+GPUParent::RecvRemoveLayerTreeIdMapping(LayerTreeIdMapping&& aMapping)
 {
   LayerTreeOwnerTracker::Get()->Unmap(aMapping.layersId(), aMapping.ownerId());
   CompositorBridgeParent::DeallocateLayerTreeId(aMapping.layersId());
@@ -442,7 +442,7 @@ GPUParent::RecvRemoveLayerTreeIdMapping(const LayerTreeIdMapping& aMapping)
 }
 
 mozilla::ipc::IPCResult
-GPUParent::RecvNotifyGpuObservers(const nsCString& aTopic)
+GPUParent::RecvNotifyGpuObservers(nsCString&& aTopic)
 {
   nsCOMPtr<nsIObserverService> obsSvc = mozilla::services::GetObserverService();
   MOZ_ASSERT(obsSvc);
@@ -453,10 +453,10 @@ GPUParent::RecvNotifyGpuObservers(const nsCString& aTopic)
 }
 
 mozilla::ipc::IPCResult
-GPUParent::RecvRequestMemoryReport(const uint32_t& aGeneration,
-                                   const bool& aAnonymize,
-                                   const bool& aMinimizeMemoryUsage,
-                                   const MaybeFileDesc& aDMDFile)
+GPUParent::RecvRequestMemoryReport(uint32_t&& aGeneration,
+                                   bool&& aAnonymize,
+                                   bool&& aMinimizeMemoryUsage,
+                                   MaybeFileDesc&& aDMDFile)
 {
   nsPrintfCString processName("GPU (pid %u)", (unsigned)getpid());
 

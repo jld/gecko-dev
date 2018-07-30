@@ -152,7 +152,7 @@ PluginWidgetParent::ParentDestroy()
 }
 
 mozilla::ipc::IPCResult
-PluginWidgetParent::RecvSetFocus(const bool& aRaise)
+PluginWidgetParent::RecvSetFocus(bool&& aRaise)
 {
   ENSURE_CHANNEL;
   PWLOG("PluginWidgetParent::RecvSetFocus(%d)\n", aRaise);
@@ -171,7 +171,7 @@ PluginWidgetParent::RecvGetNativePluginPort(uintptr_t* value)
 }
 
 mozilla::ipc::IPCResult
-PluginWidgetParent::RecvSetNativeChildWindow(const uintptr_t& aChildWindow)
+PluginWidgetParent::RecvSetNativeChildWindow(uintptr_t&& aChildWindow)
 {
   ENSURE_CHANNEL;
   PWLOG("PluginWidgetParent::RecvSetNativeChildWindow(%p)\n",

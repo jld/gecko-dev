@@ -43,7 +43,7 @@ ClientSourceChild::DeallocPClientSourceOpChild(PClientSourceOpChild* aActor)
 
 IPCResult
 ClientSourceChild::RecvPClientSourceOpConstructor(PClientSourceOpChild* aActor,
-                                                  const ClientOpConstructorArgs& aArgs)
+                                                  ClientOpConstructorArgs&& aArgs)
 {
   auto actor = static_cast<ClientSourceOpChild*>(aActor);
   actor->Init(aArgs);

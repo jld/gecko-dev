@@ -40,32 +40,32 @@ public:
 protected:
   virtual void ActorDestroy(ActorDestroyReason aWhy) override;
 
-  virtual mozilla::ipc::IPCResult RecvGetCookieString(const URIParams& aHost,
-                                                      const bool& aIsForeign,
-                                                      const bool& aIsTrackingResource,
-                                                      const bool& aFirstPartyStorageAccessGranted,
-                                                      const bool& aIsSafeTopLevelNav,
-                                                      const bool& aIsSameSiteForeign,
-                                                      const OriginAttributes& aAttrs,
+  virtual mozilla::ipc::IPCResult RecvGetCookieString(URIParams&& aHost,
+                                                      bool&& aIsForeign,
+                                                      bool&& aIsTrackingResource,
+                                                      bool&& aFirstPartyStorageAccessGranted,
+                                                      bool&& aIsSafeTopLevelNav,
+                                                      bool&& aIsSameSiteForeign,
+                                                      OriginAttributes&& aAttrs,
                                                       nsCString* aResult) override;
 
-  virtual mozilla::ipc::IPCResult RecvSetCookieString(const URIParams& aHost,
-                                                      const URIParams& aChannelURI,
-                                                      const bool& aIsForeign,
-                                                      const bool& aIsTrackingResource,
-                                                      const bool& aFirstPartyStorageAccessGranted,
-                                                      const nsCString& aCookieString,
-                                                      const nsCString& aServerTime,
-                                                      const OriginAttributes& aAttrs,
-                                                      const bool& aFromHttp) override;
+  virtual mozilla::ipc::IPCResult RecvSetCookieString(URIParams&& aHost,
+                                                      URIParams&& aChannelURI,
+                                                      bool&& aIsForeign,
+                                                      bool&& aIsTrackingResource,
+                                                      bool&& aFirstPartyStorageAccessGranted,
+                                                      nsCString&& aCookieString,
+                                                      nsCString&& aServerTime,
+                                                      OriginAttributes&& aAttrs,
+                                                      bool&& aFromHttp) override;
   virtual
-  mozilla::ipc::IPCResult RecvPrepareCookieList(const URIParams &aHost,
-                                                const bool &aIsForeign,
-                                                const bool &aIsTackingResource,
-                                                const bool& aFirstPartyStorageAccessGranted,
-                                                const bool &aIsSafeTopLevelNav,
-                                                const bool &aIsSameSiteForeign,
-                                                const OriginAttributes &aAttrs) override;
+  mozilla::ipc::IPCResult RecvPrepareCookieList(URIParams&& aHost,
+                                                bool&& aIsForeign,
+                                                bool&& aIsTackingResource,
+                                                bool&& aFirstPartyStorageAccessGranted,
+                                                bool&& aIsSafeTopLevelNav,
+                                                bool&& aIsSameSiteForeign,
+                                                OriginAttributes&& aAttrs) override;
 
   void
   SerialializeCookieList(const nsTArray<nsCookie*> &aFoundCookieList,

@@ -639,7 +639,7 @@ private:
   }
 
   mozilla::ipc::IPCResult
-  RecvSelectCacheFileToRead(const OpenMetadataForReadResponse& aResponse)
+  RecvSelectCacheFileToRead(OpenMetadataForReadResponse&& aResponse)
                             override
   {
     AssertIsOnOwningThread();
@@ -1387,7 +1387,7 @@ private:
 
   // IPDL methods.
   mozilla::ipc::IPCResult
-  RecvOnOpenMetadataForRead(const Metadata& aMetadata) override
+  RecvOnOpenMetadataForRead(Metadata&& aMetadata) override
   {
     MOZ_ASSERT(NS_IsMainThread());
     MOZ_ASSERT(mState == eOpening);
@@ -1407,8 +1407,8 @@ private:
   }
 
   mozilla::ipc::IPCResult
-  RecvOnOpenCacheFile(const int64_t& aFileSize,
-                      const FileDescriptor& aFileDesc) override
+  RecvOnOpenCacheFile(int64_t&& aFileSize,
+                      FileDescriptor&& aFileDesc) override
   {
     MOZ_ASSERT(NS_IsMainThread());
     MOZ_ASSERT(mState == eOpening);
@@ -1427,7 +1427,7 @@ private:
   }
 
   mozilla::ipc::IPCResult
-  Recv__delete__(const JS::AsmJSCacheResult& aResult) override
+  Recv__delete__(JS::AsmJSCacheResult&& aResult) override
   {
     MOZ_ASSERT(NS_IsMainThread());
     MOZ_ASSERT(mState == eOpening || mState == eFinishing);

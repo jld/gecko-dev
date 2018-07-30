@@ -25,7 +25,7 @@ public:
   NS_INLINE_DECL_REFCOUNTING(MIDIManagerChild)
 
   MIDIManagerChild();
-  mozilla::ipc::IPCResult RecvMIDIPortListUpdate(const MIDIPortList& aPortList);
+  mozilla::ipc::IPCResult RecvMIDIPortListUpdate(MIDIPortList&& aPortList);
   void SetActorAlive();
   void Shutdown();
 private:

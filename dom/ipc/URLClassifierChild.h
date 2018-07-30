@@ -25,8 +25,8 @@ public:
     mCallback = aCallback;
   }
 
-  mozilla::ipc::IPCResult Recv__delete__(const MaybeInfo& aInfo,
-                                         const nsresult& aResult) override
+  mozilla::ipc::IPCResult Recv__delete__(MaybeInfo&& aInfo,
+                                         nsresult&& aResult) override
   {
     MOZ_ASSERT(mCallback);
     if (aInfo.type() == MaybeInfo::TClassifierInfo) {

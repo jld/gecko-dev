@@ -54,7 +54,7 @@ private:
 
   // PCacheStreamControlChild methods
   virtual void ActorDestroy(ActorDestroyReason aReason) override;
-  virtual mozilla::ipc::IPCResult RecvClose(const nsID& aId) override;
+  virtual mozilla::ipc::IPCResult RecvClose(nsID&& aId) override;
   virtual mozilla::ipc::IPCResult RecvCloseAll() override;
 
   bool mDestroyStarted;

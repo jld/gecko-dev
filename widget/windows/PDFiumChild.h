@@ -26,9 +26,9 @@ public:
 
 private:
   // PPDFiumChild functions.
-  mozilla::ipc::IPCResult RecvConvertToEMF(const FileDescriptor& aFD,
-                                           const int& aPageWidth,
-                                           const int& aPageHeight) override;
+  mozilla::ipc::IPCResult RecvConvertToEMF(FileDescriptor&& aFD,
+                                           int&& aPageWidth,
+                                           int&& aPageHeight) override;
   void ActorDestroy(ActorDestroyReason aWhy) override;
   void OnChannelConnected(int32_t pid) override;
 };

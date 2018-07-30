@@ -435,8 +435,8 @@ OfflineCacheUpdateChild::Schedule()
 }
 
 mozilla::ipc::IPCResult
-OfflineCacheUpdateChild::RecvAssociateDocuments(const nsCString &cacheGroupId,
-                                                  const nsCString &cacheClientId)
+OfflineCacheUpdateChild::RecvAssociateDocuments(nsCString&& cacheGroupId,
+                                                  nsCString&& cacheClientId)
 {
     LOG(("OfflineCacheUpdateChild::RecvAssociateDocuments [%p, cache=%s]", this, cacheClientId.get()));
 
@@ -463,8 +463,8 @@ OfflineCacheUpdateChild::RecvAssociateDocuments(const nsCString &cacheGroupId,
 }
 
 mozilla::ipc::IPCResult
-OfflineCacheUpdateChild::RecvNotifyStateEvent(const uint32_t &event,
-                                              const uint64_t &byteProgress)
+OfflineCacheUpdateChild::RecvNotifyStateEvent(uint32_t&& event,
+                                              uint64_t&& byteProgress)
 {
     LOG(("OfflineCacheUpdateChild::RecvNotifyStateEvent [%p]", this));
 
@@ -494,8 +494,8 @@ OfflineCacheUpdateChild::RecvNotifyStateEvent(const uint32_t &event,
 }
 
 mozilla::ipc::IPCResult
-OfflineCacheUpdateChild::RecvFinish(const bool &succeeded,
-                                    const bool &isUpgrade)
+OfflineCacheUpdateChild::RecvFinish(bool&& succeeded,
+                                    bool&& isUpgrade)
 {
     LOG(("OfflineCacheUpdateChild::RecvFinish [%p]", this));
 

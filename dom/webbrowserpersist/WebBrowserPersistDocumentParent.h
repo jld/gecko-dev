@@ -46,10 +46,10 @@ public:
 
     // IPDL methods:
     virtual mozilla::ipc::IPCResult
-    RecvAttributes(const Attrs& aAttrs,
-                   const OptionalIPCStream& aPostStream) override;
+    RecvAttributes(Attrs&& aAttrs,
+                   OptionalIPCStream&& aPostStream) override;
     virtual mozilla::ipc::IPCResult
-    RecvInitFailure(const nsresult& aFailure) override;
+    RecvInitFailure(nsresult&& aFailure) override;
 
     virtual PWebBrowserPersistResourcesParent*
     AllocPWebBrowserPersistResourcesParent() override;

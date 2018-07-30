@@ -15,7 +15,7 @@ MIDIManagerChild::MIDIManagerChild()
 }
 
 mozilla::ipc::IPCResult
-MIDIManagerChild::RecvMIDIPortListUpdate(const MIDIPortList& aPortList)
+MIDIManagerChild::RecvMIDIPortListUpdate(MIDIPortList&& aPortList)
 {
   MOZ_ASSERT(NS_IsMainThread());
   if (mShutdown) {

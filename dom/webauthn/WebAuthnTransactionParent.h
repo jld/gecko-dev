@@ -25,15 +25,15 @@ public:
   WebAuthnTransactionParent() = default;
 
   virtual mozilla::ipc::IPCResult
-  RecvRequestRegister(const uint64_t& aTransactionId,
-                      const WebAuthnMakeCredentialInfo& aTransactionInfo) override;
+  RecvRequestRegister(uint64_t&& aTransactionId,
+                      WebAuthnMakeCredentialInfo&& aTransactionInfo) override;
 
   virtual mozilla::ipc::IPCResult
-  RecvRequestSign(const uint64_t& aTransactionId,
-                  const WebAuthnGetAssertionInfo& aTransactionInfo) override;
+  RecvRequestSign(uint64_t&& aTransactionId,
+                  WebAuthnGetAssertionInfo&& aTransactionInfo) override;
 
   virtual mozilla::ipc::IPCResult
-  RecvRequestCancel(const uint64_t& aTransactionId) override;
+  RecvRequestCancel(uint64_t&& aTransactionId) override;
 
   virtual mozilla::ipc::IPCResult
   RecvDestroyMe() override;

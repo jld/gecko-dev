@@ -757,7 +757,7 @@ PluginInstanceChild::AnswerNPP_GetValue_NPPVpluginNativeAccessibleAtkPlugId(
 }
 
 mozilla::ipc::IPCResult
-PluginInstanceChild::AnswerNPP_SetValue_NPNVprivateModeBool(const bool& value,
+PluginInstanceChild::AnswerNPP_SetValue_NPNVprivateModeBool(bool&& value,
                                                             NPError* result)
 {
     if (!mPluginIface->setvalue) {
@@ -771,7 +771,7 @@ PluginInstanceChild::AnswerNPP_SetValue_NPNVprivateModeBool(const bool& value,
 }
 
 mozilla::ipc::IPCResult
-PluginInstanceChild::AnswerNPP_SetValue_NPNVCSSZoomFactor(const double& value,
+PluginInstanceChild::AnswerNPP_SetValue_NPNVCSSZoomFactor(double&& value,
                                                           NPError* result)
 {
     if (!mPluginIface->setvalue) {
@@ -786,7 +786,7 @@ PluginInstanceChild::AnswerNPP_SetValue_NPNVCSSZoomFactor(const double& value,
 }
 
 mozilla::ipc::IPCResult
-PluginInstanceChild::AnswerNPP_SetValue_NPNVmuteAudioBool(const bool& value,
+PluginInstanceChild::AnswerNPP_SetValue_NPNVmuteAudioBool(bool&& value,
                                                           NPError* result)
 {
     if (!mPluginIface->setvalue) {
@@ -820,7 +820,7 @@ PluginInstanceChild::AudioDeviceStateChanged(NPAudioDeviceStateChanged& aDeviceS
 #endif
 
 mozilla::ipc::IPCResult
-PluginInstanceChild::AnswerNPP_HandleEvent(const NPRemoteEvent& event,
+PluginInstanceChild::AnswerNPP_HandleEvent(NPRemoteEvent&& event,
                                            int16_t* handled)
 {
     PLUGIN_LOG_DEBUG_FUNCTION;
@@ -904,7 +904,7 @@ PluginInstanceChild::AnswerNPP_HandleEvent(const NPRemoteEvent& event,
 #ifdef XP_MACOSX
 
 mozilla::ipc::IPCResult
-PluginInstanceChild::AnswerNPP_HandleEvent_Shmem(const NPRemoteEvent& event,
+PluginInstanceChild::AnswerNPP_HandleEvent_Shmem(NPRemoteEvent&& event,
                                                  Shmem&& mem,
                                                  int16_t* handled,
                                                  Shmem* rtnmem)
@@ -969,7 +969,7 @@ PluginInstanceChild::AnswerNPP_HandleEvent_Shmem(const NPRemoteEvent& event,
 
 #else
 mozilla::ipc::IPCResult
-PluginInstanceChild::AnswerNPP_HandleEvent_Shmem(const NPRemoteEvent& event,
+PluginInstanceChild::AnswerNPP_HandleEvent_Shmem(NPRemoteEvent&& event,
                                                  Shmem&& mem,
                                                  int16_t* handled,
                                                  Shmem* rtnmem)
@@ -1010,8 +1010,8 @@ PluginInstanceChild::CGDraw(CGContextRef ref, nsIntRect aUpdateRect) {
 }
 
 mozilla::ipc::IPCResult
-PluginInstanceChild::AnswerNPP_HandleEvent_IOSurface(const NPRemoteEvent& event,
-                                                     const uint32_t &surfaceid,
+PluginInstanceChild::AnswerNPP_HandleEvent_IOSurface(NPRemoteEvent&& event,
+                                                     uint32_t&& surfaceid,
                                                      int16_t* handled)
 {
     PLUGIN_LOG_DEBUG_FUNCTION;
@@ -1074,8 +1074,8 @@ PluginInstanceChild::AnswerNPP_HandleEvent_IOSurface(const NPRemoteEvent& event,
 
 #else
 mozilla::ipc::IPCResult
-PluginInstanceChild::AnswerNPP_HandleEvent_IOSurface(const NPRemoteEvent& event,
-                                                     const uint32_t &surfaceid,
+PluginInstanceChild::AnswerNPP_HandleEvent_IOSurface(NPRemoteEvent&& event,
+                                                     uint32_t&& surfaceid,
                                                      int16_t* handled)
 {
     MOZ_CRASH("NPP_HandleEvent_IOSurface is a OSX-only message");
@@ -1083,7 +1083,7 @@ PluginInstanceChild::AnswerNPP_HandleEvent_IOSurface(const NPRemoteEvent& event,
 #endif
 
 mozilla::ipc::IPCResult
-PluginInstanceChild::RecvWindowPosChanged(const NPRemoteEvent& event)
+PluginInstanceChild::RecvWindowPosChanged(NPRemoteEvent&& event)
 {
     NS_ASSERTION(!mLayersRendering && !mPendingPluginCall,
                  "Shouldn't be receiving WindowPosChanged with layer rendering");
@@ -1097,7 +1097,7 @@ PluginInstanceChild::RecvWindowPosChanged(const NPRemoteEvent& event)
 }
 
 mozilla::ipc::IPCResult
-PluginInstanceChild::RecvContentsScaleFactorChanged(const double& aContentsScaleFactor)
+PluginInstanceChild::RecvContentsScaleFactorChanged(double&& aContentsScaleFactor)
 {
 #if defined(XP_MACOSX) || defined(XP_WIN)
     mContentsScaleFactor = aContentsScaleFactor;
@@ -1136,7 +1136,7 @@ PluginInstanceChild::AnswerCreateChildPluginWindow(NativeWindowHandle* aChildPlu
 }
 
 mozilla::ipc::IPCResult
-PluginInstanceChild::RecvCreateChildPopupSurrogate(const NativeWindowHandle& aNetscapeWindow)
+PluginInstanceChild::RecvCreateChildPopupSurrogate(NativeWindowHandle&& aNetscapeWindow)
 {
 #if defined(XP_WIN)
     mCachedWinlessPluginHWND = aNetscapeWindow;
@@ -1149,7 +1149,7 @@ PluginInstanceChild::RecvCreateChildPopupSurrogate(const NativeWindowHandle& aNe
 }
 
 mozilla::ipc::IPCResult
-PluginInstanceChild::AnswerNPP_SetWindow(const NPRemoteWindow& aWindow)
+PluginInstanceChild::AnswerNPP_SetWindow(NPRemoteWindow&& aWindow)
 {
     PLUGIN_LOG_DEBUG(("%s (aWindow=<window: 0x%" PRIx64 ", x: %d, y: %d, width: %d, height: %d>)",
                       FULLFUNCTION,
@@ -1298,8 +1298,8 @@ PluginInstanceChild::Initialize()
 
 mozilla::ipc::IPCResult
 PluginInstanceChild::RecvHandledWindowedPluginKeyEvent(
-                       const NativeEventData& aKeyEventData,
-                       const bool& aIsConsumed)
+                       NativeEventData&& aKeyEventData,
+                       bool&& aIsConsumed)
 {
 #if defined(OS_WIN)
     const WinNativeKeyEventData* eventData =
@@ -2503,11 +2503,11 @@ PluginInstanceChild::RecvPPluginScriptableObjectConstructor(
 mozilla::ipc::IPCResult
 PluginInstanceChild::RecvPBrowserStreamConstructor(
     PBrowserStreamChild* aActor,
-    const nsCString& url,
-    const uint32_t& length,
-    const uint32_t& lastmodified,
+    nsCString&& url,
+    uint32_t&& length,
+    uint32_t&& lastmodified,
     PStreamNotifyChild* notifyData,
-    const nsCString& headers)
+    nsCString&& headers)
 {
     return IPC_OK();
 }
@@ -2526,8 +2526,8 @@ PluginInstanceChild::DoNPP_NewStream(BrowserStreamChild* actor,
 
 mozilla::ipc::IPCResult
 PluginInstanceChild::AnswerNPP_NewStream(PBrowserStreamChild* actor,
-                                         const nsCString& mimeType,
-                                         const bool& seekable,
+                                         nsCString&& mimeType,
+                                         bool&& seekable,
                                          NPError* rv,
                                          uint16_t* stype)
 {
@@ -2592,7 +2592,7 @@ StreamNotifyChild::SetAssociatedStream(BrowserStreamChild* bs)
 }
 
 mozilla::ipc::IPCResult
-StreamNotifyChild::Recv__delete__(const NPReason& reason)
+StreamNotifyChild::Recv__delete__(NPReason&& reason)
 {
     AssertPluginThread();
 
@@ -2605,7 +2605,7 @@ StreamNotifyChild::Recv__delete__(const NPReason& reason)
 }
 
 mozilla::ipc::IPCResult
-StreamNotifyChild::RecvRedirectNotify(const nsCString& url, const int32_t& status)
+StreamNotifyChild::RecvRedirectNotify(nsCString&& url, int32_t&& status)
 {
     // NPP_URLRedirectNotify requires a non-null closure. Since core logic
     // assumes that all out-of-process notify streams have non-null closure
@@ -2947,8 +2947,8 @@ PluginInstanceChild::DoAsyncRedraw()
 }
 
 mozilla::ipc::IPCResult
-PluginInstanceChild::RecvAsyncSetWindow(const gfxSurfaceType& aSurfaceType,
-                                        const NPRemoteWindow& aWindow)
+PluginInstanceChild::RecvAsyncSetWindow(gfxSurfaceType&& aSurfaceType,
+                                        NPRemoteWindow&& aWindow)
 {
     AssertPluginThread();
 
@@ -3952,8 +3952,8 @@ PluginInstanceChild::InvalidateRect(NPRect* aInvalidRect)
 }
 
 mozilla::ipc::IPCResult
-PluginInstanceChild::RecvUpdateBackground(const SurfaceDescriptor& aBackground,
-                                          const nsIntRect& aRect)
+PluginInstanceChild::RecvUpdateBackground(SurfaceDescriptor&& aBackground,
+                                          nsIntRect&& aRect)
 {
     MOZ_ASSERT(mIsTransparent, "Only transparent plugins use backgrounds");
 

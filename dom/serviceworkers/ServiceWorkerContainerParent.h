@@ -27,22 +27,22 @@ class ServiceWorkerContainerParent final : public PServiceWorkerContainerParent
   RecvTeardown() override;
 
   mozilla::ipc::IPCResult
-  RecvRegister(const IPCClientInfo& aClientInfo, const nsCString& aScopeURL,
-               const nsCString& aScriptURL,
-               const ServiceWorkerUpdateViaCache& aUpdateViaCache,
+  RecvRegister(IPCClientInfo&& aClientInfo, nsCString&& aScopeURL,
+               nsCString&& aScriptURL,
+               ServiceWorkerUpdateViaCache&& aUpdateViaCache,
                RegisterResolver&& aResolver) override;
 
   mozilla::ipc::IPCResult
-  RecvGetRegistration(const IPCClientInfo& aClientInfo,
-                      const nsCString& aURL,
+  RecvGetRegistration(IPCClientInfo&& aClientInfo,
+                      nsCString&& aURL,
                       GetRegistrationResolver&& aResolver) override;
 
   mozilla::ipc::IPCResult
-  RecvGetRegistrations(const IPCClientInfo& aClientInfo,
+  RecvGetRegistrations(IPCClientInfo&& aClientInfo,
                        GetRegistrationsResolver&& aResolver) override;
 
   mozilla::ipc::IPCResult
-  RecvGetReady(const IPCClientInfo& aClientInfo,
+  RecvGetReady(IPCClientInfo&& aClientInfo,
                GetReadyResolver&& aResolver) override;
 
 public:

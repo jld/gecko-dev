@@ -39,11 +39,11 @@ public:
 
   // PVideoDecoderParent
   mozilla::ipc::IPCResult RecvInit() override;
-  mozilla::ipc::IPCResult RecvInput(const MediaRawDataIPDL& aData) override;
+  mozilla::ipc::IPCResult RecvInput(MediaRawDataIPDL&& aData) override;
   mozilla::ipc::IPCResult RecvFlush() override;
   mozilla::ipc::IPCResult RecvDrain() override;
   mozilla::ipc::IPCResult RecvShutdown() override;
-  mozilla::ipc::IPCResult RecvSetSeekThreshold(const int64_t& aTime) override;
+  mozilla::ipc::IPCResult RecvSetSeekThreshold(int64_t&& aTime) override;
 
   void ActorDestroy(ActorDestroyReason aWhy) override;
 

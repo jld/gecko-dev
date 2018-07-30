@@ -21,51 +21,51 @@ namespace jsipc {
 class WrapperAnswer : public virtual JavaScriptShared
 {
   public:
-    bool RecvPreventExtensions(const ObjectId& objId, ReturnStatus* rs);
-    bool RecvGetPropertyDescriptor(const ObjectId& objId, const JSIDVariant& id,
+    bool RecvPreventExtensions(ObjectId&& objId, ReturnStatus* rs);
+    bool RecvGetPropertyDescriptor(ObjectId&& objId, JSIDVariant&& id,
                                    ReturnStatus* rs,
                                    PPropertyDescriptor* out);
-    bool RecvGetOwnPropertyDescriptor(const ObjectId& objId,
-                                      const JSIDVariant& id,
+    bool RecvGetOwnPropertyDescriptor(ObjectId&& objId,
+                                      JSIDVariant&& id,
                                       ReturnStatus* rs,
                                       PPropertyDescriptor* out);
-    bool RecvDefineProperty(const ObjectId& objId, const JSIDVariant& id,
-                            const PPropertyDescriptor& flags, ReturnStatus* rs);
-    bool RecvDelete(const ObjectId& objId, const JSIDVariant& id, ReturnStatus* rs);
+    bool RecvDefineProperty(ObjectId&& objId, JSIDVariant&& id,
+                            PPropertyDescriptor&& flags, ReturnStatus* rs);
+    bool RecvDelete(ObjectId&& objId, JSIDVariant&& id, ReturnStatus* rs);
 
-    bool RecvHas(const ObjectId& objId, const JSIDVariant& id,
+    bool RecvHas(ObjectId&& objId, JSIDVariant&& id,
                  ReturnStatus* rs, bool* foundp);
-    bool RecvHasOwn(const ObjectId& objId, const JSIDVariant& id,
+    bool RecvHasOwn(ObjectId&& objId, JSIDVariant&& id,
                     ReturnStatus* rs, bool* foundp);
-    bool RecvGet(const ObjectId& objId, const JSVariant& receiverVar,
-                 const JSIDVariant& id,
+    bool RecvGet(ObjectId&& objId, JSVariant&& receiverVar,
+                 JSIDVariant&& id,
                  ReturnStatus* rs, JSVariant* result);
-    bool RecvSet(const ObjectId& objId, const JSIDVariant& id, const JSVariant& value,
-                 const JSVariant& receiverVar, ReturnStatus* rs);
+    bool RecvSet(ObjectId&& objId, JSIDVariant&& id, JSVariant&& value,
+                 JSVariant&& receiverVar, ReturnStatus* rs);
 
-    bool RecvIsExtensible(const ObjectId& objId, ReturnStatus* rs,
+    bool RecvIsExtensible(ObjectId&& objId, ReturnStatus* rs,
                           bool* result);
-    bool RecvCallOrConstruct(const ObjectId& objId, InfallibleTArray<JSParam>&& argv,
-                             const bool& construct, ReturnStatus* rs, JSVariant* result,
+    bool RecvCallOrConstruct(ObjectId&& objId, InfallibleTArray<JSParam>&& argv,
+                             bool&& construct, ReturnStatus* rs, JSVariant* result,
                              nsTArray<JSParam>* outparams);
-    bool RecvHasInstance(const ObjectId& objId, const JSVariant& v, ReturnStatus* rs, bool* bp);
-    bool RecvGetBuiltinClass(const ObjectId& objId, ReturnStatus* rs,
+    bool RecvHasInstance(ObjectId&& objId, JSVariant&& v, ReturnStatus* rs, bool* bp);
+    bool RecvGetBuiltinClass(ObjectId&& objId, ReturnStatus* rs,
                              uint32_t* classValue);
-    bool RecvIsArray(const ObjectId& objId, ReturnStatus* rs, uint32_t* ans);
-    bool RecvClassName(const ObjectId& objId, nsCString* result);
-    bool RecvGetPrototype(const ObjectId& objId, ReturnStatus* rs, ObjectOrNullVariant* result);
-    bool RecvGetPrototypeIfOrdinary(const ObjectId& objId, ReturnStatus* rs, bool* isOrdinary,
+    bool RecvIsArray(ObjectId&& objId, ReturnStatus* rs, uint32_t* ans);
+    bool RecvClassName(ObjectId&& objId, nsCString* result);
+    bool RecvGetPrototype(ObjectId&& objId, ReturnStatus* rs, ObjectOrNullVariant* result);
+    bool RecvGetPrototypeIfOrdinary(ObjectId&& objId, ReturnStatus* rs, bool* isOrdinary,
                                     ObjectOrNullVariant* result);
-    bool RecvRegExpToShared(const ObjectId& objId, ReturnStatus* rs, nsString* source, uint32_t* flags);
+    bool RecvRegExpToShared(ObjectId&& objId, ReturnStatus* rs, nsString* source, uint32_t* flags);
 
-    bool RecvGetPropertyKeys(const ObjectId& objId, const uint32_t& flags,
+    bool RecvGetPropertyKeys(ObjectId&& objId, uint32_t&& flags,
                              ReturnStatus* rs, nsTArray<JSIDVariant>* ids);
-    bool RecvInstanceOf(const ObjectId& objId, const JSIID& iid,
+    bool RecvInstanceOf(ObjectId&& objId, JSIID&& iid,
                         ReturnStatus* rs, bool* instanceof);
-    bool RecvDOMInstanceOf(const ObjectId& objId, const int& prototypeID, const int& depth,
+    bool RecvDOMInstanceOf(ObjectId&& objId, int&& prototypeID, int&& depth,
                            ReturnStatus* rs, bool* instanceof);
 
-    bool RecvDropObject(const ObjectId& objId);
+    bool RecvDropObject(ObjectId&& objId);
 
   private:
     bool fail(dom::AutoJSAPI& jsapi, ReturnStatus* rs);

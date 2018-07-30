@@ -86,24 +86,24 @@ public:
   static bool CompositorIsInGPUProcess();
 
   virtual mozilla::ipc::IPCResult
-  RecvDidComposite(const LayersId& aId,
-                   const TransactionId& aTransactionId,
-                   const TimeStamp& aCompositeStart,
-                   const TimeStamp& aCompositeEnd) override;
+  RecvDidComposite(LayersId&& aId,
+                   TransactionId&& aTransactionId,
+                   TimeStamp&& aCompositeStart,
+                   TimeStamp&& aCompositeEnd) override;
 
   virtual mozilla::ipc::IPCResult
-  RecvInvalidateLayers(const LayersId& aLayersId) override;
+  RecvInvalidateLayers(LayersId&& aLayersId) override;
 
   virtual mozilla::ipc::IPCResult
-  RecvUpdatePluginConfigurations(const LayoutDeviceIntPoint& aContentOffset,
-                                 const LayoutDeviceIntRegion& aVisibleRegion,
+  RecvUpdatePluginConfigurations(LayoutDeviceIntPoint&& aContentOffset,
+                                 LayoutDeviceIntRegion&& aVisibleRegion,
                                  nsTArray<PluginWindowData>&& aPlugins) override;
 
   virtual mozilla::ipc::IPCResult
-  RecvCaptureAllPlugins(const uintptr_t& aParentWidget) override;
+  RecvCaptureAllPlugins(uintptr_t&& aParentWidget) override;
 
   virtual mozilla::ipc::IPCResult
-  RecvHideAllPlugins(const uintptr_t& aParentWidget) override;
+  RecvHideAllPlugins(uintptr_t&& aParentWidget) override;
 
   virtual PTextureChild* AllocPTextureChild(const SurfaceDescriptor& aSharedData,
                                             const ReadLockDescriptor& aReadLock,
@@ -305,23 +305,23 @@ private:
 
   virtual void ActorDestroy(ActorDestroyReason aWhy) override;
 
-  virtual mozilla::ipc::IPCResult RecvSharedCompositorFrameMetrics(const mozilla::ipc::SharedMemoryBasic::Handle& metrics,
-                                                                   const CrossProcessMutexHandle& handle,
-                                                                   const LayersId& aLayersId,
-                                                                   const uint32_t& aAPZCId) override;
+  virtual mozilla::ipc::IPCResult RecvSharedCompositorFrameMetrics(mozilla::ipc::SharedMemoryBasic::Handle&& metrics,
+                                                                   CrossProcessMutexHandle&& handle,
+                                                                   LayersId&& aLayersId,
+                                                                   uint32_t&& aAPZCId) override;
 
-  virtual mozilla::ipc::IPCResult RecvReleaseSharedCompositorFrameMetrics(const ViewID& aId,
-                                                                          const uint32_t& aAPZCId) override;
+  virtual mozilla::ipc::IPCResult RecvReleaseSharedCompositorFrameMetrics(ViewID&& aId,
+                                                                          uint32_t&& aAPZCId) override;
 
   virtual mozilla::ipc::IPCResult
   RecvRemotePaintIsReady() override;
 
-  mozilla::ipc::IPCResult RecvObserveLayerUpdate(const LayersId& aLayersId,
-                                                 const uint64_t& aEpoch,
-                                                 const bool& aActive) override;
+  mozilla::ipc::IPCResult RecvObserveLayerUpdate(LayersId&& aLayersId,
+                                                 uint64_t&& aEpoch,
+                                                 bool&& aActive) override;
 
   virtual mozilla::ipc::IPCResult
-  RecvNotifyWebRenderError(const WebRenderError& aError) override;
+  RecvNotifyWebRenderError(WebRenderError&& aError) override;
 
   uint64_t GetNextResourceId();
 

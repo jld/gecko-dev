@@ -19,13 +19,13 @@ class GamepadEventChannelParent final : public PGamepadEventChannelParent
   virtual void ActorDestroy(ActorDestroyReason aWhy) override;
   virtual mozilla::ipc::IPCResult RecvGamepadListenerAdded() override;
   virtual mozilla::ipc::IPCResult RecvGamepadListenerRemoved() override;
-  virtual mozilla::ipc::IPCResult RecvVibrateHaptic(const uint32_t& aControllerIdx,
-                                                    const uint32_t& aHapticIndex,
-                                                    const double& aIntensity,
-                                                    const double& aDuration,
-                                                    const uint32_t& aPromiseID) override;
+  virtual mozilla::ipc::IPCResult RecvVibrateHaptic(uint32_t&& aControllerIdx,
+                                                    uint32_t&& aHapticIndex,
+                                                    double&& aIntensity,
+                                                    double&& aDuration,
+                                                    uint32_t&& aPromiseID) override;
   virtual mozilla::ipc::IPCResult RecvStopVibrateHaptic(
-                                    const uint32_t& aGamepadIndex) override;
+                                    uint32_t&& aGamepadIndex) override;
   void DispatchUpdateEvent(const GamepadChangeEvent& aEvent);
   bool HasGamepadListener() const { return mHasGamepadListener; }
  private:

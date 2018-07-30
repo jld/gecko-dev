@@ -165,7 +165,7 @@ CacheStreamControlChild::ActorDestroy(ActorDestroyReason aReason)
 }
 
 mozilla::ipc::IPCResult
-CacheStreamControlChild::RecvClose(const nsID& aId)
+CacheStreamControlChild::RecvClose(nsID&& aId)
 {
   NS_ASSERT_OWNINGTHREAD(CacheStreamControlChild);
   CloseReadStreams(aId);

@@ -139,7 +139,7 @@ ExternalHelperAppParent::Delete()
 }
 
 mozilla::ipc::IPCResult
-ExternalHelperAppParent::RecvOnStartRequest(const nsCString& entityID,
+ExternalHelperAppParent::RecvOnStartRequest(nsCString&& entityID,
                                             PBrowserParent* contentContext)
 {
   MOZ_ASSERT(!mDiverted, "child forwarding callbacks after request was diverted");
@@ -153,9 +153,9 @@ ExternalHelperAppParent::RecvOnStartRequest(const nsCString& entityID,
 }
 
 mozilla::ipc::IPCResult
-ExternalHelperAppParent::RecvOnDataAvailable(const nsCString& data,
-                                             const uint64_t& offset,
-                                             const uint32_t& count)
+ExternalHelperAppParent::RecvOnDataAvailable(nsCString&& data,
+                                             uint64_t&& offset,
+                                             uint32_t&& count)
 {
   if (NS_FAILED(mStatus))
     return IPC_OK();
@@ -172,7 +172,7 @@ ExternalHelperAppParent::RecvOnDataAvailable(const nsCString& data,
 }
 
 mozilla::ipc::IPCResult
-ExternalHelperAppParent::RecvOnStopRequest(const nsresult& code)
+ExternalHelperAppParent::RecvOnStopRequest(nsresult&& code)
 {
   MOZ_ASSERT(!mDiverted, "child forwarding callbacks after request was diverted");
 

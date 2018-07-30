@@ -30,10 +30,10 @@ public:
 
   // Pass args here rather than storing them in the parent; they are only
   // needed if the request is to be canceled.
-  mozilla::ipc::IPCResult RecvCancelDNSRequest(const nsCString& hostName,
-                                               const OriginAttributes& originAttributes,
-                                               const uint32_t& flags,
-                                               const nsresult& reason) override;
+  mozilla::ipc::IPCResult RecvCancelDNSRequest(nsCString&& hostName,
+                                               OriginAttributes&& originAttributes,
+                                               uint32_t&& flags,
+                                               nsresult&& reason) override;
   mozilla::ipc::IPCResult Recv__delete__() override;
 
 protected:

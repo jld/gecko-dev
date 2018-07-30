@@ -61,7 +61,7 @@ GMPStorageParent::Init()
 }
 
 mozilla::ipc::IPCResult
-GMPStorageParent::RecvOpen(const nsCString& aRecordName)
+GMPStorageParent::RecvOpen(nsCString&& aRecordName)
 {
   LOGD(("GMPStorageParent[%p]::RecvOpen(record='%s')",
        this, aRecordName.get()));
@@ -103,7 +103,7 @@ GMPStorageParent::RecvOpen(const nsCString& aRecordName)
 }
 
 mozilla::ipc::IPCResult
-GMPStorageParent::RecvRead(const nsCString& aRecordName)
+GMPStorageParent::RecvRead(nsCString&& aRecordName)
 {
   LOGD(("GMPStorageParent[%p]::RecvRead(record='%s')",
        this, aRecordName.get()));
@@ -128,7 +128,7 @@ GMPStorageParent::RecvRead(const nsCString& aRecordName)
 }
 
 mozilla::ipc::IPCResult
-GMPStorageParent::RecvWrite(const nsCString& aRecordName,
+GMPStorageParent::RecvWrite(nsCString&& aRecordName,
                             InfallibleTArray<uint8_t>&& aBytes)
 {
   LOGD(("GMPStorageParent[%p]::RecvWrite(record='%s') %zu bytes",
@@ -162,7 +162,7 @@ GMPStorageParent::RecvWrite(const nsCString& aRecordName,
 }
 
 mozilla::ipc::IPCResult
-GMPStorageParent::RecvClose(const nsCString& aRecordName)
+GMPStorageParent::RecvClose(nsCString&& aRecordName)
 {
   LOGD(("GMPStorageParent[%p]::RecvClose(record='%s')",
         this, aRecordName.get()));

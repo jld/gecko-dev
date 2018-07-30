@@ -110,9 +110,9 @@ GMPVideoDecoderChild::Error(GMPErr aError)
 }
 
 mozilla::ipc::IPCResult
-GMPVideoDecoderChild::RecvInitDecode(const GMPVideoCodec& aCodecSettings,
+GMPVideoDecoderChild::RecvInitDecode(GMPVideoCodec&& aCodecSettings,
                                      InfallibleTArray<uint8_t>&& aCodecSpecific,
-                                     const int32_t& aCoreCount)
+                                     int32_t&& aCoreCount)
 {
   if (!mVideoDecoder) {
     return IPC_FAIL_NO_REASON(this);
@@ -128,10 +128,10 @@ GMPVideoDecoderChild::RecvInitDecode(const GMPVideoCodec& aCodecSettings,
 }
 
 mozilla::ipc::IPCResult
-GMPVideoDecoderChild::RecvDecode(const GMPVideoEncodedFrameData& aInputFrame,
-                                 const bool& aMissingFrames,
+GMPVideoDecoderChild::RecvDecode(GMPVideoEncodedFrameData&& aInputFrame,
+                                 bool&& aMissingFrames,
                                  InfallibleTArray<uint8_t>&& aCodecSpecificInfo,
-                                 const int64_t& aRenderTimeMs)
+                                 int64_t&& aRenderTimeMs)
 {
   if (!mVideoDecoder) {
     return IPC_FAIL_NO_REASON(this);

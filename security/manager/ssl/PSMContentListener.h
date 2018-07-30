@@ -52,11 +52,11 @@ class PSMContentDownloaderParent : public PPSMContentDownloaderParent
 public:
   explicit PSMContentDownloaderParent(uint32_t type);
 
-  virtual mozilla::ipc::IPCResult RecvOnStartRequest(const uint32_t &contentLength) override;
-  virtual mozilla::ipc::IPCResult RecvOnDataAvailable(const nsCString &data,
-                                                      const uint64_t &offset,
-                                                      const uint32_t &count) override;
-  virtual mozilla::ipc::IPCResult RecvOnStopRequest(const nsresult &code) override;
+  virtual mozilla::ipc::IPCResult RecvOnStartRequest(uint32_t&& contentLength) override;
+  virtual mozilla::ipc::IPCResult RecvOnDataAvailable(nsCString&& data,
+                                                      uint64_t&& offset,
+                                                      uint32_t&& count) override;
+  virtual mozilla::ipc::IPCResult RecvOnStopRequest(nsresult&& code) override;
 
   // We inherit most of nsIStreamListener from PSMContentStreamListener, but
   // we have to override OnStopRequest to know when we're done with our IPC

@@ -44,7 +44,7 @@ WebBrowserPersistResourcesParent::ActorDestroy(ActorDestroyReason aWhy)
 }
 
 mozilla::ipc::IPCResult
-WebBrowserPersistResourcesParent::Recv__delete__(const nsresult& aStatus)
+WebBrowserPersistResourcesParent::Recv__delete__(nsresult&& aStatus)
 {
     mVisitor->EndVisit(mDocument, aStatus);
     mVisitor = nullptr;
@@ -52,7 +52,7 @@ WebBrowserPersistResourcesParent::Recv__delete__(const nsresult& aStatus)
 }
 
 mozilla::ipc::IPCResult
-WebBrowserPersistResourcesParent::RecvVisitResource(const nsCString& aURI)
+WebBrowserPersistResourcesParent::RecvVisitResource(nsCString&& aURI)
 {
     mVisitor->VisitResource(mDocument, aURI);
     return IPC_OK();

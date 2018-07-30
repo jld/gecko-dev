@@ -25,15 +25,15 @@ public:
 
 protected:
   mozilla::ipc::IPCResult
-  RecvRespondPayment(const IPCPaymentActionResponse& aResponse) override;
+  RecvRespondPayment(IPCPaymentActionResponse&& aResponse) override;
 
   mozilla::ipc::IPCResult
-  RecvChangeShippingAddress(const nsString& aRequestId,
-                            const IPCPaymentAddress& aAddress) override;
+  RecvChangeShippingAddress(nsString&& aRequestId,
+                            IPCPaymentAddress&& aAddress) override;
 
   mozilla::ipc::IPCResult
-  RecvChangeShippingOption(const nsString& aRequestId,
-                           const nsString& aOption) override;
+  RecvChangeShippingOption(nsString&& aRequestId,
+                           nsString&& aOption) override;
 
   void ActorDestroy(ActorDestroyReason aWhy) override;
 

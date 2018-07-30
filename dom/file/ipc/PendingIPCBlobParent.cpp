@@ -41,7 +41,7 @@ PendingIPCBlobParent::PendingIPCBlobParent(BlobImpl* aBlobImpl)
 {}
 
 IPCResult
-PendingIPCBlobParent::Recv__delete__(const PendingIPCBlobData& aData)
+PendingIPCBlobParent::Recv__delete__(PendingIPCBlobData&& aData)
 {
   if (aData.file().type() == PendingIPCFileUnion::Tvoid_t) {
     mBlobImpl->SetLazyData(VoidString(), aData.type(), aData.size(), INT64_MAX);

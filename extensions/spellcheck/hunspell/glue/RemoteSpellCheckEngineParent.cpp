@@ -21,7 +21,7 @@ RemoteSpellcheckEngineParent::~RemoteSpellcheckEngineParent()
 
 mozilla::ipc::IPCResult
 RemoteSpellcheckEngineParent::RecvSetDictionary(
-  const nsString& aDictionary,
+  nsString&& aDictionary,
   bool* success)
 {
   nsresult rv = mSpellChecker->SetCurrentDictionary(aDictionary);
@@ -32,7 +32,7 @@ RemoteSpellcheckEngineParent::RecvSetDictionary(
 mozilla::ipc::IPCResult
 RemoteSpellcheckEngineParent::RecvSetDictionaryFromList(
                                 nsTArray<nsString>&& aList,
-                                const intptr_t& aPromiseId)
+                                intptr_t&& aPromiseId)
 {
   for (auto& dictionary : aList) {
     MOZ_ASSERT(!dictionary.IsEmpty());
@@ -48,7 +48,7 @@ RemoteSpellcheckEngineParent::RecvSetDictionaryFromList(
 
 mozilla::ipc::IPCResult
 RemoteSpellcheckEngineParent::RecvCheck(
-  const nsString& aWord,
+  nsString&& aWord,
   bool* aIsMisspelled)
 {
   nsresult rv = mSpellChecker->CheckWord(aWord, aIsMisspelled, nullptr);
@@ -61,7 +61,7 @@ RemoteSpellcheckEngineParent::RecvCheck(
 
 mozilla::ipc::IPCResult
 RemoteSpellcheckEngineParent::RecvCheckAndSuggest(
-  const nsString& aWord,
+  nsString&& aWord,
   bool* aIsMisspelled,
   InfallibleTArray<nsString>* aSuggestions)
 {

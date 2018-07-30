@@ -315,7 +315,7 @@ IPCBlobInputStreamChild::StreamNeeded(IPCBlobInputStream* aStream,
 }
 
 mozilla::ipc::IPCResult
-IPCBlobInputStreamChild::RecvStreamReady(const OptionalIPCStream& aStream)
+IPCBlobInputStreamChild::RecvStreamReady(OptionalIPCStream&& aStream)
 {
   nsCOMPtr<nsIInputStream> stream = mozilla::ipc::DeserializeIPCStream(aStream);
 
@@ -384,7 +384,7 @@ IPCBlobInputStreamChild::LengthNeeded(IPCBlobInputStream* aStream,
 }
 
 mozilla::ipc::IPCResult
-IPCBlobInputStreamChild::RecvLengthReady(const int64_t& aLength)
+IPCBlobInputStreamChild::RecvLengthReady(int64_t&& aLength)
 {
   RefPtr<IPCBlobInputStream> pendingStream;
   nsCOMPtr<nsIEventTarget> eventTarget;

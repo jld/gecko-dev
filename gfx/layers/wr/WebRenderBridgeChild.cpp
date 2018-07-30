@@ -542,8 +542,8 @@ WebRenderBridgeChild::InForwarderThread()
 }
 
 mozilla::ipc::IPCResult
-WebRenderBridgeChild::RecvWrUpdated(const wr::IdNamespace& aNewIdNamespace,
-                                    const TextureFactoryIdentifier& textureFactoryIdentifier)
+WebRenderBridgeChild::RecvWrUpdated(wr::IdNamespace&& aNewIdNamespace,
+                                    TextureFactoryIdentifier&& textureFactoryIdentifier)
 {
   if (mManager) {
     mManager->WrUpdated();

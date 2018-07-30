@@ -47,7 +47,7 @@ class ClientManagerChild final : public PClientManagerChild
 
   mozilla::ipc::IPCResult
   RecvPClientNavigateOpConstructor(PClientNavigateOpChild* aActor,
-                                   const ClientNavigateOpConstructorArgs& aArgs) override;
+                                   ClientNavigateOpConstructorArgs&& aArgs) override;
 
   PClientSourceChild*
   AllocPClientSourceChild(const ClientSourceConstructorArgs& aArgs) override;

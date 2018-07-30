@@ -77,7 +77,7 @@ public:
 
   // PImageBridge
   virtual mozilla::ipc::IPCResult RecvUpdate(EditArray&& aEdits, OpDestroyArray&& aToDestroy,
-                                          const uint64_t& aFwdTransactionId) override;
+                                          uint64_t&& aFwdTransactionId) override;
 
   virtual PTextureParent* AllocPTextureParent(const SurfaceDescriptor& aSharedData,
                                               const ReadLockDescriptor& aReadLock,
@@ -87,10 +87,10 @@ public:
                                               const wr::MaybeExternalImageId& aExternalImageId) override;
   virtual bool DeallocPTextureParent(PTextureParent* actor) override;
 
-  virtual mozilla::ipc::IPCResult RecvNewCompositable(const CompositableHandle& aHandle,
-                                                      const TextureInfo& aInfo,
-                                                      const LayersBackend& aLayersBackend) override;
-  virtual mozilla::ipc::IPCResult RecvReleaseCompositable(const CompositableHandle& aHandle) override;
+  virtual mozilla::ipc::IPCResult RecvNewCompositable(CompositableHandle&& aHandle,
+                                                      TextureInfo&& aInfo,
+                                                      LayersBackend&& aLayersBackend) override;
+  virtual mozilla::ipc::IPCResult RecvReleaseCompositable(CompositableHandle&& aHandle) override;
 
   PMediaSystemResourceManagerParent* AllocPMediaSystemResourceManagerParent() override;
   bool DeallocPMediaSystemResourceManagerParent(PMediaSystemResourceManagerParent* aActor) override;

@@ -97,13 +97,13 @@ protected:
   friend class FTPDivertStopRequestEvent;
   friend class FTPDivertCompleteEvent;
 
-  virtual mozilla::ipc::IPCResult RecvCancel(const nsresult& status) override;
+  virtual mozilla::ipc::IPCResult RecvCancel(nsresult&& status) override;
   virtual mozilla::ipc::IPCResult RecvSuspend() override;
   virtual mozilla::ipc::IPCResult RecvResume() override;
-  virtual mozilla::ipc::IPCResult RecvDivertOnDataAvailable(const nsCString& data,
-                                                            const uint64_t& offset,
-                                                            const uint32_t& count) override;
-  virtual mozilla::ipc::IPCResult RecvDivertOnStopRequest(const nsresult& statusCode) override;
+  virtual mozilla::ipc::IPCResult RecvDivertOnDataAvailable(nsCString&& data,
+                                                            uint64_t&& offset,
+                                                            uint32_t&& count) override;
+  virtual mozilla::ipc::IPCResult RecvDivertOnStopRequest(nsresult&& statusCode) override;
   virtual mozilla::ipc::IPCResult RecvDivertComplete() override;
 
   nsresult ResumeChannelInternalIfPossible();

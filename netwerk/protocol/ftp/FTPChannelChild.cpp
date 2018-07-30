@@ -281,12 +281,12 @@ private:
 };
 
 mozilla::ipc::IPCResult
-FTPChannelChild::RecvOnStartRequest(const nsresult& aChannelStatus,
-                                    const int64_t& aContentLength,
-                                    const nsCString& aContentType,
-                                    const PRTime& aLastModified,
-                                    const nsCString& aEntityID,
-                                    const URIParams& aURI)
+FTPChannelChild::RecvOnStartRequest(nsresult&& aChannelStatus,
+                                    int64_t&& aContentLength,
+                                    nsCString&& aContentType,
+                                    PRTime&& aLastModified,
+                                    nsCString&& aEntityID,
+                                    URIParams&& aURI)
 {
   // mFlushedForDiversion and mDivertingToParent should NEVER be set at this
   // stage, as they are set in the listener's OnStartRequest.
@@ -394,10 +394,10 @@ private:
 };
 
 mozilla::ipc::IPCResult
-FTPChannelChild::RecvOnDataAvailable(const nsresult& channelStatus,
-                                     const nsCString& data,
-                                     const uint64_t& offset,
-                                     const uint32_t& count)
+FTPChannelChild::RecvOnDataAvailable(nsresult&& channelStatus,
+                                     nsCString&& data,
+                                     uint64_t&& offset,
+                                     uint32_t&& count)
 {
   MOZ_RELEASE_ASSERT(!mFlushedForDiversion,
                      "Should not be receiving any more callbacks from parent!");
@@ -521,9 +521,9 @@ private:
 };
 
 mozilla::ipc::IPCResult
-FTPChannelChild::RecvOnStopRequest(const nsresult& aChannelStatus,
-                                   const nsCString &aErrorMsg,
-                                   const bool &aUseUTF8)
+FTPChannelChild::RecvOnStopRequest(nsresult&& aChannelStatus,
+                                   nsCString&& aErrorMsg,
+                                   bool&& aUseUTF8)
 {
   MOZ_RELEASE_ASSERT(!mFlushedForDiversion,
     "Should not be receiving any more callbacks from parent!");
@@ -658,7 +658,7 @@ class FTPFailedAsyncOpenEvent : public NeckoTargetChannelEvent<FTPChannelChild>
 };
 
 mozilla::ipc::IPCResult
-FTPChannelChild::RecvFailedAsyncOpen(const nsresult& statusCode)
+FTPChannelChild::RecvFailedAsyncOpen(nsresult&& statusCode)
 {
   LOG(("FTPChannelChild::RecvFailedAsyncOpen [this=%p status=%" PRIx32 "]\n",
        this, static_cast<uint32_t>(statusCode)));

@@ -49,7 +49,7 @@ DocAccessibleChild::Shutdown()
 }
 
 ipc::IPCResult
-DocAccessibleChild::RecvParentCOMProxy(const IDispatchHolder& aParentCOMProxy)
+DocAccessibleChild::RecvParentCOMProxy(IDispatchHolder&& aParentCOMProxy)
 {
   MOZ_ASSERT(!mParentProxy && !aParentCOMProxy.IsNull());
   mParentProxy.reset(const_cast<IDispatchHolder&>(aParentCOMProxy).Release());
@@ -65,8 +65,8 @@ DocAccessibleChild::RecvParentCOMProxy(const IDispatchHolder& aParentCOMProxy)
 }
 
 ipc::IPCResult
-DocAccessibleChild::RecvEmulatedWindow(const WindowsHandle& aEmulatedWindowHandle,
-                                       const IDispatchHolder& aEmulatedWindowCOMProxy)
+DocAccessibleChild::RecvEmulatedWindow(WindowsHandle&& aEmulatedWindowHandle,
+                                       IDispatchHolder&& aEmulatedWindowCOMProxy)
 {
   mEmulatedWindowHandle = reinterpret_cast<HWND>(aEmulatedWindowHandle);
   if (!aEmulatedWindowCOMProxy.IsNull()) {

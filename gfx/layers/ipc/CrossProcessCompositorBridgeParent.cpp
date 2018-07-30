@@ -273,7 +273,7 @@ CrossProcessCompositorBridgeParent::DeallocPWebRenderBridgeParent(PWebRenderBrid
 }
 
 mozilla::ipc::IPCResult
-CrossProcessCompositorBridgeParent::RecvNotifyChildCreated(const LayersId& child,
+CrossProcessCompositorBridgeParent::RecvNotifyChildCreated(LayersId&& child,
                                                            CompositorOptions* aOptions)
 {
   MonitorAutoLock lock(*sIndirectLayerTreesLock);
@@ -290,8 +290,8 @@ CrossProcessCompositorBridgeParent::RecvNotifyChildCreated(const LayersId& child
 }
 
 mozilla::ipc::IPCResult
-CrossProcessCompositorBridgeParent::RecvMapAndNotifyChildCreated(const LayersId& child,
-                                                                 const base::ProcessId& pid,
+CrossProcessCompositorBridgeParent::RecvMapAndNotifyChildCreated(LayersId&& child,
+                                                                 base::ProcessId&& pid,
                                                                  CompositorOptions* aOptions)
 {
   // This can only be called from the browser process, as the mapping
@@ -301,7 +301,7 @@ CrossProcessCompositorBridgeParent::RecvMapAndNotifyChildCreated(const LayersId&
 
 
 mozilla::ipc::IPCResult
-CrossProcessCompositorBridgeParent::RecvCheckContentOnlyTDR(const uint32_t& sequenceNum,
+CrossProcessCompositorBridgeParent::RecvCheckContentOnlyTDR(uint32_t&& sequenceNum,
                                                             bool* isContentOnlyTDR)
 {
   *isContentOnlyTDR = false;

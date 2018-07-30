@@ -77,12 +77,12 @@ LocalStorageCacheChild::ActorDestroy(ActorDestroyReason aWhy)
 }
 
 mozilla::ipc::IPCResult
-LocalStorageCacheChild::RecvObserve(const PrincipalInfo& aPrincipalInfo,
-                                    const uint32_t& aPrivateBrowsingId,
-                                    const nsString& aDocumentURI,
-                                    const nsString& aKey,
-                                    const nsString& aOldValue,
-                                    const nsString& aNewValue)
+LocalStorageCacheChild::RecvObserve(PrincipalInfo&& aPrincipalInfo,
+                                    uint32_t&& aPrivateBrowsingId,
+                                    nsString&& aDocumentURI,
+                                    nsString&& aKey,
+                                    nsString&& aOldValue,
+                                    nsString&& aNewValue)
 {
   AssertIsOnOwningThread();
 
@@ -365,9 +365,9 @@ StorageDBChild::ShouldPreloadOrigin(const nsACString& aOrigin)
 }
 
 mozilla::ipc::IPCResult
-StorageDBChild::RecvObserve(const nsCString& aTopic,
-                            const nsString& aOriginAttributesPattern,
-                            const nsCString& aOriginScope)
+StorageDBChild::RecvObserve(nsCString&& aTopic,
+                            nsString&& aOriginAttributesPattern,
+                            nsCString&& aOriginScope)
 {
   MOZ_ASSERT(!XRE_IsParentProcess());
 
@@ -393,10 +393,10 @@ StorageDBChild::RecvOriginsHavingData(nsTArray<nsCString>&& aOrigins)
 }
 
 mozilla::ipc::IPCResult
-StorageDBChild::RecvLoadItem(const nsCString& aOriginSuffix,
-                             const nsCString& aOriginNoSuffix,
-                             const nsString& aKey,
-                             const nsString& aValue)
+StorageDBChild::RecvLoadItem(nsCString&& aOriginSuffix,
+                             nsCString&& aOriginNoSuffix,
+                             nsString&& aKey,
+                             nsString&& aValue)
 {
   LocalStorageCache* aCache =
     mManager->GetCache(aOriginSuffix, aOriginNoSuffix);
@@ -408,9 +408,9 @@ StorageDBChild::RecvLoadItem(const nsCString& aOriginSuffix,
 }
 
 mozilla::ipc::IPCResult
-StorageDBChild::RecvLoadDone(const nsCString& aOriginSuffix,
-                             const nsCString& aOriginNoSuffix,
-                             const nsresult& aRv)
+StorageDBChild::RecvLoadDone(nsCString&& aOriginSuffix,
+                             nsCString&& aOriginNoSuffix,
+                             nsresult&& aRv)
 {
   LocalStorageCache* aCache =
     mManager->GetCache(aOriginSuffix, aOriginNoSuffix);
@@ -425,8 +425,8 @@ StorageDBChild::RecvLoadDone(const nsCString& aOriginSuffix,
 }
 
 mozilla::ipc::IPCResult
-StorageDBChild::RecvLoadUsage(const nsCString& aOriginNoSuffix,
-                              const int64_t& aUsage)
+StorageDBChild::RecvLoadUsage(nsCString&& aOriginNoSuffix,
+                              int64_t&& aUsage)
 {
   RefPtr<StorageUsageBridge> scopeUsage =
     mManager->GetOriginUsage(aOriginNoSuffix);
@@ -435,7 +435,7 @@ StorageDBChild::RecvLoadUsage(const nsCString& aOriginNoSuffix,
 }
 
 mozilla::ipc::IPCResult
-StorageDBChild::RecvError(const nsresult& aRv)
+StorageDBChild::RecvError(nsresult&& aRv)
 {
   mStatus = aRv;
   return IPC_OK();
@@ -528,10 +528,10 @@ LocalStorageCacheParent::RecvDeleteMe()
 }
 
 mozilla::ipc::IPCResult
-LocalStorageCacheParent::RecvNotify(const nsString& aDocumentURI,
-                                    const nsString& aKey,
-                                    const nsString& aOldValue,
-                                    const nsString& aNewValue)
+LocalStorageCacheParent::RecvNotify(nsString&& aDocumentURI,
+                                    nsString&& aKey,
+                                    nsString&& aOldValue,
+                                    nsString&& aNewValue)
 {
   AssertIsOnBackgroundThread();
   MOZ_ASSERT(gLocalStorageCacheParents);
@@ -756,9 +756,9 @@ StorageDBParent::RecvDeleteMe()
 }
 
 mozilla::ipc::IPCResult
-StorageDBParent::RecvAsyncPreload(const nsCString& aOriginSuffix,
-                                  const nsCString& aOriginNoSuffix,
-                                  const bool& aPriority)
+StorageDBParent::RecvAsyncPreload(nsCString&& aOriginSuffix,
+                                  nsCString&& aOriginNoSuffix,
+                                  bool&& aPriority)
 {
   StorageDBThread* storageThread = StorageDBThread::GetOrCreate(mProfilePath);
   if (!storageThread) {
@@ -772,7 +772,7 @@ StorageDBParent::RecvAsyncPreload(const nsCString& aOriginSuffix,
 }
 
 mozilla::ipc::IPCResult
-StorageDBParent::RecvAsyncGetUsage(const nsCString& aOriginNoSuffix)
+StorageDBParent::RecvAsyncGetUsage(nsCString&& aOriginNoSuffix)
 {
   StorageDBThread* storageThread = StorageDBThread::GetOrCreate(mProfilePath);
   if (!storageThread) {
@@ -873,9 +873,9 @@ private:
 } // namespace
 
 mozilla::ipc::IPCResult
-StorageDBParent::RecvPreload(const nsCString& aOriginSuffix,
-                             const nsCString& aOriginNoSuffix,
-                             const uint32_t& aAlreadyLoadedCount,
+StorageDBParent::RecvPreload(nsCString&& aOriginSuffix,
+                             nsCString&& aOriginNoSuffix,
+                             uint32_t&& aAlreadyLoadedCount,
                              InfallibleTArray<nsString>* aKeys,
                              InfallibleTArray<nsString>* aValues,
                              nsresult* aRv)
@@ -895,10 +895,10 @@ StorageDBParent::RecvPreload(const nsCString& aOriginSuffix,
 }
 
 mozilla::ipc::IPCResult
-StorageDBParent::RecvAsyncAddItem(const nsCString& aOriginSuffix,
-                                  const nsCString& aOriginNoSuffix,
-                                  const nsString& aKey,
-                                  const nsString& aValue)
+StorageDBParent::RecvAsyncAddItem(nsCString&& aOriginSuffix,
+                                  nsCString&& aOriginNoSuffix,
+                                  nsString&& aKey,
+                                  nsString&& aValue)
 {
   StorageDBThread* storageThread = StorageDBThread::GetOrCreate(mProfilePath);
   if (!storageThread) {
@@ -917,10 +917,10 @@ StorageDBParent::RecvAsyncAddItem(const nsCString& aOriginSuffix,
 }
 
 mozilla::ipc::IPCResult
-StorageDBParent::RecvAsyncUpdateItem(const nsCString& aOriginSuffix,
-                                     const nsCString& aOriginNoSuffix,
-                                     const nsString& aKey,
-                                     const nsString& aValue)
+StorageDBParent::RecvAsyncUpdateItem(nsCString&& aOriginSuffix,
+                                     nsCString&& aOriginNoSuffix,
+                                     nsString&& aKey,
+                                     nsString&& aValue)
 {
   StorageDBThread* storageThread = StorageDBThread::GetOrCreate(mProfilePath);
   if (!storageThread) {
@@ -939,9 +939,9 @@ StorageDBParent::RecvAsyncUpdateItem(const nsCString& aOriginSuffix,
 }
 
 mozilla::ipc::IPCResult
-StorageDBParent::RecvAsyncRemoveItem(const nsCString& aOriginSuffix,
-                                     const nsCString& aOriginNoSuffix,
-                                     const nsString& aKey)
+StorageDBParent::RecvAsyncRemoveItem(nsCString&& aOriginSuffix,
+                                     nsCString&& aOriginNoSuffix,
+                                     nsString&& aKey)
 {
   StorageDBThread* storageThread = StorageDBThread::GetOrCreate(mProfilePath);
   if (!storageThread) {
@@ -959,8 +959,8 @@ StorageDBParent::RecvAsyncRemoveItem(const nsCString& aOriginSuffix,
 }
 
 mozilla::ipc::IPCResult
-StorageDBParent::RecvAsyncClear(const nsCString& aOriginSuffix,
-                                const nsCString& aOriginNoSuffix)
+StorageDBParent::RecvAsyncClear(nsCString&& aOriginSuffix,
+                                nsCString&& aOriginNoSuffix)
 {
   StorageDBThread* storageThread = StorageDBThread::GetOrCreate(mProfilePath);
   if (!storageThread) {
@@ -1014,7 +1014,7 @@ StorageDBParent::RecvClearAll()
 }
 
 mozilla::ipc::IPCResult
-StorageDBParent::RecvClearMatchingOrigin(const nsCString& aOriginNoSuffix)
+StorageDBParent::RecvClearMatchingOrigin(nsCString&& aOriginNoSuffix)
 {
   StorageDBThread* storageThread = StorageDBThread::GetOrCreate(mProfilePath);
   if (!storageThread) {
@@ -1028,7 +1028,7 @@ StorageDBParent::RecvClearMatchingOrigin(const nsCString& aOriginNoSuffix)
 
 mozilla::ipc::IPCResult
 StorageDBParent::RecvClearMatchingOriginAttributes(
-                                        const OriginAttributesPattern& aPattern)
+                                        OriginAttributesPattern&& aPattern)
 {
   StorageDBThread* storageThread = StorageDBThread::GetOrCreate(mProfilePath);
   if (!storageThread) {

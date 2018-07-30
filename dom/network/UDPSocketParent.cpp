@@ -101,10 +101,10 @@ UDPSocketParent::Init(const IPC::Principal& aPrincipal,
 // PUDPSocketParent methods
 
 mozilla::ipc::IPCResult
-UDPSocketParent::RecvBind(const UDPAddressInfo& aAddressInfo,
-                          const bool& aAddressReuse, const bool& aLoopback,
-                          const uint32_t& recvBufferSize,
-                          const uint32_t& sendBufferSize)
+UDPSocketParent::RecvBind(UDPAddressInfo&& aAddressInfo,
+                          bool&& aAddressReuse, bool&& aLoopback,
+                          uint32_t&& recvBufferSize,
+                          uint32_t&& sendBufferSize)
 {
   UDPSOCKET_LOG(("%s: %s:%u", __FUNCTION__, aAddressInfo.addr().get(), aAddressInfo.port()));
 
@@ -242,7 +242,7 @@ static void CheckSTSThread()
 // Proxy the Connect() request to the STS thread, since it may block and
 // should be done there.
 mozilla::ipc::IPCResult
-UDPSocketParent::RecvConnect(const UDPAddressInfo& aAddressInfo)
+UDPSocketParent::RecvConnect(UDPAddressInfo&& aAddressInfo)
 {
   nsCOMPtr<nsIEventTarget> target = GetCurrentThreadEventTarget();
   Unused <<
@@ -338,8 +338,8 @@ UDPSocketParent::ConnectInternal(const nsCString& aHost, const uint16_t& aPort)
 }
 
 mozilla::ipc::IPCResult
-UDPSocketParent::RecvOutgoingData(const UDPData& aData,
-                                  const UDPSocketAddr& aAddr)
+UDPSocketParent::RecvOutgoingData(UDPData&& aData,
+                                  UDPSocketAddr&& aAddr)
 {
   if (!mSocket) {
     NS_WARNING("sending socket is closed");
@@ -447,8 +447,8 @@ UDPSocketParent::Send(const IPCStream& aStream,
 }
 
 mozilla::ipc::IPCResult
-UDPSocketParent::RecvJoinMulticast(const nsCString& aMulticastAddress,
-                                   const nsCString& aInterface)
+UDPSocketParent::RecvJoinMulticast(nsCString&& aMulticastAddress,
+                                   nsCString&& aInterface)
 {
   if (!mSocket) {
     NS_WARNING("multicast socket is closed");
@@ -466,8 +466,8 @@ UDPSocketParent::RecvJoinMulticast(const nsCString& aMulticastAddress,
 }
 
 mozilla::ipc::IPCResult
-UDPSocketParent::RecvLeaveMulticast(const nsCString& aMulticastAddress,
-                                    const nsCString& aInterface)
+UDPSocketParent::RecvLeaveMulticast(nsCString&& aMulticastAddress,
+                                    nsCString&& aInterface)
 {
   if (!mSocket) {
     NS_WARNING("multicast socket is closed");

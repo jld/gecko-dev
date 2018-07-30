@@ -204,7 +204,7 @@ protected:
 
   virtual mozilla::ipc::IPCResult
   RecvPBackgroundFileHandleConstructor(PBackgroundFileHandleParent* aActor,
-                                       const FileMode& aMode) override;
+                                       FileMode&& aMode) override;
 
   virtual bool
   DeallocPBackgroundFileHandleParent(PBackgroundFileHandleParent* aActor)

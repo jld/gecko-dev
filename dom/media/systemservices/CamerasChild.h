@@ -161,22 +161,22 @@ public:
 
   // IPC messages recevied, received on the PBackground thread
   // these are the actual callbacks with data
-  mozilla::ipc::IPCResult RecvDeliverFrame(const CaptureEngine&, const int&,
+  mozilla::ipc::IPCResult RecvDeliverFrame(CaptureEngine&& , int&& ,
                                            mozilla::ipc::Shmem&&,
-                                           const VideoFrameProperties & prop) override;
+                                           VideoFrameProperties&& prop) override;
 
   mozilla::ipc::IPCResult RecvDeviceChange() override;
   int AddDeviceChangeCallback(DeviceChangeCallback* aCallback) override;
   int SetFakeDeviceChangeEvents();
 
   // these are response messages to our outgoing requests
-  mozilla::ipc::IPCResult RecvReplyNumberOfCaptureDevices(const int&) override;
-  mozilla::ipc::IPCResult RecvReplyNumberOfCapabilities(const int&) override;
-  mozilla::ipc::IPCResult RecvReplyAllocateCaptureDevice(const int&) override;
-  mozilla::ipc::IPCResult RecvReplyGetCaptureCapability(const VideoCaptureCapability& capability) override;
-  mozilla::ipc::IPCResult RecvReplyGetCaptureDevice(const nsCString& device_name,
-                                                            const nsCString& device_id,
-                                                            const bool& scary) override;
+  mozilla::ipc::IPCResult RecvReplyNumberOfCaptureDevices(int&& ) override;
+  mozilla::ipc::IPCResult RecvReplyNumberOfCapabilities(int&& ) override;
+  mozilla::ipc::IPCResult RecvReplyAllocateCaptureDevice(int&& ) override;
+  mozilla::ipc::IPCResult RecvReplyGetCaptureCapability(VideoCaptureCapability&& capability) override;
+  mozilla::ipc::IPCResult RecvReplyGetCaptureDevice(nsCString&& device_name,
+                                                            nsCString&& device_id,
+                                                            bool&& scary) override;
   mozilla::ipc::IPCResult RecvReplyFailure(void) override;
   mozilla::ipc::IPCResult RecvReplySuccess(void) override;
   void ActorDestroy(ActorDestroyReason aWhy) override;

@@ -24,7 +24,7 @@ class ClientHandleChild final : public PClientHandleChild
 
   // PClientHandleChild interface
   mozilla::ipc::IPCResult
-  RecvExecutionReady(const IPCClientInfo& aClientInfo) override;
+  RecvExecutionReady(IPCClientInfo&& aClientInfo) override;
 
   void
   ActorDestroy(ActorDestroyReason aReason) override;

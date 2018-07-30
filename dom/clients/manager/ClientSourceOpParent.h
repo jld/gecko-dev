@@ -22,7 +22,7 @@ class ClientSourceOpParent final : public PClientSourceOpParent
   ActorDestroy(ActorDestroyReason aReason) override;
 
   mozilla::ipc::IPCResult
-  Recv__delete__(const ClientOpResult& aResult) override;
+  Recv__delete__(ClientOpResult&& aResult) override;
 
 public:
   ClientSourceOpParent(const ClientOpConstructorArgs& aArgs,

@@ -17,9 +17,9 @@ public:
   GamepadEventChannelChild() {}
   ~GamepadEventChannelChild() {}
   virtual mozilla::ipc::IPCResult
-  RecvGamepadUpdate(const GamepadChangeEvent& aGamepadEvent) override;
+  RecvGamepadUpdate(GamepadChangeEvent&& aGamepadEvent) override;
   virtual mozilla::ipc::IPCResult
-  RecvReplyGamepadVibrateHaptic(const uint32_t& aPromiseID) override;
+  RecvReplyGamepadVibrateHaptic(uint32_t&& aPromiseID) override;
   void AddPromise(const uint32_t& aID, dom::Promise* aPromise);
 
 private:

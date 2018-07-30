@@ -33,7 +33,7 @@ ServiceWorkerUpdaterChild::ServiceWorkerUpdaterChild(GenericPromise* aPromise,
 }
 
 mozilla::ipc::IPCResult
-ServiceWorkerUpdaterChild::RecvProceed(const bool& aAllowed)
+ServiceWorkerUpdaterChild::RecvProceed(bool&& aAllowed)
 {
   // If we have a callback, it will resolve the promise.
 

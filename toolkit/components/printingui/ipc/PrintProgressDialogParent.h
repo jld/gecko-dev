@@ -28,21 +28,21 @@ public:
 
   virtual mozilla::ipc::IPCResult
   RecvStateChange(
-          const long& stateFlags,
-          const nsresult& status) override;
+          long&& stateFlags,
+          nsresult&& status) override;
 
   virtual mozilla::ipc::IPCResult
   RecvProgressChange(
-          const long& curSelfProgress,
-          const long& maxSelfProgress,
-          const long& curTotalProgress,
-          const long& maxTotalProgress) override;
+          long&& curSelfProgress,
+          long&& maxSelfProgress,
+          long&& curTotalProgress,
+          long&& maxTotalProgress) override;
 
   virtual mozilla::ipc::IPCResult
-  RecvDocTitleChange(const nsString& newTitle) override;
+  RecvDocTitleChange(nsString&& newTitle) override;
 
   virtual mozilla::ipc::IPCResult
-  RecvDocURLChange(const nsString& newURL) override;
+  RecvDocURLChange(nsString&& newURL) override;
 
   virtual void
   ActorDestroy(ActorDestroyReason aWhy) override;

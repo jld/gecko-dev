@@ -106,8 +106,8 @@ CacheOpChild::ActorDestroy(ActorDestroyReason aReason)
 }
 
 mozilla::ipc::IPCResult
-CacheOpChild::Recv__delete__(const ErrorResult& aRv,
-                             const CacheOpResult& aResult)
+CacheOpChild::Recv__delete__(ErrorResult&& aRv,
+                             CacheOpResult&& aResult)
 {
   NS_ASSERT_OWNINGTHREAD(CacheOpChild);
 

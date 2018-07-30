@@ -185,7 +185,7 @@ FileSystemTaskChildBase::SetRequestResult(const FileSystemResponseValue& aValue)
 }
 
 mozilla::ipc::IPCResult
-FileSystemTaskChildBase::Recv__delete__(const FileSystemResponseValue& aValue)
+FileSystemTaskChildBase::Recv__delete__(FileSystemResponseValue&& aValue)
 {
   mFileSystem->AssertIsOnOwningThread();
 

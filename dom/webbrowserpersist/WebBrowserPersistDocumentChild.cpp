@@ -77,7 +77,7 @@ WebBrowserPersistDocumentChild::Start(nsIWebBrowserPersistDocument* aDocument)
 }
 
 mozilla::ipc::IPCResult
-WebBrowserPersistDocumentChild::RecvSetPersistFlags(const uint32_t& aNewFlags)
+WebBrowserPersistDocumentChild::RecvSetPersistFlags(uint32_t&& aNewFlags)
 {
     mDocument->SetPersistFlags(aNewFlags);
     return IPC_OK();
@@ -131,10 +131,10 @@ WebBrowserPersistDocumentChild::AllocPWebBrowserPersistSerializeChild(
 mozilla::ipc::IPCResult
 WebBrowserPersistDocumentChild::RecvPWebBrowserPersistSerializeConstructor(
             PWebBrowserPersistSerializeChild* aActor,
-            const WebBrowserPersistURIMap& aMap,
-            const nsCString& aRequestedContentType,
-            const uint32_t& aEncoderFlags,
-            const uint32_t& aWrapColumn)
+            WebBrowserPersistURIMap&& aMap,
+            nsCString&& aRequestedContentType,
+            uint32_t&& aEncoderFlags,
+            uint32_t&& aWrapColumn)
 {
     auto* castActor =
         static_cast<WebBrowserPersistSerializeChild*>(aActor);

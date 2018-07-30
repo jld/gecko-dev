@@ -78,7 +78,7 @@ StreamNotifyParent::ActorDestroy(ActorDestroyReason aWhy)
 }
 
 mozilla::ipc::IPCResult
-StreamNotifyParent::RecvRedirectNotifyResponse(const bool& allow)
+StreamNotifyParent::RecvRedirectNotifyResponse(bool&& allow)
 {
   PluginInstanceParent* instance = static_cast<PluginInstanceParent*>(Manager());
   instance->mNPNIface->urlredirectresponse(instance->mNPP, this, static_cast<NPBool>(allow));
@@ -321,7 +321,7 @@ PluginInstanceParent::AnswerNPN_GetValue_NPNVprivateModeBool(bool* value,
 }
 
 mozilla::ipc::IPCResult
-PluginInstanceParent::AnswerNPN_GetValue_DrawingModelSupport(const NPNVariable& model, bool* value)
+PluginInstanceParent::AnswerNPN_GetValue_DrawingModelSupport(NPNVariable&& model, bool* value)
 {
     *value = false;
     return IPC_OK();
@@ -410,7 +410,7 @@ PluginInstanceParent::AnswerNPN_GetValue_PreferredDXGIAdapter(DxgiAdapterDesc* a
 
 mozilla::ipc::IPCResult
 PluginInstanceParent::AnswerNPN_SetValue_NPPVpluginWindow(
-    const bool& windowed, NPError* result)
+    bool&& windowed, NPError* result)
 {
     // Yes, we are passing a boolean as a void*.  We have to cast to intptr_t
     // first to avoid gcc warnings about casting to a pointer from a
@@ -422,7 +422,7 @@ PluginInstanceParent::AnswerNPN_SetValue_NPPVpluginWindow(
 
 mozilla::ipc::IPCResult
 PluginInstanceParent::AnswerNPN_SetValue_NPPVpluginTransparent(
-    const bool& transparent, NPError* result)
+    bool&& transparent, NPError* result)
 {
     *result = mNPNIface->setvalue(mNPP, NPPVpluginTransparentBool,
                                   (void*)(intptr_t)transparent);
@@ -431,7 +431,7 @@ PluginInstanceParent::AnswerNPN_SetValue_NPPVpluginTransparent(
 
 mozilla::ipc::IPCResult
 PluginInstanceParent::AnswerNPN_SetValue_NPPVpluginUsesDOMForCursor(
-    const bool& useDOMForCursor, NPError* result)
+    bool&& useDOMForCursor, NPError* result)
 {
     *result = mNPNIface->setvalue(mNPP, NPPVpluginUsesDOMForCursorBool,
                                   (void*)(intptr_t)useDOMForCursor);
@@ -440,7 +440,7 @@ PluginInstanceParent::AnswerNPN_SetValue_NPPVpluginUsesDOMForCursor(
 
 mozilla::ipc::IPCResult
 PluginInstanceParent::AnswerNPN_SetValue_NPPVpluginDrawingModel(
-    const int& drawingModel, NPError* result)
+    int&& drawingModel, NPError* result)
 {
     bool allowed = false;
 
@@ -499,7 +499,7 @@ PluginInstanceParent::AnswerNPN_SetValue_NPPVpluginDrawingModel(
 
 mozilla::ipc::IPCResult
 PluginInstanceParent::AnswerNPN_SetValue_NPPVpluginEventModel(
-    const int& eventModel, NPError* result)
+    int&& eventModel, NPError* result)
 {
 #ifdef XP_MACOSX
     *result = mNPNIface->setvalue(mNPP, NPPVpluginEventModel,
@@ -513,7 +513,7 @@ PluginInstanceParent::AnswerNPN_SetValue_NPPVpluginEventModel(
 
 mozilla::ipc::IPCResult
 PluginInstanceParent::AnswerNPN_SetValue_NPPVpluginIsPlayingAudio(
-    const bool& isAudioPlaying, NPError* result)
+    bool&& isAudioPlaying, NPError* result)
 {
     *result = mNPNIface->setvalue(mNPP, NPPVpluginIsPlayingAudio,
                                   (void*)(intptr_t)isAudioPlaying);
@@ -521,8 +521,8 @@ PluginInstanceParent::AnswerNPN_SetValue_NPPVpluginIsPlayingAudio(
 }
 
 mozilla::ipc::IPCResult
-PluginInstanceParent::AnswerNPN_GetURL(const nsCString& url,
-                                       const nsCString& target,
+PluginInstanceParent::AnswerNPN_GetURL(nsCString&& url,
+                                       nsCString&& target,
                                        NPError* result)
 {
     *result = mNPNIface->geturl(mNPP,
@@ -532,10 +532,10 @@ PluginInstanceParent::AnswerNPN_GetURL(const nsCString& url,
 }
 
 mozilla::ipc::IPCResult
-PluginInstanceParent::AnswerNPN_PostURL(const nsCString& url,
-                                        const nsCString& target,
-                                        const nsCString& buffer,
-                                        const bool& file,
+PluginInstanceParent::AnswerNPN_PostURL(nsCString&& url,
+                                        nsCString&& target,
+                                        nsCString&& buffer,
+                                        bool&& file,
                                         NPError* result)
 {
     *result = mNPNIface->posturl(mNPP, url.get(), NullableStringGet(target),
@@ -556,11 +556,11 @@ PluginInstanceParent::AllocPStreamNotifyParent(const nsCString& url,
 
 mozilla::ipc::IPCResult
 PluginInstanceParent::AnswerPStreamNotifyConstructor(PStreamNotifyParent* actor,
-                                                     const nsCString& url,
-                                                     const nsCString& target,
-                                                     const bool& post,
-                                                     const nsCString& buffer,
-                                                     const bool& file,
+                                                     nsCString&& url,
+                                                     nsCString&& target,
+                                                     bool&& post,
+                                                     nsCString&& buffer,
+                                                     bool&& file,
                                                      NPError* result)
 {
     bool streamDestroyed = false;
@@ -609,7 +609,7 @@ PluginInstanceParent::DeallocPStreamNotifyParent(PStreamNotifyParent* notifyData
 }
 
 mozilla::ipc::IPCResult
-PluginInstanceParent::RecvNPN_InvalidateRect(const NPRect& rect)
+PluginInstanceParent::RecvNPN_InvalidateRect(NPRect&& rect)
 {
     mNPNIface->invalidaterect(mNPP, const_cast<NPRect*>(&rect));
     return IPC_OK();
@@ -630,8 +630,8 @@ PluginInstanceParent::RecvRevokeCurrentDirectSurface()
 }
 
 mozilla::ipc::IPCResult
-PluginInstanceParent::RecvInitDXGISurface(const gfx::SurfaceFormat& format,
-                                           const gfx::IntSize& size,
+PluginInstanceParent::RecvInitDXGISurface(gfx::SurfaceFormat&& format,
+                                           gfx::IntSize&& size,
                                            WindowsHandle* outHandle,
                                            NPError* outError)
 {
@@ -693,7 +693,7 @@ PluginInstanceParent::RecvInitDXGISurface(const gfx::SurfaceFormat& format,
 }
 
 mozilla::ipc::IPCResult
-PluginInstanceParent::RecvFinalizeDXGISurface(const WindowsHandle& handle)
+PluginInstanceParent::RecvFinalizeDXGISurface(WindowsHandle&& handle)
 {
 #if defined(XP_WIN)
     mD3D11Surfaces.Remove(reinterpret_cast<void*>(handle));
@@ -703,10 +703,10 @@ PluginInstanceParent::RecvFinalizeDXGISurface(const WindowsHandle& handle)
 
 mozilla::ipc::IPCResult
 PluginInstanceParent::RecvShowDirectBitmap(Shmem&& buffer,
-                                           const SurfaceFormat& format,
-                                           const uint32_t& stride,
-                                           const IntSize& size,
-                                           const IntRect& dirty)
+                                           SurfaceFormat&& format,
+                                           uint32_t&& stride,
+                                           IntSize&& size,
+                                           IntRect&& dirty)
 {
     // Validate format.
     if (format != SurfaceFormat::B8G8R8A8 && format != SurfaceFormat::B8G8R8X8) {
@@ -790,8 +790,8 @@ PluginInstanceParent::SetCurrentImage(Image* aImage)
 }
 
 mozilla::ipc::IPCResult
-PluginInstanceParent::RecvShowDirectDXGISurface(const WindowsHandle& handle,
-                                                 const gfx::IntRect& dirty)
+PluginInstanceParent::RecvShowDirectDXGISurface(WindowsHandle&& handle,
+                                                 gfx::IntRect&& dirty)
 {
 #if defined(XP_WIN)
     RefPtr<D3D11SurfaceHolder> surface;
@@ -836,8 +836,8 @@ PluginInstanceParent::RecvShowDirectDXGISurface(const WindowsHandle& handle,
 }
 
 mozilla::ipc::IPCResult
-PluginInstanceParent::RecvShow(const NPRect& updatedRect,
-                               const SurfaceDescriptor& newSurface,
+PluginInstanceParent::RecvShow(NPRect&& updatedRect,
+                               SurfaceDescriptor&& newSurface,
                                SurfaceDescriptor* prevSurface)
 {
     PLUGIN_LOG_DEBUG(
@@ -1905,7 +1905,7 @@ PluginInstanceParent::DeallocPPluginSurfaceParent(PPluginSurfaceParent* s)
 }
 
 mozilla::ipc::IPCResult
-PluginInstanceParent::AnswerNPN_PushPopupsEnabledState(const bool& aState)
+PluginInstanceParent::AnswerNPN_PushPopupsEnabledState(bool&& aState)
 {
     mNPNIface->pushpopupsenabledstate(mNPP, aState ? 1 : 0);
     return IPC_OK();
@@ -1919,8 +1919,8 @@ PluginInstanceParent::AnswerNPN_PopPopupsEnabledState()
 }
 
 mozilla::ipc::IPCResult
-PluginInstanceParent::AnswerNPN_GetValueForURL(const NPNURLVariable& variable,
-                                               const nsCString& url,
+PluginInstanceParent::AnswerNPN_GetValueForURL(NPNURLVariable&& variable,
+                                               nsCString&& url,
                                                nsCString* value,
                                                NPError* result)
 {
@@ -1936,9 +1936,9 @@ PluginInstanceParent::AnswerNPN_GetValueForURL(const NPNURLVariable& variable,
 }
 
 mozilla::ipc::IPCResult
-PluginInstanceParent::AnswerNPN_SetValueForURL(const NPNURLVariable& variable,
-                                               const nsCString& url,
-                                               const nsCString& value,
+PluginInstanceParent::AnswerNPN_SetValueForURL(NPNURLVariable&& variable,
+                                               nsCString&& url,
+                                               nsCString&& value,
                                                NPError* result)
 {
     *result = mNPNIface->setvalueforurl(mNPP, (NPNURLVariable) variable,
@@ -1948,12 +1948,12 @@ PluginInstanceParent::AnswerNPN_SetValueForURL(const NPNURLVariable& variable,
 }
 
 mozilla::ipc::IPCResult
-PluginInstanceParent::AnswerNPN_ConvertPoint(const double& sourceX,
-                                             const bool&   ignoreDestX,
-                                             const double& sourceY,
-                                             const bool&   ignoreDestY,
-                                             const NPCoordinateSpace& sourceSpace,
-                                             const NPCoordinateSpace& destSpace,
+PluginInstanceParent::AnswerNPN_ConvertPoint(double&& sourceX,
+                                             bool&& ignoreDestX,
+                                             double&& sourceY,
+                                             bool&& ignoreDestY,
+                                             NPCoordinateSpace&& sourceSpace,
+                                             NPCoordinateSpace&& destSpace,
                                              double *destX,
                                              double *destY,
                                              bool *result)
@@ -1989,7 +1989,7 @@ PluginInstanceParent::GetOwner()
 }
 
 mozilla::ipc::IPCResult
-PluginInstanceParent::RecvSetNetscapeWindowAsParent(const NativeWindowHandle& childWindow)
+PluginInstanceParent::RecvSetNetscapeWindowAsParent(NativeWindowHandle&& childWindow)
 {
 #if defined(XP_WIN)
     nsPluginInstanceOwner* owner = GetOwner();
@@ -2208,7 +2208,7 @@ PluginInstanceParent::MaybeCreateChildPopupSurrogate()
 #endif // defined(OS_WIN)
 
 mozilla::ipc::IPCResult
-PluginInstanceParent::AnswerPluginFocusChange(const bool& gotFocus)
+PluginInstanceParent::AnswerPluginFocusChange(bool&& gotFocus)
 {
     PLUGIN_LOG_DEBUG(("%s", FULLFUNCTION));
 
@@ -2254,7 +2254,7 @@ PluginInstanceParent::Cast(NPP aInstance)
 }
 
 mozilla::ipc::IPCResult
-PluginInstanceParent::RecvGetCompositionString(const uint32_t& aIndex,
+PluginInstanceParent::RecvGetCompositionString(uint32_t&& aIndex,
                                                nsTArray<uint8_t>* aDist,
                                                int32_t* aLength)
 {
@@ -2274,7 +2274,7 @@ PluginInstanceParent::RecvGetCompositionString(const uint32_t& aIndex,
 
 mozilla::ipc::IPCResult
 PluginInstanceParent::RecvSetCandidateWindow(
-    const mozilla::widget::CandidateWindowPosition& aPosition)
+    mozilla::widget::CandidateWindowPosition&& aPosition)
 {
 #if defined(OS_WIN)
     nsPluginInstanceOwner* owner = GetOwner();
@@ -2286,7 +2286,7 @@ PluginInstanceParent::RecvSetCandidateWindow(
 }
 
 mozilla::ipc::IPCResult
-PluginInstanceParent::RecvRequestCommitOrCancel(const bool& aCommitted)
+PluginInstanceParent::RecvRequestCommitOrCancel(bool&& aCommitted)
 {
 #if defined(OS_WIN)
     nsPluginInstanceOwner* owner = GetOwner();
@@ -2298,7 +2298,7 @@ PluginInstanceParent::RecvRequestCommitOrCancel(const bool& aCommitted)
 }
 
 mozilla::ipc::IPCResult
-PluginInstanceParent::RecvEnableIME(const bool& aEnable)
+PluginInstanceParent::RecvEnableIME(bool&& aEnable)
 {
 #if defined(OS_WIN)
     nsPluginInstanceOwner* owner = GetOwner();
@@ -2325,7 +2325,7 @@ PluginInstanceParent::HandledWindowedPluginKeyEvent(
 
 mozilla::ipc::IPCResult
 PluginInstanceParent::RecvOnWindowedPluginKeyEvent(
-                        const NativeEventData& aKeyEventData)
+                        NativeEventData&& aKeyEventData)
 {
     nsPluginInstanceOwner* owner = GetOwner();
     if (NS_WARN_IF(!owner)) {

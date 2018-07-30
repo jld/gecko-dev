@@ -29,16 +29,16 @@ public:
   // PUiCompositorControllerParent functions
   mozilla::ipc::IPCResult RecvPause() override;
   mozilla::ipc::IPCResult RecvResume() override;
-  mozilla::ipc::IPCResult RecvResumeAndResize(const int32_t& aHeight,
-                                              const int32_t& aWidth) override;
+  mozilla::ipc::IPCResult RecvResumeAndResize(int32_t&& aHeight,
+                                              int32_t&& aWidth) override;
   mozilla::ipc::IPCResult RecvInvalidateAndRender() override;
-  mozilla::ipc::IPCResult RecvMaxToolbarHeight(const int32_t& aHeight) override;
-  mozilla::ipc::IPCResult RecvPinned(const bool& aPinned, const int32_t& aReason) override;
-  mozilla::ipc::IPCResult RecvToolbarAnimatorMessageFromUI(const int32_t& aMessage) override;
-  mozilla::ipc::IPCResult RecvDefaultClearColor(const uint32_t& aColor) override;
+  mozilla::ipc::IPCResult RecvMaxToolbarHeight(int32_t&& aHeight) override;
+  mozilla::ipc::IPCResult RecvPinned(bool&& aPinned, int32_t&& aReason) override;
+  mozilla::ipc::IPCResult RecvToolbarAnimatorMessageFromUI(int32_t&& aMessage) override;
+  mozilla::ipc::IPCResult RecvDefaultClearColor(uint32_t&& aColor) override;
   mozilla::ipc::IPCResult RecvRequestScreenPixels() override;
-  mozilla::ipc::IPCResult RecvEnableLayerUpdateNotifications(const bool& aEnable) override;
-  mozilla::ipc::IPCResult RecvToolbarPixelsToCompositor(Shmem&& aMem, const ScreenIntSize& aSize) override;
+  mozilla::ipc::IPCResult RecvEnableLayerUpdateNotifications(bool&& aEnable) override;
+  mozilla::ipc::IPCResult RecvToolbarPixelsToCompositor(Shmem&& aMem, ScreenIntSize&& aSize) override;
   void ActorDestroy(ActorDestroyReason aWhy) override;
   void DeallocPUiCompositorControllerParent() override;
 

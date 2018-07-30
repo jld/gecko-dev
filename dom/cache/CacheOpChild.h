@@ -40,7 +40,7 @@ private:
   ActorDestroy(ActorDestroyReason aReason) override;
 
   virtual mozilla::ipc::IPCResult
-  Recv__delete__(const ErrorResult& aRv, const CacheOpResult& aResult) override;
+  Recv__delete__(ErrorResult&& aRv, CacheOpResult&& aResult) override;
 
   // ActorChild methods
   virtual void

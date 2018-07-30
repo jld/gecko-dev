@@ -83,7 +83,7 @@ public:
 
   void NotifyNotUsed(uint64_t aTransactionId);
 
-  virtual mozilla::ipc::IPCResult RecvRecycleTexture(const TextureFlags& aTextureFlags) override;
+  virtual mozilla::ipc::IPCResult RecvRecycleTexture(TextureFlags&& aTextureFlags) override;
 
   TextureHost* GetTextureHost() { return mTextureHost; }
 
@@ -1337,7 +1337,7 @@ TextureHost::ReceivedDestroy(PTextureParent* aActor)
 }
 
 mozilla::ipc::IPCResult
-TextureParent::RecvRecycleTexture(const TextureFlags& aTextureFlags)
+TextureParent::RecvRecycleTexture(TextureFlags&& aTextureFlags)
 {
   if (!mTextureHost) {
     return IPC_OK();

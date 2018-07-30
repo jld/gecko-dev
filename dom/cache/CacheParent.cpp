@@ -67,7 +67,7 @@ CacheParent::DeallocPCacheOpParent(PCacheOpParent* aActor)
 
 mozilla::ipc::IPCResult
 CacheParent::RecvPCacheOpConstructor(PCacheOpParent* aActor,
-                                     const CacheOpArgs& aOpArgs)
+                                     CacheOpArgs&& aOpArgs)
 {
   auto actor = static_cast<CacheOpParent*>(aActor);
   actor->Execute(mManager);

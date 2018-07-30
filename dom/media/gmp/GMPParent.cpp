@@ -545,7 +545,7 @@ GMPParent::ActorDestroy(ActorDestroyReason aWhy)
 }
 
 mozilla::ipc::IPCResult
-GMPParent::RecvInitCrashReporter(Shmem&& aShmem, const NativeThreadId& aThreadId)
+GMPParent::RecvInitCrashReporter(Shmem&& aShmem, NativeThreadId&& aThreadId)
 {
   mCrashReporter = MakeUnique<ipc::CrashReporterHost>(
     GeckoProcessType_GMPlugin,

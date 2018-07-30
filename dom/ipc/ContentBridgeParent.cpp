@@ -73,10 +73,10 @@ ContentBridgeParent::DeferredDestroy()
 }
 
 mozilla::ipc::IPCResult
-ContentBridgeParent::RecvSyncMessage(const nsString& aMsg,
-                                     const ClonedMessageData& aData,
+ContentBridgeParent::RecvSyncMessage(nsString&& aMsg,
+                                     ClonedMessageData&& aData,
                                      InfallibleTArray<jsipc::CpowEntry>&& aCpows,
-                                     const IPC::Principal& aPrincipal,
+                                     IPC::Principal&& aPrincipal,
                                      nsTArray<StructuredCloneData>* aRetvals)
 {
   return nsIContentParent::RecvSyncMessage(aMsg, aData, std::move(aCpows),
@@ -84,10 +84,10 @@ ContentBridgeParent::RecvSyncMessage(const nsString& aMsg,
 }
 
 mozilla::ipc::IPCResult
-ContentBridgeParent::RecvAsyncMessage(const nsString& aMsg,
+ContentBridgeParent::RecvAsyncMessage(nsString&& aMsg,
                                       InfallibleTArray<jsipc::CpowEntry>&& aCpows,
-                                      const IPC::Principal& aPrincipal,
-                                      const ClonedMessageData& aData)
+                                      IPC::Principal&& aPrincipal,
+                                      ClonedMessageData&& aData)
 {
   return nsIContentParent::RecvAsyncMessage(aMsg, std::move(aCpows),
                                             aPrincipal, aData);
@@ -175,12 +175,12 @@ ContentBridgeParent::DeallocPBrowserParent(PBrowserParent* aParent)
 
 mozilla::ipc::IPCResult
 ContentBridgeParent::RecvPBrowserConstructor(PBrowserParent* actor,
-                                             const TabId& tabId,
-                                             const TabId& sameTabGroupAs,
-                                             const IPCTabContext& context,
-                                             const uint32_t& chromeFlags,
-                                             const ContentParentId& cpId,
-                                             const bool& isForBrowser)
+                                             TabId&& tabId,
+                                             TabId&& sameTabGroupAs,
+                                             IPCTabContext&& context,
+                                             uint32_t&& chromeFlags,
+                                             ContentParentId&& cpId,
+                                             bool&& isForBrowser)
 {
   return nsIContentParent::RecvPBrowserConstructor(actor,
                                                    tabId,

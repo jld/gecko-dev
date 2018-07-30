@@ -22,7 +22,7 @@ public:
                             CancelableRunnable* aFailureRunnable);
 
   mozilla::ipc::IPCResult
-  RecvProceed(const bool& aAllowed) override;
+  RecvProceed(bool&& aAllowed) override;
 
 private:
   void

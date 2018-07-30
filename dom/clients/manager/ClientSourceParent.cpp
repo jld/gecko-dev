@@ -100,7 +100,7 @@ ClientSourceParent::RecvTeardown()
 }
 
 IPCResult
-ClientSourceParent::RecvExecutionReady(const ClientSourceExecutionReadyArgs& aArgs)
+ClientSourceParent::RecvExecutionReady(ClientSourceExecutionReadyArgs&& aArgs)
 {
   // Now that we have the creation URL for the Client we can do some validation
   // to make sure the child actor is not giving us garbage.  Since we validate
@@ -146,7 +146,7 @@ ClientSourceParent::RecvThaw()
 }
 
 IPCResult
-ClientSourceParent::RecvInheritController(const ClientControlledArgs& aArgs)
+ClientSourceParent::RecvInheritController(ClientControlledArgs&& aArgs)
 {
   mController.reset();
   mController.emplace(aArgs.serviceWorker());

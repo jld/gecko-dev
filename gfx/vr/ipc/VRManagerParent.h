@@ -53,26 +53,26 @@ protected:
   void OnChannelConnected(int32_t pid) override;
 
   virtual mozilla::ipc::IPCResult RecvRefreshDisplays() override;
-  virtual mozilla::ipc::IPCResult RecvResetSensor(const uint32_t& aDisplayID) override;
-  virtual mozilla::ipc::IPCResult RecvSetGroupMask(const uint32_t& aDisplayID, const uint32_t& aGroupMask) override;
-  virtual mozilla::ipc::IPCResult RecvSetHaveEventListener(const bool& aHaveEventListener) override;
+  virtual mozilla::ipc::IPCResult RecvResetSensor(uint32_t&& aDisplayID) override;
+  virtual mozilla::ipc::IPCResult RecvSetGroupMask(uint32_t&& aDisplayID, uint32_t&& aGroupMask) override;
+  virtual mozilla::ipc::IPCResult RecvSetHaveEventListener(bool&& aHaveEventListener) override;
   virtual mozilla::ipc::IPCResult RecvControllerListenerAdded() override;
   virtual mozilla::ipc::IPCResult RecvControllerListenerRemoved() override;
-  virtual mozilla::ipc::IPCResult RecvVibrateHaptic(const uint32_t& aControllerIdx, const uint32_t& aHapticIndex,
-                                                    const double& aIntensity, const double& aDuration, const uint32_t& aPromiseID) override;
-  virtual mozilla::ipc::IPCResult RecvStopVibrateHaptic(const uint32_t& aControllerIdx) override;
+  virtual mozilla::ipc::IPCResult RecvVibrateHaptic(uint32_t&& aControllerIdx, uint32_t&& aHapticIndex,
+                                                    double&& aIntensity, double&& aDuration, uint32_t&& aPromiseID) override;
+  virtual mozilla::ipc::IPCResult RecvStopVibrateHaptic(uint32_t&& aControllerIdx) override;
   virtual mozilla::ipc::IPCResult RecvCreateVRTestSystem() override;
-  virtual mozilla::ipc::IPCResult RecvCreateVRServiceTestDisplay(const nsCString& aID, const uint32_t& aPromiseID) override;
-  virtual mozilla::ipc::IPCResult RecvCreateVRServiceTestController(const nsCString& aID, const uint32_t& aPromiseID) override;
-  virtual mozilla::ipc::IPCResult RecvSetDisplayInfoToMockDisplay(const uint32_t& aDeviceID,
-                                                                  const VRDisplayInfo& aDisplayInfo) override;
-  virtual mozilla::ipc::IPCResult RecvSetSensorStateToMockDisplay(const uint32_t& aDeviceID,
-                                                                  const VRHMDSensorState& aSensorState) override;
-  virtual mozilla::ipc::IPCResult RecvNewButtonEventToMockController(const uint32_t& aDeviceID, const long& aButton,
-                                                                     const bool& aPressed) override;
-  virtual mozilla::ipc::IPCResult RecvNewAxisMoveEventToMockController(const uint32_t& aDeviceID, const long& aAxis,
-                                                                       const double& aValue) override;
-  virtual mozilla::ipc::IPCResult RecvNewPoseMoveToMockController(const uint32_t& aDeviceID, const GamepadPoseState& pose) override;
+  virtual mozilla::ipc::IPCResult RecvCreateVRServiceTestDisplay(nsCString&& aID, uint32_t&& aPromiseID) override;
+  virtual mozilla::ipc::IPCResult RecvCreateVRServiceTestController(nsCString&& aID, uint32_t&& aPromiseID) override;
+  virtual mozilla::ipc::IPCResult RecvSetDisplayInfoToMockDisplay(uint32_t&& aDeviceID,
+                                                                  VRDisplayInfo&& aDisplayInfo) override;
+  virtual mozilla::ipc::IPCResult RecvSetSensorStateToMockDisplay(uint32_t&& aDeviceID,
+                                                                  VRHMDSensorState&& aSensorState) override;
+  virtual mozilla::ipc::IPCResult RecvNewButtonEventToMockController(uint32_t&& aDeviceID, long&& aButton,
+                                                                     bool&& aPressed) override;
+  virtual mozilla::ipc::IPCResult RecvNewAxisMoveEventToMockController(uint32_t&& aDeviceID, long&& aAxis,
+                                                                       double&& aValue) override;
+  virtual mozilla::ipc::IPCResult RecvNewPoseMoveToMockController(uint32_t&& aDeviceID, GamepadPoseState&& pose) override;
 
 private:
   void RegisterWithManager();

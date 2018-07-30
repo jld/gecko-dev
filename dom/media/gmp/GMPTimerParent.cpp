@@ -33,8 +33,8 @@ GMPTimerParent::GMPTimerParent(nsISerialEventTarget* aGMPEventTarget)
 }
 
 mozilla::ipc::IPCResult
-GMPTimerParent::RecvSetTimer(const uint32_t& aTimerId,
-                             const uint32_t& aTimeoutMs)
+GMPTimerParent::RecvSetTimer(uint32_t&& aTimerId,
+                             uint32_t&& aTimeoutMs)
 {
   LOGD(("%s::%s: %p mIsOpen=%d", __CLASS__, __FUNCTION__, this, mIsOpen));
 

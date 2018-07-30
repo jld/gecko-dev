@@ -15,7 +15,7 @@ namespace dom {
 using mozilla::ipc::IPCResult;
 
 IPCResult
-ClientHandleChild::RecvExecutionReady(const IPCClientInfo& aClientInfo)
+ClientHandleChild::RecvExecutionReady(IPCClientInfo&& aClientInfo)
 {
   if (mHandle) {
     mHandle->ExecutionReady(ClientInfo(aClientInfo));

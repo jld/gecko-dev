@@ -34,7 +34,7 @@ class ClientHandleParent final : public PClientHandleParent
 
   mozilla::ipc::IPCResult
   RecvPClientHandleOpConstructor(PClientHandleOpParent* aActor,
-                                 const ClientOpConstructorArgs& aArgs) override;
+                                 ClientOpConstructorArgs&& aArgs) override;
 
 public:
   ClientHandleParent();

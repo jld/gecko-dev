@@ -38,8 +38,8 @@ RemotePrintJobChild::InitializePrint(const nsString& aDocumentTitle,
 
 mozilla::ipc::IPCResult
 RemotePrintJobChild::RecvPrintInitializationResult(
-  const nsresult& aRv,
-  const mozilla::ipc::FileDescriptor& aFd)
+  nsresult&& aRv,
+  mozilla::ipc::FileDescriptor&& aFd)
 {
   mPrintInitialized = true;
   mInitializationResult = aRv;
@@ -77,7 +77,7 @@ RemotePrintJobChild::ProcessPage()
 }
 
 mozilla::ipc::IPCResult
-RemotePrintJobChild::RecvPageProcessed(const mozilla::ipc::FileDescriptor& aFd)
+RemotePrintJobChild::RecvPageProcessed(mozilla::ipc::FileDescriptor&& aFd)
 {
   MOZ_ASSERT(mPagePrintTimer);
   SetNextPageFD(aFd);
@@ -87,7 +87,7 @@ RemotePrintJobChild::RecvPageProcessed(const mozilla::ipc::FileDescriptor& aFd)
 }
 
 mozilla::ipc::IPCResult
-RemotePrintJobChild::RecvAbortPrint(const nsresult& aRv)
+RemotePrintJobChild::RecvAbortPrint(nsresult&& aRv)
 {
   MOZ_ASSERT(mPrintJob);
 

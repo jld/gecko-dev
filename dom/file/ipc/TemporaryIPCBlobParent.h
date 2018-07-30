@@ -30,8 +30,8 @@ private:
   RecvOperationFailed() override;
 
   mozilla::ipc::IPCResult
-  RecvOperationDone(const nsCString& aContentType,
-                    const FileDescriptor& aFD) override;
+  RecvOperationDone(nsCString&& aContentType,
+                    FileDescriptor&& aFD) override;
 
   void
   ActorDestroy(ActorDestroyReason aWhy) override;

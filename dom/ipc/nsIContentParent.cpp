@@ -208,12 +208,12 @@ nsIContentParent::DeallocPBrowserParent(PBrowserParent* aFrame)
 
 mozilla::ipc::IPCResult
 nsIContentParent::RecvPBrowserConstructor(PBrowserParent* actor,
-                                          const TabId& tabId,
-                                          const TabId& sameTabGroupAs,
-                                          const IPCTabContext& context,
-                                          const uint32_t& chromeFlags,
-                                          const ContentParentId& cpId,
-                                          const bool& isForBrowser)
+                                          TabId&& tabId,
+                                          TabId&& sameTabGroupAs,
+                                          IPCTabContext&& context,
+                                          uint32_t&& chromeFlags,
+                                          ContentParentId&& cpId,
+                                          bool&& isForBrowser)
 {
   TabParent* parent = TabParent::GetFrom(actor);
   // When enabling input event prioritization, input events may preempt other
@@ -242,10 +242,10 @@ nsIContentParent::DeallocPIPCBlobInputStreamParent(PIPCBlobInputStreamParent* aA
 }
 
 mozilla::ipc::IPCResult
-nsIContentParent::RecvSyncMessage(const nsString& aMsg,
-                                  const ClonedMessageData& aData,
+nsIContentParent::RecvSyncMessage(nsString&& aMsg,
+                                  ClonedMessageData&& aData,
                                   InfallibleTArray<CpowEntry>&& aCpows,
-                                  const IPC::Principal& aPrincipal,
+                                  IPC::Principal&& aPrincipal,
                                   nsTArray<ipc::StructuredCloneData>* aRetvals)
 {
   AUTO_PROFILER_LABEL_DYNAMIC_LOSSY_NSSTRING(
@@ -264,10 +264,10 @@ nsIContentParent::RecvSyncMessage(const nsString& aMsg,
 }
 
 mozilla::ipc::IPCResult
-nsIContentParent::RecvRpcMessage(const nsString& aMsg,
-                                 const ClonedMessageData& aData,
+nsIContentParent::RecvRpcMessage(nsString&& aMsg,
+                                 ClonedMessageData&& aData,
                                  InfallibleTArray<CpowEntry>&& aCpows,
-                                 const IPC::Principal& aPrincipal,
+                                 IPC::Principal&& aPrincipal,
                                  nsTArray<ipc::StructuredCloneData>* aRetvals)
 {
   AUTO_PROFILER_LABEL_DYNAMIC_LOSSY_NSSTRING(
@@ -325,10 +325,10 @@ nsIContentParent::DeallocPParentToChildStreamParent(PParentToChildStreamParent* 
 }
 
 mozilla::ipc::IPCResult
-nsIContentParent::RecvAsyncMessage(const nsString& aMsg,
+nsIContentParent::RecvAsyncMessage(nsString&& aMsg,
                                    InfallibleTArray<CpowEntry>&& aCpows,
-                                   const IPC::Principal& aPrincipal,
-                                   const ClonedMessageData& aData)
+                                   IPC::Principal&& aPrincipal,
+                                   ClonedMessageData&& aData)
 {
   AUTO_PROFILER_LABEL_DYNAMIC_LOSSY_NSSTRING(
     "nsIContentParent::RecvAsyncMessage", OTHER, aMsg);

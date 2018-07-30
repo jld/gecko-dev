@@ -44,7 +44,7 @@ private:
   virtual void ActorDestroy(ActorDestroyReason aWhy) override;
 
   virtual mozilla::ipc::IPCResult
-  RecvAddFileDescriptor(const FileDescriptor& aFileDescriptor) override;
+  RecvAddFileDescriptor(FileDescriptor&& aFileDescriptor) override;
 };
 
 } // namespace ipc

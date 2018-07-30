@@ -333,7 +333,7 @@ CompositorBridgeChild::DeallocPLayerTransactionChild(PLayerTransactionChild* act
 }
 
 mozilla::ipc::IPCResult
-CompositorBridgeChild::RecvInvalidateLayers(const LayersId& aLayersId)
+CompositorBridgeChild::RecvInvalidateLayers(LayersId&& aLayersId)
 {
   if (mLayerManager) {
     MOZ_ASSERT(!aLayersId.IsValid());
@@ -384,8 +384,8 @@ static void CalculatePluginClip(const LayoutDeviceIntRect& aBounds,
 #endif
 
 mozilla::ipc::IPCResult
-CompositorBridgeChild::RecvUpdatePluginConfigurations(const LayoutDeviceIntPoint& aContentOffset,
-                                                      const LayoutDeviceIntRegion& aParentLayerVisibleRegion,
+CompositorBridgeChild::RecvUpdatePluginConfigurations(LayoutDeviceIntPoint&& aContentOffset,
+                                                      LayoutDeviceIntRegion&& aParentLayerVisibleRegion,
                                                       nsTArray<PluginWindowData>&& aPlugins)
 {
 #if !defined(XP_WIN) && !defined(MOZ_WIDGET_GTK)
@@ -481,7 +481,7 @@ ScheduleSendAllPluginsCaptured(CompositorBridgeChild* aThis, MessageLoop* aLoop)
 #endif
 
 mozilla::ipc::IPCResult
-CompositorBridgeChild::RecvCaptureAllPlugins(const uintptr_t& aParentWidget)
+CompositorBridgeChild::RecvCaptureAllPlugins(uintptr_t&& aParentWidget)
 {
 #if defined(XP_WIN)
   MOZ_ASSERT(NS_IsMainThread());
@@ -502,7 +502,7 @@ CompositorBridgeChild::RecvCaptureAllPlugins(const uintptr_t& aParentWidget)
 }
 
 mozilla::ipc::IPCResult
-CompositorBridgeChild::RecvHideAllPlugins(const uintptr_t& aParentWidget)
+CompositorBridgeChild::RecvHideAllPlugins(uintptr_t&& aParentWidget)
 {
 #if !defined(XP_WIN) && !defined(MOZ_WIDGET_GTK)
   MOZ_ASSERT_UNREACHABLE("CompositorBridgeChild::RecvHideAllPlugins calls "
@@ -521,10 +521,10 @@ CompositorBridgeChild::RecvHideAllPlugins(const uintptr_t& aParentWidget)
 }
 
 mozilla::ipc::IPCResult
-CompositorBridgeChild::RecvDidComposite(const LayersId& aId,
-                                        const TransactionId& aTransactionId,
-                                        const TimeStamp& aCompositeStart,
-                                        const TimeStamp& aCompositeEnd)
+CompositorBridgeChild::RecvDidComposite(LayersId&& aId,
+                                        TransactionId&& aTransactionId,
+                                        TimeStamp&& aCompositeStart,
+                                        TimeStamp&& aCompositeEnd)
 {
   // Hold a reference to keep texture pools alive.  See bug 1387799
   AutoTArray<RefPtr<TextureClientPool>,2> texturePools = mTexturePools;
@@ -582,10 +582,10 @@ CompositorBridgeChild::ActorDestroy(ActorDestroyReason aWhy)
 
 mozilla::ipc::IPCResult
 CompositorBridgeChild::RecvSharedCompositorFrameMetrics(
-    const mozilla::ipc::SharedMemoryBasic::Handle& metrics,
-    const CrossProcessMutexHandle& handle,
-    const LayersId& aLayersId,
-    const uint32_t& aAPZCId)
+    mozilla::ipc::SharedMemoryBasic::Handle&& metrics,
+    CrossProcessMutexHandle&& handle,
+    LayersId&& aLayersId,
+    uint32_t&& aAPZCId)
 {
   SharedFrameMetricsData* data = new SharedFrameMetricsData(
     metrics, handle, aLayersId, aAPZCId);
@@ -595,8 +595,8 @@ CompositorBridgeChild::RecvSharedCompositorFrameMetrics(
 
 mozilla::ipc::IPCResult
 CompositorBridgeChild::RecvReleaseSharedCompositorFrameMetrics(
-    const ViewID& aId,
-    const uint32_t& aAPZCId)
+    ViewID&& aId,
+    uint32_t&& aAPZCId)
 {
   if (auto entry = mFrameMetricsTable.Lookup(aId)) {
     // The SharedFrameMetricsData may have been removed previously if
@@ -863,9 +863,9 @@ CompositorBridgeChild::RecvParentAsyncMessages(InfallibleTArray<AsyncParentMessa
 }
 
 mozilla::ipc::IPCResult
-CompositorBridgeChild::RecvObserveLayerUpdate(const LayersId& aLayersId,
-                                              const uint64_t& aEpoch,
-                                              const bool& aActive)
+CompositorBridgeChild::RecvObserveLayerUpdate(LayersId&& aLayersId,
+                                              uint64_t&& aEpoch,
+                                              bool&& aActive)
 {
   // This message is sent via the window compositor, not the tab compositor -
   // however it still has a layers id.
@@ -879,7 +879,7 @@ CompositorBridgeChild::RecvObserveLayerUpdate(const LayersId& aLayersId,
 }
 
 mozilla::ipc::IPCResult
-CompositorBridgeChild::RecvNotifyWebRenderError(const WebRenderError& aError)
+CompositorBridgeChild::RecvNotifyWebRenderError(WebRenderError&& aError)
 {
   MOZ_ASSERT(XRE_IsParentProcess());
   GPUProcessManager::Get()->NotifyWebRenderError(aError);

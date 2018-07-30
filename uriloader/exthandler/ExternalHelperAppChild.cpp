@@ -145,7 +145,7 @@ ExternalHelperAppChild::DivertToParent(nsIDivertableChannel *divertable,
 }
 
 mozilla::ipc::IPCResult
-ExternalHelperAppChild::RecvCancel(const nsresult& aStatus)
+ExternalHelperAppChild::RecvCancel(nsresult&& aStatus)
 {
   mStatus = aStatus;
   return IPC_OK();

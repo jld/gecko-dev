@@ -23,7 +23,7 @@ public:
 
   mozilla::ipc::IPCResult
   RecvReceiveMultiTouchInputEvent(
-          const MultiTouchInput& aEvent,
+          MultiTouchInput&& aEvent,
           nsEventStatus* aOutStatus,
           MultiTouchInput* aOutEvent,
           ScrollableLayerGuid* aOutTargetGuid,
@@ -31,7 +31,7 @@ public:
 
   mozilla::ipc::IPCResult
   RecvReceiveMouseInputEvent(
-          const MouseInput& aEvent,
+          MouseInput&& aEvent,
           nsEventStatus* aOutStatus,
           MouseInput* aOutEvent,
           ScrollableLayerGuid* aOutTargetGuid,
@@ -39,7 +39,7 @@ public:
 
   mozilla::ipc::IPCResult
   RecvReceivePanGestureInputEvent(
-          const PanGestureInput& aEvent,
+          PanGestureInput&& aEvent,
           nsEventStatus* aOutStatus,
           PanGestureInput* aOutEvent,
           ScrollableLayerGuid* aOutTargetGuid,
@@ -47,7 +47,7 @@ public:
 
   mozilla::ipc::IPCResult
   RecvReceivePinchGestureInputEvent(
-          const PinchGestureInput& aEvent,
+          PinchGestureInput&& aEvent,
           nsEventStatus* aOutStatus,
           PinchGestureInput* aOutEvent,
           ScrollableLayerGuid* aOutTargetGuid,
@@ -55,7 +55,7 @@ public:
 
   mozilla::ipc::IPCResult
   RecvReceiveTapGestureInputEvent(
-          const TapGestureInput& aEvent,
+          TapGestureInput&& aEvent,
           nsEventStatus* aOutStatus,
           TapGestureInput* aOutEvent,
           ScrollableLayerGuid* aOutTargetGuid,
@@ -63,7 +63,7 @@ public:
 
   mozilla::ipc::IPCResult
   RecvReceiveScrollWheelInputEvent(
-          const ScrollWheelInput& aEvent,
+          ScrollWheelInput&& aEvent,
           nsEventStatus* aOutStatus,
           ScrollWheelInput* aOutEvent,
           ScrollableLayerGuid* aOutTargetGuid,
@@ -71,7 +71,7 @@ public:
 
   mozilla::ipc::IPCResult
   RecvReceiveKeyboardInputEvent(
-          const KeyboardInput& aEvent,
+          KeyboardInput&& aEvent,
           nsEventStatus* aOutStatus,
           KeyboardInput* aOutEvent,
           ScrollableLayerGuid* aOutTargetGuid,
@@ -79,12 +79,12 @@ public:
 
   mozilla::ipc::IPCResult
   RecvUpdateWheelTransaction(
-          const LayoutDeviceIntPoint& aRefPoint,
-          const EventMessage& aEventMessage) override;
+          LayoutDeviceIntPoint&& aRefPoint,
+          EventMessage&& aEventMessage) override;
 
   mozilla::ipc::IPCResult
   RecvProcessUnhandledEvent(
-          const LayoutDeviceIntPoint& aRefPoint,
+          LayoutDeviceIntPoint&& aRefPoint,
           LayoutDeviceIntPoint* aOutRefPoint,
           ScrollableLayerGuid*  aOutTargetGuid,
           uint64_t*             aOutFocusSequenceNumber) override;

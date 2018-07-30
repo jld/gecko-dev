@@ -1846,7 +1846,7 @@ PluginModuleParent::NPP_SetValue(NPP instance, NPNVariable variable,
 
 mozilla::ipc::IPCResult
 PluginModuleChromeParent::AnswerNPN_SetValue_NPPVpluginRequiresAudioDeviceChanges(
-    const bool& shouldRegister, NPError* result)
+    bool&& shouldRegister, NPError* result)
 {
 #ifdef XP_WIN
     *result = NPERR_NO_ERROR;
@@ -1863,7 +1863,7 @@ PluginModuleChromeParent::AnswerNPN_SetValue_NPPVpluginRequiresAudioDeviceChange
 }
 
 mozilla::ipc::IPCResult
-PluginModuleParent::RecvBackUpXResources(const FileDescriptor& aXSocketFd)
+PluginModuleParent::RecvBackUpXResources(FileDescriptor&& aXSocketFd)
 {
 #ifndef MOZ_X11
     MOZ_CRASH("This message only makes sense on X11 platforms");
@@ -2634,9 +2634,9 @@ PluginModuleParent::ProcessRemoteNativeEventsInInterruptCall()
 }
 
 mozilla::ipc::IPCResult
-PluginModuleParent::RecvPluginShowWindow(const uint32_t& aWindowId, const bool& aModal,
-                                         const int32_t& aX, const int32_t& aY,
-                                         const size_t& aWidth, const size_t& aHeight)
+PluginModuleParent::RecvPluginShowWindow(uint32_t&& aWindowId, bool&& aModal,
+                                         int32_t&& aX, int32_t&& aY,
+                                         size_t&& aWidth, size_t&& aHeight)
 {
     PLUGIN_LOG_DEBUG(("%s", FULLFUNCTION));
 #if defined(XP_MACOSX)
@@ -2651,7 +2651,7 @@ PluginModuleParent::RecvPluginShowWindow(const uint32_t& aWindowId, const bool& 
 }
 
 mozilla::ipc::IPCResult
-PluginModuleParent::RecvPluginHideWindow(const uint32_t& aWindowId)
+PluginModuleParent::RecvPluginHideWindow(uint32_t&& aWindowId)
 {
     PLUGIN_LOG_DEBUG(("%s", FULLFUNCTION));
 #if defined(XP_MACOSX)
@@ -2665,7 +2665,7 @@ PluginModuleParent::RecvPluginHideWindow(const uint32_t& aWindowId)
 }
 
 mozilla::ipc::IPCResult
-PluginModuleParent::RecvSetCursor(const NSCursorInfo& aCursorInfo)
+PluginModuleParent::RecvSetCursor(NSCursorInfo&& aCursorInfo)
 {
     PLUGIN_LOG_DEBUG(("%s", FULLFUNCTION));
 #if defined(XP_MACOSX)
@@ -2679,7 +2679,7 @@ PluginModuleParent::RecvSetCursor(const NSCursorInfo& aCursorInfo)
 }
 
 mozilla::ipc::IPCResult
-PluginModuleParent::RecvShowCursor(const bool& aShow)
+PluginModuleParent::RecvShowCursor(bool&& aShow)
 {
     PLUGIN_LOG_DEBUG(("%s", FULLFUNCTION));
 #if defined(XP_MACOSX)
@@ -2693,7 +2693,7 @@ PluginModuleParent::RecvShowCursor(const bool& aShow)
 }
 
 mozilla::ipc::IPCResult
-PluginModuleParent::RecvPushCursor(const NSCursorInfo& aCursorInfo)
+PluginModuleParent::RecvPushCursor(NSCursorInfo&& aCursorInfo)
 {
     PLUGIN_LOG_DEBUG(("%s", FULLFUNCTION));
 #if defined(XP_MACOSX)
@@ -2721,7 +2721,7 @@ PluginModuleParent::RecvPopCursor()
 }
 
 mozilla::ipc::IPCResult
-PluginModuleParent::RecvNPN_SetException(const nsCString& aMessage)
+PluginModuleParent::RecvNPN_SetException(nsCString&& aMessage)
 {
     PLUGIN_LOG_DEBUG(("%s", FULLFUNCTION));
 
@@ -2731,7 +2731,7 @@ PluginModuleParent::RecvNPN_SetException(const nsCString& aMessage)
 }
 
 mozilla::ipc::IPCResult
-PluginModuleParent::RecvNPN_ReloadPlugins(const bool& aReloadPages)
+PluginModuleParent::RecvNPN_ReloadPlugins(bool&& aReloadPages)
 {
     PLUGIN_LOG_DEBUG(("%s", FULLFUNCTION));
 
@@ -2750,8 +2750,8 @@ PluginModuleChromeParent::RecvNotifyContentModuleDestroyed()
 }
 
 mozilla::ipc::IPCResult
-PluginModuleParent::RecvReturnClearSiteData(const NPError& aRv,
-                                            const uint64_t& aCallbackId)
+PluginModuleParent::RecvReturnClearSiteData(NPError&& aRv,
+                                            uint64_t&& aCallbackId)
 {
     if (mClearSiteDataCallbacks.find(aCallbackId) == mClearSiteDataCallbacks.end()) {
         return IPC_OK();
@@ -2779,7 +2779,7 @@ PluginModuleParent::RecvReturnClearSiteData(const NPError& aRv,
 
 mozilla::ipc::IPCResult
 PluginModuleParent::RecvReturnSitesWithData(nsTArray<nsCString>&& aSites,
-                                            const uint64_t& aCallbackId)
+                                            uint64_t&& aCallbackId)
 {
     if (mSitesWithDataCallbacks.find(aCallbackId) == mSitesWithDataCallbacks.end()) {
         return IPC_OK();
@@ -2813,7 +2813,7 @@ PluginModuleParent::EnsureTextureAllocatorForDXGISurface()
 
 mozilla::ipc::IPCResult
 PluginModuleParent::AnswerNPN_SetValue_NPPVpluginRequiresAudioDeviceChanges(
-                                        const bool& shouldRegister,
+                                        bool&& shouldRegister,
                                         NPError* result) {
     MOZ_CRASH("SetValue_NPPVpluginRequiresAudioDeviceChanges is only valid "
               "with PluginModuleChromeParent");

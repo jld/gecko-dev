@@ -36,8 +36,8 @@ PrintProgressDialogParent::SetPrintProgressParams(nsIPrintProgressParams* aParam
 }
 
 mozilla::ipc::IPCResult
-PrintProgressDialogParent::RecvStateChange(const long& stateFlags,
-                                           const nsresult& status)
+PrintProgressDialogParent::RecvStateChange(long&& stateFlags,
+                                           nsresult&& status)
 {
   if (mWebProgressListener) {
     mWebProgressListener->OnStateChange(nullptr, nullptr, stateFlags, status);
@@ -46,10 +46,10 @@ PrintProgressDialogParent::RecvStateChange(const long& stateFlags,
 }
 
 mozilla::ipc::IPCResult
-PrintProgressDialogParent::RecvProgressChange(const long& curSelfProgress,
-                                              const long& maxSelfProgress,
-                                              const long& curTotalProgress,
-                                              const long& maxTotalProgress)
+PrintProgressDialogParent::RecvProgressChange(long&& curSelfProgress,
+                                              long&& maxSelfProgress,
+                                              long&& curTotalProgress,
+                                              long&& maxTotalProgress)
 {
   if (mWebProgressListener) {
     mWebProgressListener->OnProgressChange(nullptr, nullptr, curSelfProgress,
@@ -60,7 +60,7 @@ PrintProgressDialogParent::RecvProgressChange(const long& curSelfProgress,
 }
 
 mozilla::ipc::IPCResult
-PrintProgressDialogParent::RecvDocTitleChange(const nsString& newTitle)
+PrintProgressDialogParent::RecvDocTitleChange(nsString&& newTitle)
 {
   if (mPrintProgressParams) {
     mPrintProgressParams->SetDocTitle(newTitle);
@@ -69,7 +69,7 @@ PrintProgressDialogParent::RecvDocTitleChange(const nsString& newTitle)
 }
 
 mozilla::ipc::IPCResult
-PrintProgressDialogParent::RecvDocURLChange(const nsString& newURL)
+PrintProgressDialogParent::RecvDocURLChange(nsString&& newURL)
 {
   if (mPrintProgressParams) {
     mPrintProgressParams->SetDocURL(newURL);

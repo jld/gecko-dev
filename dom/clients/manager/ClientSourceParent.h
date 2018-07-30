@@ -37,7 +37,7 @@ class ClientSourceParent final : public PClientSourceParent
   RecvTeardown() override;
 
   mozilla::ipc::IPCResult
-  RecvExecutionReady(const ClientSourceExecutionReadyArgs& aArgs) override;
+  RecvExecutionReady(ClientSourceExecutionReadyArgs&& aArgs) override;
 
   mozilla::ipc::IPCResult
   RecvFreeze() override;
@@ -46,7 +46,7 @@ class ClientSourceParent final : public PClientSourceParent
   RecvThaw() override;
 
   mozilla::ipc::IPCResult
-  RecvInheritController(const ClientControlledArgs& aArgs) override;
+  RecvInheritController(ClientControlledArgs&& aArgs) override;
 
   mozilla::ipc::IPCResult
   RecvNoteDOMContentLoaded() override;

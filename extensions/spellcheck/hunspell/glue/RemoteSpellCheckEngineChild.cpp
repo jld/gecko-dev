@@ -46,8 +46,8 @@ RemoteSpellcheckEngineChild::SetCurrentDictionaryFromList(
 
 mozilla::ipc::IPCResult
 RemoteSpellcheckEngineChild::RecvNotifyOfCurrentDictionary(
-                               const nsString& aDictionary,
-                               const intptr_t& aId)
+                               nsString&& aDictionary,
+                               intptr_t&& aId)
 {
   MOZ_RELEASE_ASSERT((size_t) aId < mResponsePromises.Length());
   mOwner->mCurrentDictionary = aDictionary;

@@ -29,10 +29,10 @@ class WebrtcGlobalParent
   static WebrtcGlobalParent* Alloc();
   static bool Dealloc(WebrtcGlobalParent* aActor);
 
-  virtual mozilla::ipc::IPCResult RecvGetStatsResult(const int& aRequestId,
+  virtual mozilla::ipc::IPCResult RecvGetStatsResult(int&& aRequestId,
                                                      nsTArray<RTCStatsReportInternal>&& aStats) override;
-  virtual mozilla::ipc::IPCResult RecvGetLogResult(const int& aRequestId,
-                                                   const WebrtcGlobalLog& aLog) override;
+  virtual mozilla::ipc::IPCResult RecvGetLogResult(int&& aRequestId,
+                                                   WebrtcGlobalLog&& aLog) override;
 
   virtual void ActorDestroy(ActorDestroyReason aWhy) override;
   virtual mozilla::ipc::IPCResult Recv__delete__() override;

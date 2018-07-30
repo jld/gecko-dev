@@ -195,7 +195,7 @@ CamerasChild::RecvReplySuccess(void)
 }
 
 mozilla::ipc::IPCResult
-CamerasChild::RecvReplyNumberOfCapabilities(const int& numdev)
+CamerasChild::RecvReplyNumberOfCapabilities(int&& numdev)
 {
   LOG((__PRETTY_FUNCTION__));
   MonitorAutoLock monitor(mReplyMonitor);
@@ -320,7 +320,7 @@ CamerasChild::NumberOfCaptureDevices(CaptureEngine aCapEngine)
 }
 
 mozilla::ipc::IPCResult
-CamerasChild::RecvReplyNumberOfCaptureDevices(const int& numdev)
+CamerasChild::RecvReplyNumberOfCaptureDevices(int&& numdev)
 {
   LOG((__PRETTY_FUNCTION__));
   MonitorAutoLock monitor(mReplyMonitor);
@@ -370,7 +370,7 @@ CamerasChild::GetCaptureCapability(CaptureEngine aCapEngine,
 }
 
 mozilla::ipc::IPCResult
-CamerasChild::RecvReplyGetCaptureCapability(const VideoCaptureCapability& ipcCapability)
+CamerasChild::RecvReplyGetCaptureCapability(VideoCaptureCapability&& ipcCapability)
 {
   LOG((__PRETTY_FUNCTION__));
   MonitorAutoLock monitor(mReplyMonitor);
@@ -416,9 +416,9 @@ CamerasChild::GetCaptureDevice(CaptureEngine aCapEngine,
 }
 
 mozilla::ipc::IPCResult
-CamerasChild::RecvReplyGetCaptureDevice(const nsCString& device_name,
-                                        const nsCString& device_id,
-                                        const bool& scary)
+CamerasChild::RecvReplyGetCaptureDevice(nsCString&& device_name,
+                                        nsCString&& device_id,
+                                        bool&& scary)
 {
   LOG((__PRETTY_FUNCTION__));
   MonitorAutoLock monitor(mReplyMonitor);
@@ -460,7 +460,7 @@ CamerasChild::AllocateCaptureDevice(CaptureEngine aCapEngine,
 
 
 mozilla::ipc::IPCResult
-CamerasChild::RecvReplyAllocateCaptureDevice(const int& numdev)
+CamerasChild::RecvReplyAllocateCaptureDevice(int&& numdev)
 {
   LOG((__PRETTY_FUNCTION__));
   MonitorAutoLock monitor(mReplyMonitor);
@@ -668,10 +668,10 @@ CamerasChild::ShutdownChild()
 }
 
 mozilla::ipc::IPCResult
-CamerasChild::RecvDeliverFrame(const CaptureEngine& capEngine,
-                               const int& capId,
+CamerasChild::RecvDeliverFrame(CaptureEngine&& capEngine,
+                               int&& capId,
                                mozilla::ipc::Shmem&& shmem,
-                               const VideoFrameProperties & prop)
+                               VideoFrameProperties&& prop)
 {
   MutexAutoLock lock(mCallbackMutex);
   if (Callback(capEngine, capId)) {

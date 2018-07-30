@@ -177,7 +177,7 @@ ServiceWorkerManagerParent::~ServiceWorkerManagerParent()
 
 mozilla::ipc::IPCResult
 ServiceWorkerManagerParent::RecvRegister(
-                                     const ServiceWorkerRegistrationData& aData)
+                                     ServiceWorkerRegistrationData&& aData)
 {
   AssertIsInMainProcess();
   AssertIsOnBackgroundThread();
@@ -210,8 +210,8 @@ ServiceWorkerManagerParent::RecvRegister(
 }
 
 mozilla::ipc::IPCResult
-ServiceWorkerManagerParent::RecvUnregister(const PrincipalInfo& aPrincipalInfo,
-                                           const nsString& aScope)
+ServiceWorkerManagerParent::RecvUnregister(PrincipalInfo&& aPrincipalInfo,
+                                           nsString&& aScope)
 {
   AssertIsInMainProcess();
   AssertIsOnBackgroundThread();
@@ -244,8 +244,8 @@ ServiceWorkerManagerParent::RecvUnregister(const PrincipalInfo& aPrincipalInfo,
 }
 
 mozilla::ipc::IPCResult
-ServiceWorkerManagerParent::RecvPropagateSoftUpdate(const OriginAttributes& aOriginAttributes,
-                                                    const nsString& aScope)
+ServiceWorkerManagerParent::RecvPropagateSoftUpdate(OriginAttributes&& aOriginAttributes,
+                                                    nsString&& aScope)
 {
   AssertIsOnBackgroundThread();
 
@@ -258,8 +258,8 @@ ServiceWorkerManagerParent::RecvPropagateSoftUpdate(const OriginAttributes& aOri
 }
 
 mozilla::ipc::IPCResult
-ServiceWorkerManagerParent::RecvPropagateUnregister(const PrincipalInfo& aPrincipalInfo,
-                                                    const nsString& aScope)
+ServiceWorkerManagerParent::RecvPropagateUnregister(PrincipalInfo&& aPrincipalInfo,
+                                                    nsString&& aScope)
 {
   AssertIsOnBackgroundThread();
 
@@ -272,7 +272,7 @@ ServiceWorkerManagerParent::RecvPropagateUnregister(const PrincipalInfo& aPrinci
 }
 
 mozilla::ipc::IPCResult
-ServiceWorkerManagerParent::RecvPropagateRemove(const nsCString& aHost)
+ServiceWorkerManagerParent::RecvPropagateRemove(nsCString&& aHost)
 {
   AssertIsOnBackgroundThread();
 
@@ -323,8 +323,8 @@ ServiceWorkerManagerParent::AllocPServiceWorkerUpdaterParent(const OriginAttribu
 
 mozilla::ipc::IPCResult
 ServiceWorkerManagerParent::RecvPServiceWorkerUpdaterConstructor(PServiceWorkerUpdaterParent* aActor,
-                                                                 const OriginAttributes& aOriginAttributes,
-                                                                 const nsCString& aScope)
+                                                                 OriginAttributes&& aOriginAttributes,
+                                                                 nsCString&& aScope)
 {
   AssertIsOnBackgroundThread();
 

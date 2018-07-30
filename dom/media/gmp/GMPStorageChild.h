@@ -78,13 +78,13 @@ protected:
   ~GMPStorageChild() {}
 
   // PGMPStorageChild
-  mozilla::ipc::IPCResult RecvOpenComplete(const nsCString& aRecordName,
-                                           const GMPErr& aStatus) override;
-  mozilla::ipc::IPCResult RecvReadComplete(const nsCString& aRecordName,
-                                           const GMPErr& aStatus,
+  mozilla::ipc::IPCResult RecvOpenComplete(nsCString&& aRecordName,
+                                           GMPErr&& aStatus) override;
+  mozilla::ipc::IPCResult RecvReadComplete(nsCString&& aRecordName,
+                                           GMPErr&& aStatus,
                                            InfallibleTArray<uint8_t>&& aBytes) override;
-  mozilla::ipc::IPCResult RecvWriteComplete(const nsCString& aRecordName,
-                                            const GMPErr& aStatus) override;
+  mozilla::ipc::IPCResult RecvWriteComplete(nsCString&& aRecordName,
+                                            GMPErr&& aStatus) override;
   mozilla::ipc::IPCResult RecvShutdown() override;
 
 private:

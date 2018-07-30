@@ -269,7 +269,7 @@ UDPSocketChild::GetFilterName(nsACString& aFilterName)
 
 // PUDPSocketChild Methods
 mozilla::ipc::IPCResult
-UDPSocketChild::RecvCallbackOpened(const UDPAddressInfo& aAddressInfo)
+UDPSocketChild::RecvCallbackOpened(UDPAddressInfo&& aAddressInfo)
 {
   mLocalAddress = aAddressInfo.addr();
   mLocalPort = aAddressInfo.port();
@@ -283,7 +283,7 @@ UDPSocketChild::RecvCallbackOpened(const UDPAddressInfo& aAddressInfo)
 
 // PUDPSocketChild Methods
 mozilla::ipc::IPCResult
-UDPSocketChild::RecvCallbackConnected(const UDPAddressInfo& aAddressInfo)
+UDPSocketChild::RecvCallbackConnected(UDPAddressInfo&& aAddressInfo)
 {
   mLocalAddress = aAddressInfo.addr();
   mLocalPort = aAddressInfo.port();
@@ -305,7 +305,7 @@ UDPSocketChild::RecvCallbackClosed()
 }
 
 mozilla::ipc::IPCResult
-UDPSocketChild::RecvCallbackReceivedData(const UDPAddressInfo& aAddressInfo,
+UDPSocketChild::RecvCallbackReceivedData(UDPAddressInfo&& aAddressInfo,
                                          InfallibleTArray<uint8_t>&& aData)
 {
   UDPSOCKET_LOG(("%s: %s:%u length %zu", __FUNCTION__,
@@ -318,9 +318,9 @@ UDPSocketChild::RecvCallbackReceivedData(const UDPAddressInfo& aAddressInfo,
 }
 
 mozilla::ipc::IPCResult
-UDPSocketChild::RecvCallbackError(const nsCString& aMessage,
-                                  const nsCString& aFilename,
-                                  const uint32_t& aLineNumber)
+UDPSocketChild::RecvCallbackError(nsCString&& aMessage,
+                                  nsCString&& aFilename,
+                                  uint32_t&& aLineNumber)
 {
   UDPSOCKET_LOG(("%s: %s:%s:%u", __FUNCTION__, aMessage.get(), aFilename.get(), aLineNumber));
   nsresult rv = mSocket->CallListenerError(aMessage, aFilename, aLineNumber);

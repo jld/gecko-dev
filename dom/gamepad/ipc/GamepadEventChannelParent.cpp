@@ -78,11 +78,11 @@ GamepadEventChannelParent::RecvGamepadListenerRemoved()
 }
 
 mozilla::ipc::IPCResult
-GamepadEventChannelParent::RecvVibrateHaptic(const uint32_t& aControllerIdx,
-                                   const uint32_t& aHapticIndex,
-                                   const double& aIntensity,
-                                   const double& aDuration,
-                                   const uint32_t& aPromiseID)
+GamepadEventChannelParent::RecvVibrateHaptic(uint32_t&& aControllerIdx,
+                                   uint32_t&& aHapticIndex,
+                                   double&& aIntensity,
+                                   double&& aDuration,
+                                   uint32_t&& aPromiseID)
 {
   // TODO: Bug 680289, implement for standard gamepads
 
@@ -94,7 +94,7 @@ GamepadEventChannelParent::RecvVibrateHaptic(const uint32_t& aControllerIdx,
 }
 
 mozilla::ipc::IPCResult
-GamepadEventChannelParent::RecvStopVibrateHaptic(const uint32_t& aGamepadIndex)
+GamepadEventChannelParent::RecvStopVibrateHaptic(uint32_t&& aGamepadIndex)
 {
   // TODO: Bug 680289, implement for standard gamepads
   return IPC_OK();

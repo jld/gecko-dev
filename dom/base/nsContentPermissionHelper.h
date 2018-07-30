@@ -177,7 +177,7 @@ public:
                           nsPIDOMWindowInner* aWindow);
 
   // It will be called when prompt dismissed.
-  virtual mozilla::ipc::IPCResult RecvNotifyResult(const bool &aAllow,
+  virtual mozilla::ipc::IPCResult RecvNotifyResult(bool&& aAllow,
                                                    InfallibleTArray<PermissionChoice>&& aChoices) override;
 
   virtual mozilla::ipc::IPCResult RecvGetVisibility() override;

@@ -157,7 +157,7 @@ private:
   bool GetCrashID(nsString& aResult);
   void ActorDestroy(ActorDestroyReason aWhy) override;
 
-  mozilla::ipc::IPCResult RecvInitCrashReporter(Shmem&& shmem, const NativeThreadId& aThreadId) override;
+  mozilla::ipc::IPCResult RecvInitCrashReporter(Shmem&& shmem, NativeThreadId&& aThreadId) override;
 
   mozilla::ipc::IPCResult RecvPGMPStorageConstructor(PGMPStorageParent* actor) override;
   PGMPStorageParent* AllocPGMPStorageParent() override;

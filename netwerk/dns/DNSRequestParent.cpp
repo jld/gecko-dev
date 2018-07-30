@@ -49,10 +49,10 @@ DNSRequestParent::DoAsyncResolve(const nsACString &hostname,
 }
 
 mozilla::ipc::IPCResult
-DNSRequestParent::RecvCancelDNSRequest(const nsCString& hostName,
-                                       const OriginAttributes& originAttributes,
-                                       const uint32_t& flags,
-                                       const nsresult& reason)
+DNSRequestParent::RecvCancelDNSRequest(nsCString&& hostName,
+                                       OriginAttributes&& originAttributes,
+                                       uint32_t&& flags,
+                                       nsresult&& reason)
 {
   nsresult rv;
   nsCOMPtr<nsIDNSService> dns = do_GetService(NS_DNSSERVICE_CONTRACTID, &rv);

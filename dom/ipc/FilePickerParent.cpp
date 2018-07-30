@@ -254,15 +254,15 @@ FilePickerParent::CreateFilePicker()
 }
 
 mozilla::ipc::IPCResult
-FilePickerParent::RecvOpen(const int16_t& aSelectedType,
-                           const bool& aAddToRecentDocs,
-                           const nsString& aDefaultFile,
-                           const nsString& aDefaultExtension,
+FilePickerParent::RecvOpen(int16_t&& aSelectedType,
+                           bool&& aAddToRecentDocs,
+                           nsString&& aDefaultFile,
+                           nsString&& aDefaultExtension,
                            InfallibleTArray<nsString>&& aFilters,
                            InfallibleTArray<nsString>&& aFilterNames,
-                           const nsString& aDisplayDirectory,
-                           const nsString& aDisplaySpecialDirectory,
-                           const nsString& aOkButtonLabel)
+                           nsString&& aDisplayDirectory,
+                           nsString&& aDisplaySpecialDirectory,
+                           nsString&& aOkButtonLabel)
 {
   if (!CreateFilePicker()) {
     Unused << Send__delete__(this, void_t(), nsIFilePicker::returnCancel);

@@ -35,7 +35,7 @@ public:
   ActorDestroy(ActorDestroyReason aWhy) override;
 
   virtual mozilla::ipc::IPCResult
-  RecvUpdateStatus(const uint32_t& aDeviceState, const uint32_t& aConnectionState) override;
+  RecvUpdateStatus(uint32_t&& aDeviceState, uint32_t&& aConnectionState) override;
 
   MIDIPortChild(const MIDIPortInfo& aPortInfo, bool aSysexEnabled, MIDIPort* aPort);
   //virtual void Shutdown() override;

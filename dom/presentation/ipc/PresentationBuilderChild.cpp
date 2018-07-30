@@ -63,7 +63,7 @@ PresentationBuilderChild::ActorDestroy(ActorDestroyReason aWhy)
 }
 
 mozilla::ipc::IPCResult
-PresentationBuilderChild::RecvOnOffer(const nsString& aSDP)
+PresentationBuilderChild::RecvOnOffer(nsString&& aSDP)
 {
   if (NS_WARN_IF(!mBuilder)) {
     return IPC_FAIL_NO_REASON(this);
@@ -78,7 +78,7 @@ PresentationBuilderChild::RecvOnOffer(const nsString& aSDP)
 }
 
 mozilla::ipc::IPCResult
-PresentationBuilderChild::RecvOnAnswer(const nsString& aSDP)
+PresentationBuilderChild::RecvOnAnswer(nsString&& aSDP)
 {
   if (NS_WARN_IF(!mBuilder)) {
     return IPC_FAIL_NO_REASON(this);
@@ -93,7 +93,7 @@ PresentationBuilderChild::RecvOnAnswer(const nsString& aSDP)
 }
 
 mozilla::ipc::IPCResult
-PresentationBuilderChild::RecvOnIceCandidate(const nsString& aCandidate)
+PresentationBuilderChild::RecvOnIceCandidate(nsString&& aCandidate)
 {
   if (NS_WARN_IF(mBuilder && NS_FAILED(mBuilder->OnIceCandidate(aCandidate)))) {
     return IPC_FAIL_NO_REASON(this);

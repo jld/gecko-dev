@@ -104,13 +104,13 @@ class HangMonitorChild
   // the main thread, since it could race with ClearPaintWhileInterruptingJS.
   void MaybeStartPaintWhileInterruptingJS();
 
-  mozilla::ipc::IPCResult RecvTerminateScript(const bool& aTerminateGlobal) override;
+  mozilla::ipc::IPCResult RecvTerminateScript(bool&& aTerminateGlobal) override;
   mozilla::ipc::IPCResult RecvBeginStartingDebugger() override;
   mozilla::ipc::IPCResult RecvEndStartingDebugger() override;
 
-  mozilla::ipc::IPCResult RecvPaintWhileInterruptingJS(const TabId& aTabId,
-                                                       const bool& aForceRepaint,
-                                                       const uint64_t& aLayerObserverEpoch) override;
+  mozilla::ipc::IPCResult RecvPaintWhileInterruptingJS(TabId&& aTabId,
+                                                       bool&& aForceRepaint,
+                                                       uint64_t&& aLayerObserverEpoch) override;
 
   void ActorDestroy(ActorDestroyReason aWhy) override;
 
@@ -225,7 +225,7 @@ public:
 
   void Bind(Endpoint<PProcessHangMonitorParent>&& aEndpoint);
 
-  mozilla::ipc::IPCResult RecvHangEvidence(const HangData& aHangData) override;
+  mozilla::ipc::IPCResult RecvHangEvidence(HangData&& aHangData) override;
   mozilla::ipc::IPCResult RecvClearHang() override;
 
   void ActorDestroy(ActorDestroyReason aWhy) override;
@@ -398,7 +398,7 @@ HangMonitorChild::ActorDestroy(ActorDestroyReason aWhy)
 }
 
 mozilla::ipc::IPCResult
-HangMonitorChild::RecvTerminateScript(const bool& aTerminateGlobal)
+HangMonitorChild::RecvTerminateScript(bool&& aTerminateGlobal)
 {
   MOZ_RELEASE_ASSERT(IsOnThread());
 
@@ -432,9 +432,9 @@ HangMonitorChild::RecvEndStartingDebugger()
 }
 
 mozilla::ipc::IPCResult
-HangMonitorChild::RecvPaintWhileInterruptingJS(const TabId& aTabId,
-                                               const bool& aForceRepaint,
-                                               const uint64_t& aLayerObserverEpoch)
+HangMonitorChild::RecvPaintWhileInterruptingJS(TabId&& aTabId,
+                                               bool&& aForceRepaint,
+                                               uint64_t&& aLayerObserverEpoch)
 {
   MOZ_RELEASE_ASSERT(IsOnThread());
 
@@ -822,7 +822,7 @@ HangMonitorParent::TakeBrowserMinidump(const PluginHangData& aPhd,
 }
 
 mozilla::ipc::IPCResult
-HangMonitorParent::RecvHangEvidence(const HangData& aHangData)
+HangMonitorParent::RecvHangEvidence(HangData&& aHangData)
 {
   // chrome process, background thread
   MOZ_RELEASE_ASSERT(IsOnThread());

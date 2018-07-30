@@ -50,13 +50,13 @@ class WebSocketChannelChild final : public BaseWebSocketChannel,
  private:
   ~WebSocketChannelChild();
 
-  mozilla::ipc::IPCResult RecvOnStart(const nsCString& aProtocol, const nsCString& aExtensions,
-                                   const nsString& aEffectiveURL, const bool& aSecure) override;
-  mozilla::ipc::IPCResult RecvOnStop(const nsresult& aStatusCode) override;
-  mozilla::ipc::IPCResult RecvOnMessageAvailable(const nsCString& aMsg) override;
-  mozilla::ipc::IPCResult RecvOnBinaryMessageAvailable(const nsCString& aMsg) override;
-  mozilla::ipc::IPCResult RecvOnAcknowledge(const uint32_t& aSize) override;
-  mozilla::ipc::IPCResult RecvOnServerClose(const uint16_t& aCode, const nsCString &aReason) override;
+  mozilla::ipc::IPCResult RecvOnStart(nsCString&& aProtocol, nsCString&& aExtensions,
+                                   nsString&& aEffectiveURL, bool&& aSecure) override;
+  mozilla::ipc::IPCResult RecvOnStop(nsresult&& aStatusCode) override;
+  mozilla::ipc::IPCResult RecvOnMessageAvailable(nsCString&& aMsg) override;
+  mozilla::ipc::IPCResult RecvOnBinaryMessageAvailable(nsCString&& aMsg) override;
+  mozilla::ipc::IPCResult RecvOnAcknowledge(uint32_t&& aSize) override;
+  mozilla::ipc::IPCResult RecvOnServerClose(uint16_t&& aCode, nsCString&& aReason) override;
 
   void OnStart(const nsCString& aProtocol, const nsCString& aExtensions,
                const nsString& aEffectiveURL, const bool& aSecure);

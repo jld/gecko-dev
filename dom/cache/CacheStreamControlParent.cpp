@@ -122,7 +122,7 @@ CacheStreamControlParent::ActorDestroy(ActorDestroyReason aReason)
 }
 
 mozilla::ipc::IPCResult
-CacheStreamControlParent::RecvOpenStream(const nsID& aStreamId,
+CacheStreamControlParent::RecvOpenStream(nsID&& aStreamId,
                                          OpenStreamResolver&& aResolver)
 {
   NS_ASSERT_OWNINGTHREAD(CacheStreamControlParent);
@@ -135,7 +135,7 @@ CacheStreamControlParent::RecvOpenStream(const nsID& aStreamId,
 }
 
 mozilla::ipc::IPCResult
-CacheStreamControlParent::RecvNoteClosed(const nsID& aId)
+CacheStreamControlParent::RecvNoteClosed(nsID&& aId)
 {
   NS_ASSERT_OWNINGTHREAD(CacheStreamControlParent);
   MOZ_DIAGNOSTIC_ASSERT(mStreamList);

@@ -127,7 +127,7 @@ GPUChild::DeallocPAPZInputBridgeChild(PAPZInputBridgeChild* aActor)
 }
 
 mozilla::ipc::IPCResult
-GPUChild::RecvInitComplete(const GPUDeviceData& aData)
+GPUChild::RecvInitComplete(GPUDeviceData&& aData)
 {
   // We synchronously requested GPU parameters before this arrived.
   if (mGPUReady) {
@@ -141,14 +141,14 @@ GPUChild::RecvInitComplete(const GPUDeviceData& aData)
 }
 
 mozilla::ipc::IPCResult
-GPUChild::RecvReportCheckerboard(const uint32_t& aSeverity, const nsCString& aLog)
+GPUChild::RecvReportCheckerboard(uint32_t&& aSeverity, nsCString&& aLog)
 {
   layers::CheckerboardEventStorage::Report(aSeverity, std::string(aLog.get()));
   return IPC_OK();
 }
 
 mozilla::ipc::IPCResult
-GPUChild::RecvGraphicsError(const nsCString& aError)
+GPUChild::RecvGraphicsError(nsCString&& aError)
 {
   gfx::LogForwarder* lf = gfx::Factory::GetLogForwarder();
   if (lf) {
@@ -160,7 +160,7 @@ GPUChild::RecvGraphicsError(const nsCString& aError)
 }
 
 mozilla::ipc::IPCResult
-GPUChild::RecvInitCrashReporter(Shmem&& aShmem, const NativeThreadId& aThreadId)
+GPUChild::RecvInitCrashReporter(Shmem&& aShmem, NativeThreadId&& aThreadId)
 {
   mCrashReporter = MakeUnique<ipc::CrashReporterHost>(
     GeckoProcessType_GPU,
@@ -171,7 +171,7 @@ GPUChild::RecvInitCrashReporter(Shmem&& aShmem, const NativeThreadId& aThreadId)
 }
 
 mozilla::ipc::IPCResult
-GPUChild::RecvNotifyUiObservers(const nsCString& aTopic)
+GPUChild::RecvNotifyUiObservers(nsCString&& aTopic)
 {
   nsCOMPtr<nsIObserverService> obsSvc = mozilla::services::GetObserverService();
   MOZ_ASSERT(obsSvc);
@@ -217,14 +217,14 @@ GPUChild::RecvRecordChildEvents(nsTArray<mozilla::Telemetry::ChildEventData>&& a
 }
 
 mozilla::ipc::IPCResult
-GPUChild::RecvRecordDiscardedData(const mozilla::Telemetry::DiscardedData& aDiscardedData)
+GPUChild::RecvRecordDiscardedData(mozilla::Telemetry::DiscardedData&& aDiscardedData)
 {
   TelemetryIPC::RecordDiscardedData(Telemetry::ProcessID::Gpu, aDiscardedData);
   return IPC_OK();
 }
 
 mozilla::ipc::IPCResult
-GPUChild::RecvNotifyDeviceReset(const GPUDeviceData& aData)
+GPUChild::RecvNotifyDeviceReset(GPUDeviceData&& aData)
 {
   gfxPlatform::GetPlatform()->ImportGPUDeviceData(aData);
   mHost->mListener->OnRemoteProcessDeviceReset(mHost);
@@ -247,7 +247,7 @@ GPUChild::SendRequestMemoryReport(const uint32_t& aGeneration,
 }
 
 mozilla::ipc::IPCResult
-GPUChild::RecvAddMemoryReport(const MemoryReport& aReport)
+GPUChild::RecvAddMemoryReport(MemoryReport&& aReport)
 {
   if (mMemoryReportRequest) {
     mMemoryReportRequest->RecvReport(aReport);
@@ -256,7 +256,7 @@ GPUChild::RecvAddMemoryReport(const MemoryReport& aReport)
 }
 
 mozilla::ipc::IPCResult
-GPUChild::RecvFinishMemoryReport(const uint32_t& aGeneration)
+GPUChild::RecvFinishMemoryReport(uint32_t&& aGeneration)
 {
   if (mMemoryReportRequest) {
     mMemoryReportRequest->Finish(aGeneration);
@@ -289,21 +289,21 @@ GPUChild::ActorDestroy(ActorDestroyReason aWhy)
 }
 
 mozilla::ipc::IPCResult
-GPUChild::RecvUpdateFeature(const Feature& aFeature, const FeatureFailure& aChange)
+GPUChild::RecvUpdateFeature(Feature&& aFeature, FeatureFailure&& aChange)
 {
   gfxConfig::SetFailed(aFeature, aChange.status(), aChange.message().get(), aChange.failureId());
   return IPC_OK();
 }
 
 mozilla::ipc::IPCResult
-GPUChild::RecvUsedFallback(const Fallback& aFallback, const nsCString& aMessage)
+GPUChild::RecvUsedFallback(Fallback&& aFallback, nsCString&& aMessage)
 {
   gfxConfig::EnableFallback(aFallback, aMessage.get());
   return IPC_OK();
 }
 
 mozilla::ipc::IPCResult
-GPUChild::RecvBHRThreadHang(const HangDetails& aDetails)
+GPUChild::RecvBHRThreadHang(HangDetails&& aDetails)
 {
   nsCOMPtr<nsIObserverService> obs = mozilla::services::GetObserverService();
   if (obs) {

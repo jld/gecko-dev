@@ -29,7 +29,7 @@ public:
 
   // Called when data is received from the content process.
   // We proceed to write that data to the output stream.
-  virtual mozilla::ipc::IPCResult RecvWriteData(const nsCString& data) override;
+  virtual mozilla::ipc::IPCResult RecvWriteData(nsCString&& data) override;
   // Called when AltDataOutputStreamChild::Close() is
   // Closes and nulls the output stream.
   virtual mozilla::ipc::IPCResult RecvClose() override;

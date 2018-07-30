@@ -43,7 +43,7 @@ MIDIPortChild::RecvReceive(nsTArray<MIDIMessage>&& aMsgs)
 }
 
 mozilla::ipc::IPCResult
-MIDIPortChild::RecvUpdateStatus(const uint32_t& aDeviceState, const uint32_t& aConnectionState)
+MIDIPortChild::RecvUpdateStatus(uint32_t&& aDeviceState, uint32_t&& aConnectionState)
 {
   // Either a device is connected, and can have any connection state, or a
   // device is disconnected, and can only be closed or pending.

@@ -22,7 +22,7 @@ MemoryReportRequestHost::MemoryReportRequestHost(uint32_t aGeneration)
 }
 
 void
-MemoryReportRequestHost::RecvReport(const MemoryReport& aReport)
+MemoryReportRequestHost::RecvReport(MemoryReport&& aReport)
 {
   // Skip reports from older generations. We need to do this here since we
   // could receive older reports from a subprocesses before it acknowledges

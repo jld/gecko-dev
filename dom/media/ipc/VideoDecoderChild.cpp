@@ -55,7 +55,7 @@ VideoDecoderChild::~VideoDecoderChild()
 }
 
 mozilla::ipc::IPCResult
-VideoDecoderChild::RecvOutput(const VideoDataIPDL& aData)
+VideoDecoderChild::RecvOutput(VideoDataIPDL&& aData)
 {
   AssertOnManagerThread();
 
@@ -96,7 +96,7 @@ VideoDecoderChild::RecvDrainComplete()
 }
 
 mozilla::ipc::IPCResult
-VideoDecoderChild::RecvError(const nsresult& aError)
+VideoDecoderChild::RecvError(nsresult&& aError)
 {
   AssertOnManagerThread();
   mDecodedData.Clear();
@@ -107,10 +107,10 @@ VideoDecoderChild::RecvError(const nsresult& aError)
 }
 
 mozilla::ipc::IPCResult
-VideoDecoderChild::RecvInitComplete(const nsCString& aDecoderDescription,
-                                    const bool& aHardware,
-                                    const nsCString& aHardwareReason,
-                                    const uint32_t& aConversion)
+VideoDecoderChild::RecvInitComplete(nsCString&& aDecoderDescription,
+                                    bool&& aHardware,
+                                    nsCString&& aHardwareReason,
+                                    uint32_t&& aConversion)
 {
   AssertOnManagerThread();
   mInitPromise.ResolveIfExists(TrackInfo::kVideoTrack, __func__);
@@ -123,7 +123,7 @@ VideoDecoderChild::RecvInitComplete(const nsCString& aDecoderDescription,
 }
 
 mozilla::ipc::IPCResult
-VideoDecoderChild::RecvInitFailed(const nsresult& aReason)
+VideoDecoderChild::RecvInitFailed(nsresult&& aReason)
 {
   AssertOnManagerThread();
   mInitPromise.RejectIfExists(aReason, __func__);

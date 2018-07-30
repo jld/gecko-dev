@@ -209,7 +209,7 @@ private:
   mozilla::ipc::IPCResult
   RecvPBackgroundIDBDatabaseConstructor(
                                     PBackgroundIDBDatabaseChild* aActor,
-                                    const DatabaseSpec& aSpec,
+                                    DatabaseSpec&& aSpec,
                                     PBackgroundIDBFactoryRequestChild* aRequest)
                                     override;
 
@@ -301,13 +301,13 @@ private:
   ActorDestroy(ActorDestroyReason aWhy) override;
 
   virtual mozilla::ipc::IPCResult
-  Recv__delete__(const FactoryRequestResponse& aResponse) override;
+  Recv__delete__(FactoryRequestResponse&& aResponse) override;
 
   virtual mozilla::ipc::IPCResult
-  RecvPermissionChallenge(const PrincipalInfo& aPrincipalInfo) override;
+  RecvPermissionChallenge(PrincipalInfo&& aPrincipalInfo) override;
 
   virtual mozilla::ipc::IPCResult
-  RecvBlocked(const uint64_t& aCurrentVersion) override;
+  RecvBlocked(uint64_t&& aCurrentVersion) override;
 };
 
 class BackgroundDatabaseChild final
@@ -404,10 +404,10 @@ private:
   virtual mozilla::ipc::IPCResult
   RecvPBackgroundIDBVersionChangeTransactionConstructor(
                             PBackgroundIDBVersionChangeTransactionChild* aActor,
-                            const uint64_t& aCurrentVersion,
-                            const uint64_t& aRequestedVersion,
-                            const int64_t& aNextObjectStoreId,
-                            const int64_t& aNextIndexId)
+                            uint64_t&& aCurrentVersion,
+                            uint64_t&& aRequestedVersion,
+                            int64_t&& aNextObjectStoreId,
+                            int64_t&& aNextIndexId)
                             override;
 
   virtual bool
@@ -424,8 +424,8 @@ private:
                                      override;
 
   virtual mozilla::ipc::IPCResult
-  RecvVersionChange(const uint64_t& aOldVersion,
-                    const NullableVersion& aNewVersion)
+  RecvVersionChange(uint64_t&& aOldVersion,
+                    NullableVersion&& aNewVersion)
                     override;
 
   virtual mozilla::ipc::IPCResult
@@ -463,7 +463,7 @@ private:
 
   // IPDL methods are only called by IPDL.
   virtual mozilla::ipc::IPCResult
-  Recv__delete__(const DatabaseRequestResponse& aResponse) override;
+  Recv__delete__(DatabaseRequestResponse&& aResponse) override;
 };
 
 class BackgroundVersionChangeTransactionChild;
@@ -546,7 +546,7 @@ private:
   ActorDestroy(ActorDestroyReason aWhy) override;
 
   mozilla::ipc::IPCResult
-  RecvComplete(const nsresult& aResult) override;
+  RecvComplete(nsresult&& aResult) override;
 
   virtual PBackgroundIDBRequestChild*
   AllocPBackgroundIDBRequestChild(const RequestParams& aParams) override;
@@ -602,7 +602,7 @@ private:
   ActorDestroy(ActorDestroyReason aWhy) override;
 
   mozilla::ipc::IPCResult
-  RecvComplete(const nsresult& aResult) override;
+  RecvComplete(nsresult&& aResult) override;
 
   virtual PBackgroundIDBRequestChild*
   AllocPBackgroundIDBRequestChild(const RequestParams& aParams) override;
@@ -753,10 +753,10 @@ private:
   ActorDestroy(ActorDestroyReason aWhy) override;
 
   virtual mozilla::ipc::IPCResult
-  Recv__delete__(const RequestResponse& aResponse) override;
+  Recv__delete__(RequestResponse&& aResponse) override;
 
   virtual mozilla::ipc::IPCResult
-  RecvPreprocess(const PreprocessParams& aParams) override;
+  RecvPreprocess(PreprocessParams&& aParams) override;
 };
 
 class BackgroundCursorChild final
@@ -862,7 +862,7 @@ private:
   ActorDestroy(ActorDestroyReason aWhy) override;
 
   virtual mozilla::ipc::IPCResult
-  RecvResponse(const CursorResponse& aResponse) override;
+  RecvResponse(CursorResponse&& aResponse) override;
 
   // Force callers to use SendContinueInternal.
   bool
@@ -916,7 +916,7 @@ private:
   ActorDestroy(ActorDestroyReason aWhy) override;
 
   mozilla::ipc::IPCResult
-  RecvComplete(const bool& aAborted) override;
+  RecvComplete(bool&& aAborted) override;
 
   virtual PBackgroundFileRequestChild*
   AllocPBackgroundFileRequestChild(const FileRequestParams& aParams)
@@ -976,11 +976,11 @@ private:
   ActorDestroy(ActorDestroyReason aWhy) override;
 
   virtual mozilla::ipc::IPCResult
-  Recv__delete__(const FileRequestResponse& aResponse) override;
+  Recv__delete__(FileRequestResponse&& aResponse) override;
 
   virtual mozilla::ipc::IPCResult
-  RecvProgress(const uint64_t& aProgress,
-               const uint64_t& aProgressMax) override;
+  RecvProgress(uint64_t&& aProgress,
+               uint64_t&& aProgressMax) override;
 };
 
 class BackgroundUtilsChild final

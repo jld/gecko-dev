@@ -30,7 +30,7 @@ public:
   void ActorDestroy(ActorDestroyReason aWhy) override;
 
   mozilla::ipc::IPCResult
-  RecvBrokerFunction(const FunctionHookId &aFunctionId, const IpdlTuple &aInTuple,
+  RecvBrokerFunction(FunctionHookId&& aFunctionId, IpdlTuple&& aInTuple,
                    IpdlTuple *aOutTuple) override;
 
 #if defined(XP_WIN) && defined(MOZ_SANDBOX)

@@ -22,7 +22,7 @@ TemporaryIPCBlobChild::~TemporaryIPCBlobChild()
 {}
 
 mozilla::ipc::IPCResult
-TemporaryIPCBlobChild::RecvFileDesc(const FileDescriptor& aFD)
+TemporaryIPCBlobChild::RecvFileDesc(FileDescriptor&& aFD)
 {
   MOZ_ASSERT(mActive);
 
@@ -35,7 +35,7 @@ TemporaryIPCBlobChild::RecvFileDesc(const FileDescriptor& aFD)
 }
 
 mozilla::ipc::IPCResult
-TemporaryIPCBlobChild::Recv__delete__(const IPCBlobOrError& aData)
+TemporaryIPCBlobChild::Recv__delete__(IPCBlobOrError&& aData)
 {
   mActive = false;
   mMutableBlobStorage = nullptr;

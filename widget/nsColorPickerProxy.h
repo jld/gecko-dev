@@ -19,8 +19,8 @@ public:
 
   nsColorPickerProxy() {}
 
-  virtual mozilla::ipc::IPCResult RecvUpdate(const nsString& aColor) override;
-  virtual mozilla::ipc::IPCResult Recv__delete__(const nsString& aColor) override;
+  virtual mozilla::ipc::IPCResult RecvUpdate(nsString&& aColor) override;
+  virtual mozilla::ipc::IPCResult Recv__delete__(nsString&& aColor) override;
 
 private:
   ~nsColorPickerProxy() {}

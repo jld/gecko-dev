@@ -718,7 +718,7 @@ WebrtcGlobalInformation::GetAecDebugLogDir(const GlobalObject& aGlobal, nsAStrin
 }
 
 mozilla::ipc::IPCResult
-WebrtcGlobalParent::RecvGetStatsResult(const int& aRequestId,
+WebrtcGlobalParent::RecvGetStatsResult(int&& aRequestId,
                                        nsTArray<RTCStatsReportInternal>&& Stats)
 {
   MOZ_ASSERT(NS_IsMainThread());
@@ -763,8 +763,8 @@ WebrtcGlobalParent::RecvGetStatsResult(const int& aRequestId,
 }
 
 mozilla::ipc::IPCResult
-WebrtcGlobalParent::RecvGetLogResult(const int& aRequestId,
-                                     const WebrtcGlobalLog& aLog)
+WebrtcGlobalParent::RecvGetLogResult(int&& aRequestId,
+                                     WebrtcGlobalLog&& aLog)
 {
   MOZ_ASSERT(NS_IsMainThread());
 
@@ -835,8 +835,8 @@ MOZ_IMPLICIT WebrtcGlobalParent::~WebrtcGlobalParent()
 }
 
 mozilla::ipc::IPCResult
-WebrtcGlobalChild::RecvGetStatsRequest(const int& aRequestId,
-                                       const nsString& aPcIdFilter)
+WebrtcGlobalChild::RecvGetStatsRequest(int&& aRequestId,
+                                       nsString&& aPcIdFilter)
 {
   if (mShutdown) {
     return IPC_OK();
@@ -871,8 +871,8 @@ WebrtcGlobalChild::RecvClearStatsRequest()
 }
 
 mozilla::ipc::IPCResult
-WebrtcGlobalChild::RecvGetLogRequest(const int& aRequestId,
-                                     const nsCString& aPattern)
+WebrtcGlobalChild::RecvGetLogRequest(int&& aRequestId,
+                                     nsCString&& aPattern)
 {
   if (mShutdown) {
     return IPC_OK();
@@ -912,7 +912,7 @@ WebrtcGlobalChild::RecvClearLogRequest()
 }
 
 mozilla::ipc::IPCResult
-WebrtcGlobalChild::RecvSetAecLogging(const bool& aEnable)
+WebrtcGlobalChild::RecvSetAecLogging(bool&& aEnable)
 {
   if (!mShutdown) {
     if (aEnable) {
@@ -925,7 +925,7 @@ WebrtcGlobalChild::RecvSetAecLogging(const bool& aEnable)
 }
 
 mozilla::ipc::IPCResult
-WebrtcGlobalChild::RecvSetDebugMode(const int& aLevel)
+WebrtcGlobalChild::RecvSetDebugMode(int&& aLevel)
 {
   if (!mShutdown) {
     if (aLevel) {

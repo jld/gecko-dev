@@ -130,11 +130,11 @@ HttpBackgroundChannelChild::RecvOnStartRequestSent()
 
 IPCResult
 HttpBackgroundChannelChild::RecvOnTransportAndData(
-                                               const nsresult& aChannelStatus,
-                                               const nsresult& aTransportStatus,
-                                               const uint64_t& aOffset,
-                                               const uint32_t& aCount,
-                                               const nsCString& aData)
+                                               nsresult&& aChannelStatus,
+                                               nsresult&& aTransportStatus,
+                                               uint64_t&& aOffset,
+                                               uint32_t&& aCount,
+                                               nsCString&& aData)
 {
   LOG(("HttpBackgroundChannelChild::RecvOnTransportAndData [this=%p]\n", this));
   MOZ_ASSERT(OnSocketThread());
@@ -175,10 +175,10 @@ HttpBackgroundChannelChild::RecvOnTransportAndData(
 
 IPCResult
 HttpBackgroundChannelChild::RecvOnStopRequest(
-                                    const nsresult& aChannelStatus,
-                                    const ResourceTimingStruct& aTiming,
-                                    const TimeStamp& aLastActiveTabOptHit,
-                                    const nsHttpHeaderArray& aResponseTrailers)
+                                    nsresult&& aChannelStatus,
+                                    ResourceTimingStruct&& aTiming,
+                                    TimeStamp&& aLastActiveTabOptHit,
+                                    nsHttpHeaderArray&& aResponseTrailers)
 {
   LOG(("HttpBackgroundChannelChild::RecvOnStopRequest [this=%p]\n", this));
   MOZ_ASSERT(OnSocketThread());
@@ -218,8 +218,8 @@ HttpBackgroundChannelChild::RecvOnStopRequest(
 }
 
 IPCResult
-HttpBackgroundChannelChild::RecvOnProgress(const int64_t& aProgress,
-                                           const int64_t& aProgressMax)
+HttpBackgroundChannelChild::RecvOnProgress(int64_t&& aProgress,
+                                           int64_t&& aProgressMax)
 {
   LOG(("HttpBackgroundChannelChild::RecvOnProgress [this=%p progress=%"
        PRId64 " max=%" PRId64 "]\n", this, aProgress, aProgressMax));
@@ -250,7 +250,7 @@ HttpBackgroundChannelChild::RecvOnProgress(const int64_t& aProgress,
 }
 
 IPCResult
-HttpBackgroundChannelChild::RecvOnStatus(const nsresult& aStatus)
+HttpBackgroundChannelChild::RecvOnStatus(nsresult&& aStatus)
 {
   LOG(("HttpBackgroundChannelChild::RecvOnStatus [this=%p status=%"
        PRIx32 "]\n", this, static_cast<uint32_t>(aStatus)));
@@ -365,7 +365,7 @@ HttpBackgroundChannelChild::RecvNotifyTrackingResource()
 }
 
 IPCResult
-HttpBackgroundChannelChild::RecvSetClassifierMatchedInfo(const ClassifierInfo& info)
+HttpBackgroundChannelChild::RecvSetClassifierMatchedInfo(ClassifierInfo&& info)
 {
   LOG(("HttpBackgroundChannelChild::RecvSetClassifierMatchedInfo [this=%p]\n", this));
   MOZ_ASSERT(OnSocketThread());

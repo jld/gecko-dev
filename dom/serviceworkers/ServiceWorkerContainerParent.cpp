@@ -30,10 +30,10 @@ ServiceWorkerContainerParent::RecvTeardown()
 }
 
 IPCResult
-ServiceWorkerContainerParent::RecvRegister(const IPCClientInfo& aClientInfo,
-                                           const nsCString& aScopeURL,
-                                           const nsCString& aScriptURL,
-                                           const ServiceWorkerUpdateViaCache& aUpdateViaCache,
+ServiceWorkerContainerParent::RecvRegister(IPCClientInfo&& aClientInfo,
+                                           nsCString&& aScopeURL,
+                                           nsCString&& aScriptURL,
+                                           ServiceWorkerUpdateViaCache&& aUpdateViaCache,
                                            RegisterResolver&& aResolver)
 {
   if (!mProxy) {
@@ -53,8 +53,8 @@ ServiceWorkerContainerParent::RecvRegister(const IPCClientInfo& aClientInfo,
 }
 
 IPCResult
-ServiceWorkerContainerParent::RecvGetRegistration(const IPCClientInfo& aClientInfo,
-                                                  const nsCString& aURL,
+ServiceWorkerContainerParent::RecvGetRegistration(IPCClientInfo&& aClientInfo,
+                                                  nsCString&& aURL,
                                                   GetRegistrationResolver&& aResolver)
 {
   if (!mProxy) {
@@ -74,7 +74,7 @@ ServiceWorkerContainerParent::RecvGetRegistration(const IPCClientInfo& aClientIn
 }
 
 IPCResult
-ServiceWorkerContainerParent::RecvGetRegistrations(const IPCClientInfo& aClientInfo,
+ServiceWorkerContainerParent::RecvGetRegistrations(IPCClientInfo&& aClientInfo,
                                                    GetRegistrationsResolver&& aResolver)
 {
   if (!mProxy) {
@@ -98,7 +98,7 @@ ServiceWorkerContainerParent::RecvGetRegistrations(const IPCClientInfo& aClientI
 }
 
 IPCResult
-ServiceWorkerContainerParent::RecvGetReady(const IPCClientInfo& aClientInfo,
+ServiceWorkerContainerParent::RecvGetReady(IPCClientInfo&& aClientInfo,
                                            GetReadyResolver&& aResolver)
 {
   if (!mProxy) {

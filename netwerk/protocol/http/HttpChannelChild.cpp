@@ -384,8 +384,8 @@ class AssociateApplicationCacheEvent : public NeckoTargetChannelEvent<HttpChanne
 };
 
 mozilla::ipc::IPCResult
-HttpChannelChild::RecvAssociateApplicationCache(const nsCString &groupID,
-                                                const nsCString &clientID)
+HttpChannelChild::RecvAssociateApplicationCache(nsCString&& groupID,
+                                                nsCString&& clientID)
 {
   LOG(("HttpChannelChild::RecvAssociateApplicationCache [this=%p]\n", this));
   mEventQ->RunOrEnqueue(new AssociateApplicationCacheEvent(this, groupID,
@@ -488,26 +488,26 @@ class StartRequestEvent : public NeckoTargetChannelEvent<HttpChannelChild>
 };
 
 mozilla::ipc::IPCResult
-HttpChannelChild::RecvOnStartRequest(const nsresult& channelStatus,
-                                     const nsHttpResponseHead& responseHead,
-                                     const bool& useResponseHead,
-                                     const nsHttpHeaderArray& requestHeaders,
-                                     const ParentLoadInfoForwarderArgs& loadInfoForwarder,
-                                     const bool& isFromCache,
-                                     const bool& cacheEntryAvailable,
-                                     const uint64_t& cacheEntryId,
-                                     const int32_t& cacheFetchCount,
-                                     const uint32_t& cacheExpirationTime,
-                                     const nsCString& cachedCharset,
-                                     const nsCString& securityInfoSerialization,
-                                     const NetAddr& selfAddr,
-                                     const NetAddr& peerAddr,
-                                     const int16_t& redirectCount,
-                                     const uint32_t& cacheKey,
-                                     const nsCString& altDataType,
-                                     const int64_t& altDataLen,
-                                     const bool& aApplyConversion,
-                                     const ResourceTimingStruct& aTiming)
+HttpChannelChild::RecvOnStartRequest(nsresult&& channelStatus,
+                                     nsHttpResponseHead&& responseHead,
+                                     bool&& useResponseHead,
+                                     nsHttpHeaderArray&& requestHeaders,
+                                     ParentLoadInfoForwarderArgs&& loadInfoForwarder,
+                                     bool&& isFromCache,
+                                     bool&& cacheEntryAvailable,
+                                     uint64_t&& cacheEntryId,
+                                     int32_t&& cacheFetchCount,
+                                     uint32_t&& cacheExpirationTime,
+                                     nsCString&& cachedCharset,
+                                     nsCString&& securityInfoSerialization,
+                                     NetAddr&& selfAddr,
+                                     NetAddr&& peerAddr,
+                                     int16_t&& redirectCount,
+                                     uint32_t&& cacheKey,
+                                     nsCString&& altDataType,
+                                     int64_t&& altDataLen,
+                                     bool&& aApplyConversion,
+                                     ResourceTimingStruct&& aTiming)
 {
   LOG(("HttpChannelChild::RecvOnStartRequest [this=%p]\n", this));
   // mFlushedForDiversion and mDivertingToParent should NEVER be set at this
@@ -1393,7 +1393,7 @@ class FailedAsyncOpenEvent : public NeckoTargetChannelEvent<HttpChannelChild>
 };
 
 mozilla::ipc::IPCResult
-HttpChannelChild::RecvFailedAsyncOpen(const nsresult& status)
+HttpChannelChild::RecvFailedAsyncOpen(nsresult&& status)
 {
   LOG(("HttpChannelChild::RecvFailedAsyncOpen [this=%p]\n", this));
   mEventQ->RunOrEnqueue(new FailedAsyncOpenEvent(this, status));
@@ -1616,8 +1616,8 @@ void HttpChannelChild::FinishInterceptedRedirect()
 }
 
 mozilla::ipc::IPCResult
-HttpChannelChild::RecvReportSecurityMessage(const nsString& messageTag,
-                                            const nsString& messageCategory)
+HttpChannelChild::RecvReportSecurityMessage(nsString&& messageTag,
+                                            nsString&& messageCategory)
 {
   DebugOnly<nsresult> rv = AddSecurityMessage(messageTag, messageCategory);
   MOZ_ASSERT(NS_SUCCEEDED(rv));
@@ -1667,15 +1667,15 @@ class Redirect1Event : public NeckoTargetChannelEvent<HttpChannelChild>
 };
 
 mozilla::ipc::IPCResult
-HttpChannelChild::RecvRedirect1Begin(const uint32_t& registrarId,
-                                     const URIParams& newUri,
-                                     const uint32_t& newLoadFlags,
-                                     const uint32_t& redirectFlags,
-                                     const ParentLoadInfoForwarderArgs& loadInfoForwarder,
-                                     const nsHttpResponseHead& responseHead,
-                                     const nsCString& securityInfoSerialization,
-                                     const uint64_t& channelId,
-                                     const NetAddr& oldPeerAddr)
+HttpChannelChild::RecvRedirect1Begin(uint32_t&& registrarId,
+                                     URIParams&& newUri,
+                                     uint32_t&& newLoadFlags,
+                                     uint32_t&& redirectFlags,
+                                     ParentLoadInfoForwarderArgs&& loadInfoForwarder,
+                                     nsHttpResponseHead&& responseHead,
+                                     nsCString&& securityInfoSerialization,
+                                     uint64_t&& channelId,
+                                     NetAddr&& oldPeerAddr)
 {
   // TODO: handle security info
   LOG(("HttpChannelChild::RecvRedirect1Begin [this=%p]\n", this));
@@ -3895,8 +3895,8 @@ HttpChannelChild::ForceIntercepted(nsIInputStream* aSynthesizedInput,
 }
 
 mozilla::ipc::IPCResult
-HttpChannelChild::RecvIssueDeprecationWarning(const uint32_t& warning,
-                                              const bool& asError)
+HttpChannelChild::RecvIssueDeprecationWarning(uint32_t&& warning,
+                                              bool&& asError)
 {
   nsCOMPtr<nsIDeprecationWarner> warner;
   GetCallback(warner);
@@ -3939,7 +3939,7 @@ HttpChannelChild::ShouldInterceptURI(nsIURI* aURI,
 }
 
 mozilla::ipc::IPCResult
-HttpChannelChild::RecvSetPriority(const int16_t& aPriority)
+HttpChannelChild::RecvSetPriority(int16_t&& aPriority)
 {
   mPriority = aPriority;
   return IPC_OK();
@@ -3981,8 +3981,8 @@ HttpChannelChild::ActorDestroy(ActorDestroyReason aWhy)
 }
 
 mozilla::ipc::IPCResult
-HttpChannelChild::RecvLogBlockedCORSRequest(const nsString& aMessage,
-                                            const nsCString& aCategory)
+HttpChannelChild::RecvLogBlockedCORSRequest(nsString&& aMessage,
+                                            nsCString&& aCategory)
 {
   Unused << LogBlockedCORSRequest(aMessage, aCategory);
   return IPC_OK();

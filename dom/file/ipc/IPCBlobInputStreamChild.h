@@ -73,14 +73,14 @@ public:
                nsIEventTarget* aEventTarget);
 
   mozilla::ipc::IPCResult
-  RecvStreamReady(const OptionalIPCStream& aStream) override;
+  RecvStreamReady(OptionalIPCStream&& aStream) override;
 
   void
   LengthNeeded(IPCBlobInputStream* aStream,
                nsIEventTarget* aEventTarget);
 
   mozilla::ipc::IPCResult
-  RecvLengthReady(const int64_t& aLength) override;
+  RecvLengthReady(int64_t&& aLength) override;
 
   void
   Shutdown();

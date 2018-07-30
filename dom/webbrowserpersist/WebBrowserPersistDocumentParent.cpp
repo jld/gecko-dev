@@ -61,8 +61,8 @@ WebBrowserPersistDocumentParent::~WebBrowserPersistDocumentParent()
 }
 
 mozilla::ipc::IPCResult
-WebBrowserPersistDocumentParent::RecvAttributes(const Attrs& aAttrs,
-                                                const OptionalIPCStream& aPostStream)
+WebBrowserPersistDocumentParent::RecvAttributes(Attrs&& aAttrs,
+                                                OptionalIPCStream&& aPostStream)
 {
     // Deserialize the postData unconditionally so that fds aren't leaked.
     nsCOMPtr<nsIInputStream> postData = mozilla::ipc::DeserializeIPCStream(aPostStream);
@@ -77,7 +77,7 @@ WebBrowserPersistDocumentParent::RecvAttributes(const Attrs& aAttrs,
 }
 
 mozilla::ipc::IPCResult
-WebBrowserPersistDocumentParent::RecvInitFailure(const nsresult& aFailure)
+WebBrowserPersistDocumentParent::RecvInitFailure(nsresult&& aFailure)
 {
     if (!mOnReady || mReflection) {
         return IPC_FAIL_NO_REASON(this);

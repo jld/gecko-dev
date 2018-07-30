@@ -53,7 +53,7 @@ public:
 
     // PFilePickerChild
     virtual mozilla::ipc::IPCResult
-    Recv__delete__(const MaybeInputData& aData, const int16_t& aResult) override;
+    Recv__delete__(MaybeInputData&& aData, int16_t&& aResult) override;
 
 private:
     ~nsFilePickerProxy();

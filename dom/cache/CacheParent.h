@@ -34,7 +34,7 @@ private:
 
   virtual mozilla::ipc::IPCResult
   RecvPCacheOpConstructor(PCacheOpParent* actor,
-                          const CacheOpArgs& aOpArgs) override;
+                          CacheOpArgs&& aOpArgs) override;
 
   virtual mozilla::ipc::IPCResult
   RecvTeardown() override;

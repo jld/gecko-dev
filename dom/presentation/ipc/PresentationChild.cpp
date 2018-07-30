@@ -63,8 +63,8 @@ PresentationChild::DeallocPPresentationRequestChild(PPresentationRequestChild* a
 mozilla::ipc::IPCResult
 PresentationChild::RecvPPresentationBuilderConstructor(
   PPresentationBuilderChild* aActor,
-  const nsString& aSessionId,
-  const uint8_t& aRole)
+  nsString&& aSessionId,
+  uint8_t&& aRole)
 {
   // Child will build the session transport
   PresentationBuilderChild* actor = static_cast<PresentationBuilderChild*>(aActor);
@@ -96,7 +96,7 @@ PresentationChild::DeallocPPresentationBuilderChild(PPresentationBuilderChild* a
 mozilla::ipc::IPCResult
 PresentationChild::RecvNotifyAvailableChange(
                                         nsTArray<nsString>&& aAvailabilityUrls,
-                                        const bool& aAvailable)
+                                        bool&& aAvailable)
 {
   if (mService) {
     Unused <<
@@ -107,9 +107,9 @@ PresentationChild::RecvNotifyAvailableChange(
 }
 
 mozilla::ipc::IPCResult
-PresentationChild::RecvNotifySessionStateChange(const nsString& aSessionId,
-                                                const uint16_t& aState,
-                                                const nsresult& aReason)
+PresentationChild::RecvNotifySessionStateChange(nsString&& aSessionId,
+                                                uint16_t&& aState,
+                                                nsresult&& aReason)
 {
   if (mService) {
     Unused << NS_WARN_IF(NS_FAILED(mService->NotifySessionStateChange(aSessionId,
@@ -120,9 +120,9 @@ PresentationChild::RecvNotifySessionStateChange(const nsString& aSessionId,
 }
 
 mozilla::ipc::IPCResult
-PresentationChild::RecvNotifyMessage(const nsString& aSessionId,
-                                     const nsCString& aData,
-                                     const bool& aIsBinary)
+PresentationChild::RecvNotifyMessage(nsString&& aSessionId,
+                                     nsCString&& aData,
+                                     bool&& aIsBinary)
 {
   if (mService) {
     Unused << NS_WARN_IF(NS_FAILED(mService->NotifyMessage(aSessionId,
@@ -133,8 +133,8 @@ PresentationChild::RecvNotifyMessage(const nsString& aSessionId,
 }
 
 mozilla::ipc::IPCResult
-PresentationChild::RecvNotifySessionConnect(const uint64_t& aWindowId,
-                                            const nsString& aSessionId)
+PresentationChild::RecvNotifySessionConnect(uint64_t&& aWindowId,
+                                            nsString&& aSessionId)
 {
   if (mService) {
     Unused << NS_WARN_IF(NS_FAILED(mService->NotifySessionConnect(aWindowId, aSessionId)));
@@ -143,9 +143,9 @@ PresentationChild::RecvNotifySessionConnect(const uint64_t& aWindowId,
 }
 
 mozilla::ipc::IPCResult
-PresentationChild::RecvNotifyCloseSessionTransport(const nsString& aSessionId,
-                                                   const uint8_t& aRole,
-                                                   const nsresult& aReason)
+PresentationChild::RecvNotifyCloseSessionTransport(nsString&& aSessionId,
+                                                   uint8_t&& aRole,
+                                                   nsresult&& aReason)
 {
   if (mService) {
     Unused << NS_WARN_IF(NS_FAILED(
@@ -180,7 +180,7 @@ PresentationRequestChild::ActorDestroy(ActorDestroyReason aWhy)
 }
 
 mozilla::ipc::IPCResult
-PresentationRequestChild::Recv__delete__(const nsresult& aResult)
+PresentationRequestChild::Recv__delete__(nsresult&& aResult)
 {
   if (mActorDestroyed) {
     return IPC_OK();
@@ -196,7 +196,7 @@ PresentationRequestChild::Recv__delete__(const nsresult& aResult)
 }
 
 mozilla::ipc::IPCResult
-PresentationRequestChild::RecvNotifyRequestUrlSelected(const nsString& aUrl)
+PresentationRequestChild::RecvNotifyRequestUrlSelected(nsString&& aUrl)
 {
   Unused << NS_WARN_IF(NS_FAILED(mCallback->NotifySuccess(aUrl)));
   return IPC_OK();

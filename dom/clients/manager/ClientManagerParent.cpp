@@ -45,7 +45,7 @@ ClientManagerParent::DeallocPClientHandleParent(PClientHandleParent* aActor)
 
 IPCResult
 ClientManagerParent::RecvPClientHandleConstructor(PClientHandleParent* aActor,
-                                                  const IPCClientInfo& aClientInfo)
+                                                  IPCClientInfo&& aClientInfo)
 {
   ClientHandleParent* actor = static_cast<ClientHandleParent*>(aActor);
   actor->Init(aClientInfo);
@@ -67,7 +67,7 @@ ClientManagerParent::DeallocPClientManagerOpParent(PClientManagerOpParent* aActo
 
 IPCResult
 ClientManagerParent::RecvPClientManagerOpConstructor(PClientManagerOpParent* aActor,
-                                                     const ClientOpConstructorArgs& aArgs)
+                                                     ClientOpConstructorArgs&& aArgs)
 {
   ClientManagerOpParent* actor = static_cast<ClientManagerOpParent*>(aActor);
   actor->Init(aArgs);
@@ -103,7 +103,7 @@ ClientManagerParent::DeallocPClientSourceParent(PClientSourceParent* aActor)
 
 IPCResult
 ClientManagerParent::RecvPClientSourceConstructor(PClientSourceParent* aActor,
-                                                  const ClientSourceConstructorArgs& aArgs)
+                                                  ClientSourceConstructorArgs&& aArgs)
 {
   ClientSourceParent* actor = static_cast<ClientSourceParent*>(aActor);
   actor->Init();

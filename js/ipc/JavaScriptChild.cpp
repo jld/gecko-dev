@@ -76,7 +76,7 @@ JavaScriptChild::scopeForTargetObjects()
 }
 
 mozilla::ipc::IPCResult
-JavaScriptChild::RecvDropTemporaryStrongReferences(const uint64_t& upToObjId)
+JavaScriptChild::RecvDropTemporaryStrongReferences(uint64_t&& upToObjId)
 {
     strongReferenceObjIdMinimum_ = upToObjId + 1;
     return IPC_OK();

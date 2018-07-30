@@ -83,12 +83,12 @@ nsIContentChild::DeallocPBrowserChild(PBrowserChild* aIframe)
 
 mozilla::ipc::IPCResult
 nsIContentChild::RecvPBrowserConstructor(PBrowserChild* aActor,
-                                         const TabId& aTabId,
-                                         const TabId& aSameTabGroupAs,
-                                         const IPCTabContext& aContext,
-                                         const uint32_t& aChromeFlags,
-                                         const ContentParentId& aCpID,
-                                         const bool& aIsForBrowser)
+                                         TabId&& aTabId,
+                                         TabId&& aSameTabGroupAs,
+                                         IPCTabContext&& aContext,
+                                         uint32_t&& aChromeFlags,
+                                         ContentParentId&& aCpID,
+                                         bool&& aIsForBrowser)
 {
   // This runs after AllocPBrowserChild() returns and the IPC machinery for this
   // PBrowserChild has been set up.
@@ -168,10 +168,10 @@ nsIContentChild::DeallocPFileDescriptorSetChild(PFileDescriptorSetChild* aActor)
 }
 
 mozilla::ipc::IPCResult
-nsIContentChild::RecvAsyncMessage(const nsString& aMsg,
+nsIContentChild::RecvAsyncMessage(nsString&& aMsg,
                                   InfallibleTArray<CpowEntry>&& aCpows,
-                                  const IPC::Principal& aPrincipal,
-                                  const ClonedMessageData& aData)
+                                  IPC::Principal&& aPrincipal,
+                                  ClonedMessageData&& aData)
 {
   AUTO_PROFILER_LABEL_DYNAMIC_LOSSY_NSSTRING(
     "nsIContentChild::RecvAsyncMessage", OTHER, aMsg);

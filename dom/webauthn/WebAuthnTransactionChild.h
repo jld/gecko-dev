@@ -27,15 +27,15 @@ public:
   explicit WebAuthnTransactionChild(WebAuthnManagerBase* aManager);
 
   mozilla::ipc::IPCResult
-  RecvConfirmRegister(const uint64_t& aTransactionId,
-                      const WebAuthnMakeCredentialResult& aResult) override;
+  RecvConfirmRegister(uint64_t&& aTransactionId,
+                      WebAuthnMakeCredentialResult&& aResult) override;
 
   mozilla::ipc::IPCResult
-  RecvConfirmSign(const uint64_t& aTransactionId,
-                  const WebAuthnGetAssertionResult& aResult) override;
+  RecvConfirmSign(uint64_t&& aTransactionId,
+                  WebAuthnGetAssertionResult&& aResult) override;
 
   mozilla::ipc::IPCResult
-  RecvAbort(const uint64_t& aTransactionId, const nsresult& aError) override;
+  RecvAbort(uint64_t&& aTransactionId, nsresult&& aError) override;
 
   void ActorDestroy(ActorDestroyReason why) override;
 

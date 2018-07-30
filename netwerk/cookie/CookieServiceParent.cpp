@@ -200,13 +200,13 @@ CookieServiceParent::SerialializeCookieList(const nsTArray<nsCookie*> &aFoundCoo
 }
 
 mozilla::ipc::IPCResult
-CookieServiceParent::RecvPrepareCookieList(const URIParams        &aHost,
-                                           const bool             &aIsForeign,
-                                           const bool             &aIsTrackingResource,
-                                           const bool             &aFirstPartyStorageAccessGranted,
-                                           const bool             &aIsSafeTopLevelNav,
-                                           const bool             &aIsSameSiteForeign,
-                                           const OriginAttributes &aAttrs)
+CookieServiceParent::RecvPrepareCookieList(URIParams&& aHost,
+                                           bool&& aIsForeign,
+                                           bool&& aIsTrackingResource,
+                                           bool&& aFirstPartyStorageAccessGranted,
+                                           bool&& aIsSafeTopLevelNav,
+                                           bool&& aIsSameSiteForeign,
+                                           OriginAttributes&& aAttrs)
 {
   nsCOMPtr<nsIURI> hostURI = DeserializeURI(aHost);
 
@@ -230,13 +230,13 @@ CookieServiceParent::ActorDestroy(ActorDestroyReason aWhy)
 }
 
 mozilla::ipc::IPCResult
-CookieServiceParent::RecvGetCookieString(const URIParams& aHost,
-                                         const bool& aIsForeign,
-                                         const bool& aIsTrackingResource,
-                                         const bool& aFirstPartyStorageAccessGranted,
-                                         const bool& aIsSafeTopLevelNav,
-                                         const bool& aIsSameSiteForeign,
-                                         const OriginAttributes& aAttrs,
+CookieServiceParent::RecvGetCookieString(URIParams&& aHost,
+                                         bool&& aIsForeign,
+                                         bool&& aIsTrackingResource,
+                                         bool&& aFirstPartyStorageAccessGranted,
+                                         bool&& aIsSafeTopLevelNav,
+                                         bool&& aIsSameSiteForeign,
+                                         OriginAttributes&& aAttrs,
                                          nsCString* aResult)
 {
   if (!mCookieService)
@@ -254,15 +254,15 @@ CookieServiceParent::RecvGetCookieString(const URIParams& aHost,
 }
 
 mozilla::ipc::IPCResult
-CookieServiceParent::RecvSetCookieString(const URIParams& aHost,
-                                         const URIParams& aChannelURI,
-                                         const bool& aIsForeign,
-                                         const bool& aIsTrackingResource,
-                                         const bool& aFirstPartyStorageAccessGranted,
-                                         const nsCString& aCookieString,
-                                         const nsCString& aServerTime,
-                                         const OriginAttributes& aAttrs,
-                                         const bool& aFromHttp)
+CookieServiceParent::RecvSetCookieString(URIParams&& aHost,
+                                         URIParams&& aChannelURI,
+                                         bool&& aIsForeign,
+                                         bool&& aIsTrackingResource,
+                                         bool&& aFirstPartyStorageAccessGranted,
+                                         nsCString&& aCookieString,
+                                         nsCString&& aServerTime,
+                                         OriginAttributes&& aAttrs,
+                                         bool&& aFromHttp)
 {
   if (!mCookieService)
     return IPC_OK();

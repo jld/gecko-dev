@@ -25,24 +25,24 @@ public:
   explicit APZChild(RefPtr<GeckoContentController> aController);
   ~APZChild();
 
-  mozilla::ipc::IPCResult RecvRequestContentRepaint(const FrameMetrics& frame) override;
+  mozilla::ipc::IPCResult RecvRequestContentRepaint(FrameMetrics&& frame) override;
 
-  mozilla::ipc::IPCResult RecvUpdateOverscrollVelocity(const float& aX, const float& aY, const bool& aIsRootContent) override;
+  mozilla::ipc::IPCResult RecvUpdateOverscrollVelocity(float&& aX, float&& aY, bool&& aIsRootContent) override;
 
-  mozilla::ipc::IPCResult RecvUpdateOverscrollOffset(const float& aX, const float& aY, const bool& aIsRootContent) override;
+  mozilla::ipc::IPCResult RecvUpdateOverscrollOffset(float&& aX, float&& aY, bool&& aIsRootContent) override;
 
-  mozilla::ipc::IPCResult RecvNotifyMozMouseScrollEvent(const ViewID& aScrollId,
-                                                        const nsString& aEvent) override;
+  mozilla::ipc::IPCResult RecvNotifyMozMouseScrollEvent(ViewID&& aScrollId,
+                                                        nsString&& aEvent) override;
 
-  mozilla::ipc::IPCResult RecvNotifyAPZStateChange(const ScrollableLayerGuid& aGuid,
-                                                   const APZStateChange& aChange,
-                                                   const int& aArg) override;
+  mozilla::ipc::IPCResult RecvNotifyAPZStateChange(ScrollableLayerGuid&& aGuid,
+                                                   APZStateChange&& aChange,
+                                                   int&& aArg) override;
 
   mozilla::ipc::IPCResult RecvNotifyFlushComplete() override;
 
-  mozilla::ipc::IPCResult RecvNotifyAsyncScrollbarDragRejected(const ViewID& aScrollId) override;
+  mozilla::ipc::IPCResult RecvNotifyAsyncScrollbarDragRejected(ViewID&& aScrollId) override;
 
-  mozilla::ipc::IPCResult RecvNotifyAsyncAutoscrollRejected(const ViewID& aScrollId) override;
+  mozilla::ipc::IPCResult RecvNotifyAsyncAutoscrollRejected(ViewID&& aScrollId) override;
 
   mozilla::ipc::IPCResult RecvDestroy() override;
 

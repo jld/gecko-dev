@@ -48,7 +48,7 @@ ClientHandleParent::DeallocPClientHandleOpParent(PClientHandleOpParent* aActor)
 
 IPCResult
 ClientHandleParent::RecvPClientHandleOpConstructor(PClientHandleOpParent* aActor,
-                                                   const ClientOpConstructorArgs& aArgs)
+                                                   ClientOpConstructorArgs&& aArgs)
 {
   auto actor = static_cast<ClientHandleOpParent*>(aActor);
   actor->Init(aArgs);

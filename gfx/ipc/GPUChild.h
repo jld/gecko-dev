@@ -44,26 +44,26 @@ public:
   void OnVarChanged(const GfxVarUpdate& aVar) override;
 
   // PGPUChild overrides.
-  mozilla::ipc::IPCResult RecvInitComplete(const GPUDeviceData& aData) override;
-  mozilla::ipc::IPCResult RecvReportCheckerboard(const uint32_t& aSeverity, const nsCString& aLog) override;
-  mozilla::ipc::IPCResult RecvInitCrashReporter(Shmem&& shmem, const NativeThreadId& aThreadId) override;
+  mozilla::ipc::IPCResult RecvInitComplete(GPUDeviceData&& aData) override;
+  mozilla::ipc::IPCResult RecvReportCheckerboard(uint32_t&& aSeverity, nsCString&& aLog) override;
+  mozilla::ipc::IPCResult RecvInitCrashReporter(Shmem&& shmem, NativeThreadId&& aThreadId) override;
 
   mozilla::ipc::IPCResult RecvAccumulateChildHistograms(InfallibleTArray<HistogramAccumulation>&& aAccumulations) override;
   mozilla::ipc::IPCResult RecvAccumulateChildKeyedHistograms(InfallibleTArray<KeyedHistogramAccumulation>&& aAccumulations) override;
   mozilla::ipc::IPCResult RecvUpdateChildScalars(InfallibleTArray<ScalarAction>&& aScalarActions) override;
   mozilla::ipc::IPCResult RecvUpdateChildKeyedScalars(InfallibleTArray<KeyedScalarAction>&& aScalarActions) override;
   mozilla::ipc::IPCResult RecvRecordChildEvents(nsTArray<ChildEventData>&& events) override;
-  mozilla::ipc::IPCResult RecvRecordDiscardedData(const DiscardedData& aDiscardedData) override;
+  mozilla::ipc::IPCResult RecvRecordDiscardedData(DiscardedData&& aDiscardedData) override;
 
   void ActorDestroy(ActorDestroyReason aWhy) override;
-  mozilla::ipc::IPCResult RecvGraphicsError(const nsCString& aError) override;
-  mozilla::ipc::IPCResult RecvNotifyUiObservers(const nsCString& aTopic) override;
-  mozilla::ipc::IPCResult RecvNotifyDeviceReset(const GPUDeviceData& aData) override;
-  mozilla::ipc::IPCResult RecvAddMemoryReport(const MemoryReport& aReport) override;
-  mozilla::ipc::IPCResult RecvFinishMemoryReport(const uint32_t& aGeneration) override;
-  mozilla::ipc::IPCResult RecvUpdateFeature(const Feature& aFeature, const FeatureFailure& aChange) override;
-  mozilla::ipc::IPCResult RecvUsedFallback(const Fallback& aFallback, const nsCString& aMessage) override;
-  mozilla::ipc::IPCResult RecvBHRThreadHang(const HangDetails& aDetails) override;
+  mozilla::ipc::IPCResult RecvGraphicsError(nsCString&& aError) override;
+  mozilla::ipc::IPCResult RecvNotifyUiObservers(nsCString&& aTopic) override;
+  mozilla::ipc::IPCResult RecvNotifyDeviceReset(GPUDeviceData&& aData) override;
+  mozilla::ipc::IPCResult RecvAddMemoryReport(MemoryReport&& aReport) override;
+  mozilla::ipc::IPCResult RecvFinishMemoryReport(uint32_t&& aGeneration) override;
+  mozilla::ipc::IPCResult RecvUpdateFeature(Feature&& aFeature, FeatureFailure&& aChange) override;
+  mozilla::ipc::IPCResult RecvUsedFallback(Fallback&& aFallback, nsCString&& aMessage) override;
+  mozilla::ipc::IPCResult RecvBHRThreadHang(HangDetails&& aDetails) override;
 
   bool SendRequestMemoryReport(const uint32_t& aGeneration,
                                const bool& aAnonymize,

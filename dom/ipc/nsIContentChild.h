@@ -85,12 +85,12 @@ protected:
   virtual bool DeallocPBrowserChild(PBrowserChild*);
 
   virtual mozilla::ipc::IPCResult RecvPBrowserConstructor(PBrowserChild* aActor,
-                                                          const TabId& aTabId,
-                                                          const TabId& aSameTabGroupAs,
-                                                          const IPCTabContext& aContext,
-                                                          const uint32_t& aChromeFlags,
-                                                          const ContentParentId& aCpID,
-                                                          const bool& aIsForBrowse);
+                                                          TabId&& aTabId,
+                                                          TabId&& aSameTabGroupAs,
+                                                          IPCTabContext&& aContext,
+                                                          uint32_t&& aChromeFlags,
+                                                          ContentParentId&& aCpID,
+                                                          bool&& aIsForBrowse);
 
   virtual mozilla::ipc::PIPCBlobInputStreamChild*
   AllocPIPCBlobInputStreamChild(const nsID& aID, const uint64_t& aSize);
@@ -114,10 +114,10 @@ protected:
   virtual bool
   DeallocPFileDescriptorSetChild(mozilla::ipc::PFileDescriptorSetChild* aActor);
 
-  virtual mozilla::ipc::IPCResult RecvAsyncMessage(const nsString& aMsg,
+  virtual mozilla::ipc::IPCResult RecvAsyncMessage(nsString&& aMsg,
                                                    InfallibleTArray<jsipc::CpowEntry>&& aCpows,
-                                                   const IPC::Principal& aPrincipal,
-                                                   const ClonedMessageData& aData);
+                                                   IPC::Principal&& aPrincipal,
+                                                   ClonedMessageData&& aData);
 
   static already_AddRefed<nsIEventTarget> GetConstructedEventTarget(const IPC::Message& aMsg);
 };

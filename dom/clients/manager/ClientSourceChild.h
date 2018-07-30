@@ -32,7 +32,7 @@ class ClientSourceChild final : public PClientSourceChild
 
   mozilla::ipc::IPCResult
   RecvPClientSourceOpConstructor(PClientSourceOpChild* aActor,
-                                 const ClientOpConstructorArgs& aArgs) override;
+                                 ClientOpConstructorArgs&& aArgs) override;
 
 public:
   explicit ClientSourceChild(const ClientSourceConstructorArgs& aArgs);

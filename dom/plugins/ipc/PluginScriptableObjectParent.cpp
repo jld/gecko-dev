@@ -751,7 +751,7 @@ PluginScriptableObjectParent::ActorDestroy(ActorDestroyReason aWhy)
 }
 
 mozilla::ipc::IPCResult
-PluginScriptableObjectParent::AnswerHasMethod(const PluginIdentifier& aId,
+PluginScriptableObjectParent::AnswerHasMethod(PluginIdentifier&& aId,
                                               bool* aHasMethod)
 {
   if (!mObject) {
@@ -787,7 +787,7 @@ PluginScriptableObjectParent::AnswerHasMethod(const PluginIdentifier& aId,
 }
 
 mozilla::ipc::IPCResult
-PluginScriptableObjectParent::AnswerInvoke(const PluginIdentifier& aId,
+PluginScriptableObjectParent::AnswerInvoke(PluginIdentifier&& aId,
                                            InfallibleTArray<Variant>&& aArgs,
                                            Variant* aResult,
                                            bool* aSuccess)
@@ -960,7 +960,7 @@ PluginScriptableObjectParent::AnswerInvokeDefault(InfallibleTArray<Variant>&& aA
 }
 
 mozilla::ipc::IPCResult
-PluginScriptableObjectParent::AnswerHasProperty(const PluginIdentifier& aId,
+PluginScriptableObjectParent::AnswerHasProperty(PluginIdentifier&& aId,
                                                 bool* aHasProperty)
 {
   if (!mObject) {
@@ -999,7 +999,7 @@ PluginScriptableObjectParent::AnswerHasProperty(const PluginIdentifier& aId,
 
 mozilla::ipc::IPCResult
 PluginScriptableObjectParent::AnswerGetParentProperty(
-                                                   const PluginIdentifier& aId,
+                                                   PluginIdentifier&& aId,
                                                    Variant* aResult,
                                                    bool* aSuccess)
 {
@@ -1057,8 +1057,8 @@ PluginScriptableObjectParent::AnswerGetParentProperty(
 }
 
 mozilla::ipc::IPCResult
-PluginScriptableObjectParent::AnswerSetProperty(const PluginIdentifier& aId,
-                                                const Variant& aValue,
+PluginScriptableObjectParent::AnswerSetProperty(PluginIdentifier&& aId,
+                                                Variant&& aValue,
                                                 bool* aSuccess)
 {
   if (!mObject) {
@@ -1104,7 +1104,7 @@ PluginScriptableObjectParent::AnswerSetProperty(const PluginIdentifier& aId,
 }
 
 mozilla::ipc::IPCResult
-PluginScriptableObjectParent::AnswerRemoveProperty(const PluginIdentifier& aId,
+PluginScriptableObjectParent::AnswerRemoveProperty(PluginIdentifier&& aId,
                                                    bool* aSuccess)
 {
   if (!mObject) {
@@ -1293,7 +1293,7 @@ PluginScriptableObjectParent::RecvUnprotect()
 }
 
 mozilla::ipc::IPCResult
-PluginScriptableObjectParent::AnswerNPN_Evaluate(const nsCString& aScript,
+PluginScriptableObjectParent::AnswerNPN_Evaluate(nsCString&& aScript,
                                                  Variant* aResult,
                                                  bool* aSuccess)
 {

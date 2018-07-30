@@ -27,10 +27,10 @@ public:
   virtual void ActorDestroy(ActorDestroyReason aWhy) override;
   void DeferredDestroy();
 
-  virtual mozilla::ipc::IPCResult RecvAsyncMessage(const nsString& aMsg,
+  virtual mozilla::ipc::IPCResult RecvAsyncMessage(nsString&& aMsg,
                                                    InfallibleTArray<jsipc::CpowEntry>&& aCpows,
-                                                   const IPC::Principal& aPrincipal,
-                                                   const ClonedMessageData& aData) override;
+                                                   IPC::Principal&& aPrincipal,
+                                                   ClonedMessageData&& aData) override;
 
   jsipc::CPOWManager* GetCPOWManager() override;
 
@@ -67,12 +67,12 @@ protected:
                                             const bool& aIsForBrowser) override;
   virtual bool DeallocPBrowserChild(PBrowserChild*) override;
   virtual mozilla::ipc::IPCResult RecvPBrowserConstructor(PBrowserChild* aCctor,
-                                                          const TabId& aTabId,
-                                                          const TabId& aSameTabGroupAs,
-                                                          const IPCTabContext& aContext,
-                                                          const uint32_t& aChromeFlags,
-                                                          const ContentParentId& aCpID,
-                                                          const bool& aIsForBrowser) override;
+                                                          TabId&& aTabId,
+                                                          TabId&& aSameTabGroupAs,
+                                                          IPCTabContext&& aContext,
+                                                          uint32_t&& aChromeFlags,
+                                                          ContentParentId&& aCpID,
+                                                          bool&& aIsForBrowser) override;
 
   virtual mozilla::jsipc::PJavaScriptChild* AllocPJavaScriptChild() override;
   virtual bool DeallocPJavaScriptChild(mozilla::jsipc::PJavaScriptChild*) override;

@@ -38,18 +38,18 @@ private:
   ~ServiceWorkerManagerParent();
 
   virtual mozilla::ipc::IPCResult RecvRegister(
-    const ServiceWorkerRegistrationData& aData) override;
+    ServiceWorkerRegistrationData&& aData) override;
 
-  virtual mozilla::ipc::IPCResult RecvUnregister(const PrincipalInfo& aPrincipalInfo,
-                                                 const nsString& aScope) override;
+  virtual mozilla::ipc::IPCResult RecvUnregister(PrincipalInfo&& aPrincipalInfo,
+                                                 nsString&& aScope) override;
 
-  virtual mozilla::ipc::IPCResult RecvPropagateSoftUpdate(const OriginAttributes& aOriginAttributes,
-                                                          const nsString& aScope) override;
+  virtual mozilla::ipc::IPCResult RecvPropagateSoftUpdate(OriginAttributes&& aOriginAttributes,
+                                                          nsString&& aScope) override;
 
-  virtual mozilla::ipc::IPCResult RecvPropagateUnregister(const PrincipalInfo& aPrincipalInfo,
-                                                          const nsString& aScope) override;
+  virtual mozilla::ipc::IPCResult RecvPropagateUnregister(PrincipalInfo&& aPrincipalInfo,
+                                                          nsString&& aScope) override;
 
-  virtual mozilla::ipc::IPCResult RecvPropagateRemove(const nsCString& aHost) override;
+  virtual mozilla::ipc::IPCResult RecvPropagateRemove(nsCString&& aHost) override;
 
   virtual mozilla::ipc::IPCResult RecvPropagateRemoveAll() override;
 
@@ -61,8 +61,8 @@ private:
 
   virtual mozilla::ipc::IPCResult
   RecvPServiceWorkerUpdaterConstructor(PServiceWorkerUpdaterParent* aActor,
-                                       const OriginAttributes& aOriginAttributes,
-                                       const nsCString& aScope) override;
+                                       OriginAttributes&& aOriginAttributes,
+                                       nsCString&& aScope) override;
 
   virtual bool
   DeallocPServiceWorkerUpdaterParent(PServiceWorkerUpdaterParent* aActor) override;

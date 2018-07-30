@@ -550,7 +550,7 @@ PluginModuleChild::ExitedCxxStack()
 #endif
 
 mozilla::ipc::IPCResult
-PluginModuleChild::RecvSetParentHangTimeout(const uint32_t& aSeconds)
+PluginModuleChild::RecvSetParentHangTimeout(uint32_t&& aSeconds)
 {
 #ifdef XP_WIN
     SetReplyTimeoutMs(((aSeconds > 0) ? (1000 * aSeconds) : 0));
@@ -679,10 +679,10 @@ PluginModuleChild::AnswerOptionalFunctionsSupported(bool *aURLRedirectNotify,
 }
 
 mozilla::ipc::IPCResult
-PluginModuleChild::RecvNPP_ClearSiteData(const nsCString& aSite,
-                                           const uint64_t& aFlags,
-                                           const uint64_t& aMaxAge,
-                                           const uint64_t& aCallbackId)
+PluginModuleChild::RecvNPP_ClearSiteData(nsCString&& aSite,
+                                           uint64_t&& aFlags,
+                                           uint64_t&& aMaxAge,
+                                           uint64_t&& aCallbackId)
 {
     NPError result =
         mFunctions.clearsitedata(NullableStringGet(aSite), aFlags, aMaxAge);
@@ -691,7 +691,7 @@ PluginModuleChild::RecvNPP_ClearSiteData(const nsCString& aSite,
 }
 
 mozilla::ipc::IPCResult
-PluginModuleChild::RecvNPP_GetSitesWithData(const uint64_t& aCallbackId)
+PluginModuleChild::RecvNPP_GetSitesWithData(uint64_t&& aCallbackId)
 {
     char** result = mFunctions.getsiteswithdata();
     InfallibleTArray<nsCString> array;
@@ -711,9 +711,9 @@ PluginModuleChild::RecvNPP_GetSitesWithData(const uint64_t& aCallbackId)
 }
 
 mozilla::ipc::IPCResult
-PluginModuleChild::RecvSetAudioSessionData(const nsID& aId,
-                                           const nsString& aDisplayName,
-                                           const nsString& aIconPath)
+PluginModuleChild::RecvSetAudioSessionData(nsID&& aId,
+                                           nsString&& aDisplayName,
+                                           nsString&& aIconPath)
 {
 #if !defined XP_WIN
     MOZ_CRASH("Not Reached!");
@@ -1739,7 +1739,7 @@ _setcurrentasyncsurface(NPP instance, NPAsyncSurface *surface, NPRect *changed)
 //-----------------------------------------------------------------------------
 
 mozilla::ipc::IPCResult
-PluginModuleChild::RecvSettingChanged(const PluginSettings& aSettings)
+PluginModuleChild::RecvSettingChanged(PluginSettings&& aSettings)
 {
     mCachedSettings = aSettings;
     return IPC_OK();
@@ -1763,7 +1763,7 @@ PluginModuleChild::AnswerNP_GetEntryPoints(NPError* _retval)
 }
 
 mozilla::ipc::IPCResult
-PluginModuleChild::AnswerNP_Initialize(const PluginSettings& aSettings, NPError* rv)
+PluginModuleChild::AnswerNP_Initialize(PluginSettings&& aSettings, NPError* rv)
 {
     *rv = DoNP_Initialize(aSettings);
     return IPC_OK();
@@ -1849,7 +1849,7 @@ PluginModuleChild::AnswerModuleSupportsAsyncRender(bool* aResult)
 
 mozilla::ipc::IPCResult
 PluginModuleChild::RecvPPluginInstanceConstructor(PPluginInstanceChild* aActor,
-                                                  const nsCString& aMimeType,
+                                                  nsCString&& aMimeType,
                                                   InfallibleTArray<nsCString>&& aNames,
                                                   InfallibleTArray<nsCString>&& aValues)
 {
@@ -2221,7 +2221,7 @@ PluginModuleChild::PluginRequiresAudioDeviceChanges(
 
 mozilla::ipc::IPCResult
 PluginModuleChild::RecvNPP_SetValue_NPNVaudioDeviceChangeDetails(
-                              const NPAudioDeviceChangeDetailsIPC& detailsIPC)
+                              NPAudioDeviceChangeDetailsIPC&& detailsIPC)
 {
 #if defined(XP_WIN)
     NPAudioDeviceChangeDetails details;
@@ -2240,7 +2240,7 @@ PluginModuleChild::RecvNPP_SetValue_NPNVaudioDeviceChangeDetails(
 
 mozilla::ipc::IPCResult
 PluginModuleChild::RecvNPP_SetValue_NPNVaudioDeviceStateChanged(
-                          const NPAudioDeviceStateChangedIPC& aDeviceStateIPC)
+                          NPAudioDeviceStateChangedIPC&& aDeviceStateIPC)
 {
 #if defined(XP_WIN)
   NPAudioDeviceStateChanged stateChange;

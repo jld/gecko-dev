@@ -51,7 +51,7 @@ GMPTimerChild::SetTimer(GMPTask* aTask, int64_t aTimeoutMS)
 }
 
 mozilla::ipc::IPCResult
-GMPTimerChild::RecvTimerExpired(const uint32_t& aTimerId)
+GMPTimerChild::RecvTimerExpired(uint32_t&& aTimerId)
 {
   MOZ_ASSERT(mPlugin->GMPMessageLoop() == MessageLoop::current());
 

@@ -35,52 +35,52 @@ public:
                     RefPtr<APZUpdater> aAPZUpdater);
 
   mozilla::ipc::IPCResult
-  RecvSetKeyboardMap(const KeyboardMap& aKeyboardMap) override;
+  RecvSetKeyboardMap(KeyboardMap&& aKeyboardMap) override;
 
   mozilla::ipc::IPCResult
   RecvZoomToRect(
-          const ScrollableLayerGuid& aGuid,
-          const CSSRect& aRect,
-          const uint32_t& aFlags) override;
+          ScrollableLayerGuid&& aGuid,
+          CSSRect&& aRect,
+          uint32_t&& aFlags) override;
 
   mozilla::ipc::IPCResult
   RecvContentReceivedInputBlock(
-          const uint64_t& aInputBlockId,
-          const bool& aPreventDefault) override;
+          uint64_t&& aInputBlockId,
+          bool&& aPreventDefault) override;
 
   mozilla::ipc::IPCResult
   RecvSetTargetAPZC(
-          const uint64_t& aInputBlockId,
+          uint64_t&& aInputBlockId,
           nsTArray<ScrollableLayerGuid>&& aTargets) override;
 
   mozilla::ipc::IPCResult
   RecvUpdateZoomConstraints(
-          const ScrollableLayerGuid& aGuid,
-          const MaybeZoomConstraints& aConstraints) override;
+          ScrollableLayerGuid&& aGuid,
+          MaybeZoomConstraints&& aConstraints) override;
 
   mozilla::ipc::IPCResult
-  RecvSetDPI(const float& aDpiValue) override;
+  RecvSetDPI(float&& aDpiValue) override;
 
   mozilla::ipc::IPCResult
   RecvSetAllowedTouchBehavior(
-          const uint64_t& aInputBlockId,
+          uint64_t&& aInputBlockId,
           nsTArray<TouchBehaviorFlags>&& aValues) override;
 
   mozilla::ipc::IPCResult
   RecvStartScrollbarDrag(
-          const ScrollableLayerGuid& aGuid,
-          const AsyncDragMetrics& aDragMetrics) override;
+          ScrollableLayerGuid&& aGuid,
+          AsyncDragMetrics&& aDragMetrics) override;
 
   mozilla::ipc::IPCResult
   RecvStartAutoscroll(
-          const ScrollableLayerGuid& aGuid,
-          const ScreenPoint& aAnchorLocation) override;
+          ScrollableLayerGuid&& aGuid,
+          ScreenPoint&& aAnchorLocation) override;
 
   mozilla::ipc::IPCResult
-  RecvStopAutoscroll(const ScrollableLayerGuid& aGuid) override;
+  RecvStopAutoscroll(ScrollableLayerGuid&& aGuid) override;
 
   mozilla::ipc::IPCResult
-  RecvSetLongTapEnabled(const bool& aTapGestureEnabled) override;
+  RecvSetLongTapEnabled(bool&& aTapGestureEnabled) override;
 
   void
   ActorDestroy(ActorDestroyReason aWhy) override { }

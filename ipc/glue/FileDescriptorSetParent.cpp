@@ -33,7 +33,7 @@ FileDescriptorSetParent::ActorDestroy(ActorDestroyReason aWhy)
 
 mozilla::ipc::IPCResult
 FileDescriptorSetParent::RecvAddFileDescriptor(
-                                          const FileDescriptor& aFileDescriptor)
+                                          FileDescriptor&& aFileDescriptor)
 {
   mFileDescriptors.AppendElement(aFileDescriptor);
   return IPC_OK();

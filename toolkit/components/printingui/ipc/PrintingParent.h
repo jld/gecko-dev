@@ -33,16 +33,16 @@ public:
     RecvShowProgress(PBrowserParent* parent,
                      PPrintProgressDialogParent* printProgressDialog,
                      PRemotePrintJobParent* remotePrintJob,
-                     const bool& isForPrinting) override;
+                     bool&& isForPrinting) override;
     virtual mozilla::ipc::IPCResult
     RecvShowPrintDialog(PPrintSettingsDialogParent* aDialog,
                         PBrowserParent* aParent,
-                        const PrintData& aData) override;
+                        PrintData&& aData) override;
 
     virtual mozilla::ipc::IPCResult
-    RecvSavePrintSettings(const PrintData& data,
-                          const bool& usePrinterNamePrefix,
-                          const uint32_t& flags,
+    RecvSavePrintSettings(PrintData&& data,
+                          bool&& usePrinterNamePrefix,
+                          uint32_t&& flags,
                           nsresult* rv) override;
 
     virtual PPrintProgressDialogParent*

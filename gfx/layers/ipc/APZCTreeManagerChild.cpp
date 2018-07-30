@@ -144,11 +144,11 @@ APZCTreeManagerChild::InputBridge()
 }
 
 mozilla::ipc::IPCResult
-APZCTreeManagerChild::RecvHandleTap(const TapType& aType,
-                                    const LayoutDevicePoint& aPoint,
-                                    const Modifiers& aModifiers,
-                                    const ScrollableLayerGuid& aGuid,
-                                    const uint64_t& aInputBlockId)
+APZCTreeManagerChild::RecvHandleTap(TapType&& aType,
+                                    LayoutDevicePoint&& aPoint,
+                                    Modifiers&& aModifiers,
+                                    ScrollableLayerGuid&& aGuid,
+                                    uint64_t&& aInputBlockId)
 {
   MOZ_ASSERT(XRE_IsParentProcess());
   if (mCompositorSession &&
@@ -166,10 +166,10 @@ APZCTreeManagerChild::RecvHandleTap(const TapType& aType,
 }
 
 mozilla::ipc::IPCResult
-APZCTreeManagerChild::RecvNotifyPinchGesture(const PinchGestureType& aType,
-                                             const ScrollableLayerGuid& aGuid,
-                                             const LayoutDeviceCoord& aSpanChange,
-                                             const Modifiers& aModifiers)
+APZCTreeManagerChild::RecvNotifyPinchGesture(PinchGestureType&& aType,
+                                             ScrollableLayerGuid&& aGuid,
+                                             LayoutDeviceCoord&& aSpanChange,
+                                             Modifiers&& aModifiers)
 {
   // This will only get sent from the GPU process to the parent process, so
   // this function should never get called in the content process.
@@ -186,7 +186,7 @@ APZCTreeManagerChild::RecvNotifyPinchGesture(const PinchGestureType& aType,
 }
 
 mozilla::ipc::IPCResult
-APZCTreeManagerChild::RecvCancelAutoscroll(const FrameMetrics::ViewID& aScrollId)
+APZCTreeManagerChild::RecvCancelAutoscroll(FrameMetrics::ViewID&& aScrollId)
 {
   // This will only get sent from the GPU process to the parent process, so
   // this function should never get called in the content process.

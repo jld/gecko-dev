@@ -47,13 +47,13 @@ private:
   virtual ~GMPVideoDecoderChild();
 
   // PGMPVideoDecoderChild
-  mozilla::ipc::IPCResult RecvInitDecode(const GMPVideoCodec& aCodecSettings,
+  mozilla::ipc::IPCResult RecvInitDecode(GMPVideoCodec&& aCodecSettings,
                                          InfallibleTArray<uint8_t>&& aCodecSpecific,
-                                         const int32_t& aCoreCount) override;
-  mozilla::ipc::IPCResult RecvDecode(const GMPVideoEncodedFrameData& aInputFrame,
-                                     const bool& aMissingFrames,
+                                         int32_t&& aCoreCount) override;
+  mozilla::ipc::IPCResult RecvDecode(GMPVideoEncodedFrameData&& aInputFrame,
+                                     bool&& aMissingFrames,
                                      InfallibleTArray<uint8_t>&& aCodecSpecificInfo,
-                                     const int64_t& aRenderTimeMs) override;
+                                     int64_t&& aRenderTimeMs) override;
   mozilla::ipc::IPCResult RecvChildShmemForPool(Shmem&& aFrameBuffer) override;
   mozilla::ipc::IPCResult RecvReset() override;
   mozilla::ipc::IPCResult RecvDrain() override;

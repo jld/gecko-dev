@@ -74,7 +74,7 @@ ClientManagerChild::DeallocPClientNavigateOpChild(PClientNavigateOpChild* aActor
 
 mozilla::ipc::IPCResult
 ClientManagerChild::RecvPClientNavigateOpConstructor(PClientNavigateOpChild* aActor,
-                                                     const ClientNavigateOpConstructorArgs& aArgs)
+                                                     ClientNavigateOpConstructorArgs&& aArgs)
 {
   auto actor = static_cast<ClientNavigateOpChild*>(aActor);
   actor->Init(aArgs);

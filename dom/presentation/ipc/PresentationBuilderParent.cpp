@@ -196,7 +196,7 @@ PresentationBuilderParent::ActorDestroy(ActorDestroyReason aWhy)
 }
 
 mozilla::ipc::IPCResult
-PresentationBuilderParent::RecvSendOffer(const nsString& aSDP)
+PresentationBuilderParent::RecvSendOffer(nsString&& aSDP)
 {
   RefPtr<DCPresentationChannelDescription> description =
     new DCPresentationChannelDescription(aSDP);
@@ -208,7 +208,7 @@ PresentationBuilderParent::RecvSendOffer(const nsString& aSDP)
 }
 
 mozilla::ipc::IPCResult
-PresentationBuilderParent::RecvSendAnswer(const nsString& aSDP)
+PresentationBuilderParent::RecvSendAnswer(nsString&& aSDP)
 {
   RefPtr<DCPresentationChannelDescription> description =
     new DCPresentationChannelDescription(aSDP);
@@ -220,7 +220,7 @@ PresentationBuilderParent::RecvSendAnswer(const nsString& aSDP)
 }
 
 mozilla::ipc::IPCResult
-PresentationBuilderParent::RecvSendIceCandidate(const nsString& aCandidate)
+PresentationBuilderParent::RecvSendIceCandidate(nsString&& aCandidate)
 {
   if (NS_WARN_IF(!mBuilderListener ||
                  NS_FAILED(mBuilderListener->SendIceCandidate(aCandidate)))) {
@@ -230,7 +230,7 @@ PresentationBuilderParent::RecvSendIceCandidate(const nsString& aCandidate)
 }
 
 mozilla::ipc::IPCResult
-PresentationBuilderParent::RecvClose(const nsresult& aReason)
+PresentationBuilderParent::RecvClose(nsresult&& aReason)
 {
   if (NS_WARN_IF(!mBuilderListener ||
                  NS_FAILED(mBuilderListener->Close(aReason)))) {
@@ -251,7 +251,7 @@ PresentationBuilderParent::RecvOnSessionTransport()
 }
 
 mozilla::ipc::IPCResult
-PresentationBuilderParent::RecvOnSessionTransportError(const nsresult& aReason)
+PresentationBuilderParent::RecvOnSessionTransportError(nsresult&& aReason)
 {
   if (NS_WARN_IF(!mBuilderListener ||
                  NS_FAILED(mBuilderListener->OnError(aReason)))) {

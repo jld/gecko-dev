@@ -576,7 +576,7 @@ protected:
   { }
 
   virtual mozilla::ipc::IPCResult
-  Recv__delete__(const uint32_t& aPermission) override;
+  Recv__delete__(uint32_t&& aPermission) override;
 };
 
 void
@@ -962,7 +962,7 @@ protected:
   {}
 
   virtual mozilla::ipc::IPCResult
-  Recv__delete__(const uint32_t& aPermission) override;
+  Recv__delete__(uint32_t&& aPermission) override;
 };
 
 class WorkerPermissionChallenge final : public Runnable
@@ -1120,7 +1120,7 @@ WorkerPermissionOperationCompleted::WorkerRun(JSContext* aCx,
 
 mozilla::ipc::IPCResult
 WorkerPermissionRequestChildProcessActor::Recv__delete__(
-                                              const uint32_t& /* aPermission */)
+                                              uint32_t&& /* aPermission */)
 {
   MOZ_ASSERT(NS_IsMainThread());
   mChallenge->OperationCompleted();
@@ -1596,7 +1596,7 @@ PermissionRequestMainProcessHelper::OnPromptComplete(
 
 mozilla::ipc::IPCResult
 PermissionRequestChildProcessActor::Recv__delete__(
-                                              const uint32_t& /* aPermission */)
+                                              uint32_t&& /* aPermission */)
 {
   MOZ_ASSERT(mActor);
   mActor->AssertIsOnOwningThread();
@@ -1735,7 +1735,7 @@ BackgroundFactoryChild::DeallocPBackgroundIDBDatabaseChild(
 mozilla::ipc::IPCResult
 BackgroundFactoryChild::RecvPBackgroundIDBDatabaseConstructor(
                                     PBackgroundIDBDatabaseChild* aActor,
-                                    const DatabaseSpec& aSpec,
+                                    DatabaseSpec&& aSpec,
                                     PBackgroundIDBFactoryRequestChild* aRequest)
 {
   AssertIsOnOwningThread();
@@ -1890,7 +1890,7 @@ BackgroundFactoryRequestChild::ActorDestroy(ActorDestroyReason aWhy)
 
 mozilla::ipc::IPCResult
 BackgroundFactoryRequestChild::Recv__delete__(
-                                        const FactoryRequestResponse& aResponse)
+                                        FactoryRequestResponse&& aResponse)
 {
   AssertIsOnOwningThread();
   MOZ_ASSERT(mRequest);
@@ -1930,7 +1930,7 @@ BackgroundFactoryRequestChild::Recv__delete__(
 
 mozilla::ipc::IPCResult
 BackgroundFactoryRequestChild::RecvPermissionChallenge(
-                                            const PrincipalInfo& aPrincipalInfo)
+                                            PrincipalInfo&& aPrincipalInfo)
 {
   AssertIsOnOwningThread();
 
@@ -2005,7 +2005,7 @@ BackgroundFactoryRequestChild::RecvPermissionChallenge(
 }
 
 mozilla::ipc::IPCResult
-BackgroundFactoryRequestChild::RecvBlocked(const uint64_t& aCurrentVersion)
+BackgroundFactoryRequestChild::RecvBlocked(uint64_t&& aCurrentVersion)
 {
   AssertIsOnOwningThread();
   MOZ_ASSERT(mRequest);
@@ -2230,10 +2230,10 @@ BackgroundDatabaseChild::AllocPBackgroundIDBVersionChangeTransactionChild(
 mozilla::ipc::IPCResult
 BackgroundDatabaseChild::RecvPBackgroundIDBVersionChangeTransactionConstructor(
                             PBackgroundIDBVersionChangeTransactionChild* aActor,
-                            const uint64_t& aCurrentVersion,
-                            const uint64_t& aRequestedVersion,
-                            const int64_t& aNextObjectStoreId,
-                            const int64_t& aNextIndexId)
+                            uint64_t&& aCurrentVersion,
+                            uint64_t&& aRequestedVersion,
+                            int64_t&& aNextObjectStoreId,
+                            int64_t&& aNextIndexId)
 {
   AssertIsOnOwningThread();
   MOZ_ASSERT(aActor);
@@ -2310,8 +2310,8 @@ BackgroundDatabaseChild::DeallocPBackgroundMutableFileChild(
 }
 
 mozilla::ipc::IPCResult
-BackgroundDatabaseChild::RecvVersionChange(const uint64_t& aOldVersion,
-                                           const NullableVersion& aNewVersion)
+BackgroundDatabaseChild::RecvVersionChange(uint64_t&& aOldVersion,
+                                           NullableVersion&& aNewVersion)
 {
   AssertIsOnOwningThread();
 
@@ -2482,7 +2482,7 @@ BackgroundDatabaseRequestChild::HandleResponse(
 
 mozilla::ipc::IPCResult
 BackgroundDatabaseRequestChild::Recv__delete__(
-                                       const DatabaseRequestResponse& aResponse)
+                                       DatabaseRequestResponse&& aResponse)
 {
   AssertIsOnOwningThread();
   MOZ_ASSERT(mRequest);
@@ -2635,7 +2635,7 @@ BackgroundTransactionChild::ActorDestroy(ActorDestroyReason aWhy)
 }
 
 mozilla::ipc::IPCResult
-BackgroundTransactionChild::RecvComplete(const nsresult& aResult)
+BackgroundTransactionChild::RecvComplete(nsresult&& aResult)
 {
   AssertIsOnOwningThread();
   MOZ_ASSERT(mTransaction);
@@ -2744,7 +2744,7 @@ BackgroundVersionChangeTransactionChild::ActorDestroy(ActorDestroyReason aWhy)
 }
 
 mozilla::ipc::IPCResult
-BackgroundVersionChangeTransactionChild::RecvComplete(const nsresult& aResult)
+BackgroundVersionChangeTransactionChild::RecvComplete(nsresult&& aResult)
 {
   AssertIsOnOwningThread();
 
@@ -3249,7 +3249,7 @@ BackgroundRequestChild::ActorDestroy(ActorDestroyReason aWhy)
 }
 
 mozilla::ipc::IPCResult
-BackgroundRequestChild::Recv__delete__(const RequestResponse& aResponse)
+BackgroundRequestChild::Recv__delete__(RequestResponse&& aResponse)
 {
   AssertIsOnOwningThread();
   MOZ_ASSERT(mRequest);
@@ -3338,7 +3338,7 @@ BackgroundRequestChild::Recv__delete__(const RequestResponse& aResponse)
 }
 
 mozilla::ipc::IPCResult
-BackgroundRequestChild::RecvPreprocess(const PreprocessParams& aParams)
+BackgroundRequestChild::RecvPreprocess(PreprocessParams&& aParams)
 {
   AssertIsOnOwningThread();
   MOZ_ASSERT(mTransaction);
@@ -4013,7 +4013,7 @@ BackgroundCursorChild::ActorDestroy(ActorDestroyReason aWhy)
 }
 
 mozilla::ipc::IPCResult
-BackgroundCursorChild::RecvResponse(const CursorResponse& aResponse)
+BackgroundCursorChild::RecvResponse(CursorResponse&& aResponse)
 {
   AssertIsOnOwningThread();
   MOZ_ASSERT(aResponse.type() != CursorResponse::T__None);
@@ -4173,7 +4173,7 @@ BackgroundFileHandleChild::ActorDestroy(ActorDestroyReason aWhy)
 }
 
 mozilla::ipc::IPCResult
-BackgroundFileHandleChild::RecvComplete(const bool& aAborted)
+BackgroundFileHandleChild::RecvComplete(bool&& aAborted)
 {
   AssertIsOnOwningThread();
   MOZ_ASSERT(mFileHandle);
@@ -4315,7 +4315,7 @@ BackgroundFileRequestChild::ActorDestroy(ActorDestroyReason aWhy)
 }
 
 mozilla::ipc::IPCResult
-BackgroundFileRequestChild::Recv__delete__(const FileRequestResponse& aResponse)
+BackgroundFileRequestChild::Recv__delete__(FileRequestResponse&& aResponse)
 {
   AssertIsOnOwningThread();
   MOZ_ASSERT(mFileRequest);
@@ -4371,8 +4371,8 @@ BackgroundFileRequestChild::Recv__delete__(const FileRequestResponse& aResponse)
 }
 
 mozilla::ipc::IPCResult
-BackgroundFileRequestChild::RecvProgress(const uint64_t& aProgress,
-                                         const uint64_t& aProgressMax)
+BackgroundFileRequestChild::RecvProgress(uint64_t&& aProgress,
+                                         uint64_t&& aProgressMax)
 {
   AssertIsOnOwningThread();
   MOZ_ASSERT(mFileRequest);

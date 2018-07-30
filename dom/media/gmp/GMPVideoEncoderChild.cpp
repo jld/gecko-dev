@@ -71,10 +71,10 @@ GMPVideoEncoderChild::Error(GMPErr aError)
 }
 
 mozilla::ipc::IPCResult
-GMPVideoEncoderChild::RecvInitEncode(const GMPVideoCodec& aCodecSettings,
+GMPVideoEncoderChild::RecvInitEncode(GMPVideoCodec&& aCodecSettings,
                                      InfallibleTArray<uint8_t>&& aCodecSpecific,
-                                     const int32_t& aNumberOfCores,
-                                     const uint32_t& aMaxPayloadSize)
+                                     int32_t&& aNumberOfCores,
+                                     uint32_t&& aMaxPayloadSize)
 {
   if (!mVideoEncoder) {
     return IPC_FAIL_NO_REASON(this);
@@ -92,7 +92,7 @@ GMPVideoEncoderChild::RecvInitEncode(const GMPVideoCodec& aCodecSettings,
 }
 
 mozilla::ipc::IPCResult
-GMPVideoEncoderChild::RecvEncode(const GMPVideoi420FrameData& aInputFrame,
+GMPVideoEncoderChild::RecvEncode(GMPVideoi420FrameData&& aInputFrame,
                                  InfallibleTArray<uint8_t>&& aCodecSpecificInfo,
                                  InfallibleTArray<GMPVideoFrameType>&& aFrameTypes)
 {
@@ -123,8 +123,8 @@ GMPVideoEncoderChild::RecvChildShmemForPool(Shmem&& aEncodedBuffer)
 }
 
 mozilla::ipc::IPCResult
-GMPVideoEncoderChild::RecvSetChannelParameters(const uint32_t& aPacketLoss,
-                                               const uint32_t& aRTT)
+GMPVideoEncoderChild::RecvSetChannelParameters(uint32_t&& aPacketLoss,
+                                               uint32_t&& aRTT)
 {
   if (!mVideoEncoder) {
     return IPC_FAIL_NO_REASON(this);
@@ -137,8 +137,8 @@ GMPVideoEncoderChild::RecvSetChannelParameters(const uint32_t& aPacketLoss,
 }
 
 mozilla::ipc::IPCResult
-GMPVideoEncoderChild::RecvSetRates(const uint32_t& aNewBitRate,
-                                   const uint32_t& aFrameRate)
+GMPVideoEncoderChild::RecvSetRates(uint32_t&& aNewBitRate,
+                                   uint32_t&& aFrameRate)
 {
   if (!mVideoEncoder) {
     return IPC_FAIL_NO_REASON(this);
@@ -151,7 +151,7 @@ GMPVideoEncoderChild::RecvSetRates(const uint32_t& aNewBitRate,
 }
 
 mozilla::ipc::IPCResult
-GMPVideoEncoderChild::RecvSetPeriodicKeyFrames(const bool& aEnable)
+GMPVideoEncoderChild::RecvSetPeriodicKeyFrames(bool&& aEnable)
 {
   if (!mVideoEncoder) {
     return IPC_FAIL_NO_REASON(this);

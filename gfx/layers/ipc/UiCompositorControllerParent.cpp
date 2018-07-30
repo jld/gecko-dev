@@ -69,8 +69,8 @@ UiCompositorControllerParent::RecvResume()
 }
 
 mozilla::ipc::IPCResult
-UiCompositorControllerParent::RecvResumeAndResize(const int32_t& aWidth,
-                                                  const int32_t& aHeight)
+UiCompositorControllerParent::RecvResumeAndResize(int32_t&& aWidth,
+                                                  int32_t&& aHeight)
 {
   CompositorBridgeParent* parent = CompositorBridgeParent::GetCompositorBridgeParentFromLayersId(mRootLayerTreeId);
   if (parent) {
@@ -91,7 +91,7 @@ UiCompositorControllerParent::RecvInvalidateAndRender()
 }
 
 mozilla::ipc::IPCResult
-UiCompositorControllerParent::RecvMaxToolbarHeight(const int32_t& aHeight)
+UiCompositorControllerParent::RecvMaxToolbarHeight(int32_t&& aHeight)
 {
   mMaxToolbarHeight = aHeight;
 #if defined(MOZ_WIDGET_ANDROID)
@@ -104,7 +104,7 @@ UiCompositorControllerParent::RecvMaxToolbarHeight(const int32_t& aHeight)
 }
 
 mozilla::ipc::IPCResult
-UiCompositorControllerParent::RecvPinned(const bool& aPinned, const int32_t& aReason)
+UiCompositorControllerParent::RecvPinned(bool&& aPinned, int32_t&& aReason)
 {
 #if defined(MOZ_WIDGET_ANDROID)
   if (mAnimator) {
@@ -116,7 +116,7 @@ UiCompositorControllerParent::RecvPinned(const bool& aPinned, const int32_t& aRe
 }
 
 mozilla::ipc::IPCResult
-UiCompositorControllerParent::RecvToolbarAnimatorMessageFromUI(const int32_t& aMessage)
+UiCompositorControllerParent::RecvToolbarAnimatorMessageFromUI(int32_t&& aMessage)
 {
 #if defined(MOZ_WIDGET_ANDROID)
   if (mAnimator) {
@@ -128,7 +128,7 @@ UiCompositorControllerParent::RecvToolbarAnimatorMessageFromUI(const int32_t& aM
 }
 
 mozilla::ipc::IPCResult
-UiCompositorControllerParent::RecvDefaultClearColor(const uint32_t& aColor)
+UiCompositorControllerParent::RecvDefaultClearColor(uint32_t&& aColor)
 {
   LayerTreeState* state = CompositorBridgeParent::GetIndirectShadowTree(mRootLayerTreeId);
 
@@ -160,7 +160,7 @@ UiCompositorControllerParent::RecvRequestScreenPixels()
 }
 
 mozilla::ipc::IPCResult
-UiCompositorControllerParent::RecvEnableLayerUpdateNotifications(const bool& aEnable)
+UiCompositorControllerParent::RecvEnableLayerUpdateNotifications(bool&& aEnable)
 {
 #if defined(MOZ_WIDGET_ANDROID)
   if (mAnimator) {
@@ -172,7 +172,7 @@ UiCompositorControllerParent::RecvEnableLayerUpdateNotifications(const bool& aEn
 }
 
 mozilla::ipc::IPCResult
-UiCompositorControllerParent::RecvToolbarPixelsToCompositor(Shmem&& aMem, const ScreenIntSize& aSize)
+UiCompositorControllerParent::RecvToolbarPixelsToCompositor(Shmem&& aMem, ScreenIntSize&& aSize)
 {
 #if defined(MOZ_WIDGET_ANDROID)
   if (mAnimator) {

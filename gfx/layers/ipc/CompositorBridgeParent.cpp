@@ -386,7 +386,7 @@ CompositorBridgeParent::InitSameProcess(widget::CompositorWidget* aWidget,
 }
 
 mozilla::ipc::IPCResult
-CompositorBridgeParent::RecvInitialize(const LayersId& aRootLayerTreeId)
+CompositorBridgeParent::RecvInitialize(LayersId&& aRootLayerTreeId)
 {
   MOZ_ASSERT(XRE_IsGPUProcess());
 
@@ -576,8 +576,8 @@ CompositorBridgeParent::RecvResume()
 }
 
 mozilla::ipc::IPCResult
-CompositorBridgeParent::RecvMakeSnapshot(const SurfaceDescriptor& aInSnapshot,
-                                         const gfx::IntRect& aRect)
+CompositorBridgeParent::RecvMakeSnapshot(SurfaceDescriptor&& aInSnapshot,
+                                         gfx::IntRect&& aRect)
 {
   RefPtr<DrawTarget> target = GetDrawTargetForDescriptor(aInSnapshot, gfx::BackendType::CAIRO);
   MOZ_ASSERT(target);
@@ -637,7 +637,7 @@ CompositorBridgeParent::RecvForcePresent()
 }
 
 mozilla::ipc::IPCResult
-CompositorBridgeParent::RecvNotifyRegionInvalidated(const nsIntRegion& aRegion)
+CompositorBridgeParent::RecvNotifyRegionInvalidated(nsIntRegion&& aRegion)
 {
   if (mLayerManager) {
     mLayerManager->AddInvalidRegion(aRegion);
@@ -654,7 +654,7 @@ CompositorBridgeParent::Invalidate()
 }
 
 mozilla::ipc::IPCResult
-CompositorBridgeParent::RecvStartFrameTimeRecording(const int32_t& aBufferSize, uint32_t* aOutStartIndex)
+CompositorBridgeParent::RecvStartFrameTimeRecording(int32_t&& aBufferSize, uint32_t* aOutStartIndex)
 {
   if (mLayerManager) {
     *aOutStartIndex = mLayerManager->StartFrameTimeRecording(aBufferSize);
@@ -665,7 +665,7 @@ CompositorBridgeParent::RecvStartFrameTimeRecording(const int32_t& aBufferSize, 
 }
 
 mozilla::ipc::IPCResult
-CompositorBridgeParent::RecvStopFrameTimeRecording(const uint32_t& aStartIndex,
+CompositorBridgeParent::RecvStopFrameTimeRecording(uint32_t&& aStartIndex,
                                                    InfallibleTArray<float>* intervals)
 {
   if (mLayerManager) {
@@ -1716,7 +1716,7 @@ CompositorBridgeParent::NotifyVsync(const TimeStamp& aTimeStamp, const LayersId&
 }
 
 mozilla::ipc::IPCResult
-CompositorBridgeParent::RecvNotifyChildCreated(const LayersId& child,
+CompositorBridgeParent::RecvNotifyChildCreated(LayersId&& child,
                                                CompositorOptions* aOptions)
 {
   MonitorAutoLock lock(*sIndirectLayerTreesLock);
@@ -1726,7 +1726,7 @@ CompositorBridgeParent::RecvNotifyChildCreated(const LayersId& child,
 }
 
 mozilla::ipc::IPCResult
-CompositorBridgeParent::RecvNotifyChildRecreated(const LayersId& aChild,
+CompositorBridgeParent::RecvNotifyChildRecreated(LayersId&& aChild,
                                                  CompositorOptions* aOptions)
 {
   MonitorAutoLock lock(*sIndirectLayerTreesLock);
@@ -1750,8 +1750,8 @@ CompositorBridgeParent::NotifyChildCreated(LayersId aChild)
 }
 
 mozilla::ipc::IPCResult
-CompositorBridgeParent::RecvMapAndNotifyChildCreated(const LayersId& aChild,
-                                                     const base::ProcessId& aOwnerPid,
+CompositorBridgeParent::RecvMapAndNotifyChildCreated(LayersId&& aChild,
+                                                     base::ProcessId&& aOwnerPid,
                                                      CompositorOptions* aOptions)
 {
   // We only use this message when the remote compositor is in the GPU process.
@@ -1767,7 +1767,7 @@ CompositorBridgeParent::RecvMapAndNotifyChildCreated(const LayersId& aChild,
 }
 
 mozilla::ipc::IPCResult
-CompositorBridgeParent::RecvAdoptChild(const LayersId& child)
+CompositorBridgeParent::RecvAdoptChild(LayersId&& child)
 {
   RefPtr<APZUpdater> oldApzUpdater;
   APZCTreeManagerParent* parent;

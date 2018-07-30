@@ -730,7 +730,7 @@ PluginScriptableObjectChild::AnswerInvalidate()
 }
 
 mozilla::ipc::IPCResult
-PluginScriptableObjectChild::AnswerHasMethod(const PluginIdentifier& aId,
+PluginScriptableObjectChild::AnswerHasMethod(PluginIdentifier&& aId,
                                              bool* aHasMethod)
 {
   AssertPluginThread();
@@ -756,7 +756,7 @@ PluginScriptableObjectChild::AnswerHasMethod(const PluginIdentifier& aId,
 }
 
 mozilla::ipc::IPCResult
-PluginScriptableObjectChild::AnswerInvoke(const PluginIdentifier& aId,
+PluginScriptableObjectChild::AnswerInvoke(PluginIdentifier&& aId,
                                           InfallibleTArray<Variant>&& aArgs,
                                           Variant* aResult,
                                           bool* aSuccess)
@@ -898,7 +898,7 @@ PluginScriptableObjectChild::AnswerInvokeDefault(InfallibleTArray<Variant>&& aAr
 }
 
 mozilla::ipc::IPCResult
-PluginScriptableObjectChild::AnswerHasProperty(const PluginIdentifier& aId,
+PluginScriptableObjectChild::AnswerHasProperty(PluginIdentifier&& aId,
                                                bool* aHasProperty)
 {
   AssertPluginThread();
@@ -924,7 +924,7 @@ PluginScriptableObjectChild::AnswerHasProperty(const PluginIdentifier& aId,
 }
 
 mozilla::ipc::IPCResult
-PluginScriptableObjectChild::AnswerGetChildProperty(const PluginIdentifier& aId,
+PluginScriptableObjectChild::AnswerGetChildProperty(PluginIdentifier&& aId,
                                                     bool* aHasProperty,
                                                     bool* aHasMethod,
                                                     Variant* aResult,
@@ -975,8 +975,8 @@ PluginScriptableObjectChild::AnswerGetChildProperty(const PluginIdentifier& aId,
 }
 
 mozilla::ipc::IPCResult
-PluginScriptableObjectChild::AnswerSetProperty(const PluginIdentifier& aId,
-                                               const Variant& aValue,
+PluginScriptableObjectChild::AnswerSetProperty(PluginIdentifier&& aId,
+                                               Variant&& aValue,
                                                bool* aSuccess)
 {
   AssertPluginThread();
@@ -1015,7 +1015,7 @@ PluginScriptableObjectChild::AnswerSetProperty(const PluginIdentifier& aId,
 }
 
 mozilla::ipc::IPCResult
-PluginScriptableObjectChild::AnswerRemoveProperty(const PluginIdentifier& aId,
+PluginScriptableObjectChild::AnswerRemoveProperty(PluginIdentifier&& aId,
                                                   bool* aSuccess)
 {
   AssertPluginThread();

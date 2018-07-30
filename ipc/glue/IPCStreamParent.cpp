@@ -53,7 +53,7 @@ public:
   }
 
   IPCResult
-  RecvRequestClose(const nsresult& aRv) override
+  RecvRequestClose(nsresult&& aRv) override
   {
     OnEnd(aRv);
     return IPC_OK();
@@ -159,14 +159,14 @@ private:
   }
 
   IPCResult
-  RecvBuffer(const wr::ByteBuffer& aBuffer) override
+  RecvBuffer(wr::ByteBuffer&& aBuffer) override
   {
     BufferReceived(aBuffer);
     return IPC_OK();
   }
 
   IPCResult
-  RecvClose(const nsresult& aRv) override
+  RecvClose(nsresult&& aRv) override
   {
     CloseReceived(aRv);
     return IPC_OK();

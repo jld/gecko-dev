@@ -33,10 +33,10 @@ RemotePrintJobParent::RemotePrintJobParent(nsIPrintSettings* aPrintSettings)
 }
 
 mozilla::ipc::IPCResult
-RemotePrintJobParent::RecvInitializePrint(const nsString& aDocumentTitle,
-                                          const nsString& aPrintToFile,
-                                          const int32_t& aStartPage,
-                                          const int32_t& aEndPage)
+RemotePrintJobParent::RecvInitializePrint(nsString&& aDocumentTitle,
+                                          nsString&& aPrintToFile,
+                                          int32_t&& aStartPage,
+                                          int32_t&& aEndPage)
 {
   nsresult rv = InitializePrintDevice(aDocumentTitle, aPrintToFile, aStartPage,
                                       aEndPage);
@@ -195,7 +195,7 @@ RemotePrintJobParent::RecvFinalizePrint()
 }
 
 mozilla::ipc::IPCResult
-RemotePrintJobParent::RecvAbortPrint(const nsresult& aRv)
+RemotePrintJobParent::RecvAbortPrint(nsresult&& aRv)
 {
   if (mPrintDeviceContext) {
     Unused << mPrintDeviceContext->AbortDocument();
@@ -209,8 +209,8 @@ RemotePrintJobParent::RecvAbortPrint(const nsresult& aRv)
 }
 
 mozilla::ipc::IPCResult
-RemotePrintJobParent::RecvStateChange(const long& aStateFlags,
-                                      const nsresult& aStatus)
+RemotePrintJobParent::RecvStateChange(long&& aStateFlags,
+                                      nsresult&& aStatus)
 {
   uint32_t numberOfListeners = mPrintProgressListeners.Length();
   for (uint32_t i = 0; i < numberOfListeners; ++i) {
@@ -222,10 +222,10 @@ RemotePrintJobParent::RecvStateChange(const long& aStateFlags,
 }
 
 mozilla::ipc::IPCResult
-RemotePrintJobParent::RecvProgressChange(const long& aCurSelfProgress,
-                                         const long& aMaxSelfProgress,
-                                         const long& aCurTotalProgress,
-                                         const long& aMaxTotalProgress)
+RemotePrintJobParent::RecvProgressChange(long&& aCurSelfProgress,
+                                         long&& aMaxSelfProgress,
+                                         long&& aCurTotalProgress,
+                                         long&& aMaxTotalProgress)
 {
   uint32_t numberOfListeners = mPrintProgressListeners.Length();
   for (uint32_t i = 0; i < numberOfListeners; ++i) {
@@ -239,7 +239,7 @@ RemotePrintJobParent::RecvProgressChange(const long& aCurSelfProgress,
 }
 
 mozilla::ipc::IPCResult
-RemotePrintJobParent::RecvStatusChange(const nsresult& aStatus)
+RemotePrintJobParent::RecvStatusChange(nsresult&& aStatus)
 {
   uint32_t numberOfListeners = mPrintProgressListeners.Length();
   for (uint32_t i = 0; i < numberOfListeners; ++i) {

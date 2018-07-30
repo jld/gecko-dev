@@ -52,13 +52,13 @@ protected:
 
     virtual bool ShouldContinueFromReplyTimeout() override;
 
-    virtual mozilla::ipc::IPCResult RecvSettingChanged(const PluginSettings& aSettings) override;
+    virtual mozilla::ipc::IPCResult RecvSettingChanged(PluginSettings&& aSettings) override;
 
     // Implement the PPluginModuleChild interface
     virtual mozilla::ipc::IPCResult RecvInitProfiler(Endpoint<mozilla::PProfilerChild>&& aEndpoint) override;
     virtual mozilla::ipc::IPCResult RecvDisableFlashProtectedMode() override;
     virtual mozilla::ipc::IPCResult AnswerNP_GetEntryPoints(NPError* rv) override;
-    virtual mozilla::ipc::IPCResult AnswerNP_Initialize(const PluginSettings& aSettings, NPError* rv) override;
+    virtual mozilla::ipc::IPCResult AnswerNP_Initialize(PluginSettings&& aSettings, NPError* rv) override;
     virtual mozilla::ipc::IPCResult AnswerSyncNPP_New(PPluginInstanceChild* aActor, NPError* rv)
                                    override;
 
@@ -79,7 +79,7 @@ protected:
 
     virtual mozilla::ipc::IPCResult
     RecvPPluginInstanceConstructor(PPluginInstanceChild* aActor,
-                                   const nsCString& aMimeType,
+                                   nsCString&& aMimeType,
                                    InfallibleTArray<nsCString>&& aNames,
                                    InfallibleTArray<nsCString>&& aValues)
                                    override;
@@ -92,21 +92,21 @@ protected:
                                      bool *aGetSitesWithData) override;
 
     virtual mozilla::ipc::IPCResult
-    RecvNPP_ClearSiteData(const nsCString& aSite,
-                            const uint64_t& aFlags,
-                            const uint64_t& aMaxAge,
-                            const uint64_t& aCallbackId) override;
+    RecvNPP_ClearSiteData(nsCString&& aSite,
+                            uint64_t&& aFlags,
+                            uint64_t&& aMaxAge,
+                            uint64_t&& aCallbackId) override;
 
     virtual mozilla::ipc::IPCResult
-    RecvNPP_GetSitesWithData(const uint64_t& aCallbackId) override;
+    RecvNPP_GetSitesWithData(uint64_t&& aCallbackId) override;
 
     virtual mozilla::ipc::IPCResult
-    RecvSetAudioSessionData(const nsID& aId,
-                            const nsString& aDisplayName,
-                            const nsString& aIconPath) override;
+    RecvSetAudioSessionData(nsID&& aId,
+                            nsString&& aDisplayName,
+                            nsString&& aIconPath) override;
 
     virtual mozilla::ipc::IPCResult
-    RecvSetParentHangTimeout(const uint32_t& aSeconds) override;
+    RecvSetParentHangTimeout(uint32_t&& aSeconds) override;
 
     virtual mozilla::ipc::IPCResult
     AnswerInitCrashReporter(Shmem&& aShmem, mozilla::dom::NativeThreadId* aId) override;
@@ -210,9 +210,9 @@ public:
     NPError PluginRequiresAudioDeviceChanges(PluginInstanceChild* aInstance,
                                              NPBool aShouldRegister);
     mozilla::ipc::IPCResult RecvNPP_SetValue_NPNVaudioDeviceChangeDetails(
-        const NPAudioDeviceChangeDetailsIPC& detailsIPC) override;
+        NPAudioDeviceChangeDetailsIPC&& detailsIPC) override;
     mozilla::ipc::IPCResult RecvNPP_SetValue_NPNVaudioDeviceStateChanged(
-      const NPAudioDeviceStateChangedIPC& aDeviceStateIPC) override;
+      NPAudioDeviceStateChangedIPC&& aDeviceStateIPC) override;
 
 private:
     NPError DoNP_Initialize(const PluginSettings& aSettings);

@@ -21,8 +21,8 @@ MediaSystemResourceManagerChild::~MediaSystemResourceManagerChild()
 }
 
 mozilla::ipc::IPCResult
-MediaSystemResourceManagerChild::RecvResponse(const uint32_t& aId,
-                                              const bool& aSuccess)
+MediaSystemResourceManagerChild::RecvResponse(uint32_t&& aId,
+                                              bool&& aSuccess)
 {
   if (mManager) {
     mManager->RecvResponse(aId, aSuccess);

@@ -230,16 +230,16 @@ public:
   explicit GMPServiceParent(GeckoMediaPluginServiceParent* aService);
   virtual ~GMPServiceParent();
 
-  ipc::IPCResult RecvGetGMPNodeId(const nsString& aOrigin,
-                                  const nsString& aTopLevelOrigin,
-                                  const nsString& aGMPName,
+  ipc::IPCResult RecvGetGMPNodeId(nsString&& aOrigin,
+                                  nsString&& aTopLevelOrigin,
+                                  nsString&& aGMPName,
                                   nsCString* aID) override;
   void ActorDestroy(ActorDestroyReason aWhy) override;
 
   static bool Create(Endpoint<PGMPServiceParent>&& aGMPService);
 
-  ipc::IPCResult RecvLaunchGMP(const nsCString& aNodeId,
-                               const nsCString& aAPI,
+  ipc::IPCResult RecvLaunchGMP(nsCString&& aNodeId,
+                               nsCString&& aAPI,
                                nsTArray<nsCString>&& aTags,
                                nsTArray<ProcessId>&& aAlreadyBridgedTo,
                                uint32_t* aOutPluginId,
@@ -250,8 +250,8 @@ public:
                                nsCString* aOutErrorDescription) override;
 
   ipc::IPCResult RecvLaunchGMPForNodeId(
-    const NodeIdData& nodeId,
-    const nsCString& aAPI,
+    NodeIdData&& nodeId,
+    nsCString&& aAPI,
     nsTArray<nsCString>&& aTags,
     nsTArray<ProcessId>&& aAlreadyBridgedTo,
     uint32_t* aOutPluginId,

@@ -305,7 +305,7 @@ StreamFilterChild::RecvInitialized(bool aSuccess)
 }
 
 IPCResult
-StreamFilterChild::RecvError(const nsCString& aError)
+StreamFilterChild::RecvError(nsCString&& aError)
 {
   mState = State::Error;
   if (mStreamFilter) {
@@ -458,7 +458,7 @@ StreamFilterChild::RecvStartRequest()
 }
 
 IPCResult
-StreamFilterChild::RecvStopRequest(const nsresult& aStatus)
+StreamFilterChild::RecvStopRequest(nsresult&& aStatus)
 {
   mReceivedOnStop = true;
   MaybeStopRequest();

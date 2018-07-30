@@ -102,8 +102,8 @@ FunctionBrokerParent::ActorDestroy(ActorDestroyReason aWhy)
 }
 
 mozilla::ipc::IPCResult
-FunctionBrokerParent::RecvBrokerFunction(const FunctionHookId &aFunctionId,
-                                         const IpdlTuple &aInTuple,
+FunctionBrokerParent::RecvBrokerFunction(FunctionHookId&& aFunctionId,
+                                         IpdlTuple&& aInTuple,
                                          IpdlTuple *aOutTuple)
 {
 #if defined(XP_WIN)

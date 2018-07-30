@@ -56,10 +56,10 @@ ContentBridgeChild::DeferredDestroy()
 }
 
 mozilla::ipc::IPCResult
-ContentBridgeChild::RecvAsyncMessage(const nsString& aMsg,
+ContentBridgeChild::RecvAsyncMessage(nsString&& aMsg,
                                      InfallibleTArray<jsipc::CpowEntry>&& aCpows,
-                                     const IPC::Principal& aPrincipal,
-                                     const ClonedMessageData& aData)
+                                     IPC::Principal&& aPrincipal,
+                                     ClonedMessageData&& aData)
 {
   return nsIContentChild::RecvAsyncMessage(aMsg, std::move(aCpows), aPrincipal, aData);
 }
@@ -142,12 +142,12 @@ ContentBridgeChild::DeallocPBrowserChild(PBrowserChild* aChild)
 
 mozilla::ipc::IPCResult
 ContentBridgeChild::RecvPBrowserConstructor(PBrowserChild* aActor,
-                                            const TabId& aTabId,
-                                            const TabId& aSameTabGroupAs,
-                                            const IPCTabContext& aContext,
-                                            const uint32_t& aChromeFlags,
-                                            const ContentParentId& aCpID,
-                                            const bool& aIsForBrowser)
+                                            TabId&& aTabId,
+                                            TabId&& aSameTabGroupAs,
+                                            IPCTabContext&& aContext,
+                                            uint32_t&& aChromeFlags,
+                                            ContentParentId&& aCpID,
+                                            bool&& aIsForBrowser)
 {
   return nsIContentChild::RecvPBrowserConstructor(aActor,
                                                   aTabId,

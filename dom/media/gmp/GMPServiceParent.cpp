@@ -1728,8 +1728,8 @@ GMPServiceParent::~GMPServiceParent()
 }
 
 mozilla::ipc::IPCResult
-GMPServiceParent::RecvLaunchGMP(const nsCString& aNodeId,
-                                const nsCString& aAPI,
+GMPServiceParent::RecvLaunchGMP(nsCString&& aNodeId,
+                                nsCString&& aAPI,
                                 nsTArray<nsCString>&& aTags,
                                 nsTArray<ProcessId>&& aAlreadyBridgedTo,
                                 uint32_t* aOutPluginId,
@@ -1796,8 +1796,8 @@ GMPServiceParent::RecvLaunchGMP(const nsCString& aNodeId,
 
 mozilla::ipc::IPCResult
 GMPServiceParent::RecvLaunchGMPForNodeId(
-  const NodeIdData& aNodeId,
-  const nsCString& aApi,
+  NodeIdData&& aNodeId,
+  nsCString&& aApi,
   nsTArray<nsCString>&& aTags,
   nsTArray<ProcessId>&& aAlreadyBridgedTo,
   uint32_t* aOutPluginId,
@@ -1828,9 +1828,9 @@ GMPServiceParent::RecvLaunchGMPForNodeId(
 }
 
 mozilla::ipc::IPCResult
-GMPServiceParent::RecvGetGMPNodeId(const nsString& aOrigin,
-                                   const nsString& aTopLevelOrigin,
-                                   const nsString& aGMPName,
+GMPServiceParent::RecvGetGMPNodeId(nsString&& aOrigin,
+                                   nsString&& aTopLevelOrigin,
+                                   nsString&& aGMPName,
                                    nsCString* aID)
 {
   nsresult rv = mService->GetNodeId(aOrigin, aTopLevelOrigin, aGMPName, *aID);

@@ -31,26 +31,26 @@ public:
 
   void ActorDestroy(ActorDestroyReason aWhy) final;
 
-  mozilla::ipc::IPCResult RecvInitializePrint(const nsString& aDocumentTitle,
-                                              const nsString& aPrintToFile,
-                                              const int32_t& aStartPage,
-                                              const int32_t& aEndPage) final;
+  mozilla::ipc::IPCResult RecvInitializePrint(nsString&& aDocumentTitle,
+                                              nsString&& aPrintToFile,
+                                              int32_t&& aStartPage,
+                                              int32_t&& aEndPage) final;
 
   mozilla::ipc::IPCResult RecvProcessPage() final;
 
   mozilla::ipc::IPCResult RecvFinalizePrint() final;
 
-  mozilla::ipc::IPCResult RecvAbortPrint(const nsresult& aRv) final;
+  mozilla::ipc::IPCResult RecvAbortPrint(nsresult&& aRv) final;
 
-  mozilla::ipc::IPCResult RecvStateChange(const long& aStateFlags,
-                                          const nsresult& aStatus) final;
+  mozilla::ipc::IPCResult RecvStateChange(long&& aStateFlags,
+                                          nsresult&& aStatus) final;
 
-  mozilla::ipc::IPCResult RecvProgressChange(const long& aCurSelfProgress,
-                                             const long& aMaxSelfProgress,
-                                             const long& aCurTotalProgress,
-                                             const long& aMaxTotalProgress) final;
+  mozilla::ipc::IPCResult RecvProgressChange(long&& aCurSelfProgress,
+                                             long&& aMaxSelfProgress,
+                                             long&& aCurTotalProgress,
+                                             long&& aMaxTotalProgress) final;
 
-  mozilla::ipc::IPCResult RecvStatusChange(const nsresult& aStatus) final;
+  mozilla::ipc::IPCResult RecvStatusChange(nsresult&& aStatus) final;
 
   /**
     * Register a progress listener to receive print progress updates.

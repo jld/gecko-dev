@@ -23,7 +23,7 @@ public:
 
   MessageLoop* GMPMessageLoop();
 
-  mozilla::ipc::IPCResult RecvPGMPVideoDecoderConstructor(PGMPVideoDecoderChild* aActor, const uint32_t& aDecryptorId) override;
+  mozilla::ipc::IPCResult RecvPGMPVideoDecoderConstructor(PGMPVideoDecoderChild* aActor, uint32_t&& aDecryptorId) override;
   mozilla::ipc::IPCResult RecvPGMPVideoEncoderConstructor(PGMPVideoEncoderChild* aActor) override;
   mozilla::ipc::IPCResult RecvPChromiumCDMConstructor(
     PChromiumCDMChild* aActor) override;

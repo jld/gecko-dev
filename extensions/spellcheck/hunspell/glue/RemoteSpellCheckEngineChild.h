@@ -20,8 +20,8 @@ public:
   virtual ~RemoteSpellcheckEngineChild();
 
   virtual mozilla::ipc::IPCResult RecvNotifyOfCurrentDictionary(
-                                    const nsString& aDictionary,
-                                    const intptr_t& aPromiseId) override;
+                                    nsString&& aDictionary,
+                                    intptr_t&& aPromiseId) override;
 
   RefPtr<GenericPromise> SetCurrentDictionaryFromList(
                            const nsTArray<nsString>& aList);

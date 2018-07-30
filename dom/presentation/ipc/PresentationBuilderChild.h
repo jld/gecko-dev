@@ -27,11 +27,11 @@ public:
 
   virtual void ActorDestroy(ActorDestroyReason aWhy) override;
 
-  virtual mozilla::ipc::IPCResult RecvOnOffer(const nsString& aSDP) override;
+  virtual mozilla::ipc::IPCResult RecvOnOffer(nsString&& aSDP) override;
 
-  virtual mozilla::ipc::IPCResult RecvOnAnswer(const nsString& aSDP) override;
+  virtual mozilla::ipc::IPCResult RecvOnAnswer(nsString&& aSDP) override;
 
-  virtual mozilla::ipc::IPCResult RecvOnIceCandidate(const nsString& aCandidate) override;
+  virtual mozilla::ipc::IPCResult RecvOnIceCandidate(nsString&& aCandidate) override;
 
 private:
   virtual ~PresentationBuilderChild() = default;

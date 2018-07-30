@@ -41,21 +41,21 @@ public:
   void OnStartRequestReceived();
 
 protected:
-  IPCResult RecvOnTransportAndData(const nsresult& aChannelStatus,
-                                   const nsresult& aTransportStatus,
-                                   const uint64_t& aOffset,
-                                   const uint32_t& aCount,
-                                   const nsCString& aData) override;
+  IPCResult RecvOnTransportAndData(nsresult&& aChannelStatus,
+                                   nsresult&& aTransportStatus,
+                                   uint64_t&& aOffset,
+                                   uint32_t&& aCount,
+                                   nsCString&& aData) override;
 
-  IPCResult RecvOnStopRequest(const nsresult& aChannelStatus,
-                              const ResourceTimingStruct& aTiming,
-                              const TimeStamp& aLastActiveTabOptHit,
-                              const nsHttpHeaderArray& aResponseTrailers) override;
+  IPCResult RecvOnStopRequest(nsresult&& aChannelStatus,
+                              ResourceTimingStruct&& aTiming,
+                              TimeStamp&& aLastActiveTabOptHit,
+                              nsHttpHeaderArray&& aResponseTrailers) override;
 
-  IPCResult RecvOnProgress(const int64_t& aProgress,
-                           const int64_t& aProgressMax) override;
+  IPCResult RecvOnProgress(int64_t&& aProgress,
+                           int64_t&& aProgressMax) override;
 
-  IPCResult RecvOnStatus(const nsresult& aStatus) override;
+  IPCResult RecvOnStatus(nsresult&& aStatus) override;
 
   IPCResult RecvFlushedForDiversion() override;
 
@@ -67,7 +67,7 @@ protected:
 
   IPCResult RecvNotifyTrackingResource() override;
 
-  IPCResult RecvSetClassifierMatchedInfo(const ClassifierInfo& info) override;
+  IPCResult RecvSetClassifierMatchedInfo(ClassifierInfo&& info) override;
 
   void ActorDestroy(ActorDestroyReason aWhy) override;
 

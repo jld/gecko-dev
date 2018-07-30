@@ -33,7 +33,7 @@ BroadcastChannelParent::~BroadcastChannelParent()
 }
 
 mozilla::ipc::IPCResult
-BroadcastChannelParent::RecvPostMessage(const ClonedMessageData& aData)
+BroadcastChannelParent::RecvPostMessage(ClonedMessageData&& aData)
 {
   AssertIsOnBackgroundThread();
 

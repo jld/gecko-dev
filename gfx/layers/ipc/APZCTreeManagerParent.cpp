@@ -41,7 +41,7 @@ APZCTreeManagerParent::ChildAdopted(RefPtr<APZCTreeManager> aAPZCTreeManager,
 }
 
 mozilla::ipc::IPCResult
-APZCTreeManagerParent::RecvSetKeyboardMap(const KeyboardMap& aKeyboardMap)
+APZCTreeManagerParent::RecvSetKeyboardMap(KeyboardMap&& aKeyboardMap)
 {
   mUpdater->RunOnControllerThread(mLayersId, NewRunnableMethod<KeyboardMap>(
     "layers::IAPZCTreeManager::SetKeyboardMap",
@@ -54,9 +54,9 @@ APZCTreeManagerParent::RecvSetKeyboardMap(const KeyboardMap& aKeyboardMap)
 
 mozilla::ipc::IPCResult
 APZCTreeManagerParent::RecvZoomToRect(
-    const ScrollableLayerGuid& aGuid,
-    const CSSRect& aRect,
-    const uint32_t& aFlags)
+    ScrollableLayerGuid&& aGuid,
+    CSSRect&& aRect,
+    uint32_t&& aFlags)
 {
   if (aGuid.mLayersId != mLayersId) {
     // Guard against bad data from hijacked child processes
@@ -76,8 +76,8 @@ APZCTreeManagerParent::RecvZoomToRect(
 
 mozilla::ipc::IPCResult
 APZCTreeManagerParent::RecvContentReceivedInputBlock(
-    const uint64_t& aInputBlockId,
-    const bool& aPreventDefault)
+    uint64_t&& aInputBlockId,
+    bool&& aPreventDefault)
 {
   mUpdater->RunOnControllerThread(mLayersId, NewRunnableMethod<uint64_t, bool>(
     "layers::IAPZCTreeManager::ContentReceivedInputBlock",
@@ -91,7 +91,7 @@ APZCTreeManagerParent::RecvContentReceivedInputBlock(
 
 mozilla::ipc::IPCResult
 APZCTreeManagerParent::RecvSetTargetAPZC(
-    const uint64_t& aInputBlockId,
+    uint64_t&& aInputBlockId,
     nsTArray<ScrollableLayerGuid>&& aTargets)
 {
   for (size_t i = 0; i < aTargets.Length(); i++) {
@@ -116,8 +116,8 @@ APZCTreeManagerParent::RecvSetTargetAPZC(
 
 mozilla::ipc::IPCResult
 APZCTreeManagerParent::RecvUpdateZoomConstraints(
-    const ScrollableLayerGuid& aGuid,
-    const MaybeZoomConstraints& aConstraints)
+    ScrollableLayerGuid&& aGuid,
+    MaybeZoomConstraints&& aConstraints)
 {
   if (aGuid.mLayersId != mLayersId) {
     // Guard against bad data from hijacked child processes
@@ -130,7 +130,7 @@ APZCTreeManagerParent::RecvUpdateZoomConstraints(
 }
 
 mozilla::ipc::IPCResult
-APZCTreeManagerParent::RecvSetDPI(const float& aDpiValue)
+APZCTreeManagerParent::RecvSetDPI(float&& aDpiValue)
 {
   mUpdater->RunOnControllerThread(mLayersId, NewRunnableMethod<float>(
     "layers::IAPZCTreeManager::SetDPI",
@@ -142,7 +142,7 @@ APZCTreeManagerParent::RecvSetDPI(const float& aDpiValue)
 
 mozilla::ipc::IPCResult
 APZCTreeManagerParent::RecvSetAllowedTouchBehavior(
-    const uint64_t& aInputBlockId,
+    uint64_t&& aInputBlockId,
     nsTArray<TouchBehaviorFlags>&& aValues)
 {
   mUpdater->RunOnControllerThread(
@@ -160,8 +160,8 @@ APZCTreeManagerParent::RecvSetAllowedTouchBehavior(
 
 mozilla::ipc::IPCResult
 APZCTreeManagerParent::RecvStartScrollbarDrag(
-    const ScrollableLayerGuid& aGuid,
-    const AsyncDragMetrics& aDragMetrics)
+    ScrollableLayerGuid&& aGuid,
+    AsyncDragMetrics&& aDragMetrics)
 {
   if (aGuid.mLayersId != mLayersId) {
     // Guard against bad data from hijacked child processes
@@ -183,8 +183,8 @@ APZCTreeManagerParent::RecvStartScrollbarDrag(
 
 mozilla::ipc::IPCResult
 APZCTreeManagerParent::RecvStartAutoscroll(
-    const ScrollableLayerGuid& aGuid,
-    const ScreenPoint& aAnchorLocation)
+    ScrollableLayerGuid&& aGuid,
+    ScreenPoint&& aAnchorLocation)
 {
   // Unlike RecvStartScrollbarDrag(), this message comes from the parent
   // process (via nsBaseWidget::mAPZC) rather than from the child process
@@ -205,7 +205,7 @@ APZCTreeManagerParent::RecvStartAutoscroll(
 }
 
 mozilla::ipc::IPCResult
-APZCTreeManagerParent::RecvStopAutoscroll(const ScrollableLayerGuid& aGuid)
+APZCTreeManagerParent::RecvStopAutoscroll(ScrollableLayerGuid&& aGuid)
 {
   // See RecvStartAutoscroll() for why we don't check the layers id.
 
@@ -221,7 +221,7 @@ APZCTreeManagerParent::RecvStopAutoscroll(const ScrollableLayerGuid& aGuid)
 }
 
 mozilla::ipc::IPCResult
-APZCTreeManagerParent::RecvSetLongTapEnabled(const bool& aLongTapEnabled)
+APZCTreeManagerParent::RecvSetLongTapEnabled(bool&& aLongTapEnabled)
 {
   mUpdater->RunOnControllerThread(
       mLayersId,

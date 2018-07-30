@@ -222,23 +222,23 @@ PSMContentDownloaderParent::~PSMContentDownloaderParent()
 }
 
 mozilla::ipc::IPCResult
-PSMContentDownloaderParent::RecvOnStartRequest(const uint32_t& contentLength)
+PSMContentDownloaderParent::RecvOnStartRequest(uint32_t&& contentLength)
 {
   mByteData.SetCapacity(contentLength);
   return IPC_OK();
 }
 
 mozilla::ipc::IPCResult
-PSMContentDownloaderParent::RecvOnDataAvailable(const nsCString& data,
-                                                const uint64_t& offset,
-                                                const uint32_t& count)
+PSMContentDownloaderParent::RecvOnDataAvailable(nsCString&& data,
+                                                uint64_t&& offset,
+                                                uint32_t&& count)
 {
   mByteData.Append(data);
   return IPC_OK();
 }
 
 mozilla::ipc::IPCResult
-PSMContentDownloaderParent::RecvOnStopRequest(const nsresult& code)
+PSMContentDownloaderParent::RecvOnStopRequest(nsresult&& code)
 {
   if (NS_SUCCEEDED(code)) {
     // See also PSMContentStreamListener::OnStopRequest. In this case, we don't

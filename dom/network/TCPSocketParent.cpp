@@ -98,8 +98,8 @@ NS_IMETHODIMP_(MozExternalRefCountType) TCPSocketParent::Release(void)
 }
 
 mozilla::ipc::IPCResult
-TCPSocketParent::RecvOpen(const nsString& aHost, const uint16_t& aPort, const bool& aUseSSL,
-                          const bool& aUseArrayBuffers)
+TCPSocketParent::RecvOpen(nsString&& aHost, uint16_t&& aPort, bool&& aUseSSL,
+                          bool&& aUseArrayBuffers)
 {
   mSocket = new TCPSocket(nullptr, aHost, aPort, aUseSSL, aUseArrayBuffers);
   mSocket->SetSocketBridgeParent(this);
@@ -108,14 +108,14 @@ TCPSocketParent::RecvOpen(const nsString& aHost, const uint16_t& aPort, const bo
 }
 
 mozilla::ipc::IPCResult
-TCPSocketParent::RecvOpenBind(const nsCString& aRemoteHost,
-                              const uint16_t& aRemotePort,
-                              const nsCString& aLocalAddr,
-                              const uint16_t& aLocalPort,
-                              const bool&     aUseSSL,
-                              const bool&     aReuseAddrPort,
-                              const bool&     aUseArrayBuffers,
-                              const nsCString& aFilter)
+TCPSocketParent::RecvOpenBind(nsCString&& aRemoteHost,
+                              uint16_t&& aRemotePort,
+                              nsCString&& aLocalAddr,
+                              uint16_t&& aLocalPort,
+                              bool&& aUseSSL,
+                              bool&& aReuseAddrPort,
+                              bool&& aUseArrayBuffers,
+                              nsCString&& aFilter)
 {
   nsresult rv;
   nsCOMPtr<nsISocketTransportService> sts =
@@ -225,8 +225,8 @@ TCPSocketParent::RecvResume()
 }
 
 mozilla::ipc::IPCResult
-TCPSocketParent::RecvData(const SendableData& aData,
-                          const uint32_t& aTrackingNumber)
+TCPSocketParent::RecvData(SendableData&& aData,
+                          uint32_t&& aTrackingNumber)
 {
   ErrorResult rv;
 

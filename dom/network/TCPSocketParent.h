@@ -47,24 +47,24 @@ public:
 
   TCPSocketParent() {}
 
-  virtual mozilla::ipc::IPCResult RecvOpen(const nsString& aHost, const uint16_t& aPort,
-                                           const bool& useSSL, const bool& aUseArrayBuffers) override;
+  virtual mozilla::ipc::IPCResult RecvOpen(nsString&& aHost, uint16_t&& aPort,
+                                           bool&& useSSL, bool&& aUseArrayBuffers) override;
 
-  virtual mozilla::ipc::IPCResult RecvOpenBind(const nsCString& aRemoteHost,
-                                               const uint16_t& aRemotePort,
-                                               const nsCString& aLocalAddr,
-                                               const uint16_t& aLocalPort,
-                                               const bool&     aUseSSL,
-                                               const bool&     aReuseAddrPort,
-                                               const bool& aUseArrayBuffers,
-                                               const nsCString& aFilter) override;
+  virtual mozilla::ipc::IPCResult RecvOpenBind(nsCString&& aRemoteHost,
+                                               uint16_t&& aRemotePort,
+                                               nsCString&& aLocalAddr,
+                                               uint16_t&& aLocalPort,
+                                               bool&& aUseSSL,
+                                               bool&& aReuseAddrPort,
+                                               bool&& aUseArrayBuffers,
+                                               nsCString&& aFilter) override;
 
   virtual mozilla::ipc::IPCResult RecvStartTLS() override;
   virtual mozilla::ipc::IPCResult RecvSuspend() override;
   virtual mozilla::ipc::IPCResult RecvResume() override;
   virtual mozilla::ipc::IPCResult RecvClose() override;
-  virtual mozilla::ipc::IPCResult RecvData(const SendableData& aData,
-                                           const uint32_t& aTrackingNumber) override;
+  virtual mozilla::ipc::IPCResult RecvData(SendableData&& aData,
+                                           uint32_t&& aTrackingNumber) override;
   virtual mozilla::ipc::IPCResult RecvRequestDelete() override;
 
   void FireErrorEvent(const nsAString& aName, const nsAString& aType, TCPReadyState aReadyState);

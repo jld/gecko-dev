@@ -47,8 +47,8 @@ public:
   Child();
 
   mozilla::ipc::IPCResult
-  RecvGetPrincipalKeyResponse(const uint32_t& aRequestId,
-                              const nsCString& aKey) override;
+  RecvGetPrincipalKeyResponse(uint32_t&& aRequestId,
+                              nsCString&& aKey) override;
 
   void ActorDestroy(ActorDestroyReason aWhy) override;
   virtual ~Child();

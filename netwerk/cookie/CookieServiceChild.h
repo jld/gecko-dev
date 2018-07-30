@@ -109,7 +109,7 @@ protected:
 
   virtual
   mozilla::ipc::IPCResult RecvTrackCookiesLoad(nsTArray<CookieStruct>&& aCookiesList,
-                                               const OriginAttributes &aAttrs) override;
+                                               OriginAttributes&& aAttrs) override;
 
   virtual
   mozilla::ipc::IPCResult RecvRemoveAll() override;
@@ -119,12 +119,12 @@ protected:
                                 nsTArray<OriginAttributes>&& aAttrsList) override;
 
   virtual
-  mozilla::ipc::IPCResult RecvRemoveCookie(const CookieStruct &aCookie,
-                                           const OriginAttributes &aAttrs) override;
+  mozilla::ipc::IPCResult RecvRemoveCookie(CookieStruct&& aCookie,
+                                           OriginAttributes&& aAttrs) override;
 
   virtual
-  mozilla::ipc::IPCResult RecvAddCookie(const CookieStruct &aCookie,
-                                        const OriginAttributes &aAttrs) override;
+  mozilla::ipc::IPCResult RecvAddCookie(CookieStruct&& aCookie,
+                                        OriginAttributes&& aAttrs) override;
 
   virtual void ActorDestroy(ActorDestroyReason aWhy) override;
 

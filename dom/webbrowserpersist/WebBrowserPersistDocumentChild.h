@@ -28,7 +28,7 @@ public:
     void Start(nsIDocument* aDocument);
 
     virtual mozilla::ipc::IPCResult
-    RecvSetPersistFlags(const uint32_t& aNewFlags) override;
+    RecvSetPersistFlags(uint32_t&& aNewFlags) override;
 
     virtual PWebBrowserPersistResourcesChild*
     AllocPWebBrowserPersistResourcesChild() override;
@@ -46,10 +46,10 @@ public:
     virtual mozilla::ipc::IPCResult
     RecvPWebBrowserPersistSerializeConstructor(
             PWebBrowserPersistSerializeChild* aActor,
-            const WebBrowserPersistURIMap& aMap,
-            const nsCString& aRequestedContentType,
-            const uint32_t& aEncoderFlags,
-            const uint32_t& aWrapColumn) override;
+            WebBrowserPersistURIMap&& aMap,
+            nsCString&& aRequestedContentType,
+            uint32_t&& aEncoderFlags,
+            uint32_t&& aWrapColumn) override;
     virtual bool
     DeallocPWebBrowserPersistSerializeChild(PWebBrowserPersistSerializeChild* aActor) override;
 

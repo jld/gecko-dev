@@ -128,49 +128,49 @@ public:
   void OnBackgroundChildDestroyed(HttpBackgroundChannelChild* aBgChild);
 
 protected:
-  mozilla::ipc::IPCResult RecvOnStartRequest(const nsresult& channelStatus,
-                                             const nsHttpResponseHead& responseHead,
-                                             const bool& useResponseHead,
-                                             const nsHttpHeaderArray& requestHeaders,
-                                             const ParentLoadInfoForwarderArgs& loadInfoForwarder,
-                                             const bool& isFromCache,
-                                             const bool& cacheEntryAvailable,
-                                             const uint64_t& cacheEntryId,
-                                             const int32_t& cacheFetchCount,
-                                             const uint32_t& cacheExpirationTime,
-                                             const nsCString& cachedCharset,
-                                             const nsCString& securityInfoSerialization,
-                                             const NetAddr& selfAddr,
-                                             const NetAddr& peerAddr,
-                                             const int16_t& redirectCount,
-                                             const uint32_t& cacheKey,
-                                             const nsCString& altDataType,
-                                             const int64_t& altDataLen,
-                                             const bool& aApplyConversion,
-                                             const ResourceTimingStruct& aTiming) override;
-  mozilla::ipc::IPCResult RecvFailedAsyncOpen(const nsresult& status) override;
-  mozilla::ipc::IPCResult RecvRedirect1Begin(const uint32_t& registrarId,
-                                             const URIParams& newURI,
-                                             const uint32_t& newLoadFlags,
-                                             const uint32_t& redirectFlags,
-                                             const ParentLoadInfoForwarderArgs& loadInfoForwarder,
-                                             const nsHttpResponseHead& responseHead,
-                                             const nsCString& securityInfoSerialization,
-                                             const uint64_t& channelId,
-                                             const NetAddr& oldPeerAddr) override;
+  mozilla::ipc::IPCResult RecvOnStartRequest(nsresult&& channelStatus,
+                                             nsHttpResponseHead&& responseHead,
+                                             bool&& useResponseHead,
+                                             nsHttpHeaderArray&& requestHeaders,
+                                             ParentLoadInfoForwarderArgs&& loadInfoForwarder,
+                                             bool&& isFromCache,
+                                             bool&& cacheEntryAvailable,
+                                             uint64_t&& cacheEntryId,
+                                             int32_t&& cacheFetchCount,
+                                             uint32_t&& cacheExpirationTime,
+                                             nsCString&& cachedCharset,
+                                             nsCString&& securityInfoSerialization,
+                                             NetAddr&& selfAddr,
+                                             NetAddr&& peerAddr,
+                                             int16_t&& redirectCount,
+                                             uint32_t&& cacheKey,
+                                             nsCString&& altDataType,
+                                             int64_t&& altDataLen,
+                                             bool&& aApplyConversion,
+                                             ResourceTimingStruct&& aTiming) override;
+  mozilla::ipc::IPCResult RecvFailedAsyncOpen(nsresult&& status) override;
+  mozilla::ipc::IPCResult RecvRedirect1Begin(uint32_t&& registrarId,
+                                             URIParams&& newURI,
+                                             uint32_t&& newLoadFlags,
+                                             uint32_t&& redirectFlags,
+                                             ParentLoadInfoForwarderArgs&& loadInfoForwarder,
+                                             nsHttpResponseHead&& responseHead,
+                                             nsCString&& securityInfoSerialization,
+                                             uint64_t&& channelId,
+                                             NetAddr&& oldPeerAddr) override;
   mozilla::ipc::IPCResult RecvRedirect3Complete() override;
-  mozilla::ipc::IPCResult RecvAssociateApplicationCache(const nsCString& groupID,
-                                                        const nsCString& clientID) override;
+  mozilla::ipc::IPCResult RecvAssociateApplicationCache(nsCString&& groupID,
+                                                        nsCString&& clientID) override;
   mozilla::ipc::IPCResult RecvDeleteSelf() override;
   mozilla::ipc::IPCResult RecvFinishInterceptedRedirect() override;
 
-  mozilla::ipc::IPCResult RecvReportSecurityMessage(const nsString& messageTag,
-                                                    const nsString& messageCategory) override;
+  mozilla::ipc::IPCResult RecvReportSecurityMessage(nsString&& messageTag,
+                                                    nsString&& messageCategory) override;
 
-  mozilla::ipc::IPCResult RecvIssueDeprecationWarning(const uint32_t& warning,
-                                                      const bool& asError) override;
+  mozilla::ipc::IPCResult RecvIssueDeprecationWarning(uint32_t&& warning,
+                                                      bool&& asError) override;
 
-  mozilla::ipc::IPCResult RecvSetPriority(const int16_t& aPriority) override;
+  mozilla::ipc::IPCResult RecvSetPriority(int16_t&& aPriority) override;
 
   mozilla::ipc::IPCResult RecvAttachStreamFilter(Endpoint<extensions::PStreamFilterParent>&& aEndpoint) override;
 
@@ -191,7 +191,7 @@ protected:
   // Get event target for processing network events.
   already_AddRefed<nsIEventTarget> GetNeckoTarget() override;
 
-  virtual mozilla::ipc::IPCResult RecvLogBlockedCORSRequest(const nsString& aMessage, const nsCString& aCategory) override;
+  virtual mozilla::ipc::IPCResult RecvLogBlockedCORSRequest(nsString&& aMessage, nsCString&& aCategory) override;
   NS_IMETHOD LogBlockedCORSRequest(const nsAString & aMessage, const nsACString& aCategory) override;
 
 private:

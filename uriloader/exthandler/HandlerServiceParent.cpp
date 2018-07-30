@@ -243,8 +243,8 @@ HandlerServiceParent::~HandlerServiceParent()
 }
 
 mozilla::ipc::IPCResult
-HandlerServiceParent::RecvFillHandlerInfo(const HandlerInfo& aHandlerInfoData,
-                                          const nsCString& aOverrideType,
+HandlerServiceParent::RecvFillHandlerInfo(HandlerInfo&& aHandlerInfoData,
+                                          nsCString&& aOverrideType,
                                           HandlerInfo* handlerInfoData)
 {
   nsCOMPtr<nsIHandlerInfo> info(WrapHandlerInfo(aHandlerInfoData));
@@ -255,7 +255,7 @@ HandlerServiceParent::RecvFillHandlerInfo(const HandlerInfo& aHandlerInfoData,
 }
 
 mozilla::ipc::IPCResult
-HandlerServiceParent::RecvExists(const HandlerInfo& aHandlerInfo,
+HandlerServiceParent::RecvExists(HandlerInfo&& aHandlerInfo,
                                  bool* exists)
 {
   nsCOMPtr<nsIHandlerInfo> info(WrapHandlerInfo(aHandlerInfo));
@@ -265,7 +265,7 @@ HandlerServiceParent::RecvExists(const HandlerInfo& aHandlerInfo,
 }
 
 mozilla::ipc::IPCResult
-HandlerServiceParent::RecvExistsForProtocol(const nsCString& aProtocolScheme,
+HandlerServiceParent::RecvExistsForProtocol(nsCString&& aProtocolScheme,
                                             bool* aHandlerExists)
 {
 #ifdef MOZ_WIDGET_GTK
@@ -278,7 +278,7 @@ HandlerServiceParent::RecvExistsForProtocol(const nsCString& aProtocolScheme,
 }
 
 mozilla::ipc::IPCResult
-HandlerServiceParent::RecvGetTypeFromExtension(const nsCString& aFileExtension,
+HandlerServiceParent::RecvGetTypeFromExtension(nsCString&& aFileExtension,
                                                nsCString* type)
 {
   nsCOMPtr<nsIHandlerService> handlerSvc = do_GetService(NS_HANDLERSERVICE_CONTRACTID);

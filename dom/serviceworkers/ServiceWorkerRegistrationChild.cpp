@@ -28,7 +28,7 @@ ServiceWorkerRegistrationChild::ActorDestroy(ActorDestroyReason aReason)
 }
 
 IPCResult
-ServiceWorkerRegistrationChild::RecvUpdateState(const IPCServiceWorkerRegistrationDescriptor& aDescriptor)
+ServiceWorkerRegistrationChild::RecvUpdateState(IPCServiceWorkerRegistrationDescriptor&& aDescriptor)
 {
   if (mOwner) {
     mOwner->UpdateState(ServiceWorkerRegistrationDescriptor(aDescriptor));

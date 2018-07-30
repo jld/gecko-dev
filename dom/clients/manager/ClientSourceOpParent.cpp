@@ -23,7 +23,7 @@ ClientSourceOpParent::ActorDestroy(ActorDestroyReason aReason)
 }
 
 IPCResult
-ClientSourceOpParent::Recv__delete__(const ClientOpResult& aResult)
+ClientSourceOpParent::Recv__delete__(ClientOpResult&& aResult)
 {
   if (aResult.type() == ClientOpResult::Tnsresult &&
       NS_FAILED(aResult.get_nsresult())) {

@@ -30,14 +30,14 @@ class JavaScriptBase : public WrapperOwner, public WrapperAnswer, public Base
 
     /*** IPC handlers ***/
 
-    mozilla::ipc::IPCResult RecvPreventExtensions(const uint64_t& objId, ReturnStatus* rs) override {
+    mozilla::ipc::IPCResult RecvPreventExtensions(uint64_t&& objId, ReturnStatus* rs) override {
         Maybe<ObjectId> obj(ObjectId::deserialize(objId));
         if (obj.isNothing() || !Answer::RecvPreventExtensions(obj.value(), rs)) {
             return IPC_FAIL_NO_REASON(this);
         }
         return IPC_OK();
     }
-    mozilla::ipc::IPCResult RecvGetPropertyDescriptor(const uint64_t& objId, const JSIDVariant& id,
+    mozilla::ipc::IPCResult RecvGetPropertyDescriptor(uint64_t&& objId, JSIDVariant&& id,
                                                       ReturnStatus* rs,
                                                       PPropertyDescriptor* out) override {
         Maybe<ObjectId> obj(ObjectId::deserialize(objId));
@@ -46,8 +46,8 @@ class JavaScriptBase : public WrapperOwner, public WrapperAnswer, public Base
         }
         return IPC_OK();
     }
-    mozilla::ipc::IPCResult RecvGetOwnPropertyDescriptor(const uint64_t& objId,
-                                                         const JSIDVariant& id,
+    mozilla::ipc::IPCResult RecvGetOwnPropertyDescriptor(uint64_t&& objId,
+                                                         JSIDVariant&& id,
                                                          ReturnStatus* rs,
                                                          PPropertyDescriptor* out) override {
         Maybe<ObjectId> obj(ObjectId::deserialize(objId));
@@ -56,15 +56,15 @@ class JavaScriptBase : public WrapperOwner, public WrapperAnswer, public Base
         }
         return IPC_OK();
     }
-    mozilla::ipc::IPCResult RecvDefineProperty(const uint64_t& objId, const JSIDVariant& id,
-                                               const PPropertyDescriptor& flags, ReturnStatus* rs) override {
+    mozilla::ipc::IPCResult RecvDefineProperty(uint64_t&& objId, JSIDVariant&& id,
+                                               PPropertyDescriptor&& flags, ReturnStatus* rs) override {
         Maybe<ObjectId> obj(ObjectId::deserialize(objId));
         if (obj.isNothing() || !Answer::RecvDefineProperty(obj.value(), id, flags, rs)) {
             return IPC_FAIL_NO_REASON(this);
         }
         return IPC_OK();
     }
-    mozilla::ipc::IPCResult RecvDelete(const uint64_t& objId, const JSIDVariant& id,
+    mozilla::ipc::IPCResult RecvDelete(uint64_t&& objId, JSIDVariant&& id,
                                        ReturnStatus* rs) override {
         Maybe<ObjectId> obj(ObjectId::deserialize(objId));
         if (obj.isNothing() || !Answer::RecvDelete(obj.value(), id, rs)) {
@@ -73,7 +73,7 @@ class JavaScriptBase : public WrapperOwner, public WrapperAnswer, public Base
         return IPC_OK();
     }
 
-    mozilla::ipc::IPCResult RecvHas(const uint64_t& objId, const JSIDVariant& id,
+    mozilla::ipc::IPCResult RecvHas(uint64_t&& objId, JSIDVariant&& id,
                                     ReturnStatus* rs, bool* bp) override {
         Maybe<ObjectId> obj(ObjectId::deserialize(objId));
         if (obj.isNothing() || !Answer::RecvHas(obj.value(), id, rs, bp)) {
@@ -81,7 +81,7 @@ class JavaScriptBase : public WrapperOwner, public WrapperAnswer, public Base
         }
         return IPC_OK();
     }
-    mozilla::ipc::IPCResult RecvHasOwn(const uint64_t& objId, const JSIDVariant& id,
+    mozilla::ipc::IPCResult RecvHasOwn(uint64_t&& objId, JSIDVariant&& id,
                                        ReturnStatus* rs, bool* bp) override {
         Maybe<ObjectId> obj(ObjectId::deserialize(objId));
         if (obj.isNothing() || !Answer::RecvHasOwn(obj.value(), id, rs, bp)) {
@@ -89,7 +89,7 @@ class JavaScriptBase : public WrapperOwner, public WrapperAnswer, public Base
         }
         return IPC_OK();
     }
-    mozilla::ipc::IPCResult RecvGet(const uint64_t& objId, const JSVariant& receiverVar, const JSIDVariant& id,
+    mozilla::ipc::IPCResult RecvGet(uint64_t&& objId, JSVariant&& receiverVar, JSIDVariant&& id,
                                     ReturnStatus* rs, JSVariant* result) override {
         Maybe<ObjectId> obj(ObjectId::deserialize(objId));
         if (obj.isNothing() || !Answer::RecvGet(obj.value(), receiverVar, id, rs, result)) {
@@ -97,8 +97,8 @@ class JavaScriptBase : public WrapperOwner, public WrapperAnswer, public Base
         }
         return IPC_OK();
     }
-    mozilla::ipc::IPCResult RecvSet(const uint64_t& objId, const JSIDVariant& id, const JSVariant& value,
-                                    const JSVariant& receiverVar, ReturnStatus* rs) override {
+    mozilla::ipc::IPCResult RecvSet(uint64_t&& objId, JSIDVariant&& id, JSVariant&& value,
+                                    JSVariant&& receiverVar, ReturnStatus* rs) override {
         Maybe<ObjectId> obj(ObjectId::deserialize(objId));
         if (obj.isNothing() || !Answer::RecvSet(obj.value(), id, value, receiverVar, rs)) {
             return IPC_FAIL_NO_REASON(this);
@@ -106,7 +106,7 @@ class JavaScriptBase : public WrapperOwner, public WrapperAnswer, public Base
         return IPC_OK();
     }
 
-    mozilla::ipc::IPCResult RecvIsExtensible(const uint64_t& objId, ReturnStatus* rs,
+    mozilla::ipc::IPCResult RecvIsExtensible(uint64_t&& objId, ReturnStatus* rs,
                                              bool* result) override {
         Maybe<ObjectId> obj(ObjectId::deserialize(objId));
         if (obj.isNothing() || !Answer::RecvIsExtensible(obj.value(), rs, result)) {
@@ -114,8 +114,8 @@ class JavaScriptBase : public WrapperOwner, public WrapperAnswer, public Base
         }
         return IPC_OK();
     }
-    mozilla::ipc::IPCResult RecvCallOrConstruct(const uint64_t& objId, InfallibleTArray<JSParam>&& argv,
-                                                const bool& construct, ReturnStatus* rs, JSVariant* result,
+    mozilla::ipc::IPCResult RecvCallOrConstruct(uint64_t&& objId, InfallibleTArray<JSParam>&& argv,
+                                                bool&& construct, ReturnStatus* rs, JSVariant* result,
                                                 nsTArray<JSParam>* outparams) override {
         Maybe<ObjectId> obj(ObjectId::deserialize(objId));
         if (obj.isNothing() || !Answer::RecvCallOrConstruct(obj.value(), std::move(argv), construct, rs, result, outparams)) {
@@ -123,42 +123,42 @@ class JavaScriptBase : public WrapperOwner, public WrapperAnswer, public Base
         }
         return IPC_OK();
     }
-    mozilla::ipc::IPCResult RecvHasInstance(const uint64_t& objId, const JSVariant& v, ReturnStatus* rs, bool* bp) override {
+    mozilla::ipc::IPCResult RecvHasInstance(uint64_t&& objId, JSVariant&& v, ReturnStatus* rs, bool* bp) override {
         Maybe<ObjectId> obj(ObjectId::deserialize(objId));
         if (obj.isNothing() || !Answer::RecvHasInstance(obj.value(), v, rs, bp)) {
             return IPC_FAIL_NO_REASON(this);
         }
         return IPC_OK();
     }
-    mozilla::ipc::IPCResult RecvGetBuiltinClass(const uint64_t& objId, ReturnStatus* rs, uint32_t* classValue) override {
+    mozilla::ipc::IPCResult RecvGetBuiltinClass(uint64_t&& objId, ReturnStatus* rs, uint32_t* classValue) override {
         Maybe<ObjectId> obj(ObjectId::deserialize(objId));
         if (obj.isNothing() || !Answer::RecvGetBuiltinClass(obj.value(), rs, classValue)) {
             return IPC_FAIL_NO_REASON(this);
         }
         return IPC_OK();
     }
-    mozilla::ipc::IPCResult RecvIsArray(const uint64_t& objId, ReturnStatus* rs, uint32_t* answer) override {
+    mozilla::ipc::IPCResult RecvIsArray(uint64_t&& objId, ReturnStatus* rs, uint32_t* answer) override {
         Maybe<ObjectId> obj(ObjectId::deserialize(objId));
         if (obj.isNothing() || !Answer::RecvIsArray(obj.value(), rs, answer)) {
             return IPC_FAIL_NO_REASON(this);
         }
         return IPC_OK();
     }
-    mozilla::ipc::IPCResult RecvClassName(const uint64_t& objId, nsCString* result) override {
+    mozilla::ipc::IPCResult RecvClassName(uint64_t&& objId, nsCString* result) override {
         Maybe<ObjectId> obj(ObjectId::deserialize(objId));
         if (obj.isNothing() || !Answer::RecvClassName(obj.value(), result)) {
             return IPC_FAIL_NO_REASON(this);
         }
         return IPC_OK();
     }
-    mozilla::ipc::IPCResult RecvGetPrototype(const uint64_t& objId, ReturnStatus* rs, ObjectOrNullVariant* result) override {
+    mozilla::ipc::IPCResult RecvGetPrototype(uint64_t&& objId, ReturnStatus* rs, ObjectOrNullVariant* result) override {
         Maybe<ObjectId> obj(ObjectId::deserialize(objId));
         if (obj.isNothing() || !Answer::RecvGetPrototype(obj.value(), rs, result)) {
             return IPC_FAIL_NO_REASON(this);
         }
         return IPC_OK();
     }
-    mozilla::ipc::IPCResult RecvGetPrototypeIfOrdinary(const uint64_t& objId, ReturnStatus* rs, bool* isOrdinary,
+    mozilla::ipc::IPCResult RecvGetPrototypeIfOrdinary(uint64_t&& objId, ReturnStatus* rs, bool* isOrdinary,
                                                        ObjectOrNullVariant* result) override
     {
         Maybe<ObjectId> obj(ObjectId::deserialize(objId));
@@ -167,7 +167,7 @@ class JavaScriptBase : public WrapperOwner, public WrapperAnswer, public Base
         }
         return IPC_OK();
     }
-    mozilla::ipc::IPCResult RecvRegExpToShared(const uint64_t& objId, ReturnStatus* rs, nsString* source, uint32_t* flags) override {
+    mozilla::ipc::IPCResult RecvRegExpToShared(uint64_t&& objId, ReturnStatus* rs, nsString* source, uint32_t* flags) override {
         Maybe<ObjectId> obj(ObjectId::deserialize(objId));
         if (obj.isNothing() || !Answer::RecvRegExpToShared(obj.value(), rs, source, flags)) {
             return IPC_FAIL_NO_REASON(this);
@@ -175,7 +175,7 @@ class JavaScriptBase : public WrapperOwner, public WrapperAnswer, public Base
         return IPC_OK();
     }
 
-    mozilla::ipc::IPCResult RecvGetPropertyKeys(const uint64_t& objId, const uint32_t& flags,
+    mozilla::ipc::IPCResult RecvGetPropertyKeys(uint64_t&& objId, uint32_t&& flags,
                                                 ReturnStatus* rs, nsTArray<JSIDVariant>* ids) override {
         Maybe<ObjectId> obj(ObjectId::deserialize(objId));
         if (obj.isNothing() || !Answer::RecvGetPropertyKeys(obj.value(), flags, rs, ids)) {
@@ -183,7 +183,7 @@ class JavaScriptBase : public WrapperOwner, public WrapperAnswer, public Base
         }
         return IPC_OK();
     }
-    mozilla::ipc::IPCResult RecvInstanceOf(const uint64_t& objId, const JSIID& iid,
+    mozilla::ipc::IPCResult RecvInstanceOf(uint64_t&& objId, JSIID&& iid,
                                            ReturnStatus* rs, bool* instanceof) override {
         Maybe<ObjectId> obj(ObjectId::deserialize(objId));
         if (obj.isNothing() || !Answer::RecvInstanceOf(obj.value(), iid, rs, instanceof)) {
@@ -191,7 +191,7 @@ class JavaScriptBase : public WrapperOwner, public WrapperAnswer, public Base
         }
         return IPC_OK();
     }
-    mozilla::ipc::IPCResult RecvDOMInstanceOf(const uint64_t& objId, const int& prototypeID, const int& depth,
+    mozilla::ipc::IPCResult RecvDOMInstanceOf(uint64_t&& objId, int&& prototypeID, int&& depth,
                                               ReturnStatus* rs, bool* instanceof) override {
         Maybe<ObjectId> obj(ObjectId::deserialize(objId));
         if (obj.isNothing() || !Answer::RecvDOMInstanceOf(obj.value(), prototypeID, depth, rs, instanceof)) {
@@ -200,7 +200,7 @@ class JavaScriptBase : public WrapperOwner, public WrapperAnswer, public Base
         return IPC_OK();
     }
 
-    mozilla::ipc::IPCResult RecvDropObject(const uint64_t& objId) override {
+    mozilla::ipc::IPCResult RecvDropObject(uint64_t&& objId) override {
         Maybe<ObjectId> obj(ObjectId::deserialize(objId));
         if (obj.isNothing() || !Answer::RecvDropObject(obj.value())) {
             return IPC_FAIL_NO_REASON(this);

@@ -142,7 +142,7 @@ PresentationParent::ActorDestroy(ActorDestroyReason aWhy)
 mozilla::ipc::IPCResult
 PresentationParent::RecvPPresentationRequestConstructor(
   PPresentationRequestParent* aActor,
-  const PresentationIPCRequest& aRequest)
+  PresentationIPCRequest&& aRequest)
 {
   PresentationRequestParent* actor = static_cast<PresentationRequestParent*>(aActor);
 
@@ -245,8 +245,8 @@ PresentationParent::RecvUnregisterAvailabilityHandler(
 }
 
 /* virtual */ mozilla::ipc::IPCResult
-PresentationParent::RecvRegisterSessionHandler(const nsString& aSessionId,
-                                               const uint8_t& aRole)
+PresentationParent::RecvRegisterSessionHandler(nsString&& aSessionId,
+                                               uint8_t&& aRole)
 {
   MOZ_ASSERT(mService);
 
@@ -267,8 +267,8 @@ PresentationParent::RecvRegisterSessionHandler(const nsString& aSessionId,
 }
 
 /* virtual */ mozilla::ipc::IPCResult
-PresentationParent::RecvUnregisterSessionHandler(const nsString& aSessionId,
-                                                 const uint8_t& aRole)
+PresentationParent::RecvUnregisterSessionHandler(nsString&& aSessionId,
+                                                 uint8_t&& aRole)
 {
   MOZ_ASSERT(mService);
   if (nsIPresentationService::ROLE_CONTROLLER == aRole) {
@@ -281,7 +281,7 @@ PresentationParent::RecvUnregisterSessionHandler(const nsString& aSessionId,
 }
 
 /* virtual */ mozilla::ipc::IPCResult
-PresentationParent::RecvRegisterRespondingHandler(const uint64_t& aWindowId)
+PresentationParent::RecvRegisterRespondingHandler(uint64_t&& aWindowId)
 {
   MOZ_ASSERT(mService);
 
@@ -291,7 +291,7 @@ PresentationParent::RecvRegisterRespondingHandler(const uint64_t& aWindowId)
 }
 
 /* virtual */ mozilla::ipc::IPCResult
-PresentationParent::RecvUnregisterRespondingHandler(const uint64_t& aWindowId)
+PresentationParent::RecvUnregisterRespondingHandler(uint64_t&& aWindowId)
 {
   MOZ_ASSERT(mService);
   mWindowIds.RemoveElement(aWindowId);
@@ -351,9 +351,9 @@ PresentationParent::NotifySessionConnect(uint64_t aWindowId,
 }
 
 mozilla::ipc::IPCResult
-PresentationParent::RecvNotifyReceiverReady(const nsString& aSessionId,
-                                            const uint64_t& aWindowId,
-                                            const bool& aIsLoading)
+PresentationParent::RecvNotifyReceiverReady(nsString&& aSessionId,
+                                            uint64_t&& aWindowId,
+                                            bool&& aIsLoading)
 {
   MOZ_ASSERT(mService);
 
@@ -367,9 +367,9 @@ PresentationParent::RecvNotifyReceiverReady(const nsString& aSessionId,
 }
 
 mozilla::ipc::IPCResult
-PresentationParent::RecvNotifyTransportClosed(const nsString& aSessionId,
-                                              const uint8_t& aRole,
-                                              const nsresult& aReason)
+PresentationParent::RecvNotifyTransportClosed(nsString&& aSessionId,
+                                              uint8_t&& aRole,
+                                              nsresult&& aReason)
 {
   MOZ_ASSERT(mService);
 

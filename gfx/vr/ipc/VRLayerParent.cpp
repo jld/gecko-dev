@@ -59,10 +59,10 @@ VRLayerParent::Destroy()
 }
 
 mozilla::ipc::IPCResult
-VRLayerParent::RecvSubmitFrame(const layers::SurfaceDescriptor &aTexture,
-                               const uint64_t& aFrameId,
-                               const gfx::Rect& aLeftEyeRect,
-                               const gfx::Rect& aRightEyeRect)
+VRLayerParent::RecvSubmitFrame(layers::SurfaceDescriptor&& aTexture,
+                               uint64_t&& aFrameId,
+                               gfx::Rect&& aLeftEyeRect,
+                               gfx::Rect&& aRightEyeRect)
 {
   if (mVRDisplayID) {
     VRManager* vm = VRManager::Get();

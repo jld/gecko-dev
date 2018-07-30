@@ -27,7 +27,7 @@ AltDataOutputStreamParent::~AltDataOutputStreamParent()
 }
 
 mozilla::ipc::IPCResult
-AltDataOutputStreamParent::RecvWriteData(const nsCString& data)
+AltDataOutputStreamParent::RecvWriteData(nsCString&& data)
 {
   if (NS_FAILED(mStatus)) {
     if (mIPCOpen) {

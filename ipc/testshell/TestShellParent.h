@@ -53,7 +53,7 @@ protected:
 
   void ActorDestroy(ActorDestroyReason why) override;
 
-  mozilla::ipc::IPCResult Recv__delete__(const nsString& aResponse) override {
+  mozilla::ipc::IPCResult Recv__delete__(nsString&& aResponse) override {
     if (!ExecuteCallback(aResponse)) {
       return IPC_FAIL_NO_REASON(this);
     }

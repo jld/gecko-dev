@@ -250,7 +250,7 @@ VideoDecoderManagerParent::DeallocPVideoDecoderManagerParent()
 }
 
 mozilla::ipc::IPCResult
-VideoDecoderManagerParent::RecvReadback(const SurfaceDescriptorGPUVideo& aSD, SurfaceDescriptor* aResult)
+VideoDecoderManagerParent::RecvReadback(SurfaceDescriptorGPUVideo&& aSD, SurfaceDescriptor* aResult)
 {
   RefPtr<Image> image = mImageMap[aSD.handle()];
   if (!image) {
@@ -292,7 +292,7 @@ VideoDecoderManagerParent::RecvReadback(const SurfaceDescriptorGPUVideo& aSD, Su
 }
 
 mozilla::ipc::IPCResult
-VideoDecoderManagerParent::RecvDeallocateSurfaceDescriptorGPUVideo(const SurfaceDescriptorGPUVideo& aSD)
+VideoDecoderManagerParent::RecvDeallocateSurfaceDescriptorGPUVideo(SurfaceDescriptorGPUVideo&& aSD)
 {
   mImageMap.erase(aSD.handle());
   mTextureMap.erase(aSD.handle());

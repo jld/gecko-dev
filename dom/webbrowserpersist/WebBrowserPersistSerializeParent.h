@@ -29,8 +29,8 @@ public:
     RecvWriteData(nsTArray<uint8_t>&& aData) override;
 
     virtual mozilla::ipc::IPCResult
-    Recv__delete__(const nsCString& aContentType,
-                   const nsresult& aStatus) override;
+    Recv__delete__(nsCString&& aContentType,
+                   nsresult&& aStatus) override;
 
     virtual void
     ActorDestroy(ActorDestroyReason aWhy) override;

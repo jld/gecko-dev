@@ -141,7 +141,7 @@ class ContentPermissionRequestParent : public PContentPermissionRequestParent
 
  private:
   virtual mozilla::ipc::IPCResult Recvprompt() override;
-  virtual mozilla::ipc::IPCResult RecvNotifyVisibility(const bool& aIsVisible) override;
+  virtual mozilla::ipc::IPCResult RecvNotifyVisibility(bool&& aIsVisible) override;
   virtual mozilla::ipc::IPCResult RecvDestroy() override;
   virtual void ActorDestroy(ActorDestroyReason why) override;
 };
@@ -175,7 +175,7 @@ ContentPermissionRequestParent::Recvprompt()
 }
 
 mozilla::ipc::IPCResult
-ContentPermissionRequestParent::RecvNotifyVisibility(const bool& aIsVisible)
+ContentPermissionRequestParent::RecvNotifyVisibility(bool&& aIsVisible)
 {
   if (!mProxy) {
     return IPC_FAIL_NO_REASON(this);
@@ -795,7 +795,7 @@ RemotePermissionRequest::DoAllow(JS::HandleValue aChoices)
 
 // PContentPermissionRequestChild
 mozilla::ipc::IPCResult
-RemotePermissionRequest::RecvNotifyResult(const bool& aAllow,
+RemotePermissionRequest::RecvNotifyResult(bool&& aAllow,
                                           InfallibleTArray<PermissionChoice>&& aChoices)
 {
   Destroy();

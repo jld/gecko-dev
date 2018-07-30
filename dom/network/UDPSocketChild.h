@@ -42,14 +42,14 @@ public:
   UDPSocketChild();
   virtual ~UDPSocketChild();
 
-  virtual mozilla::ipc::IPCResult RecvCallbackOpened(const UDPAddressInfo& aAddressInfo) override;
-  virtual mozilla::ipc::IPCResult RecvCallbackConnected(const UDPAddressInfo& aAddressInfo) override;
+  virtual mozilla::ipc::IPCResult RecvCallbackOpened(UDPAddressInfo&& aAddressInfo) override;
+  virtual mozilla::ipc::IPCResult RecvCallbackConnected(UDPAddressInfo&& aAddressInfo) override;
   virtual mozilla::ipc::IPCResult RecvCallbackClosed() override;
-  virtual mozilla::ipc::IPCResult RecvCallbackReceivedData(const UDPAddressInfo& aAddressInfo,
+  virtual mozilla::ipc::IPCResult RecvCallbackReceivedData(UDPAddressInfo&& aAddressInfo,
                                                            InfallibleTArray<uint8_t>&& aData) override;
-  virtual mozilla::ipc::IPCResult RecvCallbackError(const nsCString& aMessage,
-                                                    const nsCString& aFilename,
-                                                    const uint32_t& aLineNumber) override;
+  virtual mozilla::ipc::IPCResult RecvCallbackError(nsCString&& aMessage,
+                                                    nsCString&& aFilename,
+                                                    uint32_t&& aLineNumber) override;
 
 private:
   nsresult SendDataInternal(const UDPSocketAddr& aAddr,

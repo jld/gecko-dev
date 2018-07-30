@@ -53,13 +53,13 @@ SpeechSynthesisParent::DeallocPSpeechSynthesisRequestParent(PSpeechSynthesisRequ
 
 mozilla::ipc::IPCResult
 SpeechSynthesisParent::RecvPSpeechSynthesisRequestConstructor(PSpeechSynthesisRequestParent* aActor,
-                                                              const nsString& aText,
-                                                              const nsString& aLang,
-                                                              const nsString& aUri,
-                                                              const float& aVolume,
-                                                              const float& aRate,
-                                                              const float& aPitch,
-                                                              const bool& aIsChrome)
+                                                              nsString&& aText,
+                                                              nsString&& aLang,
+                                                              nsString&& aUri,
+                                                              float&& aVolume,
+                                                              float&& aRate,
+                                                              float&& aPitch,
+                                                              bool&& aIsChrome)
 {
   MOZ_ASSERT(aActor);
   SpeechSynthesisRequestParent* actor =
@@ -136,7 +136,7 @@ SpeechSynthesisRequestParent::RecvForceEnd()
 }
 
 mozilla::ipc::IPCResult
-SpeechSynthesisRequestParent::RecvSetAudioOutputVolume(const float& aVolume)
+SpeechSynthesisRequestParent::RecvSetAudioOutputVolume(float&& aVolume)
 {
   MOZ_ASSERT(mTask);
   mTask->SetAudioOutputVolume(aVolume);

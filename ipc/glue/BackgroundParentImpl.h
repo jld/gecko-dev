@@ -34,7 +34,7 @@ protected:
 
   virtual mozilla::ipc::IPCResult
   RecvPBackgroundTestConstructor(PBackgroundTestParent* aActor,
-                                 const nsCString& aTestArg) override;
+                                 nsCString&& aTestArg) override;
 
   virtual bool
   DeallocPBackgroundTestParent(PBackgroundTestParent* aActor) override;
@@ -45,7 +45,7 @@ protected:
 
   virtual mozilla::ipc::IPCResult
   RecvPBackgroundIDBFactoryConstructor(PBackgroundIDBFactoryParent* aActor,
-                                       const LoggingInfo& aLoggingInfo)
+                                       LoggingInfo&& aLoggingInfo)
                                        override;
 
   virtual bool
@@ -72,9 +72,9 @@ protected:
   virtual mozilla::ipc::IPCResult
   RecvPBackgroundLocalStorageCacheConstructor(
                                      PBackgroundLocalStorageCacheParent* aActor,
-                                     const PrincipalInfo& aPrincipalInfo,
-                                     const nsCString& aOriginKey,
-                                     const uint32_t& aPrivateBrowsingId)
+                                     PrincipalInfo&& aPrincipalInfo,
+                                     nsCString&& aOriginKey,
+                                     uint32_t&& aPrivateBrowsingId)
                                      override;
 
   virtual bool
@@ -87,7 +87,7 @@ protected:
 
   virtual mozilla::ipc::IPCResult
   RecvPBackgroundStorageConstructor(PBackgroundStorageParent* aActor,
-                                    const nsString& aProfilePath) override;
+                                    nsString&& aProfilePath) override;
 
   virtual bool
   DeallocPBackgroundStorageParent(PBackgroundStorageParent* aActor) override;
@@ -104,8 +104,8 @@ protected:
 
   virtual mozilla::ipc::IPCResult
   RecvPIPCBlobInputStreamConstructor(PIPCBlobInputStreamParent* aActor,
-                                     const nsID& aID,
-                                     const uint64_t& aSize) override;
+                                     nsID&& aID,
+                                     uint64_t&& aSize) override;
 
   virtual bool
   DeallocPIPCBlobInputStreamParent(PIPCBlobInputStreamParent* aActor) override;
@@ -140,9 +140,9 @@ protected:
 
   virtual mozilla::ipc::IPCResult
   RecvPBroadcastChannelConstructor(PBroadcastChannelParent* actor,
-                                   const PrincipalInfo& aPrincipalInfo,
-                                   const nsCString& origin,
-                                   const nsString& channel) override;
+                                   PrincipalInfo&& aPrincipalInfo,
+                                   nsCString&& origin,
+                                   nsString&& channel) override;
 
   virtual bool
   DeallocPBroadcastChannelParent(PBroadcastChannelParent* aActor) override;
@@ -198,8 +198,8 @@ protected:
                         const nsCString& aFilter) override;
   virtual mozilla::ipc::IPCResult
   RecvPUDPSocketConstructor(PUDPSocketParent*,
-                            const OptionalPrincipalInfo& aPrincipalInfo,
-                            const nsCString& aFilter) override;
+                            OptionalPrincipalInfo&& aPrincipalInfo,
+                            nsCString&& aFilter) override;
   virtual bool
   DeallocPUDPSocketParent(PUDPSocketParent*) override;
 
@@ -210,17 +210,17 @@ protected:
 
   virtual mozilla::ipc::IPCResult
   RecvPMessagePortConstructor(PMessagePortParent* aActor,
-                              const nsID& aUUID,
-                              const nsID& aDestinationUUID,
-                              const uint32_t& aSequenceID) override;
+                              nsID&& aUUID,
+                              nsID&& aDestinationUUID,
+                              uint32_t&& aSequenceID) override;
 
   virtual bool
   DeallocPMessagePortParent(PMessagePortParent* aActor) override;
 
   virtual mozilla::ipc::IPCResult
-  RecvMessagePortForceClose(const nsID& aUUID,
-                            const nsID& aDestinationUUID,
-                            const uint32_t& aSequenceID) override;
+  RecvMessagePortForceClose(nsID&& aUUID,
+                            nsID&& aDestinationUUID,
+                            uint32_t&& aSequenceID) override;
 
   virtual PAsmJSCacheEntryParent*
   AllocPAsmJSCacheEntryParent(const dom::asmjscache::OpenMode& aOpenMode,
@@ -241,7 +241,7 @@ protected:
 
   virtual mozilla::ipc::IPCResult
   RecvPFileSystemRequestConstructor(PFileSystemRequestParent* actor,
-                                    const FileSystemParams& params) override;
+                                    FileSystemParams&& params) override;
 
   virtual bool
   DeallocPFileSystemRequestParent(PFileSystemRequestParent*) override;
@@ -270,7 +270,7 @@ protected:
 
   virtual mozilla::ipc::IPCResult
   RecvPHttpBackgroundChannelConstructor(PHttpBackgroundChannelParent *aActor,
-                                        const uint64_t& aChannelId) override;
+                                        uint64_t&& aChannelId) override;
   virtual bool
   DeallocPHttpBackgroundChannelParent(PHttpBackgroundChannelParent *aActor) override;
 
@@ -297,7 +297,7 @@ protected:
   DeallocPMIDIManagerParent(PMIDIManagerParent* aActor) override;
 
   virtual mozilla::ipc::IPCResult
-  RecvStorageActivity(const PrincipalInfo& aPrincipalInfo) override;
+  RecvStorageActivity(PrincipalInfo&& aPrincipalInfo) override;
 
   virtual PServiceWorkerParent*
   AllocPServiceWorkerParent(const IPCServiceWorkerDescriptor&) override;
@@ -307,7 +307,7 @@ protected:
 
   virtual mozilla::ipc::IPCResult
   RecvPServiceWorkerConstructor(PServiceWorkerParent* aActor,
-                                const IPCServiceWorkerDescriptor& aDescriptor) override;
+                                IPCServiceWorkerDescriptor&& aDescriptor) override;
 
   virtual PServiceWorkerContainerParent*
   AllocPServiceWorkerContainerParent() override;
@@ -326,7 +326,7 @@ protected:
 
   virtual mozilla::ipc::IPCResult
   RecvPServiceWorkerRegistrationConstructor(PServiceWorkerRegistrationParent* aActor,
-                                            const IPCServiceWorkerRegistrationDescriptor& aDescriptor) override;
+                                            IPCServiceWorkerRegistrationDescriptor&& aDescriptor) override;
 };
 
 } // namespace ipc

@@ -35,14 +35,14 @@ public:
                            const int32_t& aEndPage);
 
   mozilla::ipc::IPCResult RecvPrintInitializationResult(
-    const nsresult& aRv,
-    const FileDescriptor& aFd) final;
+    nsresult&& aRv,
+    FileDescriptor&& aFd) final;
 
   void ProcessPage();
 
-  mozilla::ipc::IPCResult RecvPageProcessed(const FileDescriptor& aFd) final;
+  mozilla::ipc::IPCResult RecvPageProcessed(FileDescriptor&& aFd) final;
 
-  mozilla::ipc::IPCResult RecvAbortPrint(const nsresult& aRv) final;
+  mozilla::ipc::IPCResult RecvAbortPrint(nsresult&& aRv) final;
 
   void SetPagePrintTimer(nsPagePrintTimer* aPagePrintTimer);
 

@@ -127,7 +127,7 @@ protected:
     }
 
     virtual mozilla::ipc::IPCResult
-    RecvBackUpXResources(const FileDescriptor& aXSocketFd) override;
+    RecvBackUpXResources(FileDescriptor&& aXSocketFd) override;
 
     virtual mozilla::ipc::IPCResult AnswerProcessSomeEvents() override;
 
@@ -135,36 +135,36 @@ protected:
     RecvProcessNativeEventsInInterruptCall() override;
 
     virtual mozilla::ipc::IPCResult
-    RecvPluginShowWindow(const uint32_t& aWindowId, const bool& aModal,
-                         const int32_t& aX, const int32_t& aY,
-                         const size_t& aWidth, const size_t& aHeight) override;
+    RecvPluginShowWindow(uint32_t&& aWindowId, bool&& aModal,
+                         int32_t&& aX, int32_t&& aY,
+                         size_t&& aWidth, size_t&& aHeight) override;
 
     virtual mozilla::ipc::IPCResult
-    RecvPluginHideWindow(const uint32_t& aWindowId) override;
+    RecvPluginHideWindow(uint32_t&& aWindowId) override;
 
     virtual mozilla::ipc::IPCResult
-    RecvSetCursor(const NSCursorInfo& aCursorInfo) override;
+    RecvSetCursor(NSCursorInfo&& aCursorInfo) override;
 
     virtual mozilla::ipc::IPCResult
-    RecvShowCursor(const bool& aShow) override;
+    RecvShowCursor(bool&& aShow) override;
 
     virtual mozilla::ipc::IPCResult
-    RecvPushCursor(const NSCursorInfo& aCursorInfo) override;
+    RecvPushCursor(NSCursorInfo&& aCursorInfo) override;
 
     virtual mozilla::ipc::IPCResult
     RecvPopCursor() override;
 
     virtual mozilla::ipc::IPCResult
-    RecvNPN_SetException(const nsCString& aMessage) override;
+    RecvNPN_SetException(nsCString&& aMessage) override;
 
     virtual mozilla::ipc::IPCResult
-    RecvNPN_ReloadPlugins(const bool& aReloadPages) override;
+    RecvNPN_ReloadPlugins(bool&& aReloadPages) override;
 
     static BrowserStreamParent* StreamCast(NPP instance, NPStream* s);
 
     virtual mozilla::ipc::IPCResult
     AnswerNPN_SetValue_NPPVpluginRequiresAudioDeviceChanges(
-                                        const bool& shouldRegister,
+                                        bool&& shouldRegister,
                                         NPError* result) override;
 
 protected:
@@ -175,11 +175,11 @@ protected:
 
     virtual mozilla::ipc::IPCResult RecvNotifyContentModuleDestroyed() override { return IPC_OK(); }
 
-    virtual mozilla::ipc::IPCResult RecvReturnClearSiteData(const NPError& aRv,
-                                                            const uint64_t& aCallbackId) override;
+    virtual mozilla::ipc::IPCResult RecvReturnClearSiteData(NPError&& aRv,
+                                                            uint64_t&& aCallbackId) override;
 
     virtual mozilla::ipc::IPCResult RecvReturnSitesWithData(nsTArray<nsCString>&& aSites,
-                                                            const uint64_t& aCallbackId) override;
+                                                            uint64_t&& aCallbackId) override;
 
     void SetPluginFuncs(NPPluginFuncs* aFuncs);
 
@@ -523,7 +523,7 @@ private:
 
     virtual mozilla::ipc::IPCResult
     AnswerNPN_SetValue_NPPVpluginRequiresAudioDeviceChanges(
-                                        const bool& shouldRegister,
+                                        bool&& shouldRegister,
                                         NPError* result) override;
 
     PluginProcessParent* mSubprocess;

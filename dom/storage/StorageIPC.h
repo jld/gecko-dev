@@ -72,12 +72,12 @@ private:
   ActorDestroy(ActorDestroyReason aWhy) override;
 
   mozilla::ipc::IPCResult
-  RecvObserve(const PrincipalInfo& aPrincipalInfo,
-              const uint32_t& aPrivateBrowsingId,
-              const nsString& aDocumentURI,
-              const nsString& aKey,
-              const nsString& aOldValue,
-              const nsString& aNewValue) override;
+  RecvObserve(PrincipalInfo&& aPrincipalInfo,
+              uint32_t&& aPrivateBrowsingId,
+              nsString&& aDocumentURI,
+              nsString&& aKey,
+              nsString&& aOldValue,
+              nsString&& aNewValue) override;
 };
 
 // Child side of the IPC protocol, exposes as DB interface but
@@ -149,20 +149,20 @@ public:
   virtual bool ShouldPreloadOrigin(const nsACString& aOriginNoSuffix);
 
 private:
-  mozilla::ipc::IPCResult RecvObserve(const nsCString& aTopic,
-                                      const nsString& aOriginAttributesPattern,
-                                      const nsCString& aOriginScope) override;
-  mozilla::ipc::IPCResult RecvLoadItem(const nsCString& aOriginSuffix,
-                                       const nsCString& aOriginNoSuffix,
-                                       const nsString& aKey,
-                                       const nsString& aValue) override;
-  mozilla::ipc::IPCResult RecvLoadDone(const nsCString& aOriginSuffix,
-                                       const nsCString& aOriginNoSuffix,
-                                       const nsresult& aRv) override;
+  mozilla::ipc::IPCResult RecvObserve(nsCString&& aTopic,
+                                      nsString&& aOriginAttributesPattern,
+                                      nsCString&& aOriginScope) override;
+  mozilla::ipc::IPCResult RecvLoadItem(nsCString&& aOriginSuffix,
+                                       nsCString&& aOriginNoSuffix,
+                                       nsString&& aKey,
+                                       nsString&& aValue) override;
+  mozilla::ipc::IPCResult RecvLoadDone(nsCString&& aOriginSuffix,
+                                       nsCString&& aOriginNoSuffix,
+                                       nsresult&& aRv) override;
   mozilla::ipc::IPCResult RecvOriginsHavingData(nsTArray<nsCString>&& aOrigins) override;
-  mozilla::ipc::IPCResult RecvLoadUsage(const nsCString& aOriginNoSuffix,
-                                        const int64_t& aUsage) override;
-  mozilla::ipc::IPCResult RecvError(const nsresult& aRv) override;
+  mozilla::ipc::IPCResult RecvLoadUsage(nsCString&& aOriginNoSuffix,
+                                        int64_t&& aUsage) override;
+  mozilla::ipc::IPCResult RecvError(nsresult&& aRv) override;
 
   nsTHashtable<nsCStringHashKey>& OriginsHavingData();
 
@@ -210,10 +210,10 @@ private:
   RecvDeleteMe() override;
 
   mozilla::ipc::IPCResult
-  RecvNotify(const nsString& aDocumentURI,
-             const nsString& aKey,
-             const nsString& aOldValue,
-             const nsString& aNewValue) override;
+  RecvNotify(nsString&& aDocumentURI,
+             nsString&& aKey,
+             nsString&& aOldValue,
+             nsString&& aNewValue) override;
 };
 
 // Receives async requests from child processes and is responsible
@@ -316,37 +316,37 @@ private:
   virtual void ActorDestroy(ActorDestroyReason aWhy) override;
   mozilla::ipc::IPCResult RecvDeleteMe() override;
 
-  mozilla::ipc::IPCResult RecvAsyncPreload(const nsCString& aOriginSuffix,
-                                           const nsCString& aOriginNoSuffix,
-                                           const bool& aPriority) override;
-  mozilla::ipc::IPCResult RecvPreload(const nsCString& aOriginSuffix,
-                                      const nsCString& aOriginNoSuffix,
-                                      const uint32_t& aAlreadyLoadedCount,
+  mozilla::ipc::IPCResult RecvAsyncPreload(nsCString&& aOriginSuffix,
+                                           nsCString&& aOriginNoSuffix,
+                                           bool&& aPriority) override;
+  mozilla::ipc::IPCResult RecvPreload(nsCString&& aOriginSuffix,
+                                      nsCString&& aOriginNoSuffix,
+                                      uint32_t&& aAlreadyLoadedCount,
                                       InfallibleTArray<nsString>* aKeys,
                                       InfallibleTArray<nsString>* aValues,
                                       nsresult* aRv) override;
-  mozilla::ipc::IPCResult RecvAsyncGetUsage(const nsCString& aOriginNoSuffix) override;
-  mozilla::ipc::IPCResult RecvAsyncAddItem(const nsCString& aOriginSuffix,
-                                           const nsCString& aOriginNoSuffix,
-                                           const nsString& aKey,
-                                           const nsString& aValue) override;
-  mozilla::ipc::IPCResult RecvAsyncUpdateItem(const nsCString& aOriginSuffix,
-                                              const nsCString& aOriginNoSuffix,
-                                              const nsString& aKey,
-                                              const nsString& aValue) override;
-  mozilla::ipc::IPCResult RecvAsyncRemoveItem(const nsCString& aOriginSuffix,
-                                              const nsCString& aOriginNoSuffix,
-                                              const nsString& aKey) override;
-  mozilla::ipc::IPCResult RecvAsyncClear(const nsCString& aOriginSuffix,
-                                         const nsCString& aOriginNoSuffix) override;
+  mozilla::ipc::IPCResult RecvAsyncGetUsage(nsCString&& aOriginNoSuffix) override;
+  mozilla::ipc::IPCResult RecvAsyncAddItem(nsCString&& aOriginSuffix,
+                                           nsCString&& aOriginNoSuffix,
+                                           nsString&& aKey,
+                                           nsString&& aValue) override;
+  mozilla::ipc::IPCResult RecvAsyncUpdateItem(nsCString&& aOriginSuffix,
+                                              nsCString&& aOriginNoSuffix,
+                                              nsString&& aKey,
+                                              nsString&& aValue) override;
+  mozilla::ipc::IPCResult RecvAsyncRemoveItem(nsCString&& aOriginSuffix,
+                                              nsCString&& aOriginNoSuffix,
+                                              nsString&& aKey) override;
+  mozilla::ipc::IPCResult RecvAsyncClear(nsCString&& aOriginSuffix,
+                                         nsCString&& aOriginNoSuffix) override;
   mozilla::ipc::IPCResult RecvAsyncFlush() override;
 
   mozilla::ipc::IPCResult RecvStartup() override;
   mozilla::ipc::IPCResult RecvClearAll() override;
   mozilla::ipc::IPCResult RecvClearMatchingOrigin(
-                                     const nsCString& aOriginNoSuffix) override;
+                                     nsCString&& aOriginNoSuffix) override;
   mozilla::ipc::IPCResult RecvClearMatchingOriginAttributes(
-                              const OriginAttributesPattern& aPattern) override;
+                              OriginAttributesPattern&& aPattern) override;
 
   void Observe(const nsCString& aTopic,
                const nsString& aOriginAttrPattern,

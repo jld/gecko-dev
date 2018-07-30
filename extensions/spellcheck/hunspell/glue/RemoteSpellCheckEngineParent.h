@@ -21,16 +21,16 @@ public:
 
   virtual void ActorDestroy(ActorDestroyReason aWhy) override;
 
-  virtual mozilla::ipc::IPCResult RecvSetDictionary(const nsString& aDictionary,
+  virtual mozilla::ipc::IPCResult RecvSetDictionary(nsString&& aDictionary,
                                                     bool* success) override;
 
   virtual mozilla::ipc::IPCResult RecvSetDictionaryFromList(
                                     nsTArray<nsString>&& aList,
-                                    const intptr_t& aPromiseId) override;
+                                    intptr_t&& aPromiseId) override;
 
-  virtual mozilla::ipc::IPCResult RecvCheck(const nsString& aWord, bool* aIsMisspelled) override;
+  virtual mozilla::ipc::IPCResult RecvCheck(nsString&& aWord, bool* aIsMisspelled) override;
 
-  virtual mozilla::ipc::IPCResult RecvCheckAndSuggest(const nsString& aWord,
+  virtual mozilla::ipc::IPCResult RecvCheckAndSuggest(nsString&& aWord,
                                                       bool* aIsMisspelled,
                                                       InfallibleTArray<nsString>* aSuggestions)
       override;

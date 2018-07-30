@@ -92,16 +92,16 @@ protected:
 
   virtual mozilla::ipc::IPCResult RecvUpdateDisplayInfo(nsTArray<VRDisplayInfo>&& aDisplayUpdates) override;
 
-  virtual mozilla::ipc::IPCResult RecvDispatchSubmitFrameResult(const uint32_t& aDisplayID, const VRSubmitFrameResultInfo& aResult) override;
-  virtual mozilla::ipc::IPCResult RecvGamepadUpdate(const GamepadChangeEvent& aGamepadEvent) override;
-  virtual mozilla::ipc::IPCResult RecvReplyGamepadVibrateHaptic(const uint32_t& aPromiseID) override;
+  virtual mozilla::ipc::IPCResult RecvDispatchSubmitFrameResult(uint32_t&& aDisplayID, VRSubmitFrameResultInfo&& aResult) override;
+  virtual mozilla::ipc::IPCResult RecvGamepadUpdate(GamepadChangeEvent&& aGamepadEvent) override;
+  virtual mozilla::ipc::IPCResult RecvReplyGamepadVibrateHaptic(uint32_t&& aPromiseID) override;
 
-  virtual mozilla::ipc::IPCResult RecvReplyCreateVRServiceTestDisplay(const nsCString& aID,
-                                                                      const uint32_t& aPromiseID,
-                                                                      const uint32_t& aDeviceID) override;
-  virtual mozilla::ipc::IPCResult RecvReplyCreateVRServiceTestController(const nsCString& aID,
-                                                                         const uint32_t& aPromiseID,
-                                                                         const uint32_t& aDeviceID) override;
+  virtual mozilla::ipc::IPCResult RecvReplyCreateVRServiceTestDisplay(nsCString&& aID,
+                                                                      uint32_t&& aPromiseID,
+                                                                      uint32_t&& aDeviceID) override;
+  virtual mozilla::ipc::IPCResult RecvReplyCreateVRServiceTestController(nsCString&& aID,
+                                                                         uint32_t&& aPromiseID,
+                                                                         uint32_t&& aDeviceID) override;
   bool IsSameProcess() const
   {
     return OtherPid() == base::GetCurrentProcId();

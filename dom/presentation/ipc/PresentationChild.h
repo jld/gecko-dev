@@ -33,8 +33,8 @@ public:
   DeallocPPresentationRequestChild(PPresentationRequestChild* aActor) override;
 
   mozilla::ipc::IPCResult RecvPPresentationBuilderConstructor(PPresentationBuilderChild* aActor,
-                                                              const nsString& aSessionId,
-                                                              const uint8_t& aRole) override;
+                                                              nsString&& aSessionId,
+                                                              uint8_t&& aRole) override;
 
   virtual PPresentationBuilderChild*
   AllocPPresentationBuilderChild(const nsString& aSessionId, const uint8_t& aRole) override;
@@ -44,26 +44,26 @@ public:
 
   virtual mozilla::ipc::IPCResult
   RecvNotifyAvailableChange(nsTArray<nsString>&& aAvailabilityUrls,
-                            const bool& aAvailable) override;
+                            bool&& aAvailable) override;
 
   virtual mozilla::ipc::IPCResult
-  RecvNotifySessionStateChange(const nsString& aSessionId,
-                               const uint16_t& aState,
-                               const nsresult& aReason) override;
+  RecvNotifySessionStateChange(nsString&& aSessionId,
+                               uint16_t&& aState,
+                               nsresult&& aReason) override;
 
   virtual mozilla::ipc::IPCResult
-  RecvNotifyMessage(const nsString& aSessionId,
-                    const nsCString& aData,
-                    const bool& aIsBinary) override;
+  RecvNotifyMessage(nsString&& aSessionId,
+                    nsCString&& aData,
+                    bool&& aIsBinary) override;
 
   virtual mozilla::ipc::IPCResult
-  RecvNotifySessionConnect(const uint64_t& aWindowId,
-                           const nsString& aSessionId) override;
+  RecvNotifySessionConnect(uint64_t&& aWindowId,
+                           nsString&& aSessionId) override;
 
   virtual mozilla::ipc::IPCResult
-  RecvNotifyCloseSessionTransport(const nsString& aSessionId,
-                                  const uint8_t& aRole,
-                                  const nsresult& aReason) override;
+  RecvNotifyCloseSessionTransport(nsString&& aSessionId,
+                                  uint8_t&& aRole,
+                                  nsresult&& aReason) override;
 
 private:
   virtual ~PresentationChild();
@@ -83,10 +83,10 @@ public:
   ActorDestroy(ActorDestroyReason aWhy) override;
 
   virtual mozilla::ipc::IPCResult
-  Recv__delete__(const nsresult& aResult) override;
+  Recv__delete__(nsresult&& aResult) override;
 
   virtual mozilla::ipc::IPCResult
-  RecvNotifyRequestUrlSelected(const nsString& aUrl) override;
+  RecvNotifyRequestUrlSelected(nsString&& aUrl) override;
 
 private:
   virtual ~PresentationRequestChild();

@@ -209,7 +209,7 @@ QuotaUsageRequestChild::ActorDestroy(ActorDestroyReason aWhy)
 }
 
 mozilla::ipc::IPCResult
-QuotaUsageRequestChild::Recv__delete__(const UsageRequestResponse& aResponse)
+QuotaUsageRequestChild::Recv__delete__(UsageRequestResponse&& aResponse)
 {
   AssertIsOnOwningThread();
   MOZ_ASSERT(mRequest);
@@ -305,7 +305,7 @@ QuotaRequestChild::ActorDestroy(ActorDestroyReason aWhy)
 }
 
 mozilla::ipc::IPCResult
-QuotaRequestChild::Recv__delete__(const RequestResponse& aResponse)
+QuotaRequestChild::Recv__delete__(RequestResponse&& aResponse)
 {
   AssertIsOnOwningThread();
   MOZ_ASSERT(mRequest);

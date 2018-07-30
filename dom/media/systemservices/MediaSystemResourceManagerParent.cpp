@@ -25,9 +25,9 @@ MediaSystemResourceManagerParent::~MediaSystemResourceManagerParent()
 }
 
 mozilla::ipc::IPCResult
-MediaSystemResourceManagerParent::RecvAcquire(const uint32_t& aId,
-                                              const MediaSystemResourceType& aResourceType,
-                                              const bool& aWillWait)
+MediaSystemResourceManagerParent::RecvAcquire(uint32_t&& aId,
+                                              MediaSystemResourceType&& aResourceType,
+                                              bool&& aWillWait)
 {
   MediaSystemResourceRequest* request = mResourceRequests.Get(aId);
   MOZ_ASSERT(!request);
@@ -44,7 +44,7 @@ MediaSystemResourceManagerParent::RecvAcquire(const uint32_t& aId,
 }
 
 mozilla::ipc::IPCResult
-MediaSystemResourceManagerParent::RecvRelease(const uint32_t& aId)
+MediaSystemResourceManagerParent::RecvRelease(uint32_t&& aId)
 {
   MediaSystemResourceRequest* request = mResourceRequests.Get(aId);
   if (!request) {

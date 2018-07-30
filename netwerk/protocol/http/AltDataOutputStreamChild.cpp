@@ -137,7 +137,7 @@ AltDataOutputStreamChild::IsNonBlocking(bool *_retval)
 }
 
 mozilla::ipc::IPCResult
-AltDataOutputStreamChild::RecvError(const nsresult& err)
+AltDataOutputStreamChild::RecvError(nsresult&& err)
 {
   mError = err;
   return IPC_OK();

@@ -23,7 +23,7 @@ class PaymentRequestParent final : public nsIPaymentActionCallback
 
 protected:
   mozilla::ipc::IPCResult
-  RecvRequestPayment(const IPCPaymentActionRequest& aRequest) override;
+  RecvRequestPayment(IPCPaymentActionRequest&& aRequest) override;
 
   mozilla::ipc::IPCResult Recv__delete__() override;
 

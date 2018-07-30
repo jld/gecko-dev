@@ -24,11 +24,11 @@ public:
   virtual ~MediaSystemResourceManagerParent();
 
 protected:
-  mozilla::ipc::IPCResult RecvAcquire(const uint32_t& aId,
-                                      const MediaSystemResourceType& aResourceType,
-                                      const bool& aWillWait) override;
+  mozilla::ipc::IPCResult RecvAcquire(uint32_t&& aId,
+                                      MediaSystemResourceType&& aResourceType,
+                                      bool&& aWillWait) override;
 
-  mozilla::ipc::IPCResult RecvRelease(const uint32_t& aId) override;
+  mozilla::ipc::IPCResult RecvRelease(uint32_t&& aId) override;
 
   mozilla::ipc::IPCResult RecvRemoveResourceManager() override;
 

@@ -26,8 +26,8 @@ namespace a11y {
 uint64_t DocAccessibleParent::sMaxDocID = 0;
 
 mozilla::ipc::IPCResult
-DocAccessibleParent::RecvShowEvent(const ShowEventData& aData,
-                                   const bool& aFromUser)
+DocAccessibleParent::RecvShowEvent(ShowEventData&& aData,
+                                   bool&& aFromUser)
 {
   if (mShutdown)
     return IPC_OK();
@@ -146,8 +146,8 @@ DocAccessibleParent::AddSubtree(ProxyAccessible* aParent,
 }
 
 mozilla::ipc::IPCResult
-DocAccessibleParent::RecvHideEvent(const uint64_t& aRootID,
-                                   const bool& aFromUser)
+DocAccessibleParent::RecvHideEvent(uint64_t&& aRootID,
+                                   bool&& aFromUser)
 {
   if (mShutdown)
     return IPC_OK();
@@ -203,7 +203,7 @@ DocAccessibleParent::RecvHideEvent(const uint64_t& aRootID,
 }
 
 mozilla::ipc::IPCResult
-DocAccessibleParent::RecvEvent(const uint64_t& aID, const uint32_t& aEventType)
+DocAccessibleParent::RecvEvent(uint64_t&& aID, uint32_t&& aEventType)
 {
   if (mShutdown) {
     return IPC_OK();
@@ -233,9 +233,9 @@ DocAccessibleParent::RecvEvent(const uint64_t& aID, const uint32_t& aEventType)
 }
 
 mozilla::ipc::IPCResult
-DocAccessibleParent::RecvStateChangeEvent(const uint64_t& aID,
-                                          const uint64_t& aState,
-                                          const bool& aEnabled)
+DocAccessibleParent::RecvStateChangeEvent(uint64_t&& aID,
+                                          uint64_t&& aState,
+                                          bool&& aEnabled)
 {
   if (mShutdown) {
     return IPC_OK();
@@ -269,11 +269,11 @@ DocAccessibleParent::RecvStateChangeEvent(const uint64_t& aID,
 }
 
 mozilla::ipc::IPCResult
-DocAccessibleParent::RecvCaretMoveEvent(const uint64_t& aID,
+DocAccessibleParent::RecvCaretMoveEvent(uint64_t&& aID,
 #if defined(XP_WIN)
-                                        const LayoutDeviceIntRect& aCaretRect,
+                                        LayoutDeviceIntRect&& aCaretRect,
 #endif // defined (XP_WIN)
-                                        const int32_t& aOffset)
+                                        int32_t&& aOffset)
 {
   if (mShutdown) {
     return IPC_OK();
@@ -308,12 +308,12 @@ DocAccessibleParent::RecvCaretMoveEvent(const uint64_t& aID,
 }
 
 mozilla::ipc::IPCResult
-DocAccessibleParent::RecvTextChangeEvent(const uint64_t& aID,
-                                         const nsString& aStr,
-                                         const int32_t& aStart,
-                                         const uint32_t& aLen,
-                                         const bool& aIsInsert,
-                                         const bool& aFromUser)
+DocAccessibleParent::RecvTextChangeEvent(uint64_t&& aID,
+                                         nsString&& aStr,
+                                         int32_t&& aStart,
+                                         uint32_t&& aLen,
+                                         bool&& aIsInsert,
+                                         bool&& aFromUser)
 {
   if (mShutdown) {
     return IPC_OK();
@@ -347,12 +347,12 @@ DocAccessibleParent::RecvTextChangeEvent(const uint64_t& aID,
 #if defined(XP_WIN)
 
 mozilla::ipc::IPCResult
-DocAccessibleParent::RecvSyncTextChangeEvent(const uint64_t& aID,
-                                             const nsString& aStr,
-                                             const int32_t& aStart,
-                                             const uint32_t& aLen,
-                                             const bool& aIsInsert,
-                                             const bool& aFromUser)
+DocAccessibleParent::RecvSyncTextChangeEvent(uint64_t&& aID,
+                                             nsString&& aStr,
+                                             int32_t&& aStart,
+                                             uint32_t&& aLen,
+                                             bool&& aIsInsert,
+                                             bool&& aFromUser)
 {
   return RecvTextChangeEvent(aID, aStr, aStart, aLen, aIsInsert, aFromUser);
 }
@@ -360,9 +360,9 @@ DocAccessibleParent::RecvSyncTextChangeEvent(const uint64_t& aID,
 #endif // defined(XP_WIN)
 
 mozilla::ipc::IPCResult
-DocAccessibleParent::RecvSelectionEvent(const uint64_t& aID,
-                                        const uint64_t& aWidgetID,
-                                        const uint32_t& aType)
+DocAccessibleParent::RecvSelectionEvent(uint64_t&& aID,
+                                        uint64_t&& aWidgetID,
+                                        uint32_t&& aType)
 {
   if (mShutdown) {
     return IPC_OK();
@@ -389,16 +389,16 @@ DocAccessibleParent::RecvSelectionEvent(const uint64_t& aID,
 }
 
 mozilla::ipc::IPCResult
-DocAccessibleParent::RecvVirtualCursorChangeEvent(const uint64_t& aID,
-                                                  const uint64_t& aOldPositionID,
-                                                  const int32_t& aOldStartOffset,
-                                                  const int32_t& aOldEndOffset,
-                                                  const uint64_t& aNewPositionID,
-                                                  const int32_t& aNewStartOffset,
-                                                  const int32_t& aNewEndOffset,
-                                                  const int16_t& aReason,
-                                                  const int16_t& aBoundaryType,
-                                                  const bool& aFromUser)
+DocAccessibleParent::RecvVirtualCursorChangeEvent(uint64_t&& aID,
+                                                  uint64_t&& aOldPositionID,
+                                                  int32_t&& aOldStartOffset,
+                                                  int32_t&& aOldEndOffset,
+                                                  uint64_t&& aNewPositionID,
+                                                  int32_t&& aNewStartOffset,
+                                                  int32_t&& aNewEndOffset,
+                                                  int16_t&& aReason,
+                                                  int16_t&& aBoundaryType,
+                                                  bool&& aFromUser)
 {
   ProxyAccessible* target = GetAccessible(aID);
   ProxyAccessible* oldPosition = GetAccessible(aOldPositionID);
@@ -427,7 +427,7 @@ DocAccessibleParent::RecvVirtualCursorChangeEvent(const uint64_t& aID,
 }
 
 mozilla::ipc::IPCResult
-DocAccessibleParent::RecvRoleChangedEvent(const a11y::role& aRole)
+DocAccessibleParent::RecvRoleChangedEvent(a11y::role&& aRole)
 {
   if (mShutdown) {
     return IPC_OK();
@@ -438,7 +438,7 @@ DocAccessibleParent::RecvRoleChangedEvent(const a11y::role& aRole)
 }
 
 mozilla::ipc::IPCResult
-DocAccessibleParent::RecvBindChildDoc(PDocAccessibleParent* aChildDoc, const uint64_t& aID)
+DocAccessibleParent::RecvBindChildDoc(PDocAccessibleParent* aChildDoc, uint64_t&& aID)
 {
   // One document should never directly be the child of another.
   // We should always have at least an outer doc accessible in between.
@@ -731,7 +731,7 @@ DocAccessibleParent::SetEmulatedWindowHandle(HWND aWindowHandle)
 
 mozilla::ipc::IPCResult
 DocAccessibleParent::RecvGetWindowedPluginIAccessible(
-      const WindowsHandle& aHwnd, IAccessibleHolder* aPluginCOMProxy)
+      WindowsHandle&& aHwnd, IAccessibleHolder* aPluginCOMProxy)
 {
 #if defined(MOZ_CONTENT_SANDBOX)
   // We don't actually want the accessible object for aHwnd, but rather the
@@ -762,8 +762,8 @@ DocAccessibleParent::RecvGetWindowedPluginIAccessible(
 }
 
 mozilla::ipc::IPCResult
-DocAccessibleParent::RecvFocusEvent(const uint64_t& aID,
-                                    const LayoutDeviceIntRect& aCaretRect)
+DocAccessibleParent::RecvFocusEvent(uint64_t&& aID,
+                                    LayoutDeviceIntRect&& aCaretRect)
 {
   if (mShutdown) {
     return IPC_OK();

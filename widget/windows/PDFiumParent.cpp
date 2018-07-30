@@ -38,7 +38,7 @@ PDFiumParent::ActorDestroy(ActorDestroyReason aWhy)
 }
 
 mozilla::ipc::IPCResult
-PDFiumParent::RecvConvertToEMFDone(const nsresult& aResult,
+PDFiumParent::RecvConvertToEMFDone(nsresult&& aResult,
                                    mozilla::ipc::Shmem&& aEMFContents)
 {
   MOZ_ASSERT(aEMFContents.IsReadable());

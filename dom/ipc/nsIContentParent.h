@@ -117,12 +117,12 @@ protected: // IPDL methods
 
   virtual mozilla::ipc::IPCResult
   RecvPBrowserConstructor(PBrowserParent* actor,
-                          const TabId& tabId,
-                          const TabId& sameTabGroupAs,
-                          const IPCTabContext& context,
-                          const uint32_t& chromeFlags,
-                          const ContentParentId& cpId,
-                          const bool& isForBrowser);
+                          TabId&& tabId,
+                          TabId&& sameTabGroupAs,
+                          IPCTabContext&& context,
+                          uint32_t&& chromeFlags,
+                          ContentParentId&& cpId,
+                          bool&& isForBrowser);
 
   virtual mozilla::ipc::PIPCBlobInputStreamParent*
   AllocPIPCBlobInputStreamParent(const nsID& aID, const uint64_t& aSize);
@@ -146,20 +146,20 @@ protected: // IPDL methods
   virtual bool
   DeallocPParentToChildStreamParent(mozilla::ipc::PParentToChildStreamParent* aActor);
 
-  virtual mozilla::ipc::IPCResult RecvSyncMessage(const nsString& aMsg,
-                                                  const ClonedMessageData& aData,
+  virtual mozilla::ipc::IPCResult RecvSyncMessage(nsString&& aMsg,
+                                                  ClonedMessageData&& aData,
                                                   InfallibleTArray<jsipc::CpowEntry>&& aCpows,
-                                                  const IPC::Principal& aPrincipal,
+                                                  IPC::Principal&& aPrincipal,
                                                   nsTArray<ipc::StructuredCloneData>* aRetvals);
-  virtual mozilla::ipc::IPCResult RecvRpcMessage(const nsString& aMsg,
-                                                 const ClonedMessageData& aData,
+  virtual mozilla::ipc::IPCResult RecvRpcMessage(nsString&& aMsg,
+                                                 ClonedMessageData&& aData,
                                                  InfallibleTArray<jsipc::CpowEntry>&& aCpows,
-                                                 const IPC::Principal& aPrincipal,
+                                                 IPC::Principal&& aPrincipal,
                                                  nsTArray<ipc::StructuredCloneData>* aRetvals);
-  virtual mozilla::ipc::IPCResult RecvAsyncMessage(const nsString& aMsg,
+  virtual mozilla::ipc::IPCResult RecvAsyncMessage(nsString&& aMsg,
                                                    InfallibleTArray<jsipc::CpowEntry>&& aCpows,
-                                                   const IPC::Principal& aPrincipal,
-                                                   const ClonedMessageData& aData);
+                                                   IPC::Principal&& aPrincipal,
+                                                   ClonedMessageData&& aData);
 
 protected: // members
   RefPtr<mozilla::dom::ProcessMessageManager> mMessageManager;

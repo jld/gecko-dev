@@ -151,8 +151,8 @@ nsFilePickerProxy::Open(nsIFilePickerShownCallback* aCallback)
 }
 
 mozilla::ipc::IPCResult
-nsFilePickerProxy::Recv__delete__(const MaybeInputData& aData,
-                                  const int16_t& aResult)
+nsFilePickerProxy::Recv__delete__(MaybeInputData&& aData,
+                                  int16_t&& aResult)
 {
   if (aData.type() == MaybeInputData::TInputBlobs) {
     const InfallibleTArray<IPCBlob>& blobs = aData.get_InputBlobs().blobs();

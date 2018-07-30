@@ -334,7 +334,7 @@ public:
   }
 
   virtual mozilla::ipc::IPCResult
-  RecvLockScreenOrientation(const dom::ScreenOrientationInternal& aOrientation, bool* aAllowed) override
+  RecvLockScreenOrientation(dom::ScreenOrientationInternal&& aOrientation, bool* aAllowed) override
   {
     // FIXME/bug 777980: unprivileged content may only lock
     // orientation while fullscreen.  We should check whether the
@@ -356,7 +356,7 @@ public:
   }
 
   virtual mozilla::ipc::IPCResult
-  RecvEnableSensorNotifications(const SensorType &aSensor) override {
+  RecvEnableSensorNotifications(SensorType&& aSensor) override {
     // We currently allow any content to register device-sensor
     // listeners.
     hal::RegisterSensorObserver(aSensor, this);
@@ -364,7 +364,7 @@ public:
   }
 
   virtual mozilla::ipc::IPCResult
-  RecvDisableSensorNotifications(const SensorType &aSensor) override {
+  RecvDisableSensorNotifications(SensorType&& aSensor) override {
     hal::UnregisterSensorObserver(aSensor, this);
     return IPC_OK();
   }
@@ -374,10 +374,10 @@ public:
   }
 
   virtual mozilla::ipc::IPCResult
-  RecvModifyWakeLock(const nsString& aTopic,
-                     const WakeLockControl& aLockAdjust,
-                     const WakeLockControl& aHiddenAdjust,
-                     const uint64_t& aProcessID) override
+  RecvModifyWakeLock(nsString&& aTopic,
+                     WakeLockControl&& aLockAdjust,
+                     WakeLockControl&& aHiddenAdjust,
+                     uint64_t&& aProcessID) override
   {
     MOZ_ASSERT(aProcessID != CONTENT_PROCESS_ID_UNKNOWN);
 
@@ -402,7 +402,7 @@ public:
   }
 
   virtual mozilla::ipc::IPCResult
-  RecvGetWakeLockInfo(const nsString &aTopic, WakeLockInformation *aWakeLockInfo) override
+  RecvGetWakeLockInfo(nsString&& aTopic, WakeLockInformation *aWakeLockInfo) override
   {
     hal::GetWakeLockInfo(aTopic, aWakeLockInfo);
     return IPC_OK();
@@ -423,35 +423,35 @@ public:
   }
 
   virtual mozilla::ipc::IPCResult
-  RecvNotifyBatteryChange(const BatteryInformation& aBatteryInfo) override {
+  RecvNotifyBatteryChange(BatteryInformation&& aBatteryInfo) override {
     hal::NotifyBatteryChange(aBatteryInfo);
     return IPC_OK();
   }
 
   virtual mozilla::ipc::IPCResult
-  RecvNotifySensorChange(const hal::SensorData &aSensorData) override;
+  RecvNotifySensorChange(hal::SensorData&& aSensorData) override;
 
   virtual mozilla::ipc::IPCResult
-  RecvNotifyNetworkChange(const NetworkInformation& aNetworkInfo) override {
+  RecvNotifyNetworkChange(NetworkInformation&& aNetworkInfo) override {
     hal::NotifyNetworkChange(aNetworkInfo);
     return IPC_OK();
   }
 
   virtual mozilla::ipc::IPCResult
-  RecvNotifyWakeLockChange(const WakeLockInformation& aWakeLockInfo) override {
+  RecvNotifyWakeLockChange(WakeLockInformation&& aWakeLockInfo) override {
     hal::NotifyWakeLockChange(aWakeLockInfo);
     return IPC_OK();
   }
 
   virtual mozilla::ipc::IPCResult
-  RecvNotifyScreenConfigurationChange(const ScreenConfiguration& aScreenConfiguration) override {
+  RecvNotifyScreenConfigurationChange(ScreenConfiguration&& aScreenConfiguration) override {
     hal::NotifyScreenConfigurationChange(aScreenConfiguration);
     return IPC_OK();
   }
 };
 
 mozilla::ipc::IPCResult
-HalChild::RecvNotifySensorChange(const hal::SensorData &aSensorData) {
+HalChild::RecvNotifySensorChange(hal::SensorData&& aSensorData) {
   hal::NotifySensorChange(aSensorData);
 
   return IPC_OK();

@@ -21,7 +21,7 @@ class ClientNavigateOpParent final : public PClientNavigateOpParent
   ActorDestroy(ActorDestroyReason aReason) override;
 
   mozilla::ipc::IPCResult
-  Recv__delete__(const ClientOpResult& aResult) override;
+  Recv__delete__(ClientOpResult&& aResult) override;
 
 public:
   ClientNavigateOpParent(const ClientNavigateOpConstructorArgs& aArgs,

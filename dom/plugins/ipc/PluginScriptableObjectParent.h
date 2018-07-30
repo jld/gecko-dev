@@ -53,11 +53,11 @@ public:
   ActorDestroy(ActorDestroyReason aWhy) override;
 
   virtual mozilla::ipc::IPCResult
-  AnswerHasMethod(const PluginIdentifier& aId,
+  AnswerHasMethod(PluginIdentifier&& aId,
                   bool* aHasMethod) override;
 
   virtual mozilla::ipc::IPCResult
-  AnswerInvoke(const PluginIdentifier& aId,
+  AnswerInvoke(PluginIdentifier&& aId,
                InfallibleTArray<Variant>&& aArgs,
                Variant* aResult,
                bool* aSuccess) override;
@@ -68,21 +68,21 @@ public:
                       bool* aSuccess) override;
 
   virtual mozilla::ipc::IPCResult
-  AnswerHasProperty(const PluginIdentifier& aId,
+  AnswerHasProperty(PluginIdentifier&& aId,
                     bool* aHasProperty) override;
 
   virtual mozilla::ipc::IPCResult
-  AnswerGetParentProperty(const PluginIdentifier& aId,
+  AnswerGetParentProperty(PluginIdentifier&& aId,
                           Variant* aResult,
                           bool* aSuccess) override;
 
   virtual mozilla::ipc::IPCResult
-  AnswerSetProperty(const PluginIdentifier& aId,
-                    const Variant& aValue,
+  AnswerSetProperty(PluginIdentifier&& aId,
+                    Variant&& aValue,
                     bool* aSuccess) override;
 
   virtual mozilla::ipc::IPCResult
-  AnswerRemoveProperty(const PluginIdentifier& aId,
+  AnswerRemoveProperty(PluginIdentifier&& aId,
                        bool* aSuccess) override;
 
   virtual mozilla::ipc::IPCResult
@@ -95,7 +95,7 @@ public:
                   bool* aSuccess) override;
 
   virtual mozilla::ipc::IPCResult
-  AnswerNPN_Evaluate(const nsCString& aScript,
+  AnswerNPN_Evaluate(nsCString&& aScript,
                      Variant* aResult,
                      bool* aSuccess) override;
 

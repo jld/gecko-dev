@@ -73,12 +73,12 @@ public:
   void GetHost(nsAString& aHost);
   void GetPort(uint16_t* aPort);
 
-  virtual mozilla::ipc::IPCResult RecvCallback(const nsString& aType,
-                                               const CallbackData& aData,
-                                               const uint32_t& aReadyState) override;
+  virtual mozilla::ipc::IPCResult RecvCallback(nsString&& aType,
+                                               CallbackData&& aData,
+                                               uint32_t&& aReadyState) override;
   virtual mozilla::ipc::IPCResult RecvRequestDelete() override;
-  virtual mozilla::ipc::IPCResult RecvUpdateBufferedAmount(const uint32_t& aBufferred,
-                                                           const uint32_t& aTrackingNumber) override;
+  virtual mozilla::ipc::IPCResult RecvUpdateBufferedAmount(uint32_t&& aBufferred,
+                                                           uint32_t&& aTrackingNumber) override;
   nsresult SetFilterName(const nsACString& aFilterName);
 private:
   nsString mHost;

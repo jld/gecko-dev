@@ -28,7 +28,7 @@ APZInputBridgeParent::~APZInputBridgeParent()
 
 mozilla::ipc::IPCResult
 APZInputBridgeParent::RecvReceiveMultiTouchInputEvent(
-    const MultiTouchInput& aEvent,
+    MultiTouchInput&& aEvent,
     nsEventStatus* aOutStatus,
     MultiTouchInput* aOutEvent,
     ScrollableLayerGuid* aOutTargetGuid,
@@ -47,7 +47,7 @@ APZInputBridgeParent::RecvReceiveMultiTouchInputEvent(
 
 mozilla::ipc::IPCResult
 APZInputBridgeParent::RecvReceiveMouseInputEvent(
-    const MouseInput& aEvent,
+    MouseInput&& aEvent,
     nsEventStatus* aOutStatus,
     MouseInput* aOutEvent,
     ScrollableLayerGuid* aOutTargetGuid,
@@ -66,7 +66,7 @@ APZInputBridgeParent::RecvReceiveMouseInputEvent(
 
 mozilla::ipc::IPCResult
 APZInputBridgeParent::RecvReceivePanGestureInputEvent(
-    const PanGestureInput& aEvent,
+    PanGestureInput&& aEvent,
     nsEventStatus* aOutStatus,
     PanGestureInput* aOutEvent,
     ScrollableLayerGuid* aOutTargetGuid,
@@ -85,7 +85,7 @@ APZInputBridgeParent::RecvReceivePanGestureInputEvent(
 
 mozilla::ipc::IPCResult
 APZInputBridgeParent::RecvReceivePinchGestureInputEvent(
-    const PinchGestureInput& aEvent,
+    PinchGestureInput&& aEvent,
     nsEventStatus* aOutStatus,
     PinchGestureInput* aOutEvent,
     ScrollableLayerGuid* aOutTargetGuid,
@@ -104,7 +104,7 @@ APZInputBridgeParent::RecvReceivePinchGestureInputEvent(
 
 mozilla::ipc::IPCResult
 APZInputBridgeParent::RecvReceiveTapGestureInputEvent(
-    const TapGestureInput& aEvent,
+    TapGestureInput&& aEvent,
     nsEventStatus* aOutStatus,
     TapGestureInput* aOutEvent,
     ScrollableLayerGuid* aOutTargetGuid,
@@ -123,7 +123,7 @@ APZInputBridgeParent::RecvReceiveTapGestureInputEvent(
 
 mozilla::ipc::IPCResult
 APZInputBridgeParent::RecvReceiveScrollWheelInputEvent(
-    const ScrollWheelInput& aEvent,
+    ScrollWheelInput&& aEvent,
     nsEventStatus* aOutStatus,
     ScrollWheelInput* aOutEvent,
     ScrollableLayerGuid* aOutTargetGuid,
@@ -142,7 +142,7 @@ APZInputBridgeParent::RecvReceiveScrollWheelInputEvent(
 
 mozilla::ipc::IPCResult
 APZInputBridgeParent::RecvReceiveKeyboardInputEvent(
-        const KeyboardInput& aEvent,
+        KeyboardInput&& aEvent,
         nsEventStatus* aOutStatus,
         KeyboardInput* aOutEvent,
         ScrollableLayerGuid* aOutTargetGuid,
@@ -161,8 +161,8 @@ APZInputBridgeParent::RecvReceiveKeyboardInputEvent(
 
 mozilla::ipc::IPCResult
 APZInputBridgeParent::RecvUpdateWheelTransaction(
-        const LayoutDeviceIntPoint& aRefPoint,
-        const EventMessage& aEventMessage)
+        LayoutDeviceIntPoint&& aRefPoint,
+        EventMessage&& aEventMessage)
 {
   mTreeManager->InputBridge()->UpdateWheelTransaction(
         aRefPoint, aEventMessage);
@@ -171,7 +171,7 @@ APZInputBridgeParent::RecvUpdateWheelTransaction(
 
 mozilla::ipc::IPCResult
 APZInputBridgeParent::RecvProcessUnhandledEvent(
-        const LayoutDeviceIntPoint& aRefPoint,
+        LayoutDeviceIntPoint&& aRefPoint,
         LayoutDeviceIntPoint* aOutRefPoint,
         ScrollableLayerGuid*  aOutTargetGuid,
         uint64_t*             aOutFocusSequenceNumber)

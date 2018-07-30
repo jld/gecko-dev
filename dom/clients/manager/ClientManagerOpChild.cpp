@@ -23,7 +23,7 @@ ClientManagerOpChild::ActorDestroy(ActorDestroyReason aReason)
 }
 
 mozilla::ipc::IPCResult
-ClientManagerOpChild::Recv__delete__(const ClientOpResult& aResult)
+ClientManagerOpChild::Recv__delete__(ClientOpResult&& aResult)
 {
   mClientManager = nullptr;
   if (aResult.type() == ClientOpResult::Tnsresult &&

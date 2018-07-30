@@ -30,7 +30,7 @@ FileDescriptorSetChild::ForgetFileDescriptors(
 
 mozilla::ipc::IPCResult
 FileDescriptorSetChild::RecvAddFileDescriptor(
-                                         const FileDescriptor& aFileDescriptor)
+                                         FileDescriptor&& aFileDescriptor)
 {
   mFileDescriptors.AppendElement(aFileDescriptor);
   return IPC_OK();

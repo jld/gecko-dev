@@ -528,8 +528,8 @@ ChromiumCDMChild::RecvPurgeShmems()
 }
 
 mozilla::ipc::IPCResult
-ChromiumCDMChild::RecvInit(const bool& aAllowDistinctiveIdentifier,
-                           const bool& aAllowPersistentState)
+ChromiumCDMChild::RecvInit(bool&& aAllowDistinctiveIdentifier,
+                           bool&& aAllowPersistentState)
 {
   MOZ_ASSERT(IsOnMessageLoopThread());
   GMP_LOG("ChromiumCDMChild::RecvInit(distinctiveId=%d, persistentState=%d)",
@@ -543,7 +543,7 @@ ChromiumCDMChild::RecvInit(const bool& aAllowDistinctiveIdentifier,
 }
 
 mozilla::ipc::IPCResult
-ChromiumCDMChild::RecvSetServerCertificate(const uint32_t& aPromiseId,
+ChromiumCDMChild::RecvSetServerCertificate(uint32_t&& aPromiseId,
                                            nsTArray<uint8_t>&& aServerCert)
 
 {
@@ -560,9 +560,9 @@ ChromiumCDMChild::RecvSetServerCertificate(const uint32_t& aPromiseId,
 
 mozilla::ipc::IPCResult
 ChromiumCDMChild::RecvCreateSessionAndGenerateRequest(
-  const uint32_t& aPromiseId,
-  const uint32_t& aSessionType,
-  const uint32_t& aInitDataType,
+  uint32_t&& aPromiseId,
+  uint32_t&& aSessionType,
+  uint32_t&& aInitDataType,
   nsTArray<uint8_t>&& aInitData)
 {
   MOZ_ASSERT(IsOnMessageLoopThread());
@@ -586,9 +586,9 @@ ChromiumCDMChild::RecvCreateSessionAndGenerateRequest(
 }
 
 mozilla::ipc::IPCResult
-ChromiumCDMChild::RecvLoadSession(const uint32_t& aPromiseId,
-                                  const uint32_t& aSessionType,
-                                  const nsCString& aSessionId)
+ChromiumCDMChild::RecvLoadSession(uint32_t&& aPromiseId,
+                                  uint32_t&& aSessionType,
+                                  nsCString&& aSessionId)
 {
   MOZ_ASSERT(IsOnMessageLoopThread());
   GMP_LOG("ChromiumCDMChild::RecvLoadSession(pid=%u, type=%u, sessionId=%s)",
@@ -606,8 +606,8 @@ ChromiumCDMChild::RecvLoadSession(const uint32_t& aPromiseId,
 }
 
 mozilla::ipc::IPCResult
-ChromiumCDMChild::RecvUpdateSession(const uint32_t& aPromiseId,
-                                    const nsCString& aSessionId,
+ChromiumCDMChild::RecvUpdateSession(uint32_t&& aPromiseId,
+                                    nsCString&& aSessionId,
                                     nsTArray<uint8_t>&& aResponse)
 {
   MOZ_ASSERT(IsOnMessageLoopThread());
@@ -627,8 +627,8 @@ ChromiumCDMChild::RecvUpdateSession(const uint32_t& aPromiseId,
 }
 
 mozilla::ipc::IPCResult
-ChromiumCDMChild::RecvCloseSession(const uint32_t& aPromiseId,
-                                   const nsCString& aSessionId)
+ChromiumCDMChild::RecvCloseSession(uint32_t&& aPromiseId,
+                                   nsCString&& aSessionId)
 {
   MOZ_ASSERT(IsOnMessageLoopThread());
   GMP_LOG("ChromiumCDMChild::RecvCloseSession(pid=%" PRIu32 ", sid=%s)",
@@ -641,8 +641,8 @@ ChromiumCDMChild::RecvCloseSession(const uint32_t& aPromiseId,
 }
 
 mozilla::ipc::IPCResult
-ChromiumCDMChild::RecvRemoveSession(const uint32_t& aPromiseId,
-                                    const nsCString& aSessionId)
+ChromiumCDMChild::RecvRemoveSession(uint32_t&& aPromiseId,
+                                    nsCString&& aSessionId)
 {
   MOZ_ASSERT(IsOnMessageLoopThread());
   GMP_LOG("ChromiumCDMChild::RecvRemoveSession(pid=%" PRIu32 ", sid=%s)",
@@ -692,8 +692,8 @@ ToCDMHdcpVersion(const nsCString& aMinHdcpVersion)
 }
 
 mozilla::ipc::IPCResult
-ChromiumCDMChild::RecvGetStatusForPolicy(const uint32_t& aPromiseId,
-                                         const nsCString& aMinHdcpVersion)
+ChromiumCDMChild::RecvGetStatusForPolicy(uint32_t&& aPromiseId,
+                                         nsCString&& aMinHdcpVersion)
 {
   MOZ_ASSERT(IsOnMessageLoopThread());
   GMP_LOG("ChromiumCDMChild::RecvGetStatusForPolicy(pid=%" PRIu32 ", MinHdcpVersion=%s)",
@@ -750,8 +750,8 @@ ChromiumCDMChild::HasShmemOfSize(size_t aSize) const
 }
 
 mozilla::ipc::IPCResult
-ChromiumCDMChild::RecvDecrypt(const uint32_t& aId,
-                              const CDMInputBuffer& aBuffer)
+ChromiumCDMChild::RecvDecrypt(uint32_t&& aId,
+                              CDMInputBuffer&& aBuffer)
 {
   MOZ_ASSERT(IsOnMessageLoopThread());
   GMP_LOG("ChromiumCDMChild::RecvDecrypt()");
@@ -822,7 +822,7 @@ ChromiumCDMChild::RecvDecrypt(const uint32_t& aId,
 
 mozilla::ipc::IPCResult
 ChromiumCDMChild::RecvInitializeVideoDecoder(
-  const CDMVideoDecoderConfig& aConfig)
+  CDMVideoDecoderConfig&& aConfig)
 {
   MOZ_ASSERT(IsOnMessageLoopThread());
   MOZ_ASSERT(!mDecoderInitialized);
@@ -876,7 +876,7 @@ ChromiumCDMChild::RecvResetVideoDecoder()
 }
 
 mozilla::ipc::IPCResult
-ChromiumCDMChild::RecvDecryptAndDecodeFrame(const CDMInputBuffer& aBuffer)
+ChromiumCDMChild::RecvDecryptAndDecodeFrame(CDMInputBuffer&& aBuffer)
 {
   MOZ_ASSERT(IsOnMessageLoopThread());
   GMP_LOG("ChromiumCDMChild::RecvDecryptAndDecodeFrame() t=%" PRId64 ")",

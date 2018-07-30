@@ -26,7 +26,7 @@ PaymentRequestParent::PaymentRequestParent(uint64_t aTabId)
 }
 
 mozilla::ipc::IPCResult
-PaymentRequestParent::RecvRequestPayment(const IPCPaymentActionRequest& aRequest)
+PaymentRequestParent::RecvRequestPayment(IPCPaymentActionRequest&& aRequest)
 {
   if (!mActorAlive) {
     return IPC_FAIL_NO_REASON(this);

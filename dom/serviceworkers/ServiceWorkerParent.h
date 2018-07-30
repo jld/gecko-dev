@@ -28,8 +28,8 @@ class ServiceWorkerParent final : public PServiceWorkerParent
   RecvTeardown() override;
 
   mozilla::ipc::IPCResult
-  RecvPostMessage(const ClonedMessageData& aClonedData,
-                  const ClientInfoAndState& aSource) override;
+  RecvPostMessage(ClonedMessageData&& aClonedData,
+                  ClientInfoAndState&& aSource) override;
 
 public:
   ServiceWorkerParent();

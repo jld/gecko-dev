@@ -60,15 +60,15 @@ public:
 protected:
   virtual ~WyciwygChannelChild();
 
-  mozilla::ipc::IPCResult RecvOnStartRequest(const nsresult& statusCode,
-                                             const int64_t& contentLength,
-                                             const int32_t& source,
-                                             const nsCString& charset,
-                                             const nsCString& securityInfo) override;
-  mozilla::ipc::IPCResult RecvOnDataAvailable(const nsCString& data,
-                                              const uint64_t& offset) override;
-  mozilla::ipc::IPCResult RecvOnStopRequest(const nsresult& statusCode) override;
-  mozilla::ipc::IPCResult RecvCancelEarly(const nsresult& statusCode) override;
+  mozilla::ipc::IPCResult RecvOnStartRequest(nsresult&& statusCode,
+                                             int64_t&& contentLength,
+                                             int32_t&& source,
+                                             nsCString&& charset,
+                                             nsCString&& securityInfo) override;
+  mozilla::ipc::IPCResult RecvOnDataAvailable(nsCString&& data,
+                                              uint64_t&& offset) override;
+  mozilla::ipc::IPCResult RecvOnStopRequest(nsresult&& statusCode) override;
+  mozilla::ipc::IPCResult RecvCancelEarly(nsresult&& statusCode) override;
 
   void OnStartRequest(const nsresult& statusCode,
                       const int64_t& contentLength,

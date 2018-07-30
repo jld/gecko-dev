@@ -35,10 +35,10 @@ public:
             const bool& seekable,
             uint16_t* stype);
 
-  virtual mozilla::ipc::IPCResult RecvWrite(const int32_t& offset,
-                                            const uint32_t& newsize,
-                                            const Buffer& data) override;
-  virtual mozilla::ipc::IPCResult RecvNPP_DestroyStream(const NPReason& reason) override;
+  virtual mozilla::ipc::IPCResult RecvWrite(int32_t&& offset,
+                                            uint32_t&& newsize,
+                                            Buffer&& data) override;
+  virtual mozilla::ipc::IPCResult RecvNPP_DestroyStream(NPReason&& reason) override;
   virtual mozilla::ipc::IPCResult Recv__delete__() override;
 
   void EnsureCorrectInstance(PluginInstanceChild* i)

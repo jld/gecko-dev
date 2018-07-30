@@ -110,38 +110,38 @@ protected:
   mozilla::ipc::IPCResult RecvShutdown() override;
   mozilla::ipc::IPCResult RecvShutdownSync() override;
 
-  mozilla::ipc::IPCResult RecvPaintTime(const TransactionId& aTransactionId,
-                                        const TimeDuration& aPaintTime) override;
+  mozilla::ipc::IPCResult RecvPaintTime(TransactionId&& aTransactionId,
+                                        TimeDuration&& aPaintTime) override;
 
-  mozilla::ipc::IPCResult RecvUpdate(const TransactionInfo& aInfo) override;
+  mozilla::ipc::IPCResult RecvUpdate(TransactionInfo&& aInfo) override;
 
-  mozilla::ipc::IPCResult RecvSetLayerObserverEpoch(const uint64_t& aLayerObserverEpoch) override;
-  mozilla::ipc::IPCResult RecvNewCompositable(const CompositableHandle& aHandle,
-                                              const TextureInfo& aInfo) override;
-  mozilla::ipc::IPCResult RecvReleaseLayer(const LayerHandle& aHandle) override;
-  mozilla::ipc::IPCResult RecvReleaseCompositable(const CompositableHandle& aHandle) override;
+  mozilla::ipc::IPCResult RecvSetLayerObserverEpoch(uint64_t&& aLayerObserverEpoch) override;
+  mozilla::ipc::IPCResult RecvNewCompositable(CompositableHandle&& aHandle,
+                                              TextureInfo&& aInfo) override;
+  mozilla::ipc::IPCResult RecvReleaseLayer(LayerHandle&& aHandle) override;
+  mozilla::ipc::IPCResult RecvReleaseCompositable(CompositableHandle&& aHandle) override;
 
   mozilla::ipc::IPCResult RecvClearCachedResources() override;
   mozilla::ipc::IPCResult RecvScheduleComposite() override;
-  mozilla::ipc::IPCResult RecvSetTestSampleTime(const TimeStamp& aTime) override;
+  mozilla::ipc::IPCResult RecvSetTestSampleTime(TimeStamp&& aTime) override;
   mozilla::ipc::IPCResult RecvLeaveTestMode() override;
-  mozilla::ipc::IPCResult RecvGetAnimationOpacity(const uint64_t& aCompositorAnimationsId,
+  mozilla::ipc::IPCResult RecvGetAnimationOpacity(uint64_t&& aCompositorAnimationsId,
                                                   float* aOpacity,
                                                   bool* aHasAnimationOpacity) override;
-  mozilla::ipc::IPCResult RecvGetAnimationTransform(const uint64_t& aCompositorAnimationsId,
+  mozilla::ipc::IPCResult RecvGetAnimationTransform(uint64_t&& aCompositorAnimationsId,
                                                     MaybeTransform* aTransform) override;
-  mozilla::ipc::IPCResult RecvGetTransform(const LayerHandle& aHandle,
+  mozilla::ipc::IPCResult RecvGetTransform(LayerHandle&& aHandle,
                                            MaybeTransform* aTransform) override;
-  mozilla::ipc::IPCResult RecvSetAsyncScrollOffset(const FrameMetrics::ViewID& aId,
-                                                   const float& aX, const float& aY) override;
-  mozilla::ipc::IPCResult RecvSetAsyncZoom(const FrameMetrics::ViewID& aId,
-                                           const float& aValue) override;
+  mozilla::ipc::IPCResult RecvSetAsyncScrollOffset(FrameMetrics::ViewID&& aId,
+                                                   float&& aX, float&& aY) override;
+  mozilla::ipc::IPCResult RecvSetAsyncZoom(FrameMetrics::ViewID&& aId,
+                                           float&& aValue) override;
   mozilla::ipc::IPCResult RecvFlushApzRepaints() override;
   mozilla::ipc::IPCResult RecvGetAPZTestData(APZTestData* aOutData) override;
-  mozilla::ipc::IPCResult RecvRequestProperty(const nsString& aProperty, float* aValue) override;
-  mozilla::ipc::IPCResult RecvSetConfirmedTargetAPZC(const uint64_t& aBlockId,
+  mozilla::ipc::IPCResult RecvRequestProperty(nsString&& aProperty, float* aValue) override;
+  mozilla::ipc::IPCResult RecvSetConfirmedTargetAPZC(uint64_t&& aBlockId,
                                                      nsTArray<ScrollableLayerGuid>&& aTargets) override;
-  mozilla::ipc::IPCResult RecvRecordPaintTimes(const PaintTiming& aTiming) override;
+  mozilla::ipc::IPCResult RecvRecordPaintTimes(PaintTiming&& aTiming) override;
   mozilla::ipc::IPCResult RecvGetTextureFactoryIdentifier(TextureFactoryIdentifier* aIdentifier) override;
 
   bool SetLayerAttributes(const OpSetLayerAttributes& aOp);

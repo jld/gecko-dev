@@ -163,7 +163,7 @@ protected:
 
   // Overrides PFileSystemRequestChild
   virtual mozilla::ipc::IPCResult
-  Recv__delete__(const FileSystemResponseValue& value) override;
+  Recv__delete__(FileSystemResponseValue&& value) override;
 
   nsresult mErrorValue;
   RefPtr<FileSystemBase> mFileSystem;

@@ -274,15 +274,15 @@ CompositorManagerParent::DeallocPCompositorBridgeParent(PCompositorBridgeParent*
 }
 
 mozilla::ipc::IPCResult
-CompositorManagerParent::RecvAddSharedSurface(const wr::ExternalImageId& aId,
-                                              const SurfaceDescriptorShared& aDesc)
+CompositorManagerParent::RecvAddSharedSurface(wr::ExternalImageId&& aId,
+                                              SurfaceDescriptorShared&& aDesc)
 {
   SharedSurfacesParent::Add(aId, aDesc, OtherPid());
   return IPC_OK();
 }
 
 mozilla::ipc::IPCResult
-CompositorManagerParent::RecvRemoveSharedSurface(const wr::ExternalImageId& aId)
+CompositorManagerParent::RecvRemoveSharedSurface(wr::ExternalImageId&& aId)
 {
   SharedSurfacesParent::Remove(aId);
   return IPC_OK();

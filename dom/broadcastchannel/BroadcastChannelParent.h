@@ -31,7 +31,7 @@ private:
   ~BroadcastChannelParent();
 
   virtual mozilla::ipc::IPCResult
-  RecvPostMessage(const ClonedMessageData& aData) override;
+  RecvPostMessage(ClonedMessageData&& aData) override;
 
   virtual mozilla::ipc::IPCResult RecvClose() override;
 

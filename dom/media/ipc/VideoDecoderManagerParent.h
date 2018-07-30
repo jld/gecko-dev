@@ -40,8 +40,8 @@ protected:
                                                 nsCString* aErrorDescription) override;
   bool DeallocPVideoDecoderParent(PVideoDecoderParent* actor) override;
 
-  mozilla::ipc::IPCResult RecvReadback(const SurfaceDescriptorGPUVideo& aSD, SurfaceDescriptor* aResult) override;
-  mozilla::ipc::IPCResult RecvDeallocateSurfaceDescriptorGPUVideo(const SurfaceDescriptorGPUVideo& aSD) override;
+  mozilla::ipc::IPCResult RecvReadback(SurfaceDescriptorGPUVideo&& aSD, SurfaceDescriptor* aResult) override;
+  mozilla::ipc::IPCResult RecvDeallocateSurfaceDescriptorGPUVideo(SurfaceDescriptorGPUVideo&& aSD) override;
 
   void ActorDestroy(mozilla::ipc::IProtocol::ActorDestroyReason) override;
 

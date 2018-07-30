@@ -88,9 +88,9 @@ BrowserStreamChild::~BrowserStreamChild()
 }
 
 mozilla::ipc::IPCResult
-BrowserStreamChild::RecvWrite(const int32_t& offset,
-                              const uint32_t& newlength,
-                              const Buffer& data)
+BrowserStreamChild::RecvWrite(int32_t&& offset,
+                              uint32_t&& newlength,
+                              Buffer&& data)
 {
   PLUGIN_LOG_DEBUG_FUNCTION;
 
@@ -117,7 +117,7 @@ BrowserStreamChild::RecvWrite(const int32_t& offset,
 }
 
 mozilla::ipc::IPCResult
-BrowserStreamChild::RecvNPP_DestroyStream(const NPReason& reason)
+BrowserStreamChild::RecvNPP_DestroyStream(NPReason&& reason)
 {
   PLUGIN_LOG_DEBUG_METHOD;
 

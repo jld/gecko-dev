@@ -215,7 +215,7 @@ FTPChannelParent::ConnectChannel(const uint32_t& channelId)
 }
 
 mozilla::ipc::IPCResult
-FTPChannelParent::RecvCancel(const nsresult& status)
+FTPChannelParent::RecvCancel(nsresult&& status)
 {
   if (mChannel)
     mChannel->Cancel(status);
@@ -268,9 +268,9 @@ private:
 };
 
 mozilla::ipc::IPCResult
-FTPChannelParent::RecvDivertOnDataAvailable(const nsCString& data,
-                                            const uint64_t& offset,
-                                            const uint32_t& count)
+FTPChannelParent::RecvDivertOnDataAvailable(nsCString&& data,
+                                            uint64_t&& offset,
+                                            uint32_t&& count)
 {
   if (NS_WARN_IF(!mDivertingFromChild)) {
     MOZ_ASSERT(mDivertingFromChild,
@@ -353,7 +353,7 @@ private:
 };
 
 mozilla::ipc::IPCResult
-FTPChannelParent::RecvDivertOnStopRequest(const nsresult& statusCode)
+FTPChannelParent::RecvDivertOnStopRequest(nsresult&& statusCode)
 {
   if (NS_WARN_IF(!mDivertingFromChild)) {
     MOZ_ASSERT(mDivertingFromChild,

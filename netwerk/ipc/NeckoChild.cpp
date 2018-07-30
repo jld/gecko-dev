@@ -372,10 +372,10 @@ NeckoChild::DeallocPTransportProviderChild(PTransportProviderChild* aActor)
 }
 
 mozilla::ipc::IPCResult
-NeckoChild::RecvAsyncAuthPromptForNestedFrame(const TabId& aNestedFrameId,
-                                              const nsCString& aUri,
-                                              const nsString& aRealm,
-                                              const uint64_t& aCallbackId)
+NeckoChild::RecvAsyncAuthPromptForNestedFrame(TabId&& aNestedFrameId,
+                                              nsCString&& aUri,
+                                              nsString&& aRealm,
+                                              uint64_t&& aCallbackId)
 {
   RefPtr<dom::TabChild> tabChild = dom::TabChild::FindTabChild(aNestedFrameId);
   if (!tabChild) {
@@ -388,8 +388,8 @@ NeckoChild::RecvAsyncAuthPromptForNestedFrame(const TabId& aNestedFrameId,
 
 /* Predictor Messages */
 mozilla::ipc::IPCResult
-NeckoChild::RecvPredOnPredictPrefetch(const URIParams& aURI,
-                                      const uint32_t& aHttpStatus)
+NeckoChild::RecvPredOnPredictPrefetch(URIParams&& aURI,
+                                      uint32_t&& aHttpStatus)
 {
   MOZ_ASSERT(NS_IsMainThread(), "PredictorChild::RecvOnPredictPrefetch "
                                 "off main thread.");
@@ -407,7 +407,7 @@ NeckoChild::RecvPredOnPredictPrefetch(const URIParams& aURI,
 }
 
 mozilla::ipc::IPCResult
-NeckoChild::RecvPredOnPredictPreconnect(const URIParams& aURI)
+NeckoChild::RecvPredOnPredictPreconnect(URIParams&& aURI)
 {
   MOZ_ASSERT(NS_IsMainThread(), "PredictorChild::RecvOnPredictPreconnect "
                                 "off main thread.");
@@ -425,7 +425,7 @@ NeckoChild::RecvPredOnPredictPreconnect(const URIParams& aURI)
 }
 
 mozilla::ipc::IPCResult
-NeckoChild::RecvPredOnPredictDNS(const URIParams& aURI)
+NeckoChild::RecvPredOnPredictDNS(URIParams&& aURI)
 {
   MOZ_ASSERT(NS_IsMainThread(), "PredictorChild::RecvOnPredictDNS off "
                                 "main thread.");
@@ -454,7 +454,7 @@ NeckoChild::RecvSpeculativeConnectRequest()
 }
 
 mozilla::ipc::IPCResult
-NeckoChild::RecvNetworkChangeNotification(nsCString const& type)
+NeckoChild::RecvNetworkChangeNotification(nsCString&& type)
 {
   nsCOMPtr<nsIObserverService> obsService = services::GetObserverService();
   if (obsService) {

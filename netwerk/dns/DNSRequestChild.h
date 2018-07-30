@@ -43,7 +43,7 @@ protected:
   friend class ChildDNSService;
   virtual ~DNSRequestChild() {}
 
-  virtual mozilla::ipc::IPCResult RecvLookupCompleted(const DNSRequestResponse& reply) override;
+  virtual mozilla::ipc::IPCResult RecvLookupCompleted(DNSRequestResponse&& reply) override;
   virtual void ActorDestroy(ActorDestroyReason why) override;
 
   nsCOMPtr<nsIDNSListener>  mListener;

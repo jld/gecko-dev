@@ -70,56 +70,56 @@ public:
    * Called when a message from a document in a child process notifies the main
    * process it is firing an event.
    */
-  virtual mozilla::ipc::IPCResult RecvEvent(const uint64_t& aID, const uint32_t& aType)
+  virtual mozilla::ipc::IPCResult RecvEvent(uint64_t&& aID, uint32_t&& aType)
     override;
 
-  virtual mozilla::ipc::IPCResult RecvShowEvent(const ShowEventData& aData, const bool& aFromUser)
+  virtual mozilla::ipc::IPCResult RecvShowEvent(ShowEventData&& aData, bool&& aFromUser)
     override;
-  virtual mozilla::ipc::IPCResult RecvHideEvent(const uint64_t& aRootID, const bool& aFromUser)
+  virtual mozilla::ipc::IPCResult RecvHideEvent(uint64_t&& aRootID, bool&& aFromUser)
     override;
-  mozilla::ipc::IPCResult RecvStateChangeEvent(const uint64_t& aID,
-                                               const uint64_t& aState,
-                                               const bool& aEnabled) final;
+  mozilla::ipc::IPCResult RecvStateChangeEvent(uint64_t&& aID,
+                                               uint64_t&& aState,
+                                               bool&& aEnabled) final;
 
-  mozilla::ipc::IPCResult RecvCaretMoveEvent(const uint64_t& aID,
+  mozilla::ipc::IPCResult RecvCaretMoveEvent(uint64_t&& aID,
 #if defined(XP_WIN)
-                                             const LayoutDeviceIntRect& aCaretRect,
+                                             LayoutDeviceIntRect&& aCaretRect,
 #endif
-                                             const int32_t& aOffset) final;
+                                             int32_t&& aOffset) final;
 
-  virtual mozilla::ipc::IPCResult RecvTextChangeEvent(const uint64_t& aID, const nsString& aStr,
-                                                      const int32_t& aStart, const uint32_t& aLen,
-                                                      const bool& aIsInsert,
-                                                      const bool& aFromUser) override;
+  virtual mozilla::ipc::IPCResult RecvTextChangeEvent(uint64_t&& aID, nsString&& aStr,
+                                                      int32_t&& aStart, uint32_t&& aLen,
+                                                      bool&& aIsInsert,
+                                                      bool&& aFromUser) override;
 
 #if defined(XP_WIN)
-  virtual mozilla::ipc::IPCResult RecvSyncTextChangeEvent(const uint64_t& aID, const nsString& aStr,
-                                                          const int32_t& aStart, const uint32_t& aLen,
-                                                          const bool& aIsInsert,
-                                                          const bool& aFromUser) override;
+  virtual mozilla::ipc::IPCResult RecvSyncTextChangeEvent(uint64_t&& aID, nsString&& aStr,
+                                                          int32_t&& aStart, uint32_t&& aLen,
+                                                          bool&& aIsInsert,
+                                                          bool&& aFromUser) override;
 
-  virtual mozilla::ipc::IPCResult RecvFocusEvent(const uint64_t& aID,
-                                                 const LayoutDeviceIntRect& aCaretRect) override;
+  virtual mozilla::ipc::IPCResult RecvFocusEvent(uint64_t&& aID,
+                                                 LayoutDeviceIntRect&& aCaretRect) override;
 #endif // defined(XP_WIN)
 
-  virtual mozilla::ipc::IPCResult RecvSelectionEvent(const uint64_t& aID,
-                                                     const uint64_t& aWidgetID,
-                                                     const uint32_t& aType) override;
+  virtual mozilla::ipc::IPCResult RecvSelectionEvent(uint64_t&& aID,
+                                                     uint64_t&& aWidgetID,
+                                                     uint32_t&& aType) override;
 
-  virtual mozilla::ipc::IPCResult RecvVirtualCursorChangeEvent(const uint64_t& aID,
-                                                               const uint64_t& aOldPositionID,
-                                                               const int32_t& aOldStartOffset,
-                                                               const int32_t& aOldEndOffset,
-                                                               const uint64_t& aNewPositionID,
-                                                               const int32_t& aNewStartOffset,
-                                                               const int32_t& aNewEndOffset,
-                                                               const int16_t& aReason,
-                                                               const int16_t& aBoundaryType,
-                                                               const bool& aFromUser) override;
+  virtual mozilla::ipc::IPCResult RecvVirtualCursorChangeEvent(uint64_t&& aID,
+                                                               uint64_t&& aOldPositionID,
+                                                               int32_t&& aOldStartOffset,
+                                                               int32_t&& aOldEndOffset,
+                                                               uint64_t&& aNewPositionID,
+                                                               int32_t&& aNewStartOffset,
+                                                               int32_t&& aNewEndOffset,
+                                                               int16_t&& aReason,
+                                                               int16_t&& aBoundaryType,
+                                                               bool&& aFromUser) override;
 
-  mozilla::ipc::IPCResult RecvRoleChangedEvent(const a11y::role& aRole) final;
+  mozilla::ipc::IPCResult RecvRoleChangedEvent(a11y::role&& aRole) final;
 
-  virtual mozilla::ipc::IPCResult RecvBindChildDoc(PDocAccessibleParent* aChildDoc, const uint64_t& aID) override;
+  virtual mozilla::ipc::IPCResult RecvBindChildDoc(PDocAccessibleParent* aChildDoc, uint64_t&& aID) override;
 
   void Unbind()
   {
@@ -201,7 +201,7 @@ public:
   void SendParentCOMProxy();
 
   virtual mozilla::ipc::IPCResult RecvGetWindowedPluginIAccessible(
-      const WindowsHandle& aHwnd, IAccessibleHolder* aPluginCOMProxy) override;
+      WindowsHandle&& aHwnd, IAccessibleHolder* aPluginCOMProxy) override;
 
   /**
    * Set emulated native window handle for a document.

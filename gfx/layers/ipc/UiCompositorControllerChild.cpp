@@ -263,7 +263,7 @@ UiCompositorControllerChild::HandleFatalError(const char* aMsg) const
 }
 
 mozilla::ipc::IPCResult
-UiCompositorControllerChild::RecvToolbarAnimatorMessageFromCompositor(const int32_t& aMessage)
+UiCompositorControllerChild::RecvToolbarAnimatorMessageFromCompositor(int32_t&& aMessage)
 {
 #if defined(MOZ_WIDGET_ANDROID)
   if (mWidget) {
@@ -275,7 +275,7 @@ UiCompositorControllerChild::RecvToolbarAnimatorMessageFromCompositor(const int3
 }
 
 mozilla::ipc::IPCResult
-UiCompositorControllerChild::RecvRootFrameMetrics(const ScreenPoint& aScrollOffset, const CSSToScreenScale& aZoom)
+UiCompositorControllerChild::RecvRootFrameMetrics(ScreenPoint&& aScrollOffset, CSSToScreenScale&& aZoom)
 {
 #if defined(MOZ_WIDGET_ANDROID)
   if (mWidget) {
@@ -287,7 +287,7 @@ UiCompositorControllerChild::RecvRootFrameMetrics(const ScreenPoint& aScrollOffs
 }
 
 mozilla::ipc::IPCResult
-UiCompositorControllerChild::RecvScreenPixels(ipc::Shmem&& aMem, const ScreenIntSize& aSize)
+UiCompositorControllerChild::RecvScreenPixels(ipc::Shmem&& aMem, ScreenIntSize&& aSize)
 {
 #if defined(MOZ_WIDGET_ANDROID)
   if (mWidget) {

@@ -20,8 +20,8 @@ class GamepadTestChannelParent final : public PGamepadTestChannelParent
     : mShuttingdown(false) {}
   virtual void ActorDestroy(ActorDestroyReason aWhy) override {}
   virtual mozilla::ipc::IPCResult
-  RecvGamepadTestEvent(const uint32_t& aID,
-                       const GamepadChangeEvent& aGamepadEvent) override;
+  RecvGamepadTestEvent(uint32_t&& aID,
+                       GamepadChangeEvent&& aGamepadEvent) override;
   virtual mozilla::ipc::IPCResult
   RecvShutdownChannel() override;
  private:

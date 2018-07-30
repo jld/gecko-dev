@@ -309,7 +309,7 @@ GMPVideoDecoderParent::ActorDestroy(ActorDestroyReason aWhy)
 }
 
 mozilla::ipc::IPCResult
-GMPVideoDecoderParent::RecvDecoded(const GMPVideoi420FrameData& aDecodedFrame)
+GMPVideoDecoderParent::RecvDecoded(GMPVideoi420FrameData&& aDecodedFrame)
 {
   --mFrameCount;
   LOGV(("GMPVideoDecoderParent[%p]::RecvDecoded() timestamp=%" PRId64 " frameCount=%d",
@@ -334,7 +334,7 @@ GMPVideoDecoderParent::RecvDecoded(const GMPVideoi420FrameData& aDecodedFrame)
 }
 
 mozilla::ipc::IPCResult
-GMPVideoDecoderParent::RecvReceivedDecodedReferenceFrame(const uint64_t& aPictureId)
+GMPVideoDecoderParent::RecvReceivedDecodedReferenceFrame(uint64_t&& aPictureId)
 {
   if (!mCallback) {
     return IPC_FAIL_NO_REASON(this);
@@ -347,7 +347,7 @@ GMPVideoDecoderParent::RecvReceivedDecodedReferenceFrame(const uint64_t& aPictur
 }
 
 mozilla::ipc::IPCResult
-GMPVideoDecoderParent::RecvReceivedDecodedFrame(const uint64_t& aPictureId)
+GMPVideoDecoderParent::RecvReceivedDecodedFrame(uint64_t&& aPictureId)
 {
   if (!mCallback) {
     return IPC_FAIL_NO_REASON(this);
@@ -428,7 +428,7 @@ GMPVideoDecoderParent::RecvResetComplete()
 }
 
 mozilla::ipc::IPCResult
-GMPVideoDecoderParent::RecvError(const GMPErr& aError)
+GMPVideoDecoderParent::RecvError(GMPErr&& aError)
 {
   LOGD(("GMPVideoDecoderParent[%p]::RecvError(error=%d)", this, aError));
 
@@ -467,7 +467,7 @@ GMPVideoDecoderParent::RecvParentShmemForPool(Shmem&& aEncodedBuffer)
 }
 
 mozilla::ipc::IPCResult
-GMPVideoDecoderParent::AnswerNeedShmem(const uint32_t& aFrameBufferSize,
+GMPVideoDecoderParent::AnswerNeedShmem(uint32_t&& aFrameBufferSize,
                                        Shmem* aMem)
 {
   ipc::Shmem mem;

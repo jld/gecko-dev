@@ -208,27 +208,27 @@ public:
 
   void InitSameProcess(widget::CompositorWidget* aWidget, const LayersId& aLayerTreeId);
 
-  mozilla::ipc::IPCResult RecvInitialize(const LayersId& aRootLayerTreeId) override;
+  mozilla::ipc::IPCResult RecvInitialize(LayersId&& aRootLayerTreeId) override;
   mozilla::ipc::IPCResult RecvGetFrameUniformity(FrameUniformityData* aOutData) override;
   mozilla::ipc::IPCResult RecvWillClose() override;
   mozilla::ipc::IPCResult RecvPause() override;
   mozilla::ipc::IPCResult RecvResume() override;
-  mozilla::ipc::IPCResult RecvNotifyChildCreated(const LayersId& child, CompositorOptions* aOptions) override;
-  mozilla::ipc::IPCResult RecvMapAndNotifyChildCreated(const LayersId& child, const base::ProcessId& pid, CompositorOptions* aOptions) override;
-  mozilla::ipc::IPCResult RecvNotifyChildRecreated(const LayersId& child, CompositorOptions* aOptions) override;
-  mozilla::ipc::IPCResult RecvAdoptChild(const LayersId& child) override;
-  mozilla::ipc::IPCResult RecvMakeSnapshot(const SurfaceDescriptor& aInSnapshot,
-                                           const gfx::IntRect& aRect) override;
+  mozilla::ipc::IPCResult RecvNotifyChildCreated(LayersId&& child, CompositorOptions* aOptions) override;
+  mozilla::ipc::IPCResult RecvMapAndNotifyChildCreated(LayersId&& child, base::ProcessId&& pid, CompositorOptions* aOptions) override;
+  mozilla::ipc::IPCResult RecvNotifyChildRecreated(LayersId&& child, CompositorOptions* aOptions) override;
+  mozilla::ipc::IPCResult RecvAdoptChild(LayersId&& child) override;
+  mozilla::ipc::IPCResult RecvMakeSnapshot(SurfaceDescriptor&& aInSnapshot,
+                                           gfx::IntRect&& aRect) override;
   mozilla::ipc::IPCResult RecvFlushRendering() override;
   mozilla::ipc::IPCResult RecvFlushRenderingAsync() override;
   mozilla::ipc::IPCResult RecvWaitOnTransactionProcessed() override;
   mozilla::ipc::IPCResult RecvForcePresent() override;
 
-  mozilla::ipc::IPCResult RecvNotifyRegionInvalidated(const nsIntRegion& aRegion) override;
-  mozilla::ipc::IPCResult RecvStartFrameTimeRecording(const int32_t& aBufferSize, uint32_t* aOutStartIndex) override;
-  mozilla::ipc::IPCResult RecvStopFrameTimeRecording(const uint32_t& aStartIndex, InfallibleTArray<float>* intervals) override;
+  mozilla::ipc::IPCResult RecvNotifyRegionInvalidated(nsIntRegion&& aRegion) override;
+  mozilla::ipc::IPCResult RecvStartFrameTimeRecording(int32_t&& aBufferSize, uint32_t* aOutStartIndex) override;
+  mozilla::ipc::IPCResult RecvStopFrameTimeRecording(uint32_t&& aStartIndex, InfallibleTArray<float>* intervals) override;
 
-  mozilla::ipc::IPCResult RecvCheckContentOnlyTDR(const uint32_t& sequenceNum, bool* isContentOnlyTDR) override { return IPC_OK(); }
+  mozilla::ipc::IPCResult RecvCheckContentOnlyTDR(uint32_t&& sequenceNum, bool* isContentOnlyTDR) override { return IPC_OK(); }
 
   // Unused for chrome <-> compositor communication (which this class does).
   // @see CrossProcessCompositorBridgeParent::RecvRequestNotifyAfterRemotePaint

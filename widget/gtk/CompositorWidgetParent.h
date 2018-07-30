@@ -26,7 +26,7 @@ public:
   void ObserveVsync(VsyncObserver* aObserver) override;
   RefPtr<VsyncObserver> GetVsyncObserver() const override;
 
-  mozilla::ipc::IPCResult RecvNotifyClientSizeChanged(const LayoutDeviceIntSize& aClientSize) override;
+  mozilla::ipc::IPCResult RecvNotifyClientSizeChanged(LayoutDeviceIntSize&& aClientSize) override;
 
 private:
   RefPtr<VsyncObserver> mVsyncObserver;

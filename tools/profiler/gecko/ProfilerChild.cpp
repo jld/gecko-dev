@@ -23,7 +23,7 @@ ProfilerChild::~ProfilerChild()
 }
 
 mozilla::ipc::IPCResult
-ProfilerChild::RecvStart(const ProfilerInitParams& params)
+ProfilerChild::RecvStart(ProfilerInitParams&& params)
 {
   nsTArray<const char*> filterArray;
   for (size_t i = 0; i < params.filters().Length(); ++i) {
@@ -39,7 +39,7 @@ ProfilerChild::RecvStart(const ProfilerInitParams& params)
 }
 
 mozilla::ipc::IPCResult
-ProfilerChild::RecvEnsureStarted(const ProfilerInitParams& params)
+ProfilerChild::RecvEnsureStarted(ProfilerInitParams&& params)
 {
   nsTArray<const char*> filterArray;
   for (size_t i = 0; i < params.filters().Length(); ++i) {

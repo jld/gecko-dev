@@ -17,8 +17,8 @@ GamepadTestChannelChild::AddPromise(const uint32_t& aID, Promise* aPromise)
 }
 
 mozilla::ipc::IPCResult
-GamepadTestChannelChild::RecvReplyGamepadIndex(const uint32_t& aID,
-                                               const uint32_t& aIndex)
+GamepadTestChannelChild::RecvReplyGamepadIndex(uint32_t&& aID,
+                                               uint32_t&& aIndex)
 {
   RefPtr<Promise> p;
   if (!mPromiseList.Get(aID, getter_AddRefs(p))) {

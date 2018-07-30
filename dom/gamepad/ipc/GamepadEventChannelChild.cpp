@@ -35,7 +35,7 @@ class GamepadUpdateRunnable final : public Runnable
 
 mozilla::ipc::IPCResult
 GamepadEventChannelChild::RecvGamepadUpdate(
-                                       const GamepadChangeEvent& aGamepadEvent)
+                                       GamepadChangeEvent&& aGamepadEvent)
 {
   DebugOnly<nsresult> rv =
     NS_DispatchToMainThread(new GamepadUpdateRunnable(aGamepadEvent));
@@ -51,7 +51,7 @@ GamepadEventChannelChild::AddPromise(const uint32_t& aID, dom::Promise* aPromise
 }
 
 mozilla::ipc::IPCResult
-GamepadEventChannelChild::RecvReplyGamepadVibrateHaptic(const uint32_t& aPromiseID)
+GamepadEventChannelChild::RecvReplyGamepadVibrateHaptic(uint32_t&& aPromiseID)
 {
   RefPtr<dom::Promise> p;
   if (!mPromiseList.Get(aPromiseID, getter_AddRefs(p))) {

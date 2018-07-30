@@ -42,7 +42,7 @@ private:
   ~FileDescriptorSetChild();
 
   virtual mozilla::ipc::IPCResult
-  RecvAddFileDescriptor(const FileDescriptor& aFileDescriptor) override;
+  RecvAddFileDescriptor(FileDescriptor&& aFileDescriptor) override;
 };
 
 } // namespace ipc

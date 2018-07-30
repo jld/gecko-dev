@@ -66,8 +66,8 @@ TemporaryIPCBlobParent::RecvOperationFailed()
 }
 
 mozilla::ipc::IPCResult
-TemporaryIPCBlobParent::RecvOperationDone(const nsCString& aContentType,
-                                          const FileDescriptor& aFD)
+TemporaryIPCBlobParent::RecvOperationDone(nsCString&& aContentType,
+                                          FileDescriptor&& aFD)
 {
   MOZ_ASSERT(mActive);
   mActive = false;

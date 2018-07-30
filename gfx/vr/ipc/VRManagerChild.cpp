@@ -368,7 +368,7 @@ VRManagerChild::CancelFrameRequestCallback(int32_t aHandle)
 }
 
 mozilla::ipc::IPCResult
-VRManagerChild::RecvGamepadUpdate(const GamepadChangeEvent& aGamepadEvent)
+VRManagerChild::RecvGamepadUpdate(GamepadChangeEvent&& aGamepadEvent)
 {
   // VRManagerChild could be at other processes, but GamepadManager
   // only exists at the content process or the same process
@@ -384,9 +384,9 @@ VRManagerChild::RecvGamepadUpdate(const GamepadChangeEvent& aGamepadEvent)
 }
 
 mozilla::ipc::IPCResult
-VRManagerChild::RecvReplyCreateVRServiceTestDisplay(const nsCString& aID,
-                                                    const uint32_t& aPromiseID,
-                                                    const uint32_t& aDeviceID)
+VRManagerChild::RecvReplyCreateVRServiceTestDisplay(nsCString&& aID,
+                                                    uint32_t&& aPromiseID,
+                                                    uint32_t&& aDeviceID)
 {
   RefPtr<dom::Promise> p;
   if (!mPromiseList.Get(aPromiseID, getter_AddRefs(p))) {
@@ -403,9 +403,9 @@ VRManagerChild::RecvReplyCreateVRServiceTestDisplay(const nsCString& aID,
 }
 
 mozilla::ipc::IPCResult
-VRManagerChild::RecvReplyCreateVRServiceTestController(const nsCString& aID,
-                                                       const uint32_t& aPromiseID,
-                                                       const uint32_t& aDeviceID)
+VRManagerChild::RecvReplyCreateVRServiceTestController(nsCString&& aID,
+                                                       uint32_t&& aPromiseID,
+                                                       uint32_t&& aDeviceID)
 {
   RefPtr<dom::Promise> p;
   if (!mPromiseList.Get(aPromiseID, getter_AddRefs(p))) {
@@ -614,7 +614,7 @@ VRManagerChild::AddPromise(const uint32_t& aID, dom::Promise* aPromise)
 }
 
 mozilla::ipc::IPCResult
-VRManagerChild::RecvReplyGamepadVibrateHaptic(const uint32_t& aPromiseID)
+VRManagerChild::RecvReplyGamepadVibrateHaptic(uint32_t&& aPromiseID)
 {
   // VRManagerChild could be at other processes, but GamepadManager
   // only exists at the content process or the same process
@@ -632,8 +632,8 @@ VRManagerChild::RecvReplyGamepadVibrateHaptic(const uint32_t& aPromiseID)
 }
 
 mozilla::ipc::IPCResult
-VRManagerChild::RecvDispatchSubmitFrameResult(const uint32_t& aDisplayID,
-                                              const VRSubmitFrameResultInfo& aResult)
+VRManagerChild::RecvDispatchSubmitFrameResult(uint32_t&& aDisplayID,
+                                              VRSubmitFrameResultInfo&& aResult)
 {
   nsTArray<RefPtr<VRDisplayClient>> displays;
   displays = mDisplays;

@@ -6256,7 +6256,7 @@ private:
   mozilla::ipc::IPCResult
   RecvPBackgroundIDBFactoryRequestConstructor(
                                      PBackgroundIDBFactoryRequestParent* aActor,
-                                     const FactoryRequestParams& aParams)
+                                     FactoryRequestParams&& aParams)
                                      override;
 
   bool
@@ -6599,7 +6599,7 @@ private:
   mozilla::ipc::IPCResult
   RecvPBackgroundIDBDatabaseRequestConstructor(
                                     PBackgroundIDBDatabaseRequestParent* aActor,
-                                    const DatabaseRequestParams& aParams)
+                                    DatabaseRequestParams&& aParams)
                                     override;
 
   bool
@@ -6617,7 +6617,7 @@ private:
   RecvPBackgroundIDBTransactionConstructor(
                                     PBackgroundIDBTransactionParent* aActor,
                                     InfallibleTArray<nsString>&& aObjectStoreNames,
-                                    const Mode& aMode)
+                                    Mode&& aMode)
                                     override;
 
   bool
@@ -7187,14 +7187,14 @@ private:
   RecvCommit() override;
 
   mozilla::ipc::IPCResult
-  RecvAbort(const nsresult& aResultCode) override;
+  RecvAbort(nsresult&& aResultCode) override;
 
   PBackgroundIDBRequestParent*
   AllocPBackgroundIDBRequestParent(const RequestParams& aParams) override;
 
   mozilla::ipc::IPCResult
   RecvPBackgroundIDBRequestConstructor(PBackgroundIDBRequestParent* aActor,
-                                       const RequestParams& aParams)
+                                       RequestParams&& aParams)
                                        override;
 
   bool
@@ -7206,7 +7206,7 @@ private:
 
   mozilla::ipc::IPCResult
   RecvPBackgroundIDBCursorConstructor(PBackgroundIDBCursorParent* aActor,
-                                      const OpenCursorParams& aParams)
+                                      OpenCursorParams&& aParams)
                                       override;
 
   bool
@@ -7261,37 +7261,37 @@ private:
   RecvCommit() override;
 
   mozilla::ipc::IPCResult
-  RecvAbort(const nsresult& aResultCode) override;
+  RecvAbort(nsresult&& aResultCode) override;
 
   mozilla::ipc::IPCResult
-  RecvCreateObjectStore(const ObjectStoreMetadata& aMetadata) override;
+  RecvCreateObjectStore(ObjectStoreMetadata&& aMetadata) override;
 
   mozilla::ipc::IPCResult
-  RecvDeleteObjectStore(const int64_t& aObjectStoreId) override;
+  RecvDeleteObjectStore(int64_t&& aObjectStoreId) override;
 
   mozilla::ipc::IPCResult
-  RecvRenameObjectStore(const int64_t& aObjectStoreId,
-                        const nsString& aName) override;
+  RecvRenameObjectStore(int64_t&& aObjectStoreId,
+                        nsString&& aName) override;
 
   mozilla::ipc::IPCResult
-  RecvCreateIndex(const int64_t& aObjectStoreId,
-                  const IndexMetadata& aMetadata) override;
+  RecvCreateIndex(int64_t&& aObjectStoreId,
+                  IndexMetadata&& aMetadata) override;
 
   mozilla::ipc::IPCResult
-  RecvDeleteIndex(const int64_t& aObjectStoreId,
-                  const int64_t& aIndexId) override;
+  RecvDeleteIndex(int64_t&& aObjectStoreId,
+                  int64_t&& aIndexId) override;
 
   mozilla::ipc::IPCResult
-  RecvRenameIndex(const int64_t& aObjectStoreId,
-                  const int64_t& aIndexId,
-                  const nsString& aName) override;
+  RecvRenameIndex(int64_t&& aObjectStoreId,
+                  int64_t&& aIndexId,
+                  nsString&& aName) override;
 
   PBackgroundIDBRequestParent*
   AllocPBackgroundIDBRequestParent(const RequestParams& aParams) override;
 
   mozilla::ipc::IPCResult
   RecvPBackgroundIDBRequestConstructor(PBackgroundIDBRequestParent* aActor,
-                                       const RequestParams& aParams)
+                                       RequestParams&& aParams)
                                        override;
 
   bool
@@ -7303,7 +7303,7 @@ private:
 
   mozilla::ipc::IPCResult
   RecvPBackgroundIDBCursorConstructor(PBackgroundIDBCursorParent* aActor,
-                                      const OpenCursorParams& aParams)
+                                      OpenCursorParams&& aParams)
                                       override;
 
   bool
@@ -7368,7 +7368,7 @@ private:
 
   mozilla::ipc::IPCResult
   RecvPBackgroundFileHandleConstructor(PBackgroundFileHandleParent* aActor,
-                                       const FileMode& aMode) override;
+                                       FileMode&& aMode) override;
 
   mozilla::ipc::IPCResult
   RecvGetFileId(int64_t* aFileId) override;
@@ -8220,7 +8220,7 @@ private:
   ActorDestroy(ActorDestroyReason aWhy) override;
 
   mozilla::ipc::IPCResult
-  RecvContinue(const PreprocessResponse& aResponse) override;
+  RecvContinue(PreprocessResponse&& aResponse) override;
 };
 
 class ObjectStoreAddOrPutRequestOp final
@@ -8688,7 +8688,7 @@ private:
   RecvDeleteMe() override;
 
   mozilla::ipc::IPCResult
-  RecvContinue(const CursorRequestParams& aParams) override;
+  RecvContinue(CursorRequestParams&& aParams) override;
 
   bool
   IsLocaleAware() const {
@@ -8826,10 +8826,10 @@ private:
   RecvDeleteMe() override;
 
   mozilla::ipc::IPCResult
-  RecvGetFileReferences(const PersistenceType& aPersistenceType,
-                        const nsCString& aOrigin,
-                        const nsString& aDatabaseName,
-                        const int64_t& aFileId,
+  RecvGetFileReferences(PersistenceType&& aPersistenceType,
+                        nsCString&& aOrigin,
+                        nsString&& aDatabaseName,
+                        int64_t&& aFileId,
                         int32_t* aRefCnt,
                         int32_t* aDBRefCnt,
                         int32_t* aSliceRefCnt,
@@ -13719,7 +13719,7 @@ Factory::AllocPBackgroundIDBFactoryRequestParent(
 mozilla::ipc::IPCResult
 Factory::RecvPBackgroundIDBFactoryRequestConstructor(
                                      PBackgroundIDBFactoryRequestParent* aActor,
-                                     const FactoryRequestParams& aParams)
+                                     FactoryRequestParams&& aParams)
 {
   AssertIsOnBackgroundThread();
   MOZ_ASSERT(aActor);
@@ -14408,7 +14408,7 @@ Database::AllocPBackgroundIDBDatabaseRequestParent(
 mozilla::ipc::IPCResult
 Database::RecvPBackgroundIDBDatabaseRequestConstructor(
                                     PBackgroundIDBDatabaseRequestParent* aActor,
-                                    const DatabaseRequestParams& aParams)
+                                    DatabaseRequestParams&& aParams)
 {
   AssertIsOnBackgroundThread();
   MOZ_ASSERT(aActor);
@@ -14523,7 +14523,7 @@ mozilla::ipc::IPCResult
 Database::RecvPBackgroundIDBTransactionConstructor(
                                     PBackgroundIDBTransactionParent* aActor,
                                     InfallibleTArray<nsString>&& aObjectStoreNames,
-                                    const Mode& aMode)
+                                    Mode&& aMode)
 {
   AssertIsOnBackgroundThread();
   MOZ_ASSERT(aActor);
@@ -15773,7 +15773,7 @@ NormalTransaction::RecvCommit()
 }
 
 mozilla::ipc::IPCResult
-NormalTransaction::RecvAbort(const nsresult& aResultCode)
+NormalTransaction::RecvAbort(nsresult&& aResultCode)
 {
   AssertIsOnBackgroundThread();
 
@@ -15796,7 +15796,7 @@ NormalTransaction::AllocPBackgroundIDBRequestParent(
 mozilla::ipc::IPCResult
 NormalTransaction::RecvPBackgroundIDBRequestConstructor(
                                             PBackgroundIDBRequestParent* aActor,
-                                            const RequestParams& aParams)
+                                            RequestParams&& aParams)
 {
   AssertIsOnBackgroundThread();
   MOZ_ASSERT(aActor);
@@ -15830,7 +15830,7 @@ NormalTransaction::AllocPBackgroundIDBCursorParent(
 mozilla::ipc::IPCResult
 NormalTransaction::RecvPBackgroundIDBCursorConstructor(
                                              PBackgroundIDBCursorParent* aActor,
-                                             const OpenCursorParams& aParams)
+                                             OpenCursorParams&& aParams)
 {
   AssertIsOnBackgroundThread();
   MOZ_ASSERT(aActor);
@@ -16080,7 +16080,7 @@ VersionChangeTransaction::RecvCommit()
 }
 
 mozilla::ipc::IPCResult
-VersionChangeTransaction::RecvAbort(const nsresult& aResultCode)
+VersionChangeTransaction::RecvAbort(nsresult&& aResultCode)
 {
   AssertIsOnBackgroundThread();
 
@@ -16092,7 +16092,7 @@ VersionChangeTransaction::RecvAbort(const nsresult& aResultCode)
 
 mozilla::ipc::IPCResult
 VersionChangeTransaction::RecvCreateObjectStore(
-                                           const ObjectStoreMetadata& aMetadata)
+                                           ObjectStoreMetadata&& aMetadata)
 {
   AssertIsOnBackgroundThread();
 
@@ -16148,7 +16148,7 @@ VersionChangeTransaction::RecvCreateObjectStore(
 }
 
 mozilla::ipc::IPCResult
-VersionChangeTransaction::RecvDeleteObjectStore(const int64_t& aObjectStoreId)
+VersionChangeTransaction::RecvDeleteObjectStore(int64_t&& aObjectStoreId)
 {
   AssertIsOnBackgroundThread();
 
@@ -16209,8 +16209,8 @@ VersionChangeTransaction::RecvDeleteObjectStore(const int64_t& aObjectStoreId)
 }
 
 mozilla::ipc::IPCResult
-VersionChangeTransaction::RecvRenameObjectStore(const int64_t& aObjectStoreId,
-                                                const nsString& aName)
+VersionChangeTransaction::RecvRenameObjectStore(int64_t&& aObjectStoreId,
+                                                nsString&& aName)
 {
   AssertIsOnBackgroundThread();
 
@@ -16257,8 +16257,8 @@ VersionChangeTransaction::RecvRenameObjectStore(const int64_t& aObjectStoreId,
 }
 
 mozilla::ipc::IPCResult
-VersionChangeTransaction::RecvCreateIndex(const int64_t& aObjectStoreId,
-                                          const IndexMetadata& aMetadata)
+VersionChangeTransaction::RecvCreateIndex(int64_t&& aObjectStoreId,
+                                          IndexMetadata&& aMetadata)
 {
   AssertIsOnBackgroundThread();
 
@@ -16327,8 +16327,8 @@ VersionChangeTransaction::RecvCreateIndex(const int64_t& aObjectStoreId,
 }
 
 mozilla::ipc::IPCResult
-VersionChangeTransaction::RecvDeleteIndex(const int64_t& aObjectStoreId,
-                                          const int64_t& aIndexId)
+VersionChangeTransaction::RecvDeleteIndex(int64_t&& aObjectStoreId,
+                                          int64_t&& aIndexId)
 {
   AssertIsOnBackgroundThread();
 
@@ -16412,9 +16412,9 @@ VersionChangeTransaction::RecvDeleteIndex(const int64_t& aObjectStoreId,
 }
 
 mozilla::ipc::IPCResult
-VersionChangeTransaction::RecvRenameIndex(const int64_t& aObjectStoreId,
-                                          const int64_t& aIndexId,
-                                          const nsString& aName)
+VersionChangeTransaction::RecvRenameIndex(int64_t&& aObjectStoreId,
+                                          int64_t&& aIndexId,
+                                          nsString&& aName)
 {
   AssertIsOnBackgroundThread();
 
@@ -16492,7 +16492,7 @@ VersionChangeTransaction::AllocPBackgroundIDBRequestParent(
 mozilla::ipc::IPCResult
 VersionChangeTransaction::RecvPBackgroundIDBRequestConstructor(
                                             PBackgroundIDBRequestParent* aActor,
-                                            const RequestParams& aParams)
+                                            RequestParams&& aParams)
 {
   AssertIsOnBackgroundThread();
   MOZ_ASSERT(aActor);
@@ -16526,7 +16526,7 @@ VersionChangeTransaction::AllocPBackgroundIDBCursorParent(
 mozilla::ipc::IPCResult
 VersionChangeTransaction::RecvPBackgroundIDBCursorConstructor(
                                              PBackgroundIDBCursorParent* aActor,
-                                             const OpenCursorParams& aParams)
+                                             OpenCursorParams&& aParams)
 {
   AssertIsOnBackgroundThread();
   MOZ_ASSERT(aActor);
@@ -16865,7 +16865,7 @@ Cursor::RecvDeleteMe()
 }
 
 mozilla::ipc::IPCResult
-Cursor::RecvContinue(const CursorRequestParams& aParams)
+Cursor::RecvContinue(CursorRequestParams&& aParams)
 {
   AssertIsOnBackgroundThread();
   MOZ_ASSERT(aParams.type() != CursorRequestParams::T__None);
@@ -20629,7 +20629,7 @@ MutableFile::AllocPBackgroundFileHandleParent(const FileMode& aMode)
 mozilla::ipc::IPCResult
 MutableFile::RecvPBackgroundFileHandleConstructor(
                                             PBackgroundFileHandleParent* aActor,
-                                            const FileMode& aMode)
+                                            FileMode&& aMode)
 {
   AssertIsOnBackgroundThread();
   MOZ_ASSERT(!mDatabase->IsClosed());
@@ -25804,7 +25804,7 @@ NormalTransactionOp::ActorDestroy(ActorDestroyReason aWhy)
 }
 
 mozilla::ipc::IPCResult
-NormalTransactionOp::RecvContinue(const PreprocessResponse& aResponse)
+NormalTransactionOp::RecvContinue(PreprocessResponse&& aResponse)
 {
   AssertIsOnOwningThread();
 
@@ -28891,10 +28891,10 @@ Utils::RecvDeleteMe()
 }
 
 mozilla::ipc::IPCResult
-Utils::RecvGetFileReferences(const PersistenceType& aPersistenceType,
-                             const nsCString& aOrigin,
-                             const nsString& aDatabaseName,
-                             const int64_t& aFileId,
+Utils::RecvGetFileReferences(PersistenceType&& aPersistenceType,
+                             nsCString&& aOrigin,
+                             nsString&& aDatabaseName,
+                             int64_t&& aFileId,
                              int32_t* aRefCnt,
                              int32_t* aDBRefCnt,
                              int32_t* aSliceRefCnt,

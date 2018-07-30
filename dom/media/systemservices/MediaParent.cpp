@@ -434,9 +434,9 @@ bool NonE10s::SendGetPrincipalKeyResponse(const uint32_t& aRequestId,
 }
 
 template<class Super> mozilla::ipc::IPCResult
-Parent<Super>::RecvGetPrincipalKey(const uint32_t& aRequestId,
-                                   const ipc::PrincipalInfo& aPrincipalInfo,
-                                   const bool& aPersist)
+Parent<Super>::RecvGetPrincipalKey(uint32_t&& aRequestId,
+                                   ipc::PrincipalInfo&& aPrincipalInfo,
+                                   bool&& aPersist)
 {
   MOZ_ASSERT(NS_IsMainThread());
 
@@ -515,8 +515,8 @@ Parent<Super>::RecvGetPrincipalKey(const uint32_t& aRequestId,
 }
 
 template<class Super> mozilla::ipc::IPCResult
-Parent<Super>::RecvSanitizeOriginKeys(const uint64_t& aSinceWhen,
-                                      const bool& aOnlyPrivateBrowsing)
+Parent<Super>::RecvSanitizeOriginKeys(uint64_t&& aSinceWhen,
+                                      bool&& aOnlyPrivateBrowsing)
 {
   MOZ_ASSERT(NS_IsMainThread());
   nsCOMPtr<nsIFile> profileDir;

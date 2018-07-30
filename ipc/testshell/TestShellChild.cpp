@@ -14,7 +14,7 @@ TestShellChild::TestShellChild()
 }
 
 mozilla::ipc::IPCResult
-TestShellChild::RecvExecuteCommand(const nsString& aCommand)
+TestShellChild::RecvExecuteCommand(nsString&& aCommand)
 {
   if (mXPCShell->IsQuitting()) {
     NS_WARNING("Commands sent after quit command issued!");
@@ -42,7 +42,7 @@ TestShellChild::DeallocPTestShellCommandChild(PTestShellCommandChild* aCommand)
 
 mozilla::ipc::IPCResult
 TestShellChild::RecvPTestShellCommandConstructor(PTestShellCommandChild* aActor,
-                                                 const nsString& aCommand)
+                                                 nsString&& aCommand)
 {
   if (mXPCShell->IsQuitting()) {
     NS_WARNING("Commands sent after quit command issued!");

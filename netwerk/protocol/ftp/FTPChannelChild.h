@@ -80,20 +80,20 @@ public:
 protected:
   virtual ~FTPChannelChild();
 
-  mozilla::ipc::IPCResult RecvOnStartRequest(const nsresult& aChannelStatus,
-                                             const int64_t& aContentLength,
-                                             const nsCString& aContentType,
-                                             const PRTime& aLastModified,
-                                             const nsCString& aEntityID,
-                                             const URIParams& aURI) override;
-  mozilla::ipc::IPCResult RecvOnDataAvailable(const nsresult& channelStatus,
-                                              const nsCString& data,
-                                              const uint64_t& offset,
-                                              const uint32_t& count) override;
-  mozilla::ipc::IPCResult RecvOnStopRequest(const nsresult& channelStatus,
-                                            const nsCString &aErrorMsg,
-                                            const bool &aUseUTF8) override;
-  mozilla::ipc::IPCResult RecvFailedAsyncOpen(const nsresult& statusCode) override;
+  mozilla::ipc::IPCResult RecvOnStartRequest(nsresult&& aChannelStatus,
+                                             int64_t&& aContentLength,
+                                             nsCString&& aContentType,
+                                             PRTime&& aLastModified,
+                                             nsCString&& aEntityID,
+                                             URIParams&& aURI) override;
+  mozilla::ipc::IPCResult RecvOnDataAvailable(nsresult&& channelStatus,
+                                              nsCString&& data,
+                                              uint64_t&& offset,
+                                              uint32_t&& count) override;
+  mozilla::ipc::IPCResult RecvOnStopRequest(nsresult&& channelStatus,
+                                            nsCString&& aErrorMsg,
+                                            bool&& aUseUTF8) override;
+  mozilla::ipc::IPCResult RecvFailedAsyncOpen(nsresult&& statusCode) override;
   mozilla::ipc::IPCResult RecvFlushedForDiversion() override;
   mozilla::ipc::IPCResult RecvDivertMessages() override;
   mozilla::ipc::IPCResult RecvDeleteSelf() override;

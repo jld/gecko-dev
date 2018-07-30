@@ -55,12 +55,12 @@ NS_IMPL_ISUPPORTS(WyciwygChannelParent,
 //-----------------------------------------------------------------------------
 
 mozilla::ipc::IPCResult
-WyciwygChannelParent::RecvInit(const URIParams&          aURI,
-                               const ipc::PrincipalInfo& aRequestingPrincipalInfo,
-                               const ipc::PrincipalInfo& aTriggeringPrincipalInfo,
-                               const ipc::PrincipalInfo& aPrincipalToInheritInfo,
-                               const uint32_t&           aSecurityFlags,
-                               const uint32_t&           aContentPolicyType)
+WyciwygChannelParent::RecvInit(URIParams&& aURI,
+                               ipc::PrincipalInfo&& aRequestingPrincipalInfo,
+                               ipc::PrincipalInfo&& aTriggeringPrincipalInfo,
+                               ipc::PrincipalInfo&& aPrincipalToInheritInfo,
+                               uint32_t&& aSecurityFlags,
+                               uint32_t&& aContentPolicyType)
 {
   nsresult rv;
 
@@ -149,8 +149,8 @@ WyciwygChannelParent::RecvInit(const URIParams&          aURI,
 }
 
 mozilla::ipc::IPCResult
-WyciwygChannelParent::RecvAppData(const IPC::SerializedLoadContext& loadContext,
-                                  const PBrowserOrId &parent)
+WyciwygChannelParent::RecvAppData(IPC::SerializedLoadContext&& loadContext,
+                                  PBrowserOrId&& parent)
 {
   LOG(("WyciwygChannelParent RecvAppData [this=%p]\n", this));
 
@@ -194,10 +194,10 @@ WyciwygChannelParent::SetupAppData(const IPC::SerializedLoadContext& loadContext
 }
 
 mozilla::ipc::IPCResult
-WyciwygChannelParent::RecvAsyncOpen(const URIParams& aOriginal,
-                                    const uint32_t& aLoadFlags,
-                                    const IPC::SerializedLoadContext& loadContext,
-                                    const PBrowserOrId &aParent)
+WyciwygChannelParent::RecvAsyncOpen(URIParams&& aOriginal,
+                                    uint32_t&& aLoadFlags,
+                                    IPC::SerializedLoadContext&& loadContext,
+                                    PBrowserOrId&& aParent)
 {
   nsCOMPtr<nsIURI> original = DeserializeURI(aOriginal);
   if (!original)
@@ -257,7 +257,7 @@ WyciwygChannelParent::RecvAsyncOpen(const URIParams& aOriginal,
 }
 
 mozilla::ipc::IPCResult
-WyciwygChannelParent::RecvWriteToCacheEntry(const nsDependentSubstring& data)
+WyciwygChannelParent::RecvWriteToCacheEntry(nsDependentSubstring&& data)
 {
   if (!mReceivedAppData) {
     printf_stderr("WyciwygChannelParent::RecvWriteToCacheEntry: FATAL ERROR: didn't receive app data\n");
@@ -271,7 +271,7 @@ WyciwygChannelParent::RecvWriteToCacheEntry(const nsDependentSubstring& data)
 }
 
 mozilla::ipc::IPCResult
-WyciwygChannelParent::RecvCloseCacheEntry(const nsresult& reason)
+WyciwygChannelParent::RecvCloseCacheEntry(nsresult&& reason)
 {
   if (mChannel) {
     mChannel->CloseCacheEntry(reason);
@@ -281,8 +281,8 @@ WyciwygChannelParent::RecvCloseCacheEntry(const nsresult& reason)
 }
 
 mozilla::ipc::IPCResult
-WyciwygChannelParent::RecvSetCharsetAndSource(const int32_t& aCharsetSource,
-                                              const nsCString& aCharset)
+WyciwygChannelParent::RecvSetCharsetAndSource(int32_t&& aCharsetSource,
+                                              nsCString&& aCharset)
 {
   if (mChannel)
     mChannel->SetCharsetAndSource(aCharsetSource, aCharset);
@@ -291,7 +291,7 @@ WyciwygChannelParent::RecvSetCharsetAndSource(const int32_t& aCharsetSource,
 }
 
 mozilla::ipc::IPCResult
-WyciwygChannelParent::RecvSetSecurityInfo(const nsCString& aSecurityInfo)
+WyciwygChannelParent::RecvSetSecurityInfo(nsCString&& aSecurityInfo)
 {
   if (mChannel) {
     nsCOMPtr<nsISupports> securityInfo;
@@ -303,7 +303,7 @@ WyciwygChannelParent::RecvSetSecurityInfo(const nsCString& aSecurityInfo)
 }
 
 mozilla::ipc::IPCResult
-WyciwygChannelParent::RecvCancel(const nsresult& aStatusCode)
+WyciwygChannelParent::RecvCancel(nsresult&& aStatusCode)
 {
   if (mChannel)
     mChannel->Cancel(aStatusCode);

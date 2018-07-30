@@ -31,9 +31,9 @@ public:
   virtual void ActorDestroy(ActorDestroyReason aWhy) override;
   virtual mozilla::ipc::IPCResult RecvCreate(nsresult* aResult, uint64_t* aScrollCaptureId,
                                           uintptr_t* aPluginInstanceId) override;
-  virtual mozilla::ipc::IPCResult RecvSetFocus(const bool& aRaise) override;
+  virtual mozilla::ipc::IPCResult RecvSetFocus(bool&& aRaise) override;
   virtual mozilla::ipc::IPCResult RecvGetNativePluginPort(uintptr_t* value) override;
-  mozilla::ipc::IPCResult RecvSetNativeChildWindow(const uintptr_t& aChildWindow) override;
+  mozilla::ipc::IPCResult RecvSetNativeChildWindow(uintptr_t&& aChildWindow) override;
 
   // Helper for compositor checks on the channel
   bool ActorDestroyed() { return !mWidget; }

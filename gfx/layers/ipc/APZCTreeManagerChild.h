@@ -80,18 +80,18 @@ public:
   InputBridge() override;
 
 protected:
-  mozilla::ipc::IPCResult RecvHandleTap(const TapType& aType,
-                                        const LayoutDevicePoint& aPoint,
-                                        const Modifiers& aModifiers,
-                                        const ScrollableLayerGuid& aGuid,
-                                        const uint64_t& aInputBlockId) override;
+  mozilla::ipc::IPCResult RecvHandleTap(TapType&& aType,
+                                        LayoutDevicePoint&& aPoint,
+                                        Modifiers&& aModifiers,
+                                        ScrollableLayerGuid&& aGuid,
+                                        uint64_t&& aInputBlockId) override;
 
-  mozilla::ipc::IPCResult RecvNotifyPinchGesture(const PinchGestureType& aType,
-                                                 const ScrollableLayerGuid& aGuid,
-                                                 const LayoutDeviceCoord& aSpanChange,
-                                                 const Modifiers& aModifiers) override;
+  mozilla::ipc::IPCResult RecvNotifyPinchGesture(PinchGestureType&& aType,
+                                                 ScrollableLayerGuid&& aGuid,
+                                                 LayoutDeviceCoord&& aSpanChange,
+                                                 Modifiers&& aModifiers) override;
 
-  mozilla::ipc::IPCResult RecvCancelAutoscroll(const FrameMetrics::ViewID& aScrollId) override;
+  mozilla::ipc::IPCResult RecvCancelAutoscroll(FrameMetrics::ViewID&& aScrollId) override;
 
   virtual ~APZCTreeManagerChild();
 

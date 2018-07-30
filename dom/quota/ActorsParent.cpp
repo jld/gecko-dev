@@ -1056,7 +1056,7 @@ private:
 
   virtual mozilla::ipc::IPCResult
   RecvPQuotaUsageRequestConstructor(PQuotaUsageRequestParent* aActor,
-                                    const UsageRequestParams& aParams) override;
+                                    UsageRequestParams&& aParams) override;
 
   virtual bool
   DeallocPQuotaUsageRequestParent(PQuotaUsageRequestParent* aActor) override;
@@ -1066,7 +1066,7 @@ private:
 
   virtual mozilla::ipc::IPCResult
   RecvPQuotaRequestConstructor(PQuotaRequestParent* aActor,
-                               const RequestParams& aParams) override;
+                               RequestParams&& aParams) override;
 
   virtual bool
   DeallocPQuotaRequestParent(PQuotaRequestParent* aActor) override;
@@ -6698,7 +6698,7 @@ Quota::AllocPQuotaUsageRequestParent(const UsageRequestParams& aParams)
 
 mozilla::ipc::IPCResult
 Quota::RecvPQuotaUsageRequestConstructor(PQuotaUsageRequestParent* aActor,
-                                         const UsageRequestParams& aParams)
+                                         UsageRequestParams&& aParams)
 {
   AssertIsOnBackgroundThread();
   MOZ_ASSERT(aActor);
@@ -6789,7 +6789,7 @@ Quota::AllocPQuotaRequestParent(const RequestParams& aParams)
 
 mozilla::ipc::IPCResult
 Quota::RecvPQuotaRequestConstructor(PQuotaRequestParent* aActor,
-                                    const RequestParams& aParams)
+                                    RequestParams&& aParams)
 {
   AssertIsOnBackgroundThread();
   MOZ_ASSERT(aActor);

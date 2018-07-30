@@ -68,12 +68,12 @@ private:
 
   // PGMPVideoEncoderParent
   void ActorDestroy(ActorDestroyReason aWhy) override;
-  mozilla::ipc::IPCResult RecvEncoded(const GMPVideoEncodedFrameData& aEncodedFrame,
+  mozilla::ipc::IPCResult RecvEncoded(GMPVideoEncodedFrameData&& aEncodedFrame,
                                       InfallibleTArray<uint8_t>&& aCodecSpecificInfo) override;
-  mozilla::ipc::IPCResult RecvError(const GMPErr& aError) override;
+  mozilla::ipc::IPCResult RecvError(GMPErr&& aError) override;
   mozilla::ipc::IPCResult RecvShutdown() override;
   mozilla::ipc::IPCResult RecvParentShmemForPool(Shmem&& aFrameBuffer) override;
-  mozilla::ipc::IPCResult AnswerNeedShmem(const uint32_t& aEncodedBufferSize,
+  mozilla::ipc::IPCResult AnswerNeedShmem(uint32_t&& aEncodedBufferSize,
                                           Shmem* aMem) override;
   mozilla::ipc::IPCResult Recv__delete__() override;
 

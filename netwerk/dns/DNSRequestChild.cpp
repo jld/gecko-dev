@@ -249,7 +249,7 @@ DNSRequestChild::CallOnLookupComplete()
 }
 
 mozilla::ipc::IPCResult
-DNSRequestChild::RecvLookupCompleted(const DNSRequestResponse& reply)
+DNSRequestChild::RecvLookupCompleted(DNSRequestResponse&& reply)
 {
   mIPCOpen = false;
   MOZ_ASSERT(mListener);

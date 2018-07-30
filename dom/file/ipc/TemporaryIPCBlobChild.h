@@ -40,10 +40,10 @@ private:
   ~TemporaryIPCBlobChild();
 
   mozilla::ipc::IPCResult
-  RecvFileDesc(const FileDescriptor& aFD) override;
+  RecvFileDesc(FileDescriptor&& aFD) override;
 
   mozilla::ipc::IPCResult
-  Recv__delete__(const IPCBlobOrError& aBlobOrError) override;
+  Recv__delete__(IPCBlobOrError&& aBlobOrError) override;
 
   void
   ActorDestroy(ActorDestroyReason aWhy) override;

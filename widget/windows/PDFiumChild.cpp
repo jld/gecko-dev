@@ -31,9 +31,9 @@ PDFiumChild::Init(base::ProcessId aParentPid,
 }
 
 mozilla::ipc::IPCResult
-PDFiumChild::RecvConvertToEMF(const FileDescriptor& aFD,
-                              const int& aPageWidth,
-                              const int& aPageHeight)
+PDFiumChild::RecvConvertToEMF(FileDescriptor&& aFD,
+                              int&& aPageWidth,
+                              int&& aPageHeight)
 {
   MOZ_ASSERT(aFD.IsValid() && aPageWidth != 0 && aPageHeight != 0);
 

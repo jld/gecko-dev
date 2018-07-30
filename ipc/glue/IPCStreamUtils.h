@@ -56,7 +56,7 @@ DeserializeIPCStream(const OptionalIPCStream& aValue);
 //
 //  // in parent c++ code
 //  bool
-//  MyStuffParent::RecvDoStuff(const IPCStream& aIPCStream) {
+//  MyStuffParent::RecvDoStuff(IPCStream&& aIPCStream) {
 //    nsCOMPtr<nsIInputStream> stream = DeserializeIPCStream(aIPCStream);
 //    // Do something with stream...
 //
@@ -97,7 +97,7 @@ DeserializeIPCStream(const OptionalIPCStream& aValue);
 //
 //  // in parent c++ code
 //  bool
-//  MyStuffParent::RecvDoStuff(const Stuff& aStuff) {
+//  MyStuffParent::RecvDoStuff(Stuff&& aStuff) {
 //    nsCOMPtr<nsIInputStream> stream = DeserializeIPCStream(aStuff.stream());
 //    /* do something with the nsIInputStream */
 //  }

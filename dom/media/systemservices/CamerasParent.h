@@ -86,26 +86,26 @@ public:
 
   // Messages received form the child. These run on the IPC/PBackground thread.
   mozilla::ipc::IPCResult
-  RecvAllocateCaptureDevice(const CaptureEngine& aEngine,
-                            const nsCString& aUnique_idUTF8,
-                            const ipc::PrincipalInfo& aPrincipalInfo) override;
-  mozilla::ipc::IPCResult RecvReleaseCaptureDevice(const CaptureEngine&,
-                                                   const int&) override;
-  mozilla::ipc::IPCResult RecvNumberOfCaptureDevices(const CaptureEngine&) override;
-  mozilla::ipc::IPCResult RecvNumberOfCapabilities(const CaptureEngine&,
-                                                   const nsCString&) override;
-  mozilla::ipc::IPCResult RecvGetCaptureCapability(const CaptureEngine&, const nsCString&,
-                                                   const int&) override;
-  mozilla::ipc::IPCResult RecvGetCaptureDevice(const CaptureEngine&, const int&) override;
-  mozilla::ipc::IPCResult RecvStartCapture(const CaptureEngine&, const int&,
-                                           const VideoCaptureCapability&) override;
-  mozilla::ipc::IPCResult RecvFocusOnSelectedSource(const CaptureEngine&,
-                                                    const int&) override;
-  mozilla::ipc::IPCResult RecvStopCapture(const CaptureEngine&, const int&) override;
+  RecvAllocateCaptureDevice(CaptureEngine&& aEngine,
+                            nsCString&& aUnique_idUTF8,
+                            ipc::PrincipalInfo&& aPrincipalInfo) override;
+  mozilla::ipc::IPCResult RecvReleaseCaptureDevice(CaptureEngine&& ,
+                                                   int&& ) override;
+  mozilla::ipc::IPCResult RecvNumberOfCaptureDevices(CaptureEngine&& ) override;
+  mozilla::ipc::IPCResult RecvNumberOfCapabilities(CaptureEngine&& ,
+                                                   nsCString&& ) override;
+  mozilla::ipc::IPCResult RecvGetCaptureCapability(CaptureEngine&& , nsCString&& ,
+                                                   int&& ) override;
+  mozilla::ipc::IPCResult RecvGetCaptureDevice(CaptureEngine&& , int&& ) override;
+  mozilla::ipc::IPCResult RecvStartCapture(CaptureEngine&& , int&& ,
+                                           VideoCaptureCapability&& ) override;
+  mozilla::ipc::IPCResult RecvFocusOnSelectedSource(CaptureEngine&& ,
+                                                    int&& ) override;
+  mozilla::ipc::IPCResult RecvStopCapture(CaptureEngine&& , int&& ) override;
   mozilla::ipc::IPCResult RecvReleaseFrame(mozilla::ipc::Shmem&&) override;
   mozilla::ipc::IPCResult RecvAllDone() override;
   void ActorDestroy(ActorDestroyReason aWhy) override;
-  mozilla::ipc::IPCResult RecvEnsureInitialized(const CaptureEngine&) override;
+  mozilla::ipc::IPCResult RecvEnsureInitialized(CaptureEngine&& ) override;
 
   nsIEventTarget* GetBackgroundEventTarget() { return mPBackgroundEventTarget; };
   bool IsShuttingDown()

@@ -33,7 +33,7 @@ mozilla::ipc::IPCResult
 PrintingParent::RecvShowProgress(PBrowserParent* parent,
                                  PPrintProgressDialogParent* printProgressDialog,
                                  PRemotePrintJobParent* remotePrintJob,
-                                 const bool& isForPrinting)
+                                 bool&& isForPrinting)
 {
   bool notifyOnOpen = false;
 
@@ -177,7 +177,7 @@ PrintingParent::ShowPrintDialog(PBrowserParent* aParent,
 mozilla::ipc::IPCResult
 PrintingParent::RecvShowPrintDialog(PPrintSettingsDialogParent* aDialog,
                                     PBrowserParent* aParent,
-                                    const PrintData& aData)
+                                    PrintData&& aData)
 {
   PrintData resultData;
   nsresult rv = ShowPrintDialog(aParent, aData, &resultData);
@@ -195,9 +195,9 @@ PrintingParent::RecvShowPrintDialog(PPrintSettingsDialogParent* aDialog,
 }
 
 mozilla::ipc::IPCResult
-PrintingParent::RecvSavePrintSettings(const PrintData& aData,
-                                      const bool& aUsePrinterNamePrefix,
-                                      const uint32_t& aFlags,
+PrintingParent::RecvSavePrintSettings(PrintData&& aData,
+                                      bool&& aUsePrinterNamePrefix,
+                                      uint32_t&& aFlags,
                                       nsresult* aResult)
 {
   nsCOMPtr<nsIPrintSettings> settings;

@@ -17,7 +17,7 @@ namespace dom {
 
 mozilla::ipc::IPCResult
 ServiceWorkerManagerChild::RecvNotifyRegister(
-                                     const ServiceWorkerRegistrationData& aData)
+                                     ServiceWorkerRegistrationData&& aData)
 {
   if (mShuttingDown) {
     return IPC_OK();
@@ -33,8 +33,8 @@ ServiceWorkerManagerChild::RecvNotifyRegister(
 
 mozilla::ipc::IPCResult
 ServiceWorkerManagerChild::RecvNotifySoftUpdate(
-                                      const OriginAttributes& aOriginAttributes,
-                                      const nsString& aScope)
+                                      OriginAttributes&& aOriginAttributes,
+                                      nsString&& aScope)
 {
   if (mShuttingDown) {
     return IPC_OK();
@@ -49,8 +49,8 @@ ServiceWorkerManagerChild::RecvNotifySoftUpdate(
 }
 
 mozilla::ipc::IPCResult
-ServiceWorkerManagerChild::RecvNotifyUnregister(const PrincipalInfo& aPrincipalInfo,
-                                                const nsString& aScope)
+ServiceWorkerManagerChild::RecvNotifyUnregister(PrincipalInfo&& aPrincipalInfo,
+                                                nsString&& aScope)
 {
   if (mShuttingDown) {
     return IPC_OK();
@@ -73,7 +73,7 @@ ServiceWorkerManagerChild::RecvNotifyUnregister(const PrincipalInfo& aPrincipalI
 }
 
 mozilla::ipc::IPCResult
-ServiceWorkerManagerChild::RecvNotifyRemove(const nsCString& aHost)
+ServiceWorkerManagerChild::RecvNotifyRemove(nsCString&& aHost)
 {
   if (mShuttingDown) {
     return IPC_OK();

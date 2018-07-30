@@ -21,8 +21,8 @@ WebAuthnTransactionChild::WebAuthnTransactionChild(WebAuthnManagerBase* aManager
 }
 
 mozilla::ipc::IPCResult
-WebAuthnTransactionChild::RecvConfirmRegister(const uint64_t& aTransactionId,
-                                              const WebAuthnMakeCredentialResult& aResult)
+WebAuthnTransactionChild::RecvConfirmRegister(uint64_t&& aTransactionId,
+                                              WebAuthnMakeCredentialResult&& aResult)
 {
   if (NS_WARN_IF(!mManager)) {
     return IPC_FAIL_NO_REASON(this);
@@ -33,8 +33,8 @@ WebAuthnTransactionChild::RecvConfirmRegister(const uint64_t& aTransactionId,
 }
 
 mozilla::ipc::IPCResult
-WebAuthnTransactionChild::RecvConfirmSign(const uint64_t& aTransactionId,
-                                          const WebAuthnGetAssertionResult& aResult)
+WebAuthnTransactionChild::RecvConfirmSign(uint64_t&& aTransactionId,
+                                          WebAuthnGetAssertionResult&& aResult)
 {
   if (NS_WARN_IF(!mManager)) {
     return IPC_FAIL_NO_REASON(this);
@@ -45,8 +45,8 @@ WebAuthnTransactionChild::RecvConfirmSign(const uint64_t& aTransactionId,
 }
 
 mozilla::ipc::IPCResult
-WebAuthnTransactionChild::RecvAbort(const uint64_t& aTransactionId,
-                                    const nsresult& aError)
+WebAuthnTransactionChild::RecvAbort(uint64_t&& aTransactionId,
+                                    nsresult&& aError)
 {
   if (NS_WARN_IF(!mManager)) {
     return IPC_FAIL_NO_REASON(this);

@@ -32,16 +32,16 @@ public:
     mShuttingDown = true;
   }
 
-  virtual mozilla::ipc::IPCResult RecvNotifyRegister(const ServiceWorkerRegistrationData& aData)
+  virtual mozilla::ipc::IPCResult RecvNotifyRegister(ServiceWorkerRegistrationData&& aData)
                                                                        override;
 
-  virtual mozilla::ipc::IPCResult RecvNotifySoftUpdate(const OriginAttributes& aOriginAttributes,
-                                                       const nsString& aScope) override;
+  virtual mozilla::ipc::IPCResult RecvNotifySoftUpdate(OriginAttributes&& aOriginAttributes,
+                                                       nsString&& aScope) override;
 
-  virtual mozilla::ipc::IPCResult RecvNotifyUnregister(const PrincipalInfo& aPrincipalInfo,
-                                                       const nsString& aScope) override;
+  virtual mozilla::ipc::IPCResult RecvNotifyUnregister(PrincipalInfo&& aPrincipalInfo,
+                                                       nsString&& aScope) override;
 
-  virtual mozilla::ipc::IPCResult RecvNotifyRemove(const nsCString& aHost) override;
+  virtual mozilla::ipc::IPCResult RecvNotifyRemove(nsCString&& aHost) override;
 
   virtual mozilla::ipc::IPCResult RecvNotifyRemoveAll() override;
 

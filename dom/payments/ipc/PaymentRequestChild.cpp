@@ -30,7 +30,7 @@ PaymentRequestChild::RequestPayment(const IPCPaymentActionRequest& aAction)
 }
 
 mozilla::ipc::IPCResult
-PaymentRequestChild::RecvRespondPayment(const IPCPaymentActionResponse& aResponse)
+PaymentRequestChild::RecvRespondPayment(IPCPaymentActionResponse&& aResponse)
 {
   if (!mRequest) {
     return IPC_FAIL_NO_REASON(this);
@@ -49,8 +49,8 @@ PaymentRequestChild::RecvRespondPayment(const IPCPaymentActionResponse& aRespons
 }
 
 mozilla::ipc::IPCResult
-PaymentRequestChild::RecvChangeShippingAddress(const nsString& aRequestId,
-                                               const IPCPaymentAddress& aAddress)
+PaymentRequestChild::RecvChangeShippingAddress(nsString&& aRequestId,
+                                               IPCPaymentAddress&& aAddress)
 {
   if (!mRequest) {
     return IPC_FAIL_NO_REASON(this);
@@ -66,8 +66,8 @@ PaymentRequestChild::RecvChangeShippingAddress(const nsString& aRequestId,
 }
 
 mozilla::ipc::IPCResult
-PaymentRequestChild::RecvChangeShippingOption(const nsString& aRequestId,
-                                              const nsString& aOption)
+PaymentRequestChild::RecvChangeShippingOption(nsString&& aRequestId,
+                                              nsString&& aOption)
 {
   if (!mRequest) {
     return IPC_FAIL_NO_REASON(this);

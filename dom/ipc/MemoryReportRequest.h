@@ -24,7 +24,7 @@ public:
   explicit MemoryReportRequestHost(uint32_t aGeneration);
   ~MemoryReportRequestHost();
 
-  void RecvReport(const MemoryReport& aReport);
+  void RecvReport(MemoryReport&& aReport);
   void Finish(uint32_t aGeneration);
 
 private:

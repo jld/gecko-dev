@@ -237,7 +237,7 @@ WebRenderBridgeParent::~WebRenderBridgeParent()
 }
 
 mozilla::ipc::IPCResult
-WebRenderBridgeParent::RecvCreate(const gfx::IntSize& aSize)
+WebRenderBridgeParent::RecvCreate(gfx::IntSize&& aSize)
 {
   if (mDestroyed) {
     return IPC_OK();
@@ -740,22 +740,22 @@ WebRenderBridgeParent::SetAPZSampleTime()
 }
 
 mozilla::ipc::IPCResult
-WebRenderBridgeParent::RecvSetDisplayList(const gfx::IntSize& aSize,
+WebRenderBridgeParent::RecvSetDisplayList(gfx::IntSize&& aSize,
                                           InfallibleTArray<WebRenderParentCommand>&& aCommands,
                                           InfallibleTArray<OpDestroy>&& aToDestroy,
-                                          const uint64_t& aFwdTransactionId,
-                                          const TransactionId& aTransactionId,
-                                          const wr::LayoutSize& aContentSize,
+                                          uint64_t&& aFwdTransactionId,
+                                          TransactionId&& aTransactionId,
+                                          wr::LayoutSize&& aContentSize,
                                           ipc::ByteBuf&& dl,
-                                          const wr::BuiltDisplayListDescriptor& dlDesc,
-                                          const WebRenderScrollData& aScrollData,
+                                          wr::BuiltDisplayListDescriptor&& dlDesc,
+                                          WebRenderScrollData&& aScrollData,
                                           nsTArray<OpUpdateResource>&& aResourceUpdates,
                                           nsTArray<RefCountedShmem>&& aSmallShmems,
                                           nsTArray<ipc::Shmem>&& aLargeShmems,
-                                          const wr::IdNamespace& aIdNamespace,
-                                          const TimeStamp& aRefreshStartTime,
-                                          const TimeStamp& aTxnStartTime,
-                                          const TimeStamp& aFwdTime)
+                                          wr::IdNamespace&& aIdNamespace,
+                                          TimeStamp&& aRefreshStartTime,
+                                          TimeStamp&& aTxnStartTime,
+                                          TimeStamp&& aFwdTime)
 {
   if (mDestroyed) {
     for (const auto& op : aToDestroy) {
@@ -838,17 +838,17 @@ WebRenderBridgeParent::RecvSetDisplayList(const gfx::IntSize& aSize,
 }
 
 mozilla::ipc::IPCResult
-WebRenderBridgeParent::RecvEmptyTransaction(const FocusTarget& aFocusTarget,
-                                            const ScrollUpdatesMap& aUpdates,
-                                            const uint32_t& aPaintSequenceNumber,
+WebRenderBridgeParent::RecvEmptyTransaction(FocusTarget&& aFocusTarget,
+                                            ScrollUpdatesMap&& aUpdates,
+                                            uint32_t&& aPaintSequenceNumber,
                                             InfallibleTArray<WebRenderParentCommand>&& aCommands,
                                             InfallibleTArray<OpDestroy>&& aToDestroy,
-                                            const uint64_t& aFwdTransactionId,
-                                            const TransactionId& aTransactionId,
-                                            const wr::IdNamespace& aIdNamespace,
-                                            const TimeStamp& aRefreshStartTime,
-                                            const TimeStamp& aTxnStartTime,
-                                            const TimeStamp& aFwdTime)
+                                            uint64_t&& aFwdTransactionId,
+                                            TransactionId&& aTransactionId,
+                                            wr::IdNamespace&& aIdNamespace,
+                                            TimeStamp&& aRefreshStartTime,
+                                            TimeStamp&& aTxnStartTime,
+                                            TimeStamp&& aFwdTime)
 {
   if (mDestroyed) {
     for (const auto& op : aToDestroy) {
@@ -920,7 +920,7 @@ WebRenderBridgeParent::RecvEmptyTransaction(const FocusTarget& aFocusTarget,
 }
 
 mozilla::ipc::IPCResult
-WebRenderBridgeParent::RecvSetFocusTarget(const FocusTarget& aFocusTarget)
+WebRenderBridgeParent::RecvSetFocusTarget(FocusTarget&& aFocusTarget)
 {
   UpdateAPZFocusState(aFocusTarget);
   return IPC_OK();
@@ -1221,7 +1221,7 @@ WebRenderBridgeParent::ReleaseTextureOfImage(const wr::ImageKey& aKey)
 }
 
 mozilla::ipc::IPCResult
-WebRenderBridgeParent::RecvSetLayerObserverEpoch(const uint64_t& aLayerObserverEpoch)
+WebRenderBridgeParent::RecvSetLayerObserverEpoch(uint64_t&& aLayerObserverEpoch)
 {
   if (mDestroyed) {
     return IPC_OK();
@@ -1334,7 +1334,7 @@ WebRenderBridgeParent::RecvSyncWithCompositor()
 }
 
 mozilla::ipc::IPCResult
-WebRenderBridgeParent::RecvSetConfirmedTargetAPZC(const uint64_t& aBlockId,
+WebRenderBridgeParent::RecvSetConfirmedTargetAPZC(uint64_t&& aBlockId,
                                                   nsTArray<ScrollableLayerGuid>&& aTargets)
 {
   if (mDestroyed) {
@@ -1345,7 +1345,7 @@ WebRenderBridgeParent::RecvSetConfirmedTargetAPZC(const uint64_t& aBlockId,
 }
 
 mozilla::ipc::IPCResult
-WebRenderBridgeParent::RecvSetTestSampleTime(const TimeStamp& aTime)
+WebRenderBridgeParent::RecvSetTestSampleTime(TimeStamp&& aTime)
 {
   if (!mCompositorBridge->SetTestSampleTime(GetLayersId(), aTime)) {
     return IPC_FAIL_NO_REASON(this);
@@ -1361,7 +1361,7 @@ WebRenderBridgeParent::RecvLeaveTestMode()
 }
 
 mozilla::ipc::IPCResult
-WebRenderBridgeParent::RecvGetAnimationOpacity(const uint64_t& aCompositorAnimationsId,
+WebRenderBridgeParent::RecvGetAnimationOpacity(uint64_t&& aCompositorAnimationsId,
                                                float* aOpacity,
                                                bool* aHasAnimationOpacity)
 {
@@ -1387,7 +1387,7 @@ WebRenderBridgeParent::RecvGetAnimationOpacity(const uint64_t& aCompositorAnimat
 }
 
 mozilla::ipc::IPCResult
-WebRenderBridgeParent::RecvGetAnimationTransform(const uint64_t& aCompositorAnimationsId,
+WebRenderBridgeParent::RecvGetAnimationTransform(uint64_t&& aCompositorAnimationsId,
                                                  MaybeTransform* aTransform)
 {
   if (mDestroyed) {
@@ -1411,9 +1411,9 @@ WebRenderBridgeParent::RecvGetAnimationTransform(const uint64_t& aCompositorAnim
 }
 
 mozilla::ipc::IPCResult
-WebRenderBridgeParent::RecvSetAsyncScrollOffset(const FrameMetrics::ViewID& aScrollId,
-                                                const float& aX,
-                                                const float& aY)
+WebRenderBridgeParent::RecvSetAsyncScrollOffset(FrameMetrics::ViewID&& aScrollId,
+                                                float&& aX,
+                                                float&& aY)
 {
   if (mDestroyed) {
     return IPC_OK();
@@ -1423,8 +1423,8 @@ WebRenderBridgeParent::RecvSetAsyncScrollOffset(const FrameMetrics::ViewID& aScr
 }
 
 mozilla::ipc::IPCResult
-WebRenderBridgeParent::RecvSetAsyncZoom(const FrameMetrics::ViewID& aScrollId,
-                                        const float& aZoom)
+WebRenderBridgeParent::RecvSetAsyncZoom(FrameMetrics::ViewID&& aScrollId,
+                                        float&& aZoom)
 {
   if (mDestroyed) {
     return IPC_OK();
@@ -1828,8 +1828,8 @@ WebRenderBridgeParent::IsSameProcess() const
 }
 
 mozilla::ipc::IPCResult
-WebRenderBridgeParent::RecvNewCompositable(const CompositableHandle& aHandle,
-                                           const TextureInfo& aInfo)
+WebRenderBridgeParent::RecvNewCompositable(CompositableHandle&& aHandle,
+                                           TextureInfo&& aInfo)
 {
   if (mDestroyed) {
     return IPC_OK();
@@ -1841,7 +1841,7 @@ WebRenderBridgeParent::RecvNewCompositable(const CompositableHandle& aHandle,
 }
 
 mozilla::ipc::IPCResult
-WebRenderBridgeParent::RecvReleaseCompositable(const CompositableHandle& aHandle)
+WebRenderBridgeParent::RecvReleaseCompositable(CompositableHandle&& aHandle)
 {
   if (mDestroyed) {
     return IPC_OK();

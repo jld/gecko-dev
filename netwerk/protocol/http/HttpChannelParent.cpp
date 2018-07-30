@@ -801,7 +801,7 @@ HttpChannelParent::ConnectChannel(const uint32_t& registrarId, const bool& shoul
 }
 
 mozilla::ipc::IPCResult
-HttpChannelParent::RecvSetPriority(const int16_t& priority)
+HttpChannelParent::RecvSetPriority(int16_t&& priority)
 {
   LOG(("HttpChannelParent::RecvSetPriority [this=%p, priority=%d]\n",
        this, priority));
@@ -819,7 +819,7 @@ HttpChannelParent::RecvSetPriority(const int16_t& priority)
 }
 
 mozilla::ipc::IPCResult
-HttpChannelParent::RecvSetClassOfService(const uint32_t& cos)
+HttpChannelParent::RecvSetClassOfService(uint32_t&& cos)
 {
   if (mChannel) {
     mChannel->SetClassFlags(cos);
@@ -850,7 +850,7 @@ HttpChannelParent::RecvResume()
 }
 
 mozilla::ipc::IPCResult
-HttpChannelParent::RecvCancel(const nsresult& status)
+HttpChannelParent::RecvCancel(nsresult&& status)
 {
   LOG(("HttpChannelParent::RecvCancel [this=%p]\n", this));
 
@@ -863,7 +863,7 @@ HttpChannelParent::RecvCancel(const nsresult& status)
 
 
 mozilla::ipc::IPCResult
-HttpChannelParent::RecvSetCacheTokenCachedCharset(const nsCString& charset)
+HttpChannelParent::RecvSetCacheTokenCachedCharset(nsCString&& charset)
 {
   if (mCacheEntry)
     mCacheEntry->SetMetaDataElement("charset", charset.get());
@@ -871,8 +871,8 @@ HttpChannelParent::RecvSetCacheTokenCachedCharset(const nsCString& charset)
 }
 
 mozilla::ipc::IPCResult
-HttpChannelParent::RecvUpdateAssociatedContentSecurity(const int32_t& broken,
-                                                       const int32_t& no)
+HttpChannelParent::RecvUpdateAssociatedContentSecurity(int32_t&& broken,
+                                                       int32_t&& no)
 {
   if (mAssociatedContentSecurity) {
     mAssociatedContentSecurity->SetCountSubRequestsBrokenSecurity(broken);
@@ -882,15 +882,15 @@ HttpChannelParent::RecvUpdateAssociatedContentSecurity(const int32_t& broken,
 }
 
 mozilla::ipc::IPCResult
-HttpChannelParent::RecvRedirect2Verify(const nsresult& aResult,
-                                       const RequestHeaderTuples& changedHeaders,
-                                       const ChildLoadInfoForwarderArgs& aLoadInfoForwarder,
-                                       const uint32_t& loadFlags,
-                                       const uint32_t& referrerPolicy,
-                                       const OptionalURIParams& aReferrerURI,
-                                       const OptionalURIParams& aAPIRedirectURI,
-                                       const OptionalCorsPreflightArgs& aCorsPreflightArgs,
-                                       const bool& aChooseAppcache)
+HttpChannelParent::RecvRedirect2Verify(nsresult&& aResult,
+                                       RequestHeaderTuples&& changedHeaders,
+                                       ChildLoadInfoForwarderArgs&& aLoadInfoForwarder,
+                                       uint32_t&& loadFlags,
+                                       uint32_t&& referrerPolicy,
+                                       OptionalURIParams&& aReferrerURI,
+                                       OptionalURIParams&& aAPIRedirectURI,
+                                       OptionalCorsPreflightArgs&& aCorsPreflightArgs,
+                                       bool&& aChooseAppcache)
 {
   LOG(("HttpChannelParent::RecvRedirect2Verify [this=%p result=%" PRIx32 "]\n",
        this, static_cast<uint32_t>(aResult)));
@@ -1061,7 +1061,7 @@ HttpChannelParent::ContinueRedirect2Verify(const nsresult& aResult)
 }
 
 mozilla::ipc::IPCResult
-HttpChannelParent::RecvDocumentChannelCleanup(const bool& clearCacheEntry)
+HttpChannelParent::RecvDocumentChannelCleanup(bool&& clearCacheEntry)
 {
   // From now on only using mAssociatedContentSecurity.  Free everything else.
   CleanupBackgroundChannel(); // Background channel can be closed.
@@ -1110,9 +1110,9 @@ private:
 };
 
 mozilla::ipc::IPCResult
-HttpChannelParent::RecvDivertOnDataAvailable(const nsCString& data,
-                                             const uint64_t& offset,
-                                             const uint32_t& count)
+HttpChannelParent::RecvDivertOnDataAvailable(nsCString&& data,
+                                             uint64_t&& offset,
+                                             uint32_t&& count)
 {
   LOG(("HttpChannelParent::RecvDivertOnDataAvailable [this=%p]\n", this));
 
@@ -1199,7 +1199,7 @@ private:
 };
 
 mozilla::ipc::IPCResult
-HttpChannelParent::RecvDivertOnStopRequest(const nsresult& statusCode)
+HttpChannelParent::RecvDivertOnStopRequest(nsresult&& statusCode)
 {
   LOG(("HttpChannelParent::RecvDivertOnStopRequest [this=%p]\n", this));
 
@@ -1333,8 +1333,8 @@ HttpChannelParent::ResponseSynthesized()
 }
 
 mozilla::ipc::IPCResult
-HttpChannelParent::RecvRemoveCorsPreflightCacheEntry(const URIParams& uri,
-  const mozilla::ipc::PrincipalInfo& requestingPrincipal)
+HttpChannelParent::RecvRemoveCorsPreflightCacheEntry(URIParams&& uri,
+  mozilla::ipc::PrincipalInfo&& requestingPrincipal)
 {
   nsCOMPtr<nsIURI> deserializedURI = DeserializeURI(uri);
   if (!deserializedURI) {

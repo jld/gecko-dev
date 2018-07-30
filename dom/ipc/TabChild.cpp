@@ -1152,8 +1152,8 @@ TabChild::~TabChild()
 }
 
 mozilla::ipc::IPCResult
-TabChild::RecvLoadURL(const nsCString& aURI,
-                      const ShowInfo& aInfo)
+TabChild::RecvLoadURL(nsCString&& aURI,
+                      ShowInfo&& aInfo)
 {
   if (!mDidLoadURLInit) {
     mDidLoadURLInit = true;
@@ -1246,10 +1246,10 @@ TabChild::ApplyShowInfo(const ShowInfo& aInfo)
 }
 
 mozilla::ipc::IPCResult
-TabChild::RecvShow(const ScreenIntSize& aSize,
-                   const ShowInfo& aInfo,
-                   const bool& aParentIsActive,
-                   const nsSizeMode& aSizeMode)
+TabChild::RecvShow(ScreenIntSize&& aSize,
+                   ShowInfo&& aInfo,
+                   bool&& aParentIsActive,
+                   nsSizeMode&& aSizeMode)
 {
   bool res = true;
 
@@ -1275,10 +1275,10 @@ TabChild::RecvShow(const ScreenIntSize& aSize,
 }
 
 mozilla::ipc::IPCResult
-TabChild::RecvInitRendering(const TextureFactoryIdentifier& aTextureFactoryIdentifier,
-                            const layers::LayersId& aLayersId,
-                            const CompositorOptions& aCompositorOptions,
-                            const bool& aLayersConnected,
+TabChild::RecvInitRendering(TextureFactoryIdentifier&& aTextureFactoryIdentifier,
+                            layers::LayersId&& aLayersId,
+                            CompositorOptions&& aCompositorOptions,
+                            bool&& aLayersConnected,
                             PRenderFrameChild* aRenderFrame)
 {
   MOZ_ASSERT((!mDidFakeShow && aRenderFrame) || (mDidFakeShow && !aRenderFrame));
@@ -1289,7 +1289,7 @@ TabChild::RecvInitRendering(const TextureFactoryIdentifier& aTextureFactoryIdent
 }
 
 mozilla::ipc::IPCResult
-TabChild::RecvUpdateDimensions(const DimensionInfo& aDimensionInfo)
+TabChild::RecvUpdateDimensions(DimensionInfo&& aDimensionInfo)
 {
     // When recording/replaying we need to make sure the dimensions are up to
     // date on the compositor used in this process.
@@ -1327,7 +1327,7 @@ TabChild::RecvUpdateDimensions(const DimensionInfo& aDimensionInfo)
 }
 
 mozilla::ipc::IPCResult
-TabChild::RecvSizeModeChanged(const nsSizeMode& aSizeMode)
+TabChild::RecvSizeModeChanged(nsSizeMode&& aSizeMode)
 {
   mPuppetWidget->SetSizeMode(aSizeMode);
   if (!mPuppetWidget->IsVisible()) {
@@ -1348,7 +1348,7 @@ TabChild::UpdateFrame(const FrameMetrics& aFrameMetrics)
 }
 
 mozilla::ipc::IPCResult
-TabChild::RecvSuppressDisplayport(const bool& aEnabled)
+TabChild::RecvSuppressDisplayport(bool&& aEnabled)
 {
   if (nsCOMPtr<nsIPresShell> shell = GetPresShell()) {
     shell->SuppressDisplayport(aEnabled);
@@ -1388,11 +1388,11 @@ TabChild::HandleDoubleTap(const CSSPoint& aPoint, const Modifiers& aModifiers,
 }
 
 mozilla::ipc::IPCResult
-TabChild::RecvHandleTap(const GeckoContentController::TapType& aType,
-                        const LayoutDevicePoint& aPoint,
-                        const Modifiers& aModifiers,
-                        const ScrollableLayerGuid& aGuid,
-                        const uint64_t& aInputBlockId)
+TabChild::RecvHandleTap(GeckoContentController::TapType&& aType,
+                        LayoutDevicePoint&& aPoint,
+                        Modifiers&& aModifiers,
+                        ScrollableLayerGuid&& aGuid,
+                        uint64_t&& aInputBlockId)
 {
   nsCOMPtr<nsIPresShell> presShell = GetPresShell();
   if (!presShell) {
@@ -1435,11 +1435,11 @@ TabChild::RecvHandleTap(const GeckoContentController::TapType& aType,
 
 mozilla::ipc::IPCResult
 TabChild::RecvNormalPriorityHandleTap(
-  const GeckoContentController::TapType& aType,
-  const LayoutDevicePoint& aPoint,
-  const Modifiers& aModifiers,
-  const ScrollableLayerGuid& aGuid,
-  const uint64_t& aInputBlockId)
+  GeckoContentController::TapType&& aType,
+  LayoutDevicePoint&& aPoint,
+  Modifiers&& aModifiers,
+  ScrollableLayerGuid&& aGuid,
+  uint64_t&& aInputBlockId)
 {
   return RecvHandleTap(aType, aPoint, aModifiers, aGuid, aInputBlockId);
 }
@@ -1506,7 +1506,7 @@ TabChild::RecvDeactivate()
 }
 
 mozilla::ipc::IPCResult
-TabChild::RecvParentActivated(const bool& aActivated)
+TabChild::RecvParentActivated(bool&& aActivated)
 {
   mParentIsActive = aActivated;
 
@@ -1519,8 +1519,8 @@ TabChild::RecvParentActivated(const bool& aActivated)
 }
 
 mozilla::ipc::IPCResult
-TabChild::RecvSetKeyboardIndicators(const UIStateChangeType& aShowAccelerators,
-                                    const UIStateChangeType& aShowFocusRings)
+TabChild::RecvSetKeyboardIndicators(UIStateChangeType&& aShowAccelerators,
+                                    UIStateChangeType&& aShowFocusRings)
 {
   nsCOMPtr<nsPIDOMWindowOuter> window = do_GetInterface(WebNavigation());
   NS_ENSURE_TRUE(window, IPC_OK());
@@ -1537,13 +1537,13 @@ TabChild::RecvStopIMEStateManagement()
 }
 
 mozilla::ipc::IPCResult
-TabChild::RecvMouseEvent(const nsString& aType,
-                         const float&    aX,
-                         const float&    aY,
-                         const int32_t&  aButton,
-                         const int32_t&  aClickCount,
-                         const int32_t&  aModifiers,
-                         const bool&     aIgnoreRootScrollFrame)
+TabChild::RecvMouseEvent(nsString&& aType,
+                         float&& aX,
+                         float&& aY,
+                         int32_t&& aButton,
+                         int32_t&& aClickCount,
+                         int32_t&& aModifiers,
+                         bool&& aIgnoreRootScrollFrame)
 {
   APZCCallbackHelper::DispatchMouseEvent(GetPresShell(), aType,
                                          CSSPoint(aX, aY), aButton, aClickCount,
@@ -1613,9 +1613,9 @@ TabChild::FlushAllCoalescedMouseData()
 }
 
 mozilla::ipc::IPCResult
-TabChild::RecvRealMouseMoveEvent(const WidgetMouseEvent& aEvent,
-                                 const ScrollableLayerGuid& aGuid,
-                                 const uint64_t& aInputBlockId)
+TabChild::RecvRealMouseMoveEvent(WidgetMouseEvent&& aEvent,
+                                 ScrollableLayerGuid&& aGuid,
+                                 uint64_t&& aInputBlockId)
 {
   if (mCoalesceMouseMoveEvents && mCoalescedMouseEventFlusher) {
     CoalescedMouseData* data = nullptr;
@@ -1654,17 +1654,17 @@ TabChild::RecvRealMouseMoveEvent(const WidgetMouseEvent& aEvent,
 }
 
 mozilla::ipc::IPCResult
-TabChild::RecvNormalPriorityRealMouseMoveEvent(const WidgetMouseEvent& aEvent,
-                                               const ScrollableLayerGuid& aGuid,
-                                               const uint64_t& aInputBlockId)
+TabChild::RecvNormalPriorityRealMouseMoveEvent(WidgetMouseEvent&& aEvent,
+                                               ScrollableLayerGuid&& aGuid,
+                                               uint64_t&& aInputBlockId)
 {
   return RecvRealMouseMoveEvent(aEvent, aGuid, aInputBlockId);
 }
 
 mozilla::ipc::IPCResult
-TabChild::RecvSynthMouseMoveEvent(const WidgetMouseEvent& aEvent,
-                                  const ScrollableLayerGuid& aGuid,
-                                  const uint64_t& aInputBlockId)
+TabChild::RecvSynthMouseMoveEvent(WidgetMouseEvent&& aEvent,
+                                  ScrollableLayerGuid&& aGuid,
+                                  uint64_t&& aInputBlockId)
 {
   if (!RecvRealMouseButtonEvent(aEvent, aGuid, aInputBlockId)) {
     return IPC_FAIL_NO_REASON(this);
@@ -1673,17 +1673,17 @@ TabChild::RecvSynthMouseMoveEvent(const WidgetMouseEvent& aEvent,
 }
 
 mozilla::ipc::IPCResult
-TabChild::RecvNormalPrioritySynthMouseMoveEvent(const WidgetMouseEvent& aEvent,
-                                                const ScrollableLayerGuid& aGuid,
-                                                const uint64_t& aInputBlockId)
+TabChild::RecvNormalPrioritySynthMouseMoveEvent(WidgetMouseEvent&& aEvent,
+                                                ScrollableLayerGuid&& aGuid,
+                                                uint64_t&& aInputBlockId)
 {
   return RecvSynthMouseMoveEvent(aEvent, aGuid, aInputBlockId);
 }
 
 mozilla::ipc::IPCResult
-TabChild::RecvRealMouseButtonEvent(const WidgetMouseEvent& aEvent,
-                                   const ScrollableLayerGuid& aGuid,
-                                   const uint64_t& aInputBlockId)
+TabChild::RecvRealMouseButtonEvent(WidgetMouseEvent&& aEvent,
+                                   ScrollableLayerGuid&& aGuid,
+                                   uint64_t&& aInputBlockId)
 {
   if (mCoalesceMouseMoveEvents && mCoalescedMouseEventFlusher &&
       aEvent.mMessage != eMouseMove) {
@@ -1751,9 +1751,9 @@ TabChild::HandleRealMouseButtonEvent(const WidgetMouseEvent& aEvent,
 
 mozilla::ipc::IPCResult
 TabChild::RecvNormalPriorityRealMouseButtonEvent(
-  const WidgetMouseEvent& aEvent,
-  const ScrollableLayerGuid& aGuid,
-  const uint64_t& aInputBlockId)
+  WidgetMouseEvent&& aEvent,
+  ScrollableLayerGuid&& aGuid,
+  uint64_t&& aInputBlockId)
 {
   return RecvRealMouseButtonEvent(aEvent, aGuid, aInputBlockId);
 }
@@ -1850,9 +1850,9 @@ TabChild::DispatchWheelEvent(const WidgetWheelEvent& aEvent,
 }
 
 mozilla::ipc::IPCResult
-TabChild::RecvMouseWheelEvent(const WidgetWheelEvent& aEvent,
-                              const ScrollableLayerGuid& aGuid,
-                              const uint64_t& aInputBlockId)
+TabChild::RecvMouseWheelEvent(WidgetWheelEvent&& aEvent,
+                              ScrollableLayerGuid&& aGuid,
+                              uint64_t&& aInputBlockId)
 {
   bool isNextWheelEvent = false;
   if (MaybeCoalesceWheelEvent(aEvent, aGuid, aInputBlockId,
@@ -1879,18 +1879,18 @@ TabChild::RecvMouseWheelEvent(const WidgetWheelEvent& aEvent,
 }
 
 mozilla::ipc::IPCResult
-TabChild::RecvNormalPriorityMouseWheelEvent(const WidgetWheelEvent& aEvent,
-                                            const ScrollableLayerGuid& aGuid,
-                                            const uint64_t& aInputBlockId)
+TabChild::RecvNormalPriorityMouseWheelEvent(WidgetWheelEvent&& aEvent,
+                                            ScrollableLayerGuid&& aGuid,
+                                            uint64_t&& aInputBlockId)
 {
   return RecvMouseWheelEvent(aEvent, aGuid, aInputBlockId);
 }
 
 mozilla::ipc::IPCResult
-TabChild::RecvRealTouchEvent(const WidgetTouchEvent& aEvent,
-                             const ScrollableLayerGuid& aGuid,
-                             const uint64_t& aInputBlockId,
-                             const nsEventStatus& aApzResponse)
+TabChild::RecvRealTouchEvent(WidgetTouchEvent&& aEvent,
+                             ScrollableLayerGuid&& aGuid,
+                             uint64_t&& aInputBlockId,
+                             nsEventStatus&& aApzResponse)
 {
   TABC_LOG("Receiving touch event of type %d\n", aEvent.mMessage);
 
@@ -1931,19 +1931,19 @@ TabChild::RecvRealTouchEvent(const WidgetTouchEvent& aEvent,
 }
 
 mozilla::ipc::IPCResult
-TabChild::RecvNormalPriorityRealTouchEvent(const WidgetTouchEvent& aEvent,
-                                           const ScrollableLayerGuid& aGuid,
-                                           const uint64_t& aInputBlockId,
-                                           const nsEventStatus& aApzResponse)
+TabChild::RecvNormalPriorityRealTouchEvent(WidgetTouchEvent&& aEvent,
+                                           ScrollableLayerGuid&& aGuid,
+                                           uint64_t&& aInputBlockId,
+                                           nsEventStatus&& aApzResponse)
 {
   return RecvRealTouchEvent(aEvent, aGuid, aInputBlockId, aApzResponse);
 }
 
 mozilla::ipc::IPCResult
-TabChild::RecvRealTouchMoveEvent(const WidgetTouchEvent& aEvent,
-                                 const ScrollableLayerGuid& aGuid,
-                                 const uint64_t& aInputBlockId,
-                                 const nsEventStatus& aApzResponse)
+TabChild::RecvRealTouchMoveEvent(WidgetTouchEvent&& aEvent,
+                                 ScrollableLayerGuid&& aGuid,
+                                 uint64_t&& aInputBlockId,
+                                 nsEventStatus&& aApzResponse)
 {
   if (!RecvRealTouchEvent(aEvent, aGuid, aInputBlockId, aApzResponse)) {
     return IPC_FAIL_NO_REASON(this);
@@ -1953,19 +1953,19 @@ TabChild::RecvRealTouchMoveEvent(const WidgetTouchEvent& aEvent,
 
 mozilla::ipc::IPCResult
 TabChild::RecvNormalPriorityRealTouchMoveEvent(
-  const WidgetTouchEvent& aEvent,
-  const ScrollableLayerGuid& aGuid,
-  const uint64_t& aInputBlockId,
-  const nsEventStatus& aApzResponse)
+  WidgetTouchEvent&& aEvent,
+  ScrollableLayerGuid&& aGuid,
+  uint64_t&& aInputBlockId,
+  nsEventStatus&& aApzResponse)
 {
   return RecvRealTouchMoveEvent(aEvent, aGuid, aInputBlockId, aApzResponse);
 }
 
 mozilla::ipc::IPCResult
-TabChild::RecvRealDragEvent(const WidgetDragEvent& aEvent,
-                            const uint32_t& aDragAction,
-                            const uint32_t& aDropEffect,
-                            const nsCString& aPrincipalURISpec)
+TabChild::RecvRealDragEvent(WidgetDragEvent&& aEvent,
+                            uint32_t&& aDragAction,
+                            uint32_t&& aDropEffect,
+                            nsCString&& aPrincipalURISpec)
 {
   WidgetDragEvent localEvent(aEvent);
   localEvent.mWidget = mPuppetWidget;
@@ -2001,7 +2001,7 @@ TabChild::RecvRealDragEvent(const WidgetDragEvent& aEvent,
 }
 
 mozilla::ipc::IPCResult
-TabChild::RecvPluginEvent(const WidgetPluginEvent& aEvent)
+TabChild::RecvPluginEvent(WidgetPluginEvent&& aEvent)
 {
   WidgetPluginEvent localEvent(aEvent);
   localEvent.mWidget = mPuppetWidget;
@@ -2041,8 +2041,8 @@ TabChild::RequestEditCommands(nsIWidget::NativeKeyBindingsType aType,
 }
 
 mozilla::ipc::IPCResult
-TabChild::RecvNativeSynthesisResponse(const uint64_t& aObserverId,
-                                      const nsCString& aResponse)
+TabChild::RecvNativeSynthesisResponse(uint64_t&& aObserverId,
+                                      nsCString&& aResponse)
 {
   mozilla::widget::AutoObserverNotifier::NotifySavedObserver(aObserverId,
                                                              aResponse.get());
@@ -2088,7 +2088,7 @@ TabChild::UpdateRepeatedKeyEventEndTime(const WidgetKeyboardEvent& aEvent)
 }
 
 mozilla::ipc::IPCResult
-TabChild::RecvRealKeyEvent(const WidgetKeyboardEvent& aEvent)
+TabChild::RecvRealKeyEvent(WidgetKeyboardEvent&& aEvent)
 {
   if (SkipRepeatedKeyEvent(aEvent)) {
     return IPC_OK();
@@ -2149,13 +2149,13 @@ TabChild::RecvRealKeyEvent(const WidgetKeyboardEvent& aEvent)
 }
 
 mozilla::ipc::IPCResult
-TabChild::RecvNormalPriorityRealKeyEvent(const WidgetKeyboardEvent& aEvent)
+TabChild::RecvNormalPriorityRealKeyEvent(WidgetKeyboardEvent&& aEvent)
 {
   return RecvRealKeyEvent(aEvent);
 }
 
 mozilla::ipc::IPCResult
-TabChild::RecvCompositionEvent(const WidgetCompositionEvent& aEvent)
+TabChild::RecvCompositionEvent(WidgetCompositionEvent&& aEvent)
 {
   WidgetCompositionEvent localEvent(aEvent);
   localEvent.mWidget = mPuppetWidget;
@@ -2166,13 +2166,13 @@ TabChild::RecvCompositionEvent(const WidgetCompositionEvent& aEvent)
 
 mozilla::ipc::IPCResult
 TabChild::RecvNormalPriorityCompositionEvent(
-            const WidgetCompositionEvent& aEvent)
+            WidgetCompositionEvent&& aEvent)
 {
   return RecvCompositionEvent(aEvent);
 }
 
 mozilla::ipc::IPCResult
-TabChild::RecvSelectionEvent(const WidgetSelectionEvent& aEvent)
+TabChild::RecvSelectionEvent(WidgetSelectionEvent&& aEvent)
 {
   WidgetSelectionEvent localEvent(aEvent);
   localEvent.mWidget = mPuppetWidget;
@@ -2182,16 +2182,16 @@ TabChild::RecvSelectionEvent(const WidgetSelectionEvent& aEvent)
 }
 
 mozilla::ipc::IPCResult
-TabChild::RecvNormalPrioritySelectionEvent(const WidgetSelectionEvent& aEvent)
+TabChild::RecvNormalPrioritySelectionEvent(WidgetSelectionEvent&& aEvent)
 {
   return RecvSelectionEvent(aEvent);
 }
 
 mozilla::ipc::IPCResult
-TabChild::RecvPasteTransferable(const IPCDataTransfer& aDataTransfer,
-                                const bool& aIsPrivateData,
-                                const IPC::Principal& aRequestingPrincipal,
-                                const uint32_t& aContentPolicyType)
+TabChild::RecvPasteTransferable(IPCDataTransfer&& aDataTransfer,
+                                bool&& aIsPrivateData,
+                                IPC::Principal&& aRequestingPrincipal,
+                                uint32_t&& aContentPolicyType)
 {
   nsresult rv;
   nsCOMPtr<nsITransferable> trans =
@@ -2285,7 +2285,7 @@ TabChild::DeallocPIndexedDBPermissionRequestChild(
 }
 
 mozilla::ipc::IPCResult
-TabChild::RecvActivateFrameEvent(const nsString& aType, const bool& capture)
+TabChild::RecvActivateFrameEvent(nsString&& aType, bool&& capture)
 {
   nsCOMPtr<nsPIDOMWindowOuter> window = do_GetInterface(WebNavigation());
   NS_ENSURE_TRUE(window, IPC_OK());
@@ -2298,7 +2298,7 @@ TabChild::RecvActivateFrameEvent(const nsString& aType, const bool& capture)
 }
 
 mozilla::ipc::IPCResult
-TabChild::RecvLoadRemoteScript(const nsString& aURL, const bool& aRunInGlobalScope)
+TabChild::RecvLoadRemoteScript(nsString&& aURL, bool&& aRunInGlobalScope)
 {
   if (!InitTabChildGlobal())
     // This can happen if we're half-destroyed.  It's not a fatal
@@ -2316,10 +2316,10 @@ TabChild::RecvLoadRemoteScript(const nsString& aURL, const bool& aRunInGlobalSco
 }
 
 mozilla::ipc::IPCResult
-TabChild::RecvAsyncMessage(const nsString& aMessage,
+TabChild::RecvAsyncMessage(nsString&& aMessage,
                            InfallibleTArray<CpowEntry>&& aCpows,
-                           const IPC::Principal& aPrincipal,
-                           const ClonedMessageData& aData)
+                           IPC::Principal&& aPrincipal,
+                           ClonedMessageData&& aData)
 {
   AUTO_PROFILER_LABEL_DYNAMIC_LOSSY_NSSTRING(
     "TabChild::RecvAsyncMessage", OTHER, aMessage);
@@ -2349,7 +2349,7 @@ TabChild::RecvAsyncMessage(const nsString& aMessage,
 }
 
 mozilla::ipc::IPCResult
-TabChild::RecvSwappedWithOtherRemoteLoader(const IPCTabContext& aContext)
+TabChild::RecvSwappedWithOtherRemoteLoader(IPCTabContext&& aContext)
 {
   nsCOMPtr<nsIDocShell> ourDocShell = do_GetInterface(WebNavigation());
   if (NS_WARN_IF(!ourDocShell)) {
@@ -2404,7 +2404,7 @@ TabChild::RecvSwappedWithOtherRemoteLoader(const IPCTabContext& aContext)
 }
 
 mozilla::ipc::IPCResult
-TabChild::RecvHandleAccessKey(const WidgetKeyboardEvent& aEvent,
+TabChild::RecvHandleAccessKey(WidgetKeyboardEvent&& aEvent,
                               nsTArray<uint32_t>&& aCharCodes)
 {
   nsCOMPtr<nsIDocument> document(GetDocument());
@@ -2425,7 +2425,7 @@ TabChild::RecvHandleAccessKey(const WidgetKeyboardEvent& aEvent,
 }
 
 mozilla::ipc::IPCResult
-TabChild::RecvSetUseGlobalHistory(const bool& aUse)
+TabChild::RecvSetUseGlobalHistory(bool&& aUse)
 {
   nsCOMPtr<nsIDocShell> docShell = do_GetInterface(WebNavigation());
   MOZ_ASSERT(docShell);
@@ -2439,7 +2439,7 @@ TabChild::RecvSetUseGlobalHistory(const bool& aUse)
 }
 
 mozilla::ipc::IPCResult
-TabChild::RecvPrint(const uint64_t& aOuterWindowID, const PrintData& aPrintData)
+TabChild::RecvPrint(uint64_t&& aOuterWindowID, PrintData&& aPrintData)
 {
 #ifdef NS_PRINTING
   nsGlobalWindowOuter* outerWindow =
@@ -2485,7 +2485,7 @@ TabChild::RecvPrint(const uint64_t& aOuterWindowID, const PrintData& aPrintData)
 }
 
 mozilla::ipc::IPCResult
-TabChild::RecvUpdateNativeWindowHandle(const uintptr_t& aNewHandle)
+TabChild::RecvUpdateNativeWindowHandle(uintptr_t&& aNewHandle)
 {
 #if defined(XP_WIN) && defined(ACCESSIBILITY)
   mNativeWindowHandle = aNewHandle;
@@ -2566,7 +2566,7 @@ TabChild::InternalSetDocShellIsActive(bool aIsActive)
 }
 
 mozilla::ipc::IPCResult
-TabChild::RecvSetDocShellIsActive(const bool& aIsActive)
+TabChild::RecvSetDocShellIsActive(bool&& aIsActive)
 {
   // If we're currently waiting for window opening to complete, we need to hold
   // off on setting the docshell active. We queue up the values we're receiving
@@ -2582,7 +2582,7 @@ TabChild::RecvSetDocShellIsActive(const bool& aIsActive)
 }
 
 mozilla::ipc::IPCResult
-TabChild::RecvRenderLayers(const bool& aEnabled, const bool& aForceRepaint, const uint64_t& aLayerObserverEpoch)
+TabChild::RecvRenderLayers(bool&& aEnabled, bool&& aForceRepaint, uint64_t&& aLayerObserverEpoch)
 {
   if (mPendingDocShellBlockers > 0) {
     mPendingRenderLayersReceivedMessage = true;
@@ -2693,7 +2693,7 @@ TabChild::RecvRenderLayers(const bool& aEnabled, const bool& aForceRepaint, cons
 }
 
 mozilla::ipc::IPCResult
-TabChild::RecvNavigateByKey(const bool& aForward, const bool& aForDocumentNavigation)
+TabChild::RecvNavigateByKey(bool&& aForward, bool&& aForDocumentNavigation)
 {
   nsIFocusManager* fm = nsFocusManager::GetFocusManager();
   if (fm) {
@@ -2723,8 +2723,8 @@ TabChild::RecvNavigateByKey(const bool& aForward, const bool& aForDocumentNaviga
 
 mozilla::ipc::IPCResult
 TabChild::RecvHandledWindowedPluginKeyEvent(
-            const NativeEventData& aKeyEventData,
-            const bool& aIsConsumed)
+            NativeEventData&& aKeyEventData,
+            bool&& aIsConsumed)
 {
   if (NS_WARN_IF(!mPuppetWidget)) {
     return IPC_OK();
@@ -3296,9 +3296,9 @@ TabChild::RecvRequestNotifyAfterRemotePaint()
 }
 
 mozilla::ipc::IPCResult
-TabChild::RecvUIResolutionChanged(const float& aDpi,
-                                  const int32_t& aRounding,
-                                  const double& aScale)
+TabChild::RecvUIResolutionChanged(float&& aDpi,
+                                  int32_t&& aRounding,
+                                  double&& aScale)
 {
   ScreenIntSize oldScreenSize = GetInnerSize();
   if (aDpi > 0) {
@@ -3359,7 +3359,7 @@ TabChild::StopAwaitingLargeAlloc()
 }
 
 mozilla::ipc::IPCResult
-TabChild::RecvSetWindowName(const nsString& aName)
+TabChild::RecvSetWindowName(nsString&& aName)
 {
   nsCOMPtr<nsIDocShellTreeItem> item = do_QueryInterface(WebNavigation());
   if (item) {
@@ -3369,7 +3369,7 @@ TabChild::RecvSetWindowName(const nsString& aName)
 }
 
 mozilla::ipc::IPCResult
-TabChild::RecvSetOriginAttributes(const OriginAttributes& aOriginAttributes)
+TabChild::RecvSetOriginAttributes(OriginAttributes&& aOriginAttributes)
 {
   nsCOMPtr<nsIDocShell> docShell = do_GetInterface(WebNavigation());
   nsDocShell::Cast(docShell)->SetOriginAttributes(aOriginAttributes);
@@ -3378,7 +3378,7 @@ TabChild::RecvSetOriginAttributes(const OriginAttributes& aOriginAttributes)
 }
 
 mozilla::ipc::IPCResult
-TabChild::RecvSetWidgetNativeData(const WindowsHandle& aWidgetNativeData)
+TabChild::RecvSetWidgetNativeData(WindowsHandle&& aWidgetNativeData)
 {
   mWidgetNativeData = aWidgetNativeData;
   return IPC_OK();

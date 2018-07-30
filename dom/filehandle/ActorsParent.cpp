@@ -362,7 +362,7 @@ private:
 
   virtual mozilla::ipc::IPCResult
   RecvPBackgroundFileRequestConstructor(PBackgroundFileRequestParent* aActor,
-                                        const FileRequestParams& aParams)
+                                        FileRequestParams&& aParams)
                                         override;
 
   virtual bool
@@ -1481,7 +1481,7 @@ BackgroundMutableFileParentBase::AllocPBackgroundFileHandleParent(
 mozilla::ipc::IPCResult
 BackgroundMutableFileParentBase::RecvPBackgroundFileHandleConstructor(
                                             PBackgroundFileHandleParent* aActor,
-                                            const FileMode& aMode)
+                                            FileMode&& aMode)
 {
   AssertIsOnBackgroundThread();
   MOZ_ASSERT(aActor);
@@ -1942,7 +1942,7 @@ FileHandle::AllocPBackgroundFileRequestParent(const FileRequestParams& aParams)
 mozilla::ipc::IPCResult
 FileHandle::RecvPBackgroundFileRequestConstructor(
                                            PBackgroundFileRequestParent* aActor,
-                                           const FileRequestParams& aParams)
+                                           FileRequestParams&& aParams)
 {
   AssertIsOnBackgroundThread();
   MOZ_ASSERT(aActor);

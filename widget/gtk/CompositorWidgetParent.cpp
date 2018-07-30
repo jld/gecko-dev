@@ -40,7 +40,7 @@ CompositorWidgetParent::GetVsyncObserver() const
 }
 
 mozilla::ipc::IPCResult
-CompositorWidgetParent::RecvNotifyClientSizeChanged(const LayoutDeviceIntSize& aClientSize)
+CompositorWidgetParent::RecvNotifyClientSizeChanged(LayoutDeviceIntSize&& aClientSize)
 {
   NotifyClientSizeChanged(aClientSize);
   return IPC_OK();

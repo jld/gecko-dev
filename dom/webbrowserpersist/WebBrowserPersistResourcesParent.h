@@ -24,13 +24,13 @@ public:
                                      nsIWebBrowserPersistResourceVisitor* aVisitor);
 
     virtual mozilla::ipc::IPCResult
-    RecvVisitResource(const nsCString& aURI) override;
+    RecvVisitResource(nsCString&& aURI) override;
 
     virtual mozilla::ipc::IPCResult
     RecvVisitDocument(PWebBrowserPersistDocumentParent* aSubDocument) override;
 
     virtual mozilla::ipc::IPCResult
-    Recv__delete__(const nsresult& aStatus) override;
+    Recv__delete__(nsresult&& aStatus) override;
 
     virtual void
     ActorDestroy(ActorDestroyReason aWhy) override;

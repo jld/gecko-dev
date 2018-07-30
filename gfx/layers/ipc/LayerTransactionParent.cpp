@@ -152,15 +152,15 @@ private:
 };
 
 mozilla::ipc::IPCResult
-LayerTransactionParent::RecvPaintTime(const TransactionId& aTransactionId,
-                                      const TimeDuration& aPaintTime)
+LayerTransactionParent::RecvPaintTime(TransactionId&& aTransactionId,
+                                      TimeDuration&& aPaintTime)
 {
   mCompositorBridge->UpdatePaintTime(this, aPaintTime);
   return IPC_OK();
 }
 
 mozilla::ipc::IPCResult
-LayerTransactionParent::RecvUpdate(const TransactionInfo& aInfo)
+LayerTransactionParent::RecvUpdate(TransactionInfo&& aInfo)
 {
   auto guard = MakeScopeExit([&] {
       if (recordreplay::IsRecordingOrReplaying()) {
@@ -647,7 +647,7 @@ LayerTransactionParent::SetLayerAttributes(const OpSetLayerAttributes& aOp)
 }
 
 mozilla::ipc::IPCResult
-LayerTransactionParent::RecvSetLayerObserverEpoch(const uint64_t& aLayerObserverEpoch)
+LayerTransactionParent::RecvSetLayerObserverEpoch(uint64_t&& aLayerObserverEpoch)
 {
   mChildEpoch = aLayerObserverEpoch;
   return IPC_OK();
@@ -665,7 +665,7 @@ LayerTransactionParent::ShouldParentObserveEpoch()
 }
 
 mozilla::ipc::IPCResult
-LayerTransactionParent::RecvSetTestSampleTime(const TimeStamp& aTime)
+LayerTransactionParent::RecvSetTestSampleTime(TimeStamp&& aTime)
 {
   if (!mCompositorBridge->SetTestSampleTime(GetId(), aTime)) {
     return IPC_FAIL_NO_REASON(this);
@@ -681,7 +681,7 @@ LayerTransactionParent::RecvLeaveTestMode()
 }
 
 mozilla::ipc::IPCResult
-LayerTransactionParent::RecvGetAnimationOpacity(const uint64_t& aCompositorAnimationsId,
+LayerTransactionParent::RecvGetAnimationOpacity(uint64_t&& aCompositorAnimationsId,
                                                 float* aOpacity,
                                                 bool* aHasAnimationOpacity)
 {
@@ -706,7 +706,7 @@ LayerTransactionParent::RecvGetAnimationOpacity(const uint64_t& aCompositorAnima
 }
 
 mozilla::ipc::IPCResult
-LayerTransactionParent::RecvGetAnimationTransform(const uint64_t& aCompositorAnimationsId,
+LayerTransactionParent::RecvGetAnimationTransform(uint64_t&& aCompositorAnimationsId,
                                                   MaybeTransform* aTransform)
 {
   if (mDestroyed || !mLayerManager || mLayerManager->IsDestroyed()) {
@@ -734,7 +734,7 @@ LayerTransactionParent::RecvGetAnimationTransform(const uint64_t& aCompositorAni
 }
 
 mozilla::ipc::IPCResult
-LayerTransactionParent::RecvGetTransform(const LayerHandle& aLayerHandle,
+LayerTransactionParent::RecvGetTransform(LayerHandle&& aLayerHandle,
                                          MaybeTransform* aTransform)
 {
   if (mDestroyed || !mLayerManager || mLayerManager->IsDestroyed()) {
@@ -797,8 +797,8 @@ LayerTransactionParent::RecvGetTransform(const LayerHandle& aLayerHandle,
 }
 
 mozilla::ipc::IPCResult
-LayerTransactionParent::RecvSetAsyncScrollOffset(const FrameMetrics::ViewID& aScrollID,
-                                                 const float& aX, const float& aY)
+LayerTransactionParent::RecvSetAsyncScrollOffset(FrameMetrics::ViewID&& aScrollID,
+                                                 float&& aX, float&& aY)
 {
   if (mDestroyed || !mLayerManager || mLayerManager->IsDestroyed()) {
     return IPC_FAIL_NO_REASON(this);
@@ -809,8 +809,8 @@ LayerTransactionParent::RecvSetAsyncScrollOffset(const FrameMetrics::ViewID& aSc
 }
 
 mozilla::ipc::IPCResult
-LayerTransactionParent::RecvSetAsyncZoom(const FrameMetrics::ViewID& aScrollID,
-                                         const float& aValue)
+LayerTransactionParent::RecvSetAsyncZoom(FrameMetrics::ViewID&& aScrollID,
+                                         float&& aValue)
 {
   if (mDestroyed || !mLayerManager || mLayerManager->IsDestroyed()) {
     return IPC_FAIL_NO_REASON(this);
@@ -835,14 +835,14 @@ LayerTransactionParent::RecvGetAPZTestData(APZTestData* aOutData)
 }
 
 mozilla::ipc::IPCResult
-LayerTransactionParent::RecvRequestProperty(const nsString& aProperty, float* aValue)
+LayerTransactionParent::RecvRequestProperty(nsString&& aProperty, float* aValue)
 {
   *aValue = -1;
   return IPC_OK();
 }
 
 mozilla::ipc::IPCResult
-LayerTransactionParent::RecvSetConfirmedTargetAPZC(const uint64_t& aBlockId,
+LayerTransactionParent::RecvSetConfirmedTargetAPZC(uint64_t&& aBlockId,
                                                    nsTArray<ScrollableLayerGuid>&& aTargets)
 {
   mCompositorBridge->SetConfirmedTargetAPZC(GetId(), aBlockId, aTargets);
@@ -1025,7 +1025,7 @@ LayerTransactionParent::AsLayer(const LayerHandle& aHandle)
 }
 
 mozilla::ipc::IPCResult
-LayerTransactionParent::RecvNewCompositable(const CompositableHandle& aHandle, const TextureInfo& aInfo)
+LayerTransactionParent::RecvNewCompositable(CompositableHandle&& aHandle, TextureInfo&& aInfo)
 {
   if (!AddCompositable(aHandle, aInfo, /* aUseWebRender */ false)) {
     return IPC_FAIL_NO_REASON(this);
@@ -1034,7 +1034,7 @@ LayerTransactionParent::RecvNewCompositable(const CompositableHandle& aHandle, c
 }
 
 mozilla::ipc::IPCResult
-LayerTransactionParent::RecvReleaseLayer(const LayerHandle& aHandle)
+LayerTransactionParent::RecvReleaseLayer(LayerHandle&& aHandle)
 {
   RefPtr<Layer> layer;
   if (!aHandle || !mLayerMap.Remove(aHandle.Value(), getter_AddRefs(layer))) {
@@ -1050,14 +1050,14 @@ LayerTransactionParent::RecvReleaseLayer(const LayerHandle& aHandle)
 }
 
 mozilla::ipc::IPCResult
-LayerTransactionParent::RecvReleaseCompositable(const CompositableHandle& aHandle)
+LayerTransactionParent::RecvReleaseCompositable(CompositableHandle&& aHandle)
 {
   ReleaseCompositable(aHandle);
   return IPC_OK();
 }
 
 mozilla::ipc::IPCResult
-LayerTransactionParent::RecvRecordPaintTimes(const PaintTiming& aTiming)
+LayerTransactionParent::RecvRecordPaintTimes(PaintTiming&& aTiming)
 {
   // Currently we only add paint timings for remote layers. In the future
   // we could be smarter and use paint timings from the UI process, either

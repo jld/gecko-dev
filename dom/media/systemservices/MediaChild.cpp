@@ -84,8 +84,8 @@ void Child::ActorDestroy(ActorDestroyReason aWhy)
 }
 
 mozilla::ipc::IPCResult
-Child::RecvGetPrincipalKeyResponse(const uint32_t& aRequestId,
-                                   const nsCString& aKey)
+Child::RecvGetPrincipalKeyResponse(uint32_t&& aRequestId,
+                                   nsCString&& aKey)
 {
   RefPtr<MediaManager> mgr = MediaManager::GetInstance();
   if (!mgr) {

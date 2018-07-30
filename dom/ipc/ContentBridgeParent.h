@@ -106,16 +106,16 @@ protected:
 
 protected:
   virtual mozilla::ipc::IPCResult
-  RecvSyncMessage(const nsString& aMsg,
-                  const ClonedMessageData& aData,
+  RecvSyncMessage(nsString&& aMsg,
+                  ClonedMessageData&& aData,
                   InfallibleTArray<jsipc::CpowEntry>&& aCpows,
-                  const IPC::Principal& aPrincipal,
+                  IPC::Principal&& aPrincipal,
                   nsTArray<StructuredCloneData>* aRetvals) override;
 
-  virtual mozilla::ipc::IPCResult RecvAsyncMessage(const nsString& aMsg,
+  virtual mozilla::ipc::IPCResult RecvAsyncMessage(nsString&& aMsg,
                                                    InfallibleTArray<jsipc::CpowEntry>&& aCpows,
-                                                   const IPC::Principal& aPrincipal,
-                                                   const ClonedMessageData& aData) override;
+                                                   IPC::Principal&& aPrincipal,
+                                                   ClonedMessageData&& aData) override;
 
   virtual jsipc::PJavaScriptParent* AllocPJavaScriptParent() override;
 
@@ -134,12 +134,12 @@ protected:
 
   virtual mozilla::ipc::IPCResult
   RecvPBrowserConstructor(PBrowserParent* actor,
-                          const TabId& tabId,
-                          const TabId& sameTabGroupAs,
-                          const IPCTabContext& context,
-                          const uint32_t& chromeFlags,
-                          const ContentParentId& cpId,
-                          const bool& isForBrowser) override;
+                          TabId&& tabId,
+                          TabId&& sameTabGroupAs,
+                          IPCTabContext&& context,
+                          uint32_t&& chromeFlags,
+                          ContentParentId&& cpId,
+                          bool&& isForBrowser) override;
 
   virtual PIPCBlobInputStreamParent*
   SendPIPCBlobInputStreamConstructor(PIPCBlobInputStreamParent* aActor,

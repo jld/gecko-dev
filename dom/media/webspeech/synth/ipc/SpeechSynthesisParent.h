@@ -41,13 +41,13 @@ protected:
   bool DeallocPSpeechSynthesisRequestParent(PSpeechSynthesisRequestParent* aActor) override;
 
   mozilla::ipc::IPCResult RecvPSpeechSynthesisRequestConstructor(PSpeechSynthesisRequestParent* aActor,
-                                                                 const nsString& aText,
-                                                                 const nsString& aLang,
-                                                                 const nsString& aUri,
-                                                                 const float& aVolume,
-                                                                 const float& aRate,
-                                                                 const float& aPitch,
-                                                                 const bool& aIsChrome) override;
+                                                                 nsString&& aText,
+                                                                 nsString&& aLang,
+                                                                 nsString&& aUri,
+                                                                 float&& aVolume,
+                                                                 float&& aRate,
+                                                                 float&& aPitch,
+                                                                 bool&& aIsChrome) override;
 };
 
 class SpeechSynthesisRequestParent : public PSpeechSynthesisRequestParent
@@ -70,7 +70,7 @@ protected:
 
   mozilla::ipc::IPCResult RecvForceEnd() override;
 
-  mozilla::ipc::IPCResult RecvSetAudioOutputVolume(const float& aVolume) override;
+  mozilla::ipc::IPCResult RecvSetAudioOutputVolume(float&& aVolume) override;
 
   mozilla::ipc::IPCResult Recv__delete__() override;
 };

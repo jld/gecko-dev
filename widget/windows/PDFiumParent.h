@@ -37,7 +37,7 @@ private:
   // PPDFiumParent functions.
   void ActorDestroy(ActorDestroyReason aWhy) override;
 
-  mozilla::ipc::IPCResult RecvConvertToEMFDone(const nsresult& aResult,
+  mozilla::ipc::IPCResult RecvConvertToEMFDone(nsresult&& aResult,
                                                mozilla::ipc::Shmem&& aEMFContents) override;
   void OnChannelConnected(int32_t pid) override;
   void DeallocPPDFiumParent() override;

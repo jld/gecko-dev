@@ -181,7 +181,7 @@ VRManagerParent::RecvRefreshDisplays()
 }
 
 mozilla::ipc::IPCResult
-VRManagerParent::RecvResetSensor(const uint32_t& aDisplayID)
+VRManagerParent::RecvResetSensor(uint32_t&& aDisplayID)
 {
   VRManager* vm = VRManager::Get();
   RefPtr<gfx::VRDisplayHost> display = vm->GetDisplay(aDisplayID);
@@ -193,7 +193,7 @@ VRManagerParent::RecvResetSensor(const uint32_t& aDisplayID)
 }
 
 mozilla::ipc::IPCResult
-VRManagerParent::RecvSetGroupMask(const uint32_t& aDisplayID, const uint32_t& aGroupMask)
+VRManagerParent::RecvSetGroupMask(uint32_t&& aDisplayID, uint32_t&& aGroupMask)
 {
   VRManager* vm = VRManager::Get();
   RefPtr<gfx::VRDisplayHost> display = vm->GetDisplay(aDisplayID);
@@ -216,7 +216,7 @@ VRManagerParent::HaveControllerListener()
 }
 
 mozilla::ipc::IPCResult
-VRManagerParent::RecvSetHaveEventListener(const bool& aHaveEventListener)
+VRManagerParent::RecvSetHaveEventListener(bool&& aHaveEventListener)
 {
   mHaveEventListener = aHaveEventListener;
   return IPC_OK();
@@ -254,7 +254,7 @@ VRManagerParent::RecvCreateVRTestSystem()
 }
 
 mozilla::ipc::IPCResult
-VRManagerParent::RecvCreateVRServiceTestDisplay(const nsCString& aID, const uint32_t& aPromiseID)
+VRManagerParent::RecvCreateVRServiceTestDisplay(nsCString&& aID, uint32_t&& aPromiseID)
 {
   VRManager* vm = VRManager::Get();
   VRSystemManagerPuppet* puppetManager = vm->GetPuppetManager();
@@ -268,7 +268,7 @@ VRManagerParent::RecvCreateVRServiceTestDisplay(const nsCString& aID, const uint
 }
 
 mozilla::ipc::IPCResult
-VRManagerParent::RecvCreateVRServiceTestController(const nsCString& aID, const uint32_t& aPromiseID)
+VRManagerParent::RecvCreateVRServiceTestController(nsCString&& aID, uint32_t&& aPromiseID)
 {
   uint32_t controllerIdx = 1; // ID's are 1 based
   nsTArray<VRControllerInfo> controllerInfoArray;
@@ -320,8 +320,8 @@ VRManagerParent::RecvCreateVRServiceTestController(const nsCString& aID, const u
 }
 
 mozilla::ipc::IPCResult
-VRManagerParent::RecvSetDisplayInfoToMockDisplay(const uint32_t& aDeviceID,
-                                                 const VRDisplayInfo& aDisplayInfo)
+VRManagerParent::RecvSetDisplayInfoToMockDisplay(uint32_t&& aDeviceID,
+                                                 VRDisplayInfo&& aDisplayInfo)
 {
   VRManager* vm = VRManager::Get();
   VRSystemManagerPuppet* puppetManager = vm->GetPuppetManager();
@@ -330,8 +330,8 @@ VRManagerParent::RecvSetDisplayInfoToMockDisplay(const uint32_t& aDeviceID,
 }
 
 mozilla::ipc::IPCResult
-VRManagerParent::RecvSetSensorStateToMockDisplay(const uint32_t& aDeviceID,
-                                                 const VRHMDSensorState& aSensorState)
+VRManagerParent::RecvSetSensorStateToMockDisplay(uint32_t&& aDeviceID,
+                                                 VRHMDSensorState&& aSensorState)
 {
   VRManager* vm = VRManager::Get();
   VRSystemManagerPuppet* puppetManager = vm->GetPuppetManager();
@@ -353,8 +353,8 @@ VRManagerParent::GetControllerPuppet(uint32_t aDeviceID)
 }
 
 mozilla::ipc::IPCResult
-VRManagerParent::RecvNewButtonEventToMockController(const uint32_t& aDeviceID, const long& aButton,
-                                                    const bool& aPressed)
+VRManagerParent::RecvNewButtonEventToMockController(uint32_t&& aDeviceID, long&& aButton,
+                                                    bool&& aPressed)
 {
   RefPtr<impl::VRControllerPuppet> controllerPuppet = GetControllerPuppet(aDeviceID);
   if (controllerPuppet) {
@@ -364,8 +364,8 @@ VRManagerParent::RecvNewButtonEventToMockController(const uint32_t& aDeviceID, c
 }
 
 mozilla::ipc::IPCResult
-VRManagerParent::RecvNewAxisMoveEventToMockController(const uint32_t& aDeviceID, const long& aAxis,
-                                                      const double& aValue)
+VRManagerParent::RecvNewAxisMoveEventToMockController(uint32_t&& aDeviceID, long&& aAxis,
+                                                      double&& aValue)
 {
   RefPtr<impl::VRControllerPuppet> controllerPuppet = GetControllerPuppet(aDeviceID);
   if (controllerPuppet) {
@@ -375,8 +375,8 @@ VRManagerParent::RecvNewAxisMoveEventToMockController(const uint32_t& aDeviceID,
 }
 
 mozilla::ipc::IPCResult
-VRManagerParent::RecvNewPoseMoveToMockController(const uint32_t& aDeviceID,
-                                                 const GamepadPoseState& pose)
+VRManagerParent::RecvNewPoseMoveToMockController(uint32_t&& aDeviceID,
+                                                 GamepadPoseState&& pose)
 {
   RefPtr<impl::VRControllerPuppet> controllerPuppet = GetControllerPuppet(aDeviceID);
   if (controllerPuppet) {
@@ -386,11 +386,11 @@ VRManagerParent::RecvNewPoseMoveToMockController(const uint32_t& aDeviceID,
 }
 
 mozilla::ipc::IPCResult
-VRManagerParent::RecvVibrateHaptic(const uint32_t& aControllerIdx,
-                                   const uint32_t& aHapticIndex,
-                                   const double& aIntensity,
-                                   const double& aDuration,
-                                   const uint32_t& aPromiseID)
+VRManagerParent::RecvVibrateHaptic(uint32_t&& aControllerIdx,
+                                   uint32_t&& aHapticIndex,
+                                   double&& aIntensity,
+                                   double&& aDuration,
+                                   uint32_t&& aPromiseID)
 {
   VRManager* vm = VRManager::Get();
   VRManagerPromise promise(this, aPromiseID);
@@ -401,7 +401,7 @@ VRManagerParent::RecvVibrateHaptic(const uint32_t& aControllerIdx,
 }
 
 mozilla::ipc::IPCResult
-VRManagerParent::RecvStopVibrateHaptic(const uint32_t& aControllerIdx)
+VRManagerParent::RecvStopVibrateHaptic(uint32_t&& aControllerIdx)
 {
   VRManager* vm = VRManager::Get();
   vm->StopVibrateHaptic(aControllerIdx);

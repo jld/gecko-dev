@@ -17,16 +17,16 @@ class HandlerServiceParent final : public mozilla::dom::PHandlerServiceParent
   virtual void ActorDestroy(ActorDestroyReason aWhy) override;
 
 
-  virtual mozilla::ipc::IPCResult RecvFillHandlerInfo(const HandlerInfo& aHandlerInfoData,
-                                                      const nsCString& aOverrideType,
+  virtual mozilla::ipc::IPCResult RecvFillHandlerInfo(HandlerInfo&& aHandlerInfoData,
+                                                      nsCString&& aOverrideType,
                                                       HandlerInfo* handlerInfoData) override;
-  virtual mozilla::ipc::IPCResult RecvExists(const HandlerInfo& aHandlerInfo,
+  virtual mozilla::ipc::IPCResult RecvExists(HandlerInfo&& aHandlerInfo,
                                              bool* exits) override;
 
-  virtual mozilla::ipc::IPCResult RecvGetTypeFromExtension(const nsCString& aFileExtension,
+  virtual mozilla::ipc::IPCResult RecvGetTypeFromExtension(nsCString&& aFileExtension,
                                                            nsCString* type) override;
 
-  virtual mozilla::ipc::IPCResult RecvExistsForProtocol(const nsCString& aProtocolScheme,
+  virtual mozilla::ipc::IPCResult RecvExistsForProtocol(nsCString&& aProtocolScheme,
                                                         bool* aHandlerExists) override;
 
 };

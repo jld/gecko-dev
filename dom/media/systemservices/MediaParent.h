@@ -28,11 +28,11 @@ public:
   virtual ~NonE10s() {}
 protected:
   virtual mozilla::ipc::IPCResult
-  RecvGetPrincipalKey(const uint32_t& aRequestId,
-                      const mozilla::ipc::PrincipalInfo& aPrincipalInfo,
-                      const bool& aPersist) = 0;
-  virtual mozilla::ipc::IPCResult RecvSanitizeOriginKeys(const uint64_t& aSinceWhen,
-                                                         const bool& aOnlyPrivateBrowsing) = 0;
+  RecvGetPrincipalKey(uint32_t&& aRequestId,
+                      mozilla::ipc::PrincipalInfo&& aPrincipalInfo,
+                      bool&& aPersist) = 0;
+  virtual mozilla::ipc::IPCResult RecvSanitizeOriginKeys(uint64_t&& aSinceWhen,
+                                                         bool&& aOnlyPrivateBrowsing) = 0;
   virtual void
   ActorDestroy(ActorDestroyReason aWhy) = 0;
 
@@ -62,11 +62,11 @@ class Parent : public RefCountedParent, public Super
       ActorDestroyReason;
 public:
   virtual mozilla::ipc::IPCResult
-  RecvGetPrincipalKey(const uint32_t& aRequestId,
-                      const mozilla::ipc::PrincipalInfo& aPrincipalInfo,
-                      const bool& aPersist) override;
-  virtual mozilla::ipc::IPCResult RecvSanitizeOriginKeys(const uint64_t& aSinceWhen,
-                                                         const bool& aOnlyPrivateBrowsing) override;
+  RecvGetPrincipalKey(uint32_t&& aRequestId,
+                      mozilla::ipc::PrincipalInfo&& aPrincipalInfo,
+                      bool&& aPersist) override;
+  virtual mozilla::ipc::IPCResult RecvSanitizeOriginKeys(uint64_t&& aSinceWhen,
+                                                         bool&& aOnlyPrivateBrowsing) override;
   virtual void ActorDestroy(ActorDestroyReason aWhy) override;
 
   Parent();

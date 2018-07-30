@@ -31,7 +31,7 @@ public:
     mBC = aBC;
   }
 
-  virtual mozilla::ipc::IPCResult RecvNotify(const ClonedMessageData& aData) override;
+  virtual mozilla::ipc::IPCResult RecvNotify(ClonedMessageData&& aData) override;
 
   bool IsActorDestroyed() const
   {

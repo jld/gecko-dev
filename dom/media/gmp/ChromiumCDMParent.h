@@ -95,44 +95,44 @@ protected:
 
   ipc::IPCResult Recv__delete__() override;
   ipc::IPCResult RecvOnResolvePromiseWithKeyStatus(
-    const uint32_t& aPromiseId,
-    const uint32_t& aKeyStatus) override;
+    uint32_t&& aPromiseId,
+    uint32_t&& aKeyStatus) override;
   ipc::IPCResult RecvOnResolveNewSessionPromise(
-    const uint32_t& aPromiseId,
-    const nsCString& aSessionId) override;
+    uint32_t&& aPromiseId,
+    nsCString&& aSessionId) override;
   ipc::IPCResult RecvResolveLoadSessionPromise(
-    const uint32_t& aPromiseId,
-    const bool& aSuccessful) override;
-  ipc::IPCResult RecvOnResolvePromise(const uint32_t& aPromiseId) override;
-  ipc::IPCResult RecvOnRejectPromise(const uint32_t& aPromiseId,
-                                     const uint32_t& aError,
-                                     const uint32_t& aSystemCode,
-                                     const nsCString& aErrorMessage) override;
-  ipc::IPCResult RecvOnSessionMessage(const nsCString& aSessionId,
-                                      const uint32_t& aMessageType,
+    uint32_t&& aPromiseId,
+    bool&& aSuccessful) override;
+  ipc::IPCResult RecvOnResolvePromise(uint32_t&& aPromiseId) override;
+  ipc::IPCResult RecvOnRejectPromise(uint32_t&& aPromiseId,
+                                     uint32_t&& aError,
+                                     uint32_t&& aSystemCode,
+                                     nsCString&& aErrorMessage) override;
+  ipc::IPCResult RecvOnSessionMessage(nsCString&& aSessionId,
+                                      uint32_t&& aMessageType,
                                       nsTArray<uint8_t>&& aMessage) override;
   ipc::IPCResult RecvOnSessionKeysChange(
-    const nsCString& aSessionId,
+    nsCString&& aSessionId,
     nsTArray<CDMKeyInformation>&& aKeysInfo) override;
   ipc::IPCResult RecvOnExpirationChange(
-    const nsCString& aSessionId,
-    const double& aSecondsSinceEpoch) override;
-  ipc::IPCResult RecvOnSessionClosed(const nsCString& aSessionId) override;
-  ipc::IPCResult RecvOnLegacySessionError(const nsCString& aSessionId,
-                                          const uint32_t& aError,
-                                          const uint32_t& aSystemCode,
-                                          const nsCString& aMessage) override;
-  ipc::IPCResult RecvDecrypted(const uint32_t& aId,
-                               const uint32_t& aStatus,
+    nsCString&& aSessionId,
+    double&& aSecondsSinceEpoch) override;
+  ipc::IPCResult RecvOnSessionClosed(nsCString&& aSessionId) override;
+  ipc::IPCResult RecvOnLegacySessionError(nsCString&& aSessionId,
+                                          uint32_t&& aError,
+                                          uint32_t&& aSystemCode,
+                                          nsCString&& aMessage) override;
+  ipc::IPCResult RecvDecrypted(uint32_t&& aId,
+                               uint32_t&& aStatus,
                                ipc::Shmem&& aData) override;
-  ipc::IPCResult RecvDecryptFailed(const uint32_t& aId,
-                                   const uint32_t& aStatus) override;
-  ipc::IPCResult RecvOnDecoderInitDone(const uint32_t& aStatus) override;
-  ipc::IPCResult RecvDecodedShmem(const CDMVideoFrame& aFrame,
+  ipc::IPCResult RecvDecryptFailed(uint32_t&& aId,
+                                   uint32_t&& aStatus) override;
+  ipc::IPCResult RecvOnDecoderInitDone(uint32_t&& aStatus) override;
+  ipc::IPCResult RecvDecodedShmem(CDMVideoFrame&& aFrame,
                                   ipc::Shmem&& aShmem) override;
-  ipc::IPCResult RecvDecodedData(const CDMVideoFrame& aFrame,
+  ipc::IPCResult RecvDecodedData(CDMVideoFrame&& aFrame,
                                  nsTArray<uint8_t>&& aData) override;
-  ipc::IPCResult RecvDecodeFailed(const uint32_t& aStatus) override;
+  ipc::IPCResult RecvDecodeFailed(uint32_t&& aStatus) override;
   ipc::IPCResult RecvShutdown() override;
   ipc::IPCResult RecvResetVideoDecoderComplete() override;
   ipc::IPCResult RecvDrainComplete() override;

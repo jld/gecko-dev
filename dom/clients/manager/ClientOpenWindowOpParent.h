@@ -21,7 +21,7 @@ class ClientOpenWindowOpParent final : public PClientOpenWindowOpParent
   ActorDestroy(ActorDestroyReason aReason) override;
 
   mozilla::ipc::IPCResult
-  Recv__delete__(const ClientOpResult& aResult) override;
+  Recv__delete__(ClientOpResult&& aResult) override;
 
 public:
   ClientOpenWindowOpParent(const ClientOpenWindowArgs& aArgs,

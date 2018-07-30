@@ -47,7 +47,7 @@ protected:
   virtual ~StunAddrsRequestChild() {}
 
   virtual mozilla::ipc::IPCResult RecvOnStunAddrsAvailable(
-      const NrIceStunAddrArray& addrs) override;
+      NrIceStunAddrArray&& addrs) override;
 
   RefPtr<StunAddrsListener> mListener;
 

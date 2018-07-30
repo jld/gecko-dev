@@ -230,10 +230,10 @@ class StartEvent : public ChannelEvent
 };
 
 mozilla::ipc::IPCResult
-WebSocketChannelChild::RecvOnStart(const nsCString& aProtocol,
-                                   const nsCString& aExtensions,
-                                   const nsString& aEffectiveURL,
-                                   const bool& aEncrypted)
+WebSocketChannelChild::RecvOnStart(nsCString&& aProtocol,
+                                   nsCString&& aExtensions,
+                                   nsString&& aEffectiveURL,
+                                   bool&& aEncrypted)
 {
   mEventQ->RunOrEnqueue(
     new EventTargetDispatcher(new StartEvent(this, aProtocol, aExtensions,
@@ -291,7 +291,7 @@ class StopEvent : public ChannelEvent
 };
 
 mozilla::ipc::IPCResult
-WebSocketChannelChild::RecvOnStop(const nsresult& aStatusCode)
+WebSocketChannelChild::RecvOnStop(nsresult&& aStatusCode)
 {
   mEventQ->RunOrEnqueue(
     new EventTargetDispatcher(new StopEvent(this, aStatusCode),
@@ -348,7 +348,7 @@ class MessageEvent : public ChannelEvent
 };
 
 mozilla::ipc::IPCResult
-WebSocketChannelChild::RecvOnMessageAvailable(const nsCString& aMsg)
+WebSocketChannelChild::RecvOnMessageAvailable(nsCString&& aMsg)
 {
   mEventQ->RunOrEnqueue(
     new EventTargetDispatcher(new MessageEvent(this, aMsg, false),
@@ -374,7 +374,7 @@ WebSocketChannelChild::OnMessageAvailable(const nsCString& aMsg)
 }
 
 mozilla::ipc::IPCResult
-WebSocketChannelChild::RecvOnBinaryMessageAvailable(const nsCString& aMsg)
+WebSocketChannelChild::RecvOnBinaryMessageAvailable(nsCString&& aMsg)
 {
   mEventQ->RunOrEnqueue(
     new EventTargetDispatcher(new MessageEvent(this, aMsg, true),
@@ -425,7 +425,7 @@ class AcknowledgeEvent : public ChannelEvent
 };
 
 mozilla::ipc::IPCResult
-WebSocketChannelChild::RecvOnAcknowledge(const uint32_t& aSize)
+WebSocketChannelChild::RecvOnAcknowledge(uint32_t&& aSize)
 {
   mEventQ->RunOrEnqueue(
     new EventTargetDispatcher(new AcknowledgeEvent(this, aSize),
@@ -478,8 +478,8 @@ class ServerCloseEvent : public ChannelEvent
 };
 
 mozilla::ipc::IPCResult
-WebSocketChannelChild::RecvOnServerClose(const uint16_t& aCode,
-                                         const nsCString& aReason)
+WebSocketChannelChild::RecvOnServerClose(uint16_t&& aCode,
+                                         nsCString&& aReason)
 {
   mEventQ->RunOrEnqueue(
     new EventTargetDispatcher(new ServerCloseEvent(this, aCode, aReason),

@@ -32,7 +32,7 @@ class ClientManagerParent final : public PClientManagerParent
 
   mozilla::ipc::IPCResult
   RecvPClientHandleConstructor(PClientHandleParent* aActor,
-                               const IPCClientInfo& aClientInfo) override;
+                               IPCClientInfo&& aClientInfo) override;
 
   PClientManagerOpParent*
   AllocPClientManagerOpParent(const ClientOpConstructorArgs& aArgs) override;
@@ -42,7 +42,7 @@ class ClientManagerParent final : public PClientManagerParent
 
   mozilla::ipc::IPCResult
   RecvPClientManagerOpConstructor(PClientManagerOpParent* aActor,
-                                 const ClientOpConstructorArgs& aArgs) override;
+                                 ClientOpConstructorArgs&& aArgs) override;
 
   PClientNavigateOpParent*
   AllocPClientNavigateOpParent(const ClientNavigateOpConstructorArgs& aArgs) override;
@@ -58,7 +58,7 @@ class ClientManagerParent final : public PClientManagerParent
 
   mozilla::ipc::IPCResult
   RecvPClientSourceConstructor(PClientSourceParent* aActor,
-                               const ClientSourceConstructorArgs& aArgs) override;
+                               ClientSourceConstructorArgs&& aArgs) override;
 
 public:
   ClientManagerParent();

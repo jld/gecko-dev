@@ -210,8 +210,8 @@ CookieServiceChild::RecvRemoveAll(){
 }
 
 mozilla::ipc::IPCResult
-CookieServiceChild::RecvRemoveCookie(const CookieStruct     &aCookie,
-                                     const OriginAttributes &aAttrs)
+CookieServiceChild::RecvRemoveCookie(CookieStruct&& aCookie,
+                                     OriginAttributes&& aAttrs)
 {
   nsCString baseDomain;
   nsCookieService::
@@ -238,8 +238,8 @@ CookieServiceChild::RecvRemoveCookie(const CookieStruct     &aCookie,
 }
 
 mozilla::ipc::IPCResult
-CookieServiceChild::RecvAddCookie(const CookieStruct     &aCookie,
-                                  const OriginAttributes &aAttrs)
+CookieServiceChild::RecvAddCookie(CookieStruct&& aCookie,
+                                  OriginAttributes&& aAttrs)
 {
   RefPtr<nsCookie> cookie = nsCookie::Create(aCookie.name(),
                                              aCookie.value(),
@@ -271,7 +271,7 @@ CookieServiceChild::RecvRemoveBatchDeletedCookies(nsTArray<CookieStruct>&& aCook
 
 mozilla::ipc::IPCResult
 CookieServiceChild::RecvTrackCookiesLoad(nsTArray<CookieStruct>&& aCookiesList,
-                                         const OriginAttributes &aAttrs)
+                                         OriginAttributes&& aAttrs)
 {
   for (uint32_t i = 0; i < aCookiesList.Length(); i++) {
     RefPtr<nsCookie> cookie = nsCookie::Create(aCookiesList[i].name(),

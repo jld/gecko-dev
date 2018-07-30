@@ -96,7 +96,7 @@ GMPContentChild::DeallocPChromiumCDMChild(PChromiumCDMChild* aActor)
 
 mozilla::ipc::IPCResult
 GMPContentChild::RecvPGMPVideoDecoderConstructor(PGMPVideoDecoderChild* aActor,
-                                                 const uint32_t& aDecryptorId)
+                                                 uint32_t&& aDecryptorId)
 {
   auto vdc = static_cast<GMPVideoDecoderChild*>(aActor);
 

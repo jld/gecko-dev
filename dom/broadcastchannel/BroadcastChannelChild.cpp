@@ -35,7 +35,7 @@ BroadcastChannelChild::~BroadcastChannelChild()
 }
 
 mozilla::ipc::IPCResult
-BroadcastChannelChild::RecvNotify(const ClonedMessageData& aData)
+BroadcastChannelChild::RecvNotify(ClonedMessageData&& aData)
 {
   // Make sure to retrieve all blobs from the message before returning to avoid
   // leaking their actors.

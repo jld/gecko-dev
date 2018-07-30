@@ -25,9 +25,9 @@ WebSocketEventListenerChild::~WebSocketEventListenerChild()
 }
 
 mozilla::ipc::IPCResult
-WebSocketEventListenerChild::RecvWebSocketCreated(const uint32_t& aWebSocketSerialID,
-                                                  const nsString& aURI,
-                                                  const nsCString& aProtocols)
+WebSocketEventListenerChild::RecvWebSocketCreated(uint32_t&& aWebSocketSerialID,
+                                                  nsString&& aURI,
+                                                  nsCString&& aProtocols)
 {
   if (mService) {
     nsCOMPtr<nsIEventTarget> target = GetNeckoTarget();
@@ -39,10 +39,10 @@ WebSocketEventListenerChild::RecvWebSocketCreated(const uint32_t& aWebSocketSeri
 }
 
 mozilla::ipc::IPCResult
-WebSocketEventListenerChild::RecvWebSocketOpened(const uint32_t& aWebSocketSerialID,
-                                                 const nsString& aEffectiveURI,
-                                                 const nsCString& aProtocols,
-                                                 const nsCString& aExtensions)
+WebSocketEventListenerChild::RecvWebSocketOpened(uint32_t&& aWebSocketSerialID,
+                                                 nsString&& aEffectiveURI,
+                                                 nsCString&& aProtocols,
+                                                 nsCString&& aExtensions)
 {
   if (mService) {
     nsCOMPtr<nsIEventTarget> target = GetNeckoTarget();
@@ -54,9 +54,9 @@ WebSocketEventListenerChild::RecvWebSocketOpened(const uint32_t& aWebSocketSeria
 }
 
 mozilla::ipc::IPCResult
-WebSocketEventListenerChild::RecvWebSocketMessageAvailable(const uint32_t& aWebSocketSerialID,
-                                                           const nsCString& aData,
-                                                           const uint16_t& aMessageType)
+WebSocketEventListenerChild::RecvWebSocketMessageAvailable(uint32_t&& aWebSocketSerialID,
+                                                           nsCString&& aData,
+                                                           uint16_t&& aMessageType)
 {
   if (mService) {
     nsCOMPtr<nsIEventTarget> target = GetNeckoTarget();
@@ -68,10 +68,10 @@ WebSocketEventListenerChild::RecvWebSocketMessageAvailable(const uint32_t& aWebS
 }
 
 mozilla::ipc::IPCResult
-WebSocketEventListenerChild::RecvWebSocketClosed(const uint32_t& aWebSocketSerialID,
-                                                 const bool& aWasClean,
-                                                 const uint16_t& aCode,
-                                                 const nsString& aReason)
+WebSocketEventListenerChild::RecvWebSocketClosed(uint32_t&& aWebSocketSerialID,
+                                                 bool&& aWasClean,
+                                                 uint16_t&& aCode,
+                                                 nsString&& aReason)
 {
   if (mService) {
     nsCOMPtr<nsIEventTarget> target = GetNeckoTarget();
@@ -83,8 +83,8 @@ WebSocketEventListenerChild::RecvWebSocketClosed(const uint32_t& aWebSocketSeria
 }
 
 mozilla::ipc::IPCResult
-WebSocketEventListenerChild::RecvFrameReceived(const uint32_t& aWebSocketSerialID,
-                                               const WebSocketFrameData& aFrameData)
+WebSocketEventListenerChild::RecvFrameReceived(uint32_t&& aWebSocketSerialID,
+                                               WebSocketFrameData&& aFrameData)
 {
   if (mService) {
     nsCOMPtr<nsIEventTarget> target = GetNeckoTarget();
@@ -97,8 +97,8 @@ WebSocketEventListenerChild::RecvFrameReceived(const uint32_t& aWebSocketSerialI
 }
 
 mozilla::ipc::IPCResult
-WebSocketEventListenerChild::RecvFrameSent(const uint32_t& aWebSocketSerialID,
-                                           const WebSocketFrameData& aFrameData)
+WebSocketEventListenerChild::RecvFrameSent(uint32_t&& aWebSocketSerialID,
+                                           WebSocketFrameData&& aFrameData)
 {
   if (mService) {
     nsCOMPtr<nsIEventTarget> target = GetNeckoTarget();

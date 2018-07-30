@@ -107,36 +107,36 @@ protected:
   ipc::IPCResult RecvGiveBuffer(ipc::Shmem&& aShmem) override;
   ipc::IPCResult RecvPurgeShmems() override;
   void PurgeShmems();
-  ipc::IPCResult RecvInit(const bool& aAllowDistinctiveIdentifier,
-                          const bool& aAllowPersistentState) override;
+  ipc::IPCResult RecvInit(bool&& aAllowDistinctiveIdentifier,
+                          bool&& aAllowPersistentState) override;
   ipc::IPCResult RecvSetServerCertificate(
-    const uint32_t& aPromiseId,
+    uint32_t&& aPromiseId,
     nsTArray<uint8_t>&& aServerCert) override;
   ipc::IPCResult RecvCreateSessionAndGenerateRequest(
-    const uint32_t& aPromiseId,
-    const uint32_t& aSessionType,
-    const uint32_t& aInitDataType,
+    uint32_t&& aPromiseId,
+    uint32_t&& aSessionType,
+    uint32_t&& aInitDataType,
     nsTArray<uint8_t>&& aInitData) override;
-  ipc::IPCResult RecvLoadSession(const uint32_t& aPromiseId,
-                                 const uint32_t& aSessionType,
-                                 const nsCString& aSessionId) override;
-  ipc::IPCResult RecvUpdateSession(const uint32_t& aPromiseId,
-                                   const nsCString& aSessionId,
+  ipc::IPCResult RecvLoadSession(uint32_t&& aPromiseId,
+                                 uint32_t&& aSessionType,
+                                 nsCString&& aSessionId) override;
+  ipc::IPCResult RecvUpdateSession(uint32_t&& aPromiseId,
+                                   nsCString&& aSessionId,
                                    nsTArray<uint8_t>&& aResponse) override;
-  ipc::IPCResult RecvCloseSession(const uint32_t& aPromiseId,
-                                  const nsCString& aSessionId) override;
-  ipc::IPCResult RecvRemoveSession(const uint32_t& aPromiseId,
-                                   const nsCString& aSessionId) override;
-  ipc::IPCResult RecvGetStatusForPolicy(const uint32_t& aPromiseId,
-                                        const nsCString& aMinHdcpVersion) override;
-  ipc::IPCResult RecvDecrypt(const uint32_t& aId,
-                             const CDMInputBuffer& aBuffer) override;
+  ipc::IPCResult RecvCloseSession(uint32_t&& aPromiseId,
+                                  nsCString&& aSessionId) override;
+  ipc::IPCResult RecvRemoveSession(uint32_t&& aPromiseId,
+                                   nsCString&& aSessionId) override;
+  ipc::IPCResult RecvGetStatusForPolicy(uint32_t&& aPromiseId,
+                                        nsCString&& aMinHdcpVersion) override;
+  ipc::IPCResult RecvDecrypt(uint32_t&& aId,
+                             CDMInputBuffer&& aBuffer) override;
   ipc::IPCResult RecvInitializeVideoDecoder(
-    const CDMVideoDecoderConfig& aConfig) override;
+    CDMVideoDecoderConfig&& aConfig) override;
   ipc::IPCResult RecvDeinitializeVideoDecoder() override;
   ipc::IPCResult RecvResetVideoDecoder() override;
   ipc::IPCResult RecvDecryptAndDecodeFrame(
-    const CDMInputBuffer& aBuffer) override;
+    CDMInputBuffer&& aBuffer) override;
   ipc::IPCResult RecvDrain() override;
   ipc::IPCResult RecvDestroy() override;
 

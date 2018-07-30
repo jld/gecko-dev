@@ -64,70 +64,70 @@ public:
   AsyncImagePipelineManager* AsyncImageManager() { return mAsyncImageManager; }
   CompositorVsyncScheduler* CompositorScheduler() { return mCompositorScheduler.get(); }
 
-  mozilla::ipc::IPCResult RecvNewCompositable(const CompositableHandle& aHandle,
-                                              const TextureInfo& aInfo) override;
-  mozilla::ipc::IPCResult RecvReleaseCompositable(const CompositableHandle& aHandle) override;
+  mozilla::ipc::IPCResult RecvNewCompositable(CompositableHandle&& aHandle,
+                                              TextureInfo&& aInfo) override;
+  mozilla::ipc::IPCResult RecvReleaseCompositable(CompositableHandle&& aHandle) override;
 
-  mozilla::ipc::IPCResult RecvCreate(const gfx::IntSize& aSize) override;
+  mozilla::ipc::IPCResult RecvCreate(gfx::IntSize&& aSize) override;
   mozilla::ipc::IPCResult RecvShutdown() override;
   mozilla::ipc::IPCResult RecvShutdownSync() override;
   mozilla::ipc::IPCResult RecvDeleteCompositorAnimations(InfallibleTArray<uint64_t>&& aIds) override;
   mozilla::ipc::IPCResult RecvUpdateResources(nsTArray<OpUpdateResource>&& aUpdates,
                                               nsTArray<RefCountedShmem>&& aSmallShmems,
                                               nsTArray<ipc::Shmem>&& aLargeShmems) override;
-  mozilla::ipc::IPCResult RecvSetDisplayList(const gfx::IntSize& aSize,
+  mozilla::ipc::IPCResult RecvSetDisplayList(gfx::IntSize&& aSize,
                                              InfallibleTArray<WebRenderParentCommand>&& aCommands,
                                              InfallibleTArray<OpDestroy>&& aToDestroy,
-                                             const uint64_t& aFwdTransactionId,
-                                             const TransactionId& aTransactionId,
-                                             const wr::LayoutSize& aContentSize,
+                                             uint64_t&& aFwdTransactionId,
+                                             TransactionId&& aTransactionId,
+                                             wr::LayoutSize&& aContentSize,
                                              ipc::ByteBuf&& dl,
-                                             const wr::BuiltDisplayListDescriptor& dlDesc,
-                                             const WebRenderScrollData& aScrollData,
+                                             wr::BuiltDisplayListDescriptor&& dlDesc,
+                                             WebRenderScrollData&& aScrollData,
                                              nsTArray<OpUpdateResource>&& aResourceUpdates,
                                              nsTArray<RefCountedShmem>&& aSmallShmems,
                                              nsTArray<ipc::Shmem>&& aLargeShmems,
-                                             const wr::IdNamespace& aIdNamespace,
-                                             const TimeStamp& aRefreshStartTime,
-                                             const TimeStamp& aTxnStartTime,
-                                             const TimeStamp& aFwdTime) override;
-  mozilla::ipc::IPCResult RecvEmptyTransaction(const FocusTarget& aFocusTarget,
-                                               const ScrollUpdatesMap& aUpdates,
-                                               const uint32_t& aPaintSequenceNumber,
+                                             wr::IdNamespace&& aIdNamespace,
+                                             TimeStamp&& aRefreshStartTime,
+                                             TimeStamp&& aTxnStartTime,
+                                             TimeStamp&& aFwdTime) override;
+  mozilla::ipc::IPCResult RecvEmptyTransaction(FocusTarget&& aFocusTarget,
+                                               ScrollUpdatesMap&& aUpdates,
+                                               uint32_t&& aPaintSequenceNumber,
                                                InfallibleTArray<WebRenderParentCommand>&& aCommands,
                                                InfallibleTArray<OpDestroy>&& aToDestroy,
-                                               const uint64_t& aFwdTransactionId,
-                                               const TransactionId& aTransactionId,
-                                               const wr::IdNamespace& aIdNamespace,
-                                               const TimeStamp& aRefreshStartTime,
-                                               const TimeStamp& aTxnStartTime,
-                                               const TimeStamp& aFwdTime) override;
-  mozilla::ipc::IPCResult RecvSetFocusTarget(const FocusTarget& aFocusTarget) override;
+                                               uint64_t&& aFwdTransactionId,
+                                               TransactionId&& aTransactionId,
+                                               wr::IdNamespace&& aIdNamespace,
+                                               TimeStamp&& aRefreshStartTime,
+                                               TimeStamp&& aTxnStartTime,
+                                               TimeStamp&& aFwdTime) override;
+  mozilla::ipc::IPCResult RecvSetFocusTarget(FocusTarget&& aFocusTarget) override;
   mozilla::ipc::IPCResult RecvParentCommands(nsTArray<WebRenderParentCommand>&& commands) override;
   mozilla::ipc::IPCResult RecvGetSnapshot(PTextureParent* aTexture) override;
 
-  mozilla::ipc::IPCResult RecvSetLayerObserverEpoch(const uint64_t& aLayerObserverEpoch) override;
+  mozilla::ipc::IPCResult RecvSetLayerObserverEpoch(uint64_t&& aLayerObserverEpoch) override;
 
   mozilla::ipc::IPCResult RecvClearCachedResources() override;
   mozilla::ipc::IPCResult RecvScheduleComposite() override;
   mozilla::ipc::IPCResult RecvCapture() override;
   mozilla::ipc::IPCResult RecvSyncWithCompositor() override;
 
-  mozilla::ipc::IPCResult RecvSetConfirmedTargetAPZC(const uint64_t& aBlockId,
+  mozilla::ipc::IPCResult RecvSetConfirmedTargetAPZC(uint64_t&& aBlockId,
                                                      nsTArray<ScrollableLayerGuid>&& aTargets) override;
 
-  mozilla::ipc::IPCResult RecvSetTestSampleTime(const TimeStamp& aTime) override;
+  mozilla::ipc::IPCResult RecvSetTestSampleTime(TimeStamp&& aTime) override;
   mozilla::ipc::IPCResult RecvLeaveTestMode() override;
-  mozilla::ipc::IPCResult RecvGetAnimationOpacity(const uint64_t& aCompositorAnimationsId,
+  mozilla::ipc::IPCResult RecvGetAnimationOpacity(uint64_t&& aCompositorAnimationsId,
                                                   float* aOpacity,
                                                   bool* aHasAnimationOpacity) override;
-  mozilla::ipc::IPCResult RecvGetAnimationTransform(const uint64_t& aCompositorAnimationsId,
+  mozilla::ipc::IPCResult RecvGetAnimationTransform(uint64_t&& aCompositorAnimationsId,
                                                     MaybeTransform* aTransform) override;
-  mozilla::ipc::IPCResult RecvSetAsyncScrollOffset(const FrameMetrics::ViewID& aScrollId,
-                                                   const float& aX,
-                                                   const float& aY) override;
-  mozilla::ipc::IPCResult RecvSetAsyncZoom(const FrameMetrics::ViewID& aScrollId,
-                                           const float& aZoom) override;
+  mozilla::ipc::IPCResult RecvSetAsyncScrollOffset(FrameMetrics::ViewID&& aScrollId,
+                                                   float&& aX,
+                                                   float&& aY) override;
+  mozilla::ipc::IPCResult RecvSetAsyncZoom(FrameMetrics::ViewID&& aScrollId,
+                                           float&& aZoom) override;
   mozilla::ipc::IPCResult RecvFlushApzRepaints() override;
   mozilla::ipc::IPCResult RecvGetAPZTestData(APZTestData* data) override;
 

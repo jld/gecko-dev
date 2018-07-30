@@ -191,7 +191,7 @@ private:
 
 mozilla::ipc::IPCResult
 ImageBridgeParent::RecvUpdate(EditArray&& aEdits, OpDestroyArray&& aToDestroy,
-                              const uint64_t& aFwdTransactionId)
+                              uint64_t&& aFwdTransactionId)
 {
   // This ensures that destroy operations are always processed. It is not safe
   // to early-return from RecvUpdate without doing so.
@@ -275,9 +275,9 @@ mozilla::ipc::IPCResult ImageBridgeParent::RecvWillClose()
 }
 
 mozilla::ipc::IPCResult
-ImageBridgeParent::RecvNewCompositable(const CompositableHandle& aHandle,
-                                       const TextureInfo& aInfo,
-                                       const LayersBackend& aLayersBackend)
+ImageBridgeParent::RecvNewCompositable(CompositableHandle&& aHandle,
+                                       TextureInfo&& aInfo,
+                                       LayersBackend&& aLayersBackend)
 {
   bool useWebRender = aLayersBackend == LayersBackend::LAYERS_WR;
   RefPtr<CompositableHost> host = AddCompositable(aHandle, aInfo, useWebRender);
@@ -290,7 +290,7 @@ ImageBridgeParent::RecvNewCompositable(const CompositableHandle& aHandle,
 }
 
 mozilla::ipc::IPCResult
-ImageBridgeParent::RecvReleaseCompositable(const CompositableHandle& aHandle)
+ImageBridgeParent::RecvReleaseCompositable(CompositableHandle&& aHandle)
 {
   ReleaseCompositable(aHandle);
   return IPC_OK();

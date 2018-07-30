@@ -80,22 +80,22 @@ protected:
   AllocPTransportProviderChild() override;
   virtual bool
   DeallocPTransportProviderChild(PTransportProviderChild* aActor) override;
-  virtual mozilla::ipc::IPCResult RecvAsyncAuthPromptForNestedFrame(const TabId& aNestedFrameId,
-                                                                    const nsCString& aUri,
-                                                                    const nsString& aRealm,
-                                                                    const uint64_t& aCallbackId) override;
+  virtual mozilla::ipc::IPCResult RecvAsyncAuthPromptForNestedFrame(TabId&& aNestedFrameId,
+                                                                    nsCString&& aUri,
+                                                                    nsString&& aRealm,
+                                                                    uint64_t&& aCallbackId) override;
   virtual PWebSocketEventListenerChild*
     AllocPWebSocketEventListenerChild(const uint64_t& aInnerWindowID) override;
   virtual bool DeallocPWebSocketEventListenerChild(PWebSocketEventListenerChild*) override;
 
   /* Predictor Messsages */
-  virtual mozilla::ipc::IPCResult RecvPredOnPredictPrefetch(const URIParams& aURI,
-                                                            const uint32_t& aHttpStatus) override;
-  virtual mozilla::ipc::IPCResult RecvPredOnPredictPreconnect(const URIParams& aURI) override;
-  virtual mozilla::ipc::IPCResult RecvPredOnPredictDNS(const URIParams& aURI) override;
+  virtual mozilla::ipc::IPCResult RecvPredOnPredictPrefetch(URIParams&& aURI,
+                                                            uint32_t&& aHttpStatus) override;
+  virtual mozilla::ipc::IPCResult RecvPredOnPredictPreconnect(URIParams&& aURI) override;
+  virtual mozilla::ipc::IPCResult RecvPredOnPredictDNS(URIParams&& aURI) override;
 
   virtual mozilla::ipc::IPCResult RecvSpeculativeConnectRequest() override;
-  virtual mozilla::ipc::IPCResult RecvNetworkChangeNotification(nsCString const& type) override;
+  virtual mozilla::ipc::IPCResult RecvNetworkChangeNotification(nsCString&& type) override;
 };
 
 /**

@@ -59,9 +59,9 @@ private:
   virtual void ActorDestroy(ActorDestroyReason aReason) override;
 
   virtual mozilla::ipc::IPCResult
-  RecvOpenStream(const nsID& aStreamId, OpenStreamResolver&& aResolve) override;
+  RecvOpenStream(nsID&& aStreamId, OpenStreamResolver&& aResolve) override;
 
-  virtual mozilla::ipc::IPCResult RecvNoteClosed(const nsID& aId) override;
+  virtual mozilla::ipc::IPCResult RecvNoteClosed(nsID&& aId) override;
 
   void NotifyClose(const nsID& aId);
   void NotifyCloseAll();

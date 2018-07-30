@@ -108,7 +108,7 @@ private:
   ActorDestroy(ActorDestroyReason aWhy) override;
 
   virtual mozilla::ipc::IPCResult
-  Recv__delete__(const UsageRequestResponse& aResponse) override;
+  Recv__delete__(UsageRequestResponse&& aResponse) override;
 };
 
 class QuotaRequestChild final
@@ -149,7 +149,7 @@ private:
   ActorDestroy(ActorDestroyReason aWhy) override;
 
   virtual mozilla::ipc::IPCResult
-  Recv__delete__(const RequestResponse& aResponse) override;
+  Recv__delete__(RequestResponse&& aResponse) override;
 };
 
 } // namespace quota

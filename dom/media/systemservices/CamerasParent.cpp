@@ -480,7 +480,7 @@ CamerasParent::EnsureInitialized(int aEngine)
 // It would be nice to get rid of the code duplication here,
 // perhaps via Promises.
 mozilla::ipc::IPCResult
-CamerasParent::RecvNumberOfCaptureDevices(const CaptureEngine& aCapEngine)
+CamerasParent::RecvNumberOfCaptureDevices(CaptureEngine&& aCapEngine)
 {
   LOG((__PRETTY_FUNCTION__));
   LOG(("CaptureEngine=%d", aCapEngine));
@@ -517,7 +517,7 @@ CamerasParent::RecvNumberOfCaptureDevices(const CaptureEngine& aCapEngine)
 }
 
 mozilla::ipc::IPCResult
-CamerasParent::RecvEnsureInitialized(const CaptureEngine& aCapEngine)
+CamerasParent::RecvEnsureInitialized(CaptureEngine&& aCapEngine)
 {
   LOG((__PRETTY_FUNCTION__));
 
@@ -550,8 +550,8 @@ CamerasParent::RecvEnsureInitialized(const CaptureEngine& aCapEngine)
 }
 
 mozilla::ipc::IPCResult
-CamerasParent::RecvNumberOfCapabilities(const CaptureEngine& aCapEngine,
-                                        const nsCString& unique_id)
+CamerasParent::RecvNumberOfCapabilities(CaptureEngine&& aCapEngine,
+                                        nsCString&& unique_id)
 {
   LOG((__PRETTY_FUNCTION__));
   LOG(("Getting caps for %s", unique_id.get()));
@@ -589,9 +589,9 @@ CamerasParent::RecvNumberOfCapabilities(const CaptureEngine& aCapEngine,
 }
 
 mozilla::ipc::IPCResult
-CamerasParent::RecvGetCaptureCapability(const CaptureEngine& aCapEngine,
-                                        const nsCString& unique_id,
-                                        const int& num)
+CamerasParent::RecvGetCaptureCapability(CaptureEngine&& aCapEngine,
+                                        nsCString&& unique_id,
+                                        int&& num)
 {
   LOG((__PRETTY_FUNCTION__));
   LOG(("RecvGetCaptureCapability: %s %d", unique_id.get(), num));
@@ -651,8 +651,8 @@ CamerasParent::RecvGetCaptureCapability(const CaptureEngine& aCapEngine,
 }
 
 mozilla::ipc::IPCResult
-CamerasParent::RecvGetCaptureDevice(const CaptureEngine& aCapEngine,
-                                    const int& aListNumber)
+CamerasParent::RecvGetCaptureDevice(CaptureEngine&& aCapEngine,
+                                    int&& aListNumber)
 {
   LOG((__PRETTY_FUNCTION__));
 
@@ -750,9 +750,9 @@ HasCameraPermission(const ipc::PrincipalInfo& aPrincipalInfo)
 }
 
 mozilla::ipc::IPCResult
-CamerasParent::RecvAllocateCaptureDevice(const CaptureEngine& aCapEngine,
-                                         const nsCString& unique_id,
-                                         const PrincipalInfo& aPrincipalInfo)
+CamerasParent::RecvAllocateCaptureDevice(CaptureEngine&& aCapEngine,
+                                         nsCString&& unique_id,
+                                         PrincipalInfo&& aPrincipalInfo)
 {
   LOG(("%s: Verifying permissions", __PRETTY_FUNCTION__));
   RefPtr<CamerasParent> self(this);
@@ -825,8 +825,8 @@ CamerasParent::ReleaseCaptureDevice(const CaptureEngine& aCapEngine,
 }
 
 mozilla::ipc::IPCResult
-CamerasParent::RecvReleaseCaptureDevice(const CaptureEngine& aCapEngine,
-                                        const int& numdev)
+CamerasParent::RecvReleaseCaptureDevice(CaptureEngine&& aCapEngine,
+                                        int&& numdev)
 {
   LOG((__PRETTY_FUNCTION__));
   LOG(("RecvReleaseCamera device nr %d", numdev));
@@ -859,9 +859,9 @@ CamerasParent::RecvReleaseCaptureDevice(const CaptureEngine& aCapEngine,
 }
 
 mozilla::ipc::IPCResult
-CamerasParent::RecvStartCapture(const CaptureEngine& aCapEngine,
-                                const int& capnum,
-                                const VideoCaptureCapability& ipcCaps)
+CamerasParent::RecvStartCapture(CaptureEngine&& aCapEngine,
+                                int&& capnum,
+                                VideoCaptureCapability&& ipcCaps)
 {
   LOG((__PRETTY_FUNCTION__));
 
@@ -980,8 +980,8 @@ CamerasParent::RecvStartCapture(const CaptureEngine& aCapEngine,
 }
 
 mozilla::ipc::IPCResult
-CamerasParent::RecvFocusOnSelectedSource(const CaptureEngine& aCapEngine,
-                                         const int& aCapNum)
+CamerasParent::RecvFocusOnSelectedSource(CaptureEngine&& aCapEngine,
+                                         int&& aCapNum)
 {
   LOG((__PRETTY_FUNCTION__));
   RefPtr<Runnable> webrtc_runnable =
@@ -1047,8 +1047,8 @@ CamerasParent::StopCapture(const CaptureEngine& aCapEngine,
 }
 
 mozilla::ipc::IPCResult
-CamerasParent::RecvStopCapture(const CaptureEngine& aCapEngine,
-                               const int& capnum)
+CamerasParent::RecvStopCapture(CaptureEngine&& aCapEngine,
+                               int&& capnum)
 {
   LOG((__PRETTY_FUNCTION__));
 

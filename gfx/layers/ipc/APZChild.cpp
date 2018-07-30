@@ -30,7 +30,7 @@ APZChild::~APZChild()
 }
 
 mozilla::ipc::IPCResult
-APZChild::RecvRequestContentRepaint(const FrameMetrics& aFrameMetrics)
+APZChild::RecvRequestContentRepaint(FrameMetrics&& aFrameMetrics)
 {
   MOZ_ASSERT(mController->IsRepaintThread());
 
@@ -39,31 +39,31 @@ APZChild::RecvRequestContentRepaint(const FrameMetrics& aFrameMetrics)
 }
 
 mozilla::ipc::IPCResult
-APZChild::RecvUpdateOverscrollVelocity(const float& aX, const float& aY, const bool& aIsRootContent)
+APZChild::RecvUpdateOverscrollVelocity(float&& aX, float&& aY, bool&& aIsRootContent)
 {
   mController->UpdateOverscrollVelocity(aX, aY, aIsRootContent);
   return IPC_OK();
 }
 
 mozilla::ipc::IPCResult
-APZChild::RecvUpdateOverscrollOffset(const float& aX, const float& aY, const bool& aIsRootContent)
+APZChild::RecvUpdateOverscrollOffset(float&& aX, float&& aY, bool&& aIsRootContent)
 {
   mController->UpdateOverscrollOffset(aX, aY, aIsRootContent);
   return IPC_OK();
 }
 
 mozilla::ipc::IPCResult
-APZChild::RecvNotifyMozMouseScrollEvent(const ViewID& aScrollId,
-                                        const nsString& aEvent)
+APZChild::RecvNotifyMozMouseScrollEvent(ViewID&& aScrollId,
+                                        nsString&& aEvent)
 {
   mController->NotifyMozMouseScrollEvent(aScrollId, aEvent);
   return IPC_OK();
 }
 
 mozilla::ipc::IPCResult
-APZChild::RecvNotifyAPZStateChange(const ScrollableLayerGuid& aGuid,
-                                   const APZStateChange& aChange,
-                                   const int& aArg)
+APZChild::RecvNotifyAPZStateChange(ScrollableLayerGuid&& aGuid,
+                                   APZStateChange&& aChange,
+                                   int&& aArg)
 {
   mController->NotifyAPZStateChange(aGuid, aChange, aArg);
   return IPC_OK();
@@ -79,14 +79,14 @@ APZChild::RecvNotifyFlushComplete()
 }
 
 mozilla::ipc::IPCResult
-APZChild::RecvNotifyAsyncScrollbarDragRejected(const ViewID& aScrollId)
+APZChild::RecvNotifyAsyncScrollbarDragRejected(ViewID&& aScrollId)
 {
   mController->NotifyAsyncScrollbarDragRejected(aScrollId);
   return IPC_OK();
 }
 
 mozilla::ipc::IPCResult
-APZChild::RecvNotifyAsyncAutoscrollRejected(const ViewID& aScrollId)
+APZChild::RecvNotifyAsyncAutoscrollRejected(ViewID&& aScrollId)
 {
   mController->NotifyAsyncAutoscrollRejected(aScrollId);
   return IPC_OK();

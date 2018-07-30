@@ -31,17 +31,17 @@ public:
     NS_DECL_NSIOFFLINECACHEUPDATE
 
     virtual mozilla::ipc::IPCResult
-    RecvNotifyStateEvent(const uint32_t& stateEvent,
-                         const uint64_t& byteProgress) override;
+    RecvNotifyStateEvent(uint32_t&& stateEvent,
+                         uint64_t&& byteProgress) override;
 
     virtual mozilla::ipc::IPCResult
     RecvAssociateDocuments(
-            const nsCString& cacheGroupId,
-            const nsCString& cacheClientId) override;
+            nsCString&& cacheGroupId,
+            nsCString&& cacheClientId) override;
 
     virtual mozilla::ipc::IPCResult
-    RecvFinish(const bool& succeeded,
-               const bool& isUpgrade) override;
+    RecvFinish(bool&& succeeded,
+               bool&& isUpgrade) override;
 
     explicit OfflineCacheUpdateChild(nsPIDOMWindowInner* aWindow);
 

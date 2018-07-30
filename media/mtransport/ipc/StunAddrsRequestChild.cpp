@@ -27,7 +27,7 @@ StunAddrsRequestChild::StunAddrsRequestChild(
 }
 
 mozilla::ipc::IPCResult
-StunAddrsRequestChild::RecvOnStunAddrsAvailable(const NrIceStunAddrArray& addrs)
+StunAddrsRequestChild::RecvOnStunAddrsAvailable(NrIceStunAddrArray&& addrs)
 {
   if (mListener) {
     mListener->OnStunAddrsAvailable(addrs);

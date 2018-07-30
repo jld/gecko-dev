@@ -21,7 +21,7 @@ PrintSettingsDialogChild::~PrintSettingsDialogChild()
 }
 
 mozilla::ipc::IPCResult
-PrintSettingsDialogChild::Recv__delete__(const PrintDataOrNSResult& aData)
+PrintSettingsDialogChild::Recv__delete__(PrintDataOrNSResult&& aData)
 {
   if (aData.type() == PrintDataOrNSResult::Tnsresult) {
     mResult = aData.get_nsresult();

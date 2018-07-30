@@ -30,7 +30,7 @@ public:
   {}
 
   mozilla::ipc::IPCResult
-  Recv__delete__(const PendingIPCBlobData& aData) override;
+  Recv__delete__(PendingIPCBlobData&& aData) override;
 
 private:
   explicit PendingIPCBlobParent(BlobImpl* aBlobImpl);

@@ -140,112 +140,112 @@ public:
 
   void AddWindowListeners();
 
-  virtual mozilla::ipc::IPCResult RecvMoveFocus(const bool& aForward,
-                                                const bool& aForDocumentNavigation) override;
+  virtual mozilla::ipc::IPCResult RecvMoveFocus(bool&& aForward,
+                                                bool&& aForDocumentNavigation) override;
 
-  virtual mozilla::ipc::IPCResult RecvSizeShellTo(const uint32_t& aFlags,
-                                                  const int32_t& aWidth,
-                                                  const int32_t& aHeight,
-                                                  const int32_t& aShellItemWidth,
-                                                  const int32_t& aShellItemHeight) override;
+  virtual mozilla::ipc::IPCResult RecvSizeShellTo(uint32_t&& aFlags,
+                                                  int32_t&& aWidth,
+                                                  int32_t&& aHeight,
+                                                  int32_t&& aShellItemWidth,
+                                                  int32_t&& aShellItemHeight) override;
 
   virtual mozilla::ipc::IPCResult RecvDropLinks(nsTArray<nsString>&& aLinks) override;
 
-  virtual mozilla::ipc::IPCResult RecvEvent(const RemoteDOMEvent& aEvent) override;
+  virtual mozilla::ipc::IPCResult RecvEvent(RemoteDOMEvent&& aEvent) override;
 
-  virtual mozilla::ipc::IPCResult RecvReplyKeyEvent(const WidgetKeyboardEvent& aEvent) override;
-
-  virtual mozilla::ipc::IPCResult
-  RecvAccessKeyNotHandled(const WidgetKeyboardEvent& aEvent) override;
+  virtual mozilla::ipc::IPCResult RecvReplyKeyEvent(WidgetKeyboardEvent&& aEvent) override;
 
   virtual mozilla::ipc::IPCResult
-  RecvSetHasBeforeUnload(const bool& aHasBeforeUnload) override;
+  RecvAccessKeyNotHandled(WidgetKeyboardEvent&& aEvent) override;
+
+  virtual mozilla::ipc::IPCResult
+  RecvSetHasBeforeUnload(bool&& aHasBeforeUnload) override;
 
   virtual mozilla::ipc::IPCResult
   RecvBrowserFrameOpenWindow(PBrowserParent* aOpener,
                              PRenderFrameParent* aRenderFrame,
-                             const nsString& aURL,
-                             const nsString& aName,
-                             const nsString& aFeatures,
+                             nsString&& aURL,
+                             nsString&& aName,
+                             nsString&& aFeatures,
                              BrowserFrameOpenWindowResolver&& aResolve) override;
 
   virtual mozilla::ipc::IPCResult
-  RecvSyncMessage(const nsString& aMessage,
-                  const ClonedMessageData& aData,
+  RecvSyncMessage(nsString&& aMessage,
+                  ClonedMessageData&& aData,
                   InfallibleTArray<CpowEntry>&& aCpows,
-                  const IPC::Principal& aPrincipal,
+                  IPC::Principal&& aPrincipal,
                   nsTArray<ipc::StructuredCloneData>* aRetVal) override;
 
   virtual mozilla::ipc::IPCResult
-  RecvRpcMessage(const nsString& aMessage,
-                 const ClonedMessageData& aData,
+  RecvRpcMessage(nsString&& aMessage,
+                 ClonedMessageData&& aData,
                  InfallibleTArray<CpowEntry>&& aCpows,
-                 const IPC::Principal& aPrincipal,
+                 IPC::Principal&& aPrincipal,
                  nsTArray<ipc::StructuredCloneData>* aRetVal) override;
 
-  virtual mozilla::ipc::IPCResult RecvAsyncMessage(const nsString& aMessage,
+  virtual mozilla::ipc::IPCResult RecvAsyncMessage(nsString&& aMessage,
                                                    InfallibleTArray<CpowEntry>&& aCpows,
-                                                   const IPC::Principal& aPrincipal,
-                                                   const ClonedMessageData& aData) override;
+                                                   IPC::Principal&& aPrincipal,
+                                                   ClonedMessageData&& aData) override;
 
   virtual mozilla::ipc::IPCResult
-  RecvNotifyIMEFocus(const ContentCache& aContentCache,
-                     const widget::IMENotification& aEventMessage,
+  RecvNotifyIMEFocus(ContentCache&& aContentCache,
+                     widget::IMENotification&& aEventMessage,
                      NotifyIMEFocusResolver&& aResolve) override;
 
   virtual mozilla::ipc::IPCResult
-  RecvNotifyIMETextChange(const ContentCache& aContentCache,
-                          const widget::IMENotification& aEventMessage) override;
+  RecvNotifyIMETextChange(ContentCache&& aContentCache,
+                          widget::IMENotification&& aEventMessage) override;
 
   virtual mozilla::ipc::IPCResult
-  RecvNotifyIMECompositionUpdate(const ContentCache& aContentCache,
-                                 const widget::IMENotification& aEventMessage) override;
+  RecvNotifyIMECompositionUpdate(ContentCache&& aContentCache,
+                                 widget::IMENotification&& aEventMessage) override;
 
   virtual mozilla::ipc::IPCResult
-  RecvNotifyIMESelection(const ContentCache& aContentCache,
-                         const widget::IMENotification& aEventMessage) override;
+  RecvNotifyIMESelection(ContentCache&& aContentCache,
+                         widget::IMENotification&& aEventMessage) override;
 
   virtual mozilla::ipc::IPCResult
-  RecvUpdateContentCache(const ContentCache& aContentCache) override;
+  RecvUpdateContentCache(ContentCache&& aContentCache) override;
 
   virtual mozilla::ipc::IPCResult
-  RecvNotifyIMEMouseButtonEvent(const widget::IMENotification& aEventMessage,
+  RecvNotifyIMEMouseButtonEvent(widget::IMENotification&& aEventMessage,
                                 bool* aConsumedByIME) override;
 
   virtual mozilla::ipc::IPCResult
-  RecvNotifyIMEPositionChange(const ContentCache& aContentCache,
-                              const widget::IMENotification& aEventMessage) override;
+  RecvNotifyIMEPositionChange(ContentCache&& aContentCache,
+                              widget::IMENotification&& aEventMessage) override;
 
   virtual mozilla::ipc::IPCResult
-  RecvOnEventNeedingAckHandled(const EventMessage& aMessage) override;
+  RecvOnEventNeedingAckHandled(EventMessage&& aMessage) override;
 
   virtual mozilla::ipc::IPCResult
-  RecvRequestIMEToCommitComposition(const bool& aCancel,
+  RecvRequestIMEToCommitComposition(bool&& aCancel,
                                     bool* aIsCommitted,
                                     nsString* aCommittedString) override;
 
   virtual mozilla::ipc::IPCResult
-  RecvStartPluginIME(const WidgetKeyboardEvent& aKeyboardEvent,
-                     const int32_t& aPanelX,
-                     const int32_t& aPanelY,
+  RecvStartPluginIME(WidgetKeyboardEvent&& aKeyboardEvent,
+                     int32_t&& aPanelX,
+                     int32_t&& aPanelY,
                      nsString* aCommitted) override;
 
-  virtual mozilla::ipc::IPCResult RecvSetPluginFocused(const bool& aFocused) override;
+  virtual mozilla::ipc::IPCResult RecvSetPluginFocused(bool&& aFocused) override;
 
   virtual mozilla::ipc::IPCResult RecvSetCandidateWindowForPlugin(
-    const widget::CandidateWindowPosition& aPosition) override;
+    widget::CandidateWindowPosition&& aPosition) override;
   virtual mozilla::ipc::IPCResult
-  RecvEnableIMEForPlugin(const bool& aEnable) override;
+  RecvEnableIMEForPlugin(bool&& aEnable) override;
 
   virtual mozilla::ipc::IPCResult
-  RecvDefaultProcOfPluginEvent(const WidgetPluginEvent& aEvent) override;
+  RecvDefaultProcOfPluginEvent(WidgetPluginEvent&& aEvent) override;
 
   virtual mozilla::ipc::IPCResult RecvGetInputContext(
     widget::IMEState* aIMEState) override;
 
   virtual mozilla::ipc::IPCResult RecvSetInputContext(
-    const widget::InputContext& aContext,
-    const widget::InputContextAction& aAction) override;
+    widget::InputContext&& aContext,
+    widget::InputContextAction&& aAction) override;
 
   // See nsIKeyEventInPluginCallback
   virtual void HandledWindowedPluginKeyEvent(
@@ -253,59 +253,59 @@ public:
                  bool aIsConsumed) override;
 
   virtual mozilla::ipc::IPCResult RecvOnWindowedPluginKeyEvent(
-    const NativeEventData& aKeyEventData) override;
+    NativeEventData&& aKeyEventData) override;
 
-  virtual mozilla::ipc::IPCResult RecvRequestFocus(const bool& aCanRaise) override;
+  virtual mozilla::ipc::IPCResult RecvRequestFocus(bool&& aCanRaise) override;
 
   virtual mozilla::ipc::IPCResult RecvLookUpDictionary(
-    const nsString& aText,
+    nsString&& aText,
     nsTArray<mozilla::FontRange>&& aFontRangeArray,
-    const bool& aIsVertical,
-    const LayoutDeviceIntPoint& aPoint) override;
+    bool&& aIsVertical,
+    LayoutDeviceIntPoint&& aPoint) override;
 
   virtual mozilla::ipc::IPCResult
-  RecvEnableDisableCommands(const nsString& aAction,
+  RecvEnableDisableCommands(nsString&& aAction,
                             nsTArray<nsCString>&& aEnabledCommands,
                             nsTArray<nsCString>&& aDisabledCommands) override;
 
-  virtual mozilla::ipc::IPCResult RecvSetCursor(const nsCursor& aValue,
-                                                const bool& aForce) override;
+  virtual mozilla::ipc::IPCResult RecvSetCursor(nsCursor&& aValue,
+                                                bool&& aForce) override;
 
-  virtual mozilla::ipc::IPCResult RecvSetCustomCursor(const nsCString& aUri,
-                                                      const uint32_t& aWidth,
-                                                      const uint32_t& aHeight,
-                                                      const uint32_t& aStride,
-                                                      const gfx::SurfaceFormat& aFormat,
-                                                      const uint32_t& aHotspotX,
-                                                      const uint32_t& aHotspotY,
-                                                      const bool& aForce) override;
+  virtual mozilla::ipc::IPCResult RecvSetCustomCursor(nsCString&& aUri,
+                                                      uint32_t&& aWidth,
+                                                      uint32_t&& aHeight,
+                                                      uint32_t&& aStride,
+                                                      gfx::SurfaceFormat&& aFormat,
+                                                      uint32_t&& aHotspotX,
+                                                      uint32_t&& aHotspotY,
+                                                      bool&& aForce) override;
 
-  virtual mozilla::ipc::IPCResult RecvSetStatus(const uint32_t& aType,
-                                                const nsString& aStatus) override;
+  virtual mozilla::ipc::IPCResult RecvSetStatus(uint32_t&& aType,
+                                                nsString&& aStatus) override;
 
-  virtual mozilla::ipc::IPCResult RecvShowTooltip(const uint32_t& aX,
-                                                  const uint32_t& aY,
-                                                  const nsString& aTooltip,
-                                                  const nsString& aDirection) override;
+  virtual mozilla::ipc::IPCResult RecvShowTooltip(uint32_t&& aX,
+                                                  uint32_t&& aY,
+                                                  nsString&& aTooltip,
+                                                  nsString&& aDirection) override;
 
   virtual mozilla::ipc::IPCResult RecvHideTooltip() override;
 
 
-  virtual mozilla::ipc::IPCResult RecvSetNativeChildOfShareableWindow(const uintptr_t& childWindow) override;
+  virtual mozilla::ipc::IPCResult RecvSetNativeChildOfShareableWindow(uintptr_t&& childWindow) override;
 
   virtual mozilla::ipc::IPCResult RecvDispatchFocusToTopLevelWindow() override;
 
-  virtual mozilla::ipc::IPCResult RecvRespondStartSwipeEvent(const uint64_t& aInputBlockId,
-                                                             const bool& aStartSwipe) override;
+  virtual mozilla::ipc::IPCResult RecvRespondStartSwipeEvent(uint64_t&& aInputBlockId,
+                                                             bool&& aStartSwipe) override;
 
   virtual mozilla::ipc::IPCResult
-  RecvDispatchWheelEvent(const mozilla::WidgetWheelEvent& aEvent) override;
+  RecvDispatchWheelEvent(mozilla::WidgetWheelEvent&& aEvent) override;
 
   virtual mozilla::ipc::IPCResult
-  RecvDispatchMouseEvent(const mozilla::WidgetMouseEvent& aEvent) override;
+  RecvDispatchMouseEvent(mozilla::WidgetMouseEvent&& aEvent) override;
 
   virtual mozilla::ipc::IPCResult
-  RecvDispatchKeyboardEvent(const mozilla::WidgetKeyboardEvent& aEvent) override;
+  RecvDispatchKeyboardEvent(mozilla::WidgetKeyboardEvent&& aEvent) override;
 
   virtual PColorPickerParent*
   AllocPColorPickerParent(const nsString& aTitle,
@@ -323,9 +323,9 @@ public:
   virtual mozilla::ipc::IPCResult
   RecvPDocAccessibleConstructor(PDocAccessibleParent* aDoc,
                                 PDocAccessibleParent* aParentDoc,
-                                const uint64_t& aParentID,
-                                const uint32_t& aMsaaID,
-                                const IAccessibleHolder& aDocCOMProxy) override;
+                                uint64_t&& aParentID,
+                                uint32_t&& aMsaaID,
+                                IAccessibleHolder&& aDocCOMProxy) override;
 
   /**
    * Return the top level doc accessible parent for this tab.
@@ -369,53 +369,53 @@ public:
 
   virtual mozilla::ipc::IPCResult
   RecvRequestNativeKeyBindings(
-    const uint32_t& aType,
-    const mozilla::WidgetKeyboardEvent& aEvent,
+    uint32_t&& aType,
+    mozilla::WidgetKeyboardEvent&& aEvent,
     nsTArray<mozilla::CommandInt>* aCommands) override;
 
   virtual mozilla::ipc::IPCResult
-  RecvSynthesizeNativeKeyEvent(const int32_t& aNativeKeyboardLayout,
-                               const int32_t& aNativeKeyCode,
-                               const uint32_t& aModifierFlags,
-                               const nsString& aCharacters,
-                               const nsString& aUnmodifiedCharacters,
-                               const uint64_t& aObserverId) override;
+  RecvSynthesizeNativeKeyEvent(int32_t&& aNativeKeyboardLayout,
+                               int32_t&& aNativeKeyCode,
+                               uint32_t&& aModifierFlags,
+                               nsString&& aCharacters,
+                               nsString&& aUnmodifiedCharacters,
+                               uint64_t&& aObserverId) override;
 
   virtual mozilla::ipc::IPCResult
-  RecvSynthesizeNativeMouseEvent(const LayoutDeviceIntPoint& aPoint,
-                                 const uint32_t& aNativeMessage,
-                                 const uint32_t& aModifierFlags,
-                                 const uint64_t& aObserverId) override;
+  RecvSynthesizeNativeMouseEvent(LayoutDeviceIntPoint&& aPoint,
+                                 uint32_t&& aNativeMessage,
+                                 uint32_t&& aModifierFlags,
+                                 uint64_t&& aObserverId) override;
 
   virtual mozilla::ipc::IPCResult
-  RecvSynthesizeNativeMouseMove(const LayoutDeviceIntPoint& aPoint,
-                                const uint64_t& aObserverId) override;
+  RecvSynthesizeNativeMouseMove(LayoutDeviceIntPoint&& aPoint,
+                                uint64_t&& aObserverId) override;
 
   virtual mozilla::ipc::IPCResult
-  RecvSynthesizeNativeMouseScrollEvent(const LayoutDeviceIntPoint& aPoint,
-                                       const uint32_t& aNativeMessage,
-                                       const double& aDeltaX,
-                                       const double& aDeltaY,
-                                       const double& aDeltaZ,
-                                       const uint32_t& aModifierFlags,
-                                       const uint32_t& aAdditionalFlags,
-                                       const uint64_t& aObserverId) override;
+  RecvSynthesizeNativeMouseScrollEvent(LayoutDeviceIntPoint&& aPoint,
+                                       uint32_t&& aNativeMessage,
+                                       double&& aDeltaX,
+                                       double&& aDeltaY,
+                                       double&& aDeltaZ,
+                                       uint32_t&& aModifierFlags,
+                                       uint32_t&& aAdditionalFlags,
+                                       uint64_t&& aObserverId) override;
 
   virtual mozilla::ipc::IPCResult
-  RecvSynthesizeNativeTouchPoint(const uint32_t& aPointerId,
-                                 const TouchPointerState& aPointerState,
-                                 const LayoutDeviceIntPoint& aPoint,
-                                 const double& aPointerPressure,
-                                 const uint32_t& aPointerOrientation,
-                                 const uint64_t& aObserverId) override;
+  RecvSynthesizeNativeTouchPoint(uint32_t&& aPointerId,
+                                 TouchPointerState&& aPointerState,
+                                 LayoutDeviceIntPoint&& aPoint,
+                                 double&& aPointerPressure,
+                                 uint32_t&& aPointerOrientation,
+                                 uint64_t&& aObserverId) override;
 
   virtual mozilla::ipc::IPCResult
-  RecvSynthesizeNativeTouchTap(const LayoutDeviceIntPoint& aPoint,
-                               const bool& aLongTap,
-                               const uint64_t& aObserverId) override;
+  RecvSynthesizeNativeTouchTap(LayoutDeviceIntPoint&& aPoint,
+                               bool&& aLongTap,
+                               uint64_t&& aObserverId) override;
 
   virtual mozilla::ipc::IPCResult
-  RecvClearNativeTouchSequence(const uint64_t& aObserverId) override;
+  RecvClearNativeTouchSequence(uint64_t&& aObserverId) override;
 
   void SendMouseEvent(const nsAString& aType, float aX, float aY,
                       int32_t aButton, int32_t aClickCount,
@@ -470,7 +470,7 @@ public:
   virtual mozilla::ipc::IPCResult
   RecvPIndexedDBPermissionRequestConstructor(
     PIndexedDBPermissionRequestParent* aActor,
-    const Principal& aPrincipal)
+    Principal&& aPrincipal)
                                     override;
 
   virtual bool
@@ -562,11 +562,11 @@ public:
 
   virtual mozilla::ipc::IPCResult
   RecvInvokeDragSession(nsTArray<IPCDataTransfer>&& aTransfers,
-                        const uint32_t& aAction,
-                        const OptionalShmem& aVisualDnDData,
-                        const uint32_t& aStride, const gfx::SurfaceFormat& aFormat,
-                        const LayoutDeviceIntRect& aDragRect,
-                        const nsCString& aPrincipalURISpec) override;
+                        uint32_t&& aAction,
+                        OptionalShmem&& aVisualDnDData,
+                        uint32_t&& aStride, gfx::SurfaceFormat&& aFormat,
+                        LayoutDeviceIntRect&& aDragRect,
+                        nsCString&& aPrincipalURISpec) override;
 
   void AddInitialDnDDataTo(DataTransfer* aDataTransfer,
                            nsACString& aPrincipalURISpec);
@@ -601,9 +601,9 @@ protected:
                       nsIPrincipal* aPrincipal,
                       nsTArray<ipc::StructuredCloneData>* aJSONRetVal = nullptr);
 
-  virtual mozilla::ipc::IPCResult RecvAsyncAuthPrompt(const nsCString& aUri,
-                                                      const nsString& aRealm,
-                                                      const uint64_t& aCallbackId) override;
+  virtual mozilla::ipc::IPCResult RecvAsyncAuthPrompt(nsCString&& aUri,
+                                                      nsString&& aRealm,
+                                                      uint64_t&& aCallbackId) override;
 
   virtual mozilla::ipc::IPCResult Recv__delete__() override;
 
@@ -620,13 +620,13 @@ protected:
 
   virtual mozilla::ipc::IPCResult RecvRemoteIsReadyToHandleInputEvents() override;
 
-  virtual mozilla::ipc::IPCResult RecvPaintWhileInterruptingJSNoOp(const uint64_t& aLayerObserverEpoch) override;
+  virtual mozilla::ipc::IPCResult RecvPaintWhileInterruptingJSNoOp(uint64_t&& aLayerObserverEpoch) override;
 
-  virtual mozilla::ipc::IPCResult RecvSetDimensions(const uint32_t& aFlags,
-                                                    const int32_t& aX, const int32_t& aY,
-                                                    const int32_t& aCx, const int32_t& aCy) override;
+  virtual mozilla::ipc::IPCResult RecvSetDimensions(uint32_t&& aFlags,
+                                                    int32_t&& aX, int32_t&& aY,
+                                                    int32_t&& aCx, int32_t&& aCy) override;
 
-  virtual mozilla::ipc::IPCResult RecvShowCanvasPermissionPrompt(const nsCString& aFirstPartyURI) override;
+  virtual mozilla::ipc::IPCResult RecvShowCanvasPermissionPrompt(nsCString&& aFirstPartyURI) override;
 
   ContentCacheInParent mContentCache;
 
