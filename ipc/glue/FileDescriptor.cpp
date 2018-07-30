@@ -8,6 +8,7 @@
 
 #include "mozilla/Assertions.h"
 #include "mozilla/Move.h"
+#include "mozilla/TypeTraits.h"
 #include "nsDebug.h"
 
 #ifdef XP_WIN
@@ -190,40 +191,6 @@ FileDescriptor::Close(PlatformHandleType aHandle)
     IGNORE_EINTR(close(aHandle));
 #endif
   }
-}
-
-FileDescriptor::PlatformHandleHelper::PlatformHandleHelper(FileDescriptor::PlatformHandleType aHandle)
-  :mHandle(aHandle)
-{
-}
-
-FileDescriptor::PlatformHandleHelper::PlatformHandleHelper(std::nullptr_t)
-  :mHandle(INVALID_HANDLE)
-{
-}
-
-bool
-FileDescriptor::PlatformHandleHelper::operator!=(std::nullptr_t) const
-{
-  return mHandle != INVALID_HANDLE;
-}
-
-FileDescriptor::PlatformHandleHelper::operator FileDescriptor::PlatformHandleType () const
-{
-  return mHandle;
-}
-
-#ifdef XP_WIN
-FileDescriptor::PlatformHandleHelper::operator std::intptr_t () const
-{
-  return reinterpret_cast<std::intptr_t>(mHandle);
-}
-#endif
-
-void
-FileDescriptor::PlatformHandleDeleter::operator()(FileDescriptor::PlatformHandleHelper aHelper)
-{
-  FileDescriptor::Close(aHelper);
 }
 
 void
