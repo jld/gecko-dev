@@ -62,6 +62,8 @@ public:
   // The caller still have to close aHandle.
   explicit FileDescriptor(PlatformHandleType aHandle);
 
+  explicit FileDescriptor(UniquePlatformHandle&& aHandle);
+
   // This constructor WILL NOT duplicate the handle.
   // FileDescriptor takes the ownership from IPC message.
   FileDescriptor(const IPDLPrivate&, const PickleType& aPickle);
@@ -89,6 +91,11 @@ public:
   // handle.
   UniquePlatformHandle
   ClonePlatformHandle() const;
+
+  // Extracts the underlying handle and makes this object an invalid handle.
+  // (Compare UniquePtr::release.)
+  UniquePlatformHandle
+  TakePlatformHandle();
 
   // Only used in nsTArray.
   bool
