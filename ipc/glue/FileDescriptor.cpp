@@ -106,6 +106,12 @@ FileDescriptor::ClonePlatformHandle() const
   return Clone(mHandle.get());
 }
 
+FileDescriptor::UniquePlatformHandle
+FileDescriptor::TakePlatformHandle()
+{
+  return UniquePlatformHandle(mHandle.release());
+}
+
 bool
 FileDescriptor::operator==(const FileDescriptor& aOther) const
 {
