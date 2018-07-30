@@ -3285,12 +3285,12 @@ ContentParent::RecvPBrowserConstructor(PBrowserParent* actor,
                                        bool&& isForBrowser)
 {
   return nsIContentParent::RecvPBrowserConstructor(actor,
-                                                   tabId,
-                                                   sameTabGroupAs,
-                                                   context,
-                                                   chromeFlags,
-                                                   cpId,
-                                                   isForBrowser);
+                                                   std::move(tabId),
+                                                   std::move(sameTabGroupAs),
+                                                   std::move(context),
+                                                   std::move(chromeFlags),
+                                                   std::move(cpId),
+                                                   std::move(isForBrowser));
 }
 
 PIPCBlobInputStreamParent*
@@ -3493,7 +3493,7 @@ mozilla::ipc::IPCResult
 ContentParent::RecvAddMemoryReport(MemoryReport&& aReport)
 {
   if (mMemoryReportRequest) {
-    mMemoryReportRequest->RecvReport(aReport);
+    mMemoryReportRequest->RecvReport(std::move(aReport));
   }
   return IPC_OK();
 }
@@ -4013,8 +4013,9 @@ ContentParent::RecvSyncMessage(nsString&& aMsg,
                                IPC::Principal&& aPrincipal,
                                nsTArray<StructuredCloneData>* aRetvals)
 {
-  return nsIContentParent::RecvSyncMessage(aMsg, aData, std::move(aCpows),
-                                           aPrincipal, aRetvals);
+  return nsIContentParent::RecvSyncMessage(std::move(aMsg), std::move(aData),
+                                           std::move(aCpows),
+                                           std::move(aPrincipal), aRetvals);
 }
 
 mozilla::ipc::IPCResult
@@ -4024,7 +4025,9 @@ ContentParent::RecvRpcMessage(nsString&& aMsg,
                               IPC::Principal&& aPrincipal,
                               nsTArray<StructuredCloneData>* aRetvals)
 {
-  return nsIContentParent::RecvRpcMessage(aMsg, aData, std::move(aCpows), aPrincipal,
+  return nsIContentParent::RecvRpcMessage(std::move(aMsg), std::move(aData),
+                                          std::move(aCpows),
+                                          std::move(aPrincipal),
                                           aRetvals);
 }
 
@@ -4034,8 +4037,9 @@ ContentParent::RecvAsyncMessage(nsString&& aMsg,
                                 IPC::Principal&& aPrincipal,
                                 ClonedMessageData&& aData)
 {
-  return nsIContentParent::RecvAsyncMessage(aMsg, std::move(aCpows), aPrincipal,
-                                            aData);
+  return nsIContentParent::RecvAsyncMessage(std::move(aMsg), std::move(aCpows),
+                                            std::move(aPrincipal),
+                                            std::move(aData));
 }
 
 static int32_t
@@ -4141,9 +4145,11 @@ ContentParent::RecvScriptError(nsString&& aMessage,
                                nsCString&& aCategory,
                                bool&& aFromPrivateWindow)
 {
-  return RecvScriptErrorInternal(aMessage, aSourceName, aSourceLine,
-                                 aLineNumber, aColNumber, aFlags,
-                                 aCategory, aFromPrivateWindow);
+  return RecvScriptErrorInternal(std::move(aMessage), std::move(aSourceName),
+                                 std::move(aSourceLine), std::move(aLineNumber),
+                                 std::move(aColNumber), std::move(aFlags),
+                                 std::move(aCategory),
+                                 std::move(aFromPrivateWindow));
 }
 
 mozilla::ipc::IPCResult
@@ -4157,9 +4163,11 @@ ContentParent::RecvScriptErrorWithStack(nsString&& aMessage,
                                         bool&& aFromPrivateWindow,
                                         ClonedMessageData&& aFrame)
 {
-  return RecvScriptErrorInternal(aMessage, aSourceName, aSourceLine,
-                                 aLineNumber, aColNumber, aFlags,
-                                 aCategory, aFromPrivateWindow, &aFrame);
+  return RecvScriptErrorInternal(std::move(aMessage), std::move(aSourceName),
+                                 std::move(aSourceLine), std::move(aLineNumber),
+                                 std::move(aColNumber), std::move(aFlags),
+                                 std::move(aCategory),
+                                 std::move(aFromPrivateWindow), &aFrame);
 }
 
 mozilla::ipc::IPCResult
@@ -5096,7 +5104,7 @@ ContentParent::RecvCreateWindow(PBrowserParent* aThisTab,
   auto resolveOnExit = MakeScopeExit([&] {
     // Copy over the nsresult, and then resolve.
     cwi.rv() = rv;
-    aResolve(cwi);
+    aResolve(std::move(cwi));
   });
 
   TabParent* newTab = TabParent::GetFrom(aNewTab);
@@ -5969,15 +5977,17 @@ ContentParent::RecvBHRThreadHang(HangDetails&& aDetails)
 }
 
 mozilla::ipc::IPCResult
-ContentParent::RecvFirstPartyStorageAccessGrantedForOrigin(Principal&& aParentPrincipal,
-                                                           nsCString&& aTrackingOrigin,
-                                                           nsCString&& aGrantedOrigin,
-                                                           FirstPartyStorageAccessGrantedForOriginResolver&& aResolver)
+ContentParent::RecvFirstPartyStorageAccessGrantedForOrigin(
+  Principal&& aParentPrincipal,
+  nsCString&& aTrackingOrigin,
+  nsCString&& aGrantedOrigin,
+  FirstPartyStorageAccessGrantedForOriginResolver&& aResolver)
 {
-  AntiTrackingCommon::SaveFirstPartyStorageAccessGrantedForOriginOnParentProcess(aParentPrincipal,
-                                                                                 aTrackingOrigin,
-                                                                                 aGrantedOrigin,
-                                                                                 std::move(aResolver));
+  AntiTrackingCommon::SaveFirstPartyStorageAccessGrantedForOriginOnParentProcess(
+    std::move(aParentPrincipal),
+    std::move(aTrackingOrigin),
+    std::move(aGrantedOrigin),
+    std::move(aResolver));
   return IPC_OK();
 }
 

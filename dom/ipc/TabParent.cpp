@@ -1892,7 +1892,7 @@ TabParent::RecvNotifyIMEFocus(ContentCache&& aContentCache,
   if (aIMENotification.mMessage == NOTIFY_IME_OF_FOCUS) {
     requests = widget->IMENotificationRequestsRef();
   }
-  aResolve(requests);
+  aResolve(std::move(requests));
 
   return IPC_OK();
 }
@@ -2785,7 +2785,8 @@ TabParent::RecvBrowserFrameOpenWindow(PBrowserParent* aOpener,
                                         &cwi.layersId());
   cwi.compositorOptions() =
     static_cast<RenderFrameParent*>(aRenderFrame)->GetCompositorOptions();
-  cwi.windowOpened() = (opened == BrowserElementParent::OPEN_WINDOW_ADDED);
+  bool windowOpened = (opened == BrowserElementParent::OPEN_WINDOW_ADDED);
+  cwi.windowOpened() = windowOpened;
   nsCOMPtr<nsIWidget> widget = GetWidget();
   if (widget) {
     cwi.maxTouchPoints() = widget->GetMaxTouchPoints();
@@ -2793,9 +2794,9 @@ TabParent::RecvBrowserFrameOpenWindow(PBrowserParent* aOpener,
   }
 
   // Resolve the request with the information we collected.
-  aResolve(cwi);
+  aResolve(std::move(cwi));
 
-  if (!cwi.windowOpened()) {
+  if (!windowOpened) {
     Destroy();
   }
   return IPC_OK();

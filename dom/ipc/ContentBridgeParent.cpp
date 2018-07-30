@@ -79,8 +79,10 @@ ContentBridgeParent::RecvSyncMessage(nsString&& aMsg,
                                      IPC::Principal&& aPrincipal,
                                      nsTArray<StructuredCloneData>* aRetvals)
 {
-  return nsIContentParent::RecvSyncMessage(aMsg, aData, std::move(aCpows),
-                                           aPrincipal, aRetvals);
+  return nsIContentParent::RecvSyncMessage(std::move(aMsg), std::move(aData),
+                                           std::move(aCpows),
+                                           std::move(aPrincipal),
+                                           std::move(aRetvals));
 }
 
 mozilla::ipc::IPCResult
@@ -89,8 +91,9 @@ ContentBridgeParent::RecvAsyncMessage(nsString&& aMsg,
                                       IPC::Principal&& aPrincipal,
                                       ClonedMessageData&& aData)
 {
-  return nsIContentParent::RecvAsyncMessage(aMsg, std::move(aCpows),
-                                            aPrincipal, aData);
+  return nsIContentParent::RecvAsyncMessage(std::move(aMsg), std::move(aCpows),
+                                            std::move(aPrincipal),
+                                            std::move(aData));
 }
 
 PBrowserParent*
@@ -183,12 +186,12 @@ ContentBridgeParent::RecvPBrowserConstructor(PBrowserParent* actor,
                                              bool&& isForBrowser)
 {
   return nsIContentParent::RecvPBrowserConstructor(actor,
-                                                   tabId,
-                                                   sameTabGroupAs,
-                                                   context,
-                                                   chromeFlags,
-                                                   cpId,
-                                                   isForBrowser);
+                                                   std::move(tabId),
+                                                   std::move(sameTabGroupAs),
+                                                   std::move(context),
+                                                   std::move(chromeFlags),
+                                                   std::move(cpId),
+                                                   std::move(isForBrowser));
 }
 
 void

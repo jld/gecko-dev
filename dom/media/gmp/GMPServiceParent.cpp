@@ -1815,8 +1815,8 @@ GMPServiceParent::RecvLaunchGMPForNodeId(
     *aOutErrorDescription = NS_LITERAL_CSTRING("GetNodeId failed.");
     return IPC_OK();
   }
-  return RecvLaunchGMP(nodeId,
-                       aApi,
+  return RecvLaunchGMP(std::move(nodeId),
+                       std::move(aApi),
                        std::move(aTags),
                        std::move(aAlreadyBridgedTo),
                        aOutPluginId,
@@ -1833,7 +1833,10 @@ GMPServiceParent::RecvGetGMPNodeId(nsString&& aOrigin,
                                    nsString&& aGMPName,
                                    nsCString* aID)
 {
-  nsresult rv = mService->GetNodeId(aOrigin, aTopLevelOrigin, aGMPName, *aID);
+  nsresult rv = mService->GetNodeId(std::move(aOrigin),
+                                    std::move(aTopLevelOrigin),
+                                    std::move(aGMPName),
+                                    *aID);
   if (!NS_SUCCEEDED(rv)) {
     return IPC_FAIL_NO_REASON(this);
   }

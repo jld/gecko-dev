@@ -250,7 +250,7 @@ mozilla::ipc::IPCResult
 GPUChild::RecvAddMemoryReport(MemoryReport&& aReport)
 {
   if (mMemoryReportRequest) {
-    mMemoryReportRequest->RecvReport(aReport);
+    mMemoryReportRequest->RecvReport(std::move(aReport));
   }
   return IPC_OK();
 }

@@ -147,11 +147,11 @@ HttpBackgroundChannelChild::RecvOnTransportAndData(
     LOG(("  > pending until OnStartRequest [offset=%" PRIu64 " count=%" PRIu32
          "]\n", aOffset, aCount));
 
-    mQueuedRunnables.AppendElement(NewRunnableMethod<const nsresult,
-                                                     const nsresult,
-                                                     const uint64_t,
-                                                     const uint32_t,
-                                                     const nsCString>(
+    mQueuedRunnables.AppendElement(NewRunnableMethod<nsresult&&,
+                                                     nsresult&&,
+                                                     uint64_t&&,
+                                                     uint32_t&&,
+                                                     nsCString&&>(
       "HttpBackgroundChannelChild::RecvOnTransportAndData",
       this,
       &HttpBackgroundChannelChild::RecvOnTransportAndData,
@@ -159,7 +159,7 @@ HttpBackgroundChannelChild::RecvOnTransportAndData(
       aTransportStatus,
       aOffset,
       aCount,
-      aData));
+      std::move(aData)));
 
     return IPC_OK();
   }
@@ -197,17 +197,17 @@ HttpBackgroundChannelChild::RecvOnStopRequest(
          static_cast<uint32_t>(aChannelStatus)));
 
     mQueuedRunnables.AppendElement(
-      NewRunnableMethod<const nsresult,
-                        const ResourceTimingStruct,
-                        const TimeStamp,
-                        const nsHttpHeaderArray>(
+      NewRunnableMethod<nsresult&&,
+                        ResourceTimingStruct&&,
+                        TimeStamp&&,
+                        nsHttpHeaderArray&&>(
         "HttpBackgroundChannelChild::RecvOnStopRequest",
         this,
         &HttpBackgroundChannelChild::RecvOnStopRequest,
         aChannelStatus,
         aTiming,
         aLastActiveTabOptHit,
-        aResponseTrailers));
+        std::move(aResponseTrailers)));
 
     return IPC_OK();
   }
@@ -234,7 +234,7 @@ HttpBackgroundChannelChild::RecvOnProgress(int64_t&& aProgress,
          PRId64 "]\n", aProgress, aProgressMax));
 
     mQueuedRunnables.AppendElement(
-      NewRunnableMethod<const int64_t, const int64_t>(
+      NewRunnableMethod<int64_t&&, int64_t&&>(
         "HttpBackgroundChannelChild::RecvOnProgress",
         this,
         &HttpBackgroundChannelChild::RecvOnProgress,
@@ -264,7 +264,7 @@ HttpBackgroundChannelChild::RecvOnStatus(nsresult&& aStatus)
     LOG(("  > pending until OnStartRequest [status=%" PRIx32 "]\n",
          static_cast<uint32_t>(aStatus)));
 
-    mQueuedRunnables.AppendElement(NewRunnableMethod<const nsresult>(
+    mQueuedRunnables.AppendElement(NewRunnableMethod<nsresult&&>(
       "HttpBackgroundChannelChild::RecvOnStatus",
       this,
       &HttpBackgroundChannelChild::RecvOnStatus,

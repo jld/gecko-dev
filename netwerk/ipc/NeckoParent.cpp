@@ -1006,7 +1006,7 @@ NeckoParent::RecvGetExtensionFD(URIParams&& aURI,
 
   if (result.isErr()) {
     FileDescriptor invalidFD;
-    aResolve(invalidFD);
+    aResolve(std::move(invalidFD));
   }
 
   return IPC_OK();

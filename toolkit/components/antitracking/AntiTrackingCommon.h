@@ -25,7 +25,7 @@ public:
   // ipc::FirstPartyStorageAccessGrantedForOriginResolver type which maps to
   // the same underlying type, but that results in Windows compilation errors,
   // so we use the underlying type to avoid the #include here.
-  typedef std::function<void(const bool&)>
+  typedef std::function<void(bool&&)>
     FirstPartyStorageAccessGrantedForOriginResolver;
 
   // This method returns true if the URI has first party storage access when

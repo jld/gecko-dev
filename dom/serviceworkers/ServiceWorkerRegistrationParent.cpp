@@ -35,8 +35,8 @@ void
 ResolveUnregister(PServiceWorkerRegistrationParent::UnregisterResolver&& aResolver,
                   bool aSuccess, nsresult aRv)
 {
-  aResolver(Tuple<const bool&, const CopyableErrorResult&>(
-    aSuccess, CopyableErrorResult(aRv)));
+  aResolver(Tuple<bool&&, CopyableErrorResult&&>(
+    std::move(aSuccess), CopyableErrorResult(aRv)));
 }
 
 } // anonymous namespace

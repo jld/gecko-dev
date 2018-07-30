@@ -29,7 +29,10 @@ GetPrincipalKey(const ipc::PrincipalInfo& aPrincipalInfo, bool aPersist)
   uint32_t id = mgr->mGetPrincipalKeyPledges.Append(*p);
 
   if (XRE_GetProcessType() == GeckoProcessType_Default) {
-    mgr->GetNonE10sParent()->RecvGetPrincipalKey(id, aPrincipalInfo, aPersist);
+    ipc::PrincipalInfo principalInfoCopy(aPrincipalInfo);
+    mgr->GetNonE10sParent()->RecvGetPrincipalKey(std::move(id),
+                                                 std::move(principalInfoCopy),
+                                                 std::move(aPersist));
   } else {
     Child::Get()->SendGetPrincipalKey(id, aPrincipalInfo, aPersist);
   }
@@ -46,7 +49,8 @@ SanitizeOriginKeys(const uint64_t& aSinceWhen, bool aOnlyPrivateBrowsing)
     // Avoid opening MediaManager in this case, since this is called by
     // sanitize.js when cookies are cleared, which can happen on startup.
     RefPtr<Parent<NonE10s>> tmpParent = new Parent<NonE10s>();
-    tmpParent->RecvSanitizeOriginKeys(aSinceWhen, aOnlyPrivateBrowsing);
+    tmpParent->RecvSanitizeOriginKeys(uint64_t(aSinceWhen),
+                                      std::move(aOnlyPrivateBrowsing));
   } else {
     Child::Get()->SendSanitizeOriginKeys(aSinceWhen, aOnlyPrivateBrowsing);
   }

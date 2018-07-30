@@ -1051,17 +1051,19 @@ ContentChild::ProvideWindowCommon(TabChild* aTabOpener,
     newChild->DoFakeShow(textureFactoryIdentifier, layersId, compositorOptions,
                         renderFrame, showInfo);
 
-    newChild->RecvUpdateDimensions(dimensionInfo);
+    newChild->RecvUpdateDimensions(std::move(dimensionInfo));
 
     for (size_t i = 0; i < frameScripts.Length(); i++) {
       FrameScriptInfo& info = frameScripts[i];
-      if (!newChild->RecvLoadRemoteScript(info.url(), info.runInGlobalScope())) {
+      nsAutoString url(info.url());
+      if (!newChild->RecvLoadRemoteScript(std::move(url),
+                                          bool(info.runInGlobalScope()))) {
         MOZ_CRASH();
       }
     }
 
     if (!urlToLoad.IsEmpty()) {
-      newChild->RecvLoadURL(urlToLoad, showInfo);
+      newChild->RecvLoadURL(std::move(urlToLoad), std::move(showInfo));
     }
 
     nsCOMPtr<mozIDOMWindowProxy> win = do_GetInterface(newChild->WebNavigation());
@@ -1239,13 +1241,14 @@ ContentChild::InitXPCOM(const XPCOMInitData& aXPCOMInit,
 
   mAvailableDictionaries = aXPCOMInit.dictionaries();
 
-  RecvSetOffline(aXPCOMInit.isOffline());
-  RecvSetConnectivity(aXPCOMInit.isConnected());
+  RecvSetOffline(bool(aXPCOMInit.isOffline()));
+  RecvSetConnectivity(bool(aXPCOMInit.isConnected()));
   LocaleService::GetInstance()->AssignAppLocales(aXPCOMInit.appLocales());
   LocaleService::GetInstance()->AssignRequestedLocales(aXPCOMInit.requestedLocales());
 
-  RecvSetCaptivePortalState(aXPCOMInit.captivePortalState());
-  RecvBidiKeyboardNotify(aXPCOMInit.isLangRTL(), aXPCOMInit.haveBidiKeyboards());
+  RecvSetCaptivePortalState(int32_t(aXPCOMInit.captivePortalState()));
+  RecvBidiKeyboardNotify(bool(aXPCOMInit.isLangRTL()),
+                         bool(aXPCOMInit.haveBidiKeyboards()));
 
   // Create the CPOW manager as soon as possible. Middleman processes don't use
   // CPOWs, because their recording child will also have a CPOW manager that
@@ -1888,12 +1891,12 @@ ContentChild::RecvPBrowserConstructor(PBrowserChild* aActor,
   }
 
   return nsIContentChild::RecvPBrowserConstructor(aActor,
-                                                  aTabId,
-                                                  aSameTabGroupAs,
-                                                  aContext,
-                                                  aChromeFlags,
-                                                  aCpID,
-                                                  aIsForBrowser);
+                                                  std::move(aTabId),
+                                                  std::move(aSameTabGroupAs),
+                                                  std::move(aContext),
+                                                  std::move(aChromeFlags),
+                                                  std::move(aCpID),
+                                                  std::move(aIsForBrowser));
 }
 
 void

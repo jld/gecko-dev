@@ -94,7 +94,7 @@ void
 CacheStreamControlParent::NoteClosedAfterForget(const nsID& aId)
 {
   NS_ASSERT_OWNINGTHREAD(CacheStreamControlParent);
-  RecvNoteClosed(aId);
+  RecvNoteClosed(nsID(aId));
 }
 
 #ifdef DEBUG

@@ -183,7 +183,7 @@ public:
   NS_IMETHOD SendBackFD()
   {
     MOZ_ASSERT(NS_IsMainThread());
-    mResolve(mFD);
+    mResolve(std::move(mFD));
     return NS_OK;
   }
 

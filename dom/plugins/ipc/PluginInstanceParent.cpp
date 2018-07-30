@@ -784,7 +784,7 @@ PluginInstanceParent::SetCurrentImage(Image* aImage)
     // Invalidate our area in the page so the image gets flushed.
     gfx::IntRect rect = aImage->GetPictureRect();
     NPRect nprect = {uint16_t(rect.x), uint16_t(rect.y), uint16_t(rect.width), uint16_t(rect.height)};
-    RecvNPN_InvalidateRect(nprect);
+    RecvNPN_InvalidateRect(std::move(nprect));
 
     RecordDrawingModel();
 }
@@ -947,7 +947,7 @@ PluginInstanceParent::RecvShow(NPRect&& updatedRect,
     }
 
     mFrontSurface = surface;
-    RecvNPN_InvalidateRect(updatedRect);
+    RecvNPN_InvalidateRect(std::move(updatedRect));
 
     PLUGIN_LOG_DEBUG(("   (RecvShow invalidated for surface %p)",
                       mFrontSurface.get()));

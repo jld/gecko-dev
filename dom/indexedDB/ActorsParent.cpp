@@ -20641,7 +20641,7 @@ MutableFile::RecvPBackgroundFileHandleConstructor(
   }
 
   return BackgroundMutableFileParentBase::RecvPBackgroundFileHandleConstructor(
-                                                                 aActor, aMode);
+    aActor, std::move(aMode));
 }
 
 mozilla::ipc::IPCResult

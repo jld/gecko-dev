@@ -127,7 +127,7 @@ protected:
     AnswerPaint(NPRemoteEvent&& event, int16_t* handled) override
     {
         PaintTracker pt;
-        if (!AnswerNPP_HandleEvent(event, handled)) {
+        if (!AnswerNPP_HandleEvent(std::move(event), handled)) {
           return IPC_FAIL_NO_REASON(this);
         }
         return IPC_OK();

@@ -1186,7 +1186,7 @@ TabChild::DoFakeShow(const TextureFactoryIdentifier& aTextureFactoryIdentifier,
 {
   mLayersConnected = aRenderFrame ? Some(true) : Some(false);
   InitRenderingState(aTextureFactoryIdentifier, aLayersId, aCompositorOptions, aRenderFrame);
-  RecvShow(ScreenIntSize(0, 0), aShowInfo, mParentIsActive, nsSizeMode_Normal);
+  RecvShow(ScreenIntSize(0, 0), ShowInfo(aShowInfo), bool(mParentIsActive), nsSizeMode_Normal);
   mDidFakeShow = true;
 }
 
@@ -1266,7 +1266,7 @@ TabChild::RecvShow(ScreenIntSize&& aSize,
   }
 
   ApplyShowInfo(aInfo);
-  RecvParentActivated(aParentIsActive);
+  RecvParentActivated(std::move(aParentIsActive));
 
   if (!res) {
     return IPC_FAIL_NO_REASON(this);
@@ -1441,7 +1441,11 @@ TabChild::RecvNormalPriorityHandleTap(
   ScrollableLayerGuid&& aGuid,
   uint64_t&& aInputBlockId)
 {
-  return RecvHandleTap(aType, aPoint, aModifiers, aGuid, aInputBlockId);
+  return RecvHandleTap(std::move(aType),
+                       std::move(aPoint),
+                       std::move(aModifiers),
+                       std::move(aGuid),
+                       std::move(aInputBlockId));
 }
 
 bool
@@ -1647,7 +1651,8 @@ TabChild::RecvRealMouseMoveEvent(WidgetMouseEvent&& aEvent,
     // Dispatch all pending mouse events.
     ProcessPendingCoalescedMouseDataAndDispatchEvents();
     mCoalescedMouseEventFlusher->StartObserver();
-  } else if (!RecvRealMouseButtonEvent(aEvent, aGuid, aInputBlockId)) {
+  } else if (!RecvRealMouseButtonEvent(std::move(aEvent), std::move(aGuid),
+                                       std::move(aInputBlockId))) {
     return IPC_FAIL_NO_REASON(this);
   }
   return IPC_OK();
@@ -1658,7 +1663,8 @@ TabChild::RecvNormalPriorityRealMouseMoveEvent(WidgetMouseEvent&& aEvent,
                                                ScrollableLayerGuid&& aGuid,
                                                uint64_t&& aInputBlockId)
 {
-  return RecvRealMouseMoveEvent(aEvent, aGuid, aInputBlockId);
+  return RecvRealMouseMoveEvent(std::move(aEvent), std::move(aGuid),
+                                std::move(aInputBlockId));
 }
 
 mozilla::ipc::IPCResult
@@ -1666,7 +1672,8 @@ TabChild::RecvSynthMouseMoveEvent(WidgetMouseEvent&& aEvent,
                                   ScrollableLayerGuid&& aGuid,
                                   uint64_t&& aInputBlockId)
 {
-  if (!RecvRealMouseButtonEvent(aEvent, aGuid, aInputBlockId)) {
+  if (!RecvRealMouseButtonEvent(std::move(aEvent), std::move(aGuid),
+                                std::move(aInputBlockId))) {
     return IPC_FAIL_NO_REASON(this);
   }
   return IPC_OK();
@@ -1677,7 +1684,8 @@ TabChild::RecvNormalPrioritySynthMouseMoveEvent(WidgetMouseEvent&& aEvent,
                                                 ScrollableLayerGuid&& aGuid,
                                                 uint64_t&& aInputBlockId)
 {
-  return RecvSynthMouseMoveEvent(aEvent, aGuid, aInputBlockId);
+  return RecvSynthMouseMoveEvent(std::move(aEvent), std::move(aGuid),
+                                 std::move(aInputBlockId));
 }
 
 mozilla::ipc::IPCResult
@@ -1755,7 +1763,8 @@ TabChild::RecvNormalPriorityRealMouseButtonEvent(
   ScrollableLayerGuid&& aGuid,
   uint64_t&& aInputBlockId)
 {
-  return RecvRealMouseButtonEvent(aEvent, aGuid, aInputBlockId);
+  return RecvRealMouseButtonEvent(std::move(aEvent), std::move(aGuid),
+                                  std::move(aInputBlockId));
 }
 
 // In case handling repeated mouse wheel takes much time, we skip firing current
@@ -1883,7 +1892,8 @@ TabChild::RecvNormalPriorityMouseWheelEvent(WidgetWheelEvent&& aEvent,
                                             ScrollableLayerGuid&& aGuid,
                                             uint64_t&& aInputBlockId)
 {
-  return RecvMouseWheelEvent(aEvent, aGuid, aInputBlockId);
+  return RecvMouseWheelEvent(std::move(aEvent), std::move(aGuid),
+                             std::move(aInputBlockId));
 }
 
 mozilla::ipc::IPCResult
@@ -1936,7 +1946,8 @@ TabChild::RecvNormalPriorityRealTouchEvent(WidgetTouchEvent&& aEvent,
                                            uint64_t&& aInputBlockId,
                                            nsEventStatus&& aApzResponse)
 {
-  return RecvRealTouchEvent(aEvent, aGuid, aInputBlockId, aApzResponse);
+  return RecvRealTouchEvent(std::move(aEvent), std::move(aGuid),
+                            std::move(aInputBlockId), std::move(aApzResponse));
 }
 
 mozilla::ipc::IPCResult
@@ -1945,7 +1956,8 @@ TabChild::RecvRealTouchMoveEvent(WidgetTouchEvent&& aEvent,
                                  uint64_t&& aInputBlockId,
                                  nsEventStatus&& aApzResponse)
 {
-  if (!RecvRealTouchEvent(aEvent, aGuid, aInputBlockId, aApzResponse)) {
+  if (!RecvRealTouchEvent(std::move(aEvent), std::move(aGuid),
+                          std::move(aInputBlockId), std::move(aApzResponse))) {
     return IPC_FAIL_NO_REASON(this);
   }
   return IPC_OK();
@@ -1958,7 +1970,9 @@ TabChild::RecvNormalPriorityRealTouchMoveEvent(
   uint64_t&& aInputBlockId,
   nsEventStatus&& aApzResponse)
 {
-  return RecvRealTouchMoveEvent(aEvent, aGuid, aInputBlockId, aApzResponse);
+  return RecvRealTouchMoveEvent(std::move(aEvent), std::move(aGuid),
+                                std::move(aInputBlockId),
+                                std::move(aApzResponse));
 }
 
 mozilla::ipc::IPCResult
@@ -2151,7 +2165,7 @@ TabChild::RecvRealKeyEvent(WidgetKeyboardEvent&& aEvent)
 mozilla::ipc::IPCResult
 TabChild::RecvNormalPriorityRealKeyEvent(WidgetKeyboardEvent&& aEvent)
 {
-  return RecvRealKeyEvent(aEvent);
+  return RecvRealKeyEvent(std::move(aEvent));
 }
 
 mozilla::ipc::IPCResult
@@ -2168,7 +2182,7 @@ mozilla::ipc::IPCResult
 TabChild::RecvNormalPriorityCompositionEvent(
             WidgetCompositionEvent&& aEvent)
 {
-  return RecvCompositionEvent(aEvent);
+  return RecvCompositionEvent(std::move(aEvent));
 }
 
 mozilla::ipc::IPCResult
@@ -2184,7 +2198,7 @@ TabChild::RecvSelectionEvent(WidgetSelectionEvent&& aEvent)
 mozilla::ipc::IPCResult
 TabChild::RecvNormalPrioritySelectionEvent(WidgetSelectionEvent&& aEvent)
 {
-  return RecvSelectionEvent(aEvent);
+  return RecvSelectionEvent(std::move(aEvent));
 }
 
 mozilla::ipc::IPCResult
@@ -2393,7 +2407,8 @@ TabChild::RecvSwappedWithOtherRemoteLoader(IPCTabContext&& aContext)
   mTriedBrowserInit = true;
   // Initialize the child side of the browser element machinery, if appropriate.
   if (IsMozBrowser()) {
-    RecvLoadRemoteScript(BROWSER_ELEMENT_CHILD_SCRIPT, true);
+    nsAutoString url(BROWSER_ELEMENT_CHILD_SCRIPT);
+    RecvLoadRemoteScript(std::move(url), true);
   }
 
   nsContentUtils::FirePageShowEvent(ourDocShell, ourEventTarget, true);
@@ -2549,9 +2564,9 @@ TabChild::RemovePendingDocShellBlocker()
   }
   if (!mPendingDocShellBlockers && mPendingRenderLayersReceivedMessage) {
     mPendingRenderLayersReceivedMessage = false;
-    RecvRenderLayers(mPendingRenderLayers,
+    RecvRenderLayers(bool(mPendingRenderLayers),
                      false /* aForceRepaint */,
-                     mPendingLayerObserverEpoch);
+                     uint64_t(mPendingLayerObserverEpoch));
   }
 }
 
@@ -2777,7 +2792,8 @@ TabChild::InitTabChildGlobal()
     // Initialize the child side of the browser element machinery,
     // if appropriate.
     if (IsMozBrowser()) {
-      RecvLoadRemoteScript(BROWSER_ELEMENT_CHILD_SCRIPT, true);
+      nsAutoString url(BROWSER_ELEMENT_CHILD_SCRIPT);
+      RecvLoadRemoteScript(std::move(url), true);
     }
   }
 
@@ -3476,7 +3492,8 @@ TabChild::PaintWhileInterruptingJS(uint64_t aLayerObserverEpoch,
   }
 
   nsAutoScriptBlocker scriptBlocker;
-  RecvRenderLayers(true /* aEnabled */, aForceRepaint, aLayerObserverEpoch);
+  RecvRenderLayers(true /* aEnabled */, std::move(aForceRepaint),
+                   std::move(aLayerObserverEpoch));
 }
 
 void

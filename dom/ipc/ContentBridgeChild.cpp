@@ -61,7 +61,9 @@ ContentBridgeChild::RecvAsyncMessage(nsString&& aMsg,
                                      IPC::Principal&& aPrincipal,
                                      ClonedMessageData&& aData)
 {
-  return nsIContentChild::RecvAsyncMessage(aMsg, std::move(aCpows), aPrincipal, aData);
+  return nsIContentChild::RecvAsyncMessage(std::move(aMsg), std::move(aCpows),
+                                           std::move(aPrincipal),
+                                           std::move(aData));
 }
 
 bool
@@ -150,12 +152,12 @@ ContentBridgeChild::RecvPBrowserConstructor(PBrowserChild* aActor,
                                             bool&& aIsForBrowser)
 {
   return nsIContentChild::RecvPBrowserConstructor(aActor,
-                                                  aTabId,
-                                                  aSameTabGroupAs,
-                                                  aContext,
-                                                  aChromeFlags,
-                                                  aCpID,
-                                                  aIsForBrowser);
+                                                  std::move(aTabId),
+                                                  std::move(aSameTabGroupAs),
+                                                  std::move(aContext),
+                                                  std::move(aChromeFlags),
+                                                  std::move(aCpID),
+                                                  std::move(aIsForBrowser));
 }
 
 PIPCBlobInputStreamChild*

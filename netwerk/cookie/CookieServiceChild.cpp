@@ -28,6 +28,8 @@
 #include "mozilla/Telemetry.h"
 #include "mozilla/TimeStamp.h"
 
+#include <utility>
+
 using namespace mozilla::ipc;
 using mozilla::OriginAttributes;
 
@@ -263,8 +265,8 @@ CookieServiceChild::RecvRemoveBatchDeletedCookies(nsTArray<CookieStruct>&& aCook
 {
   MOZ_ASSERT(aCookiesList.Length() == aAttrsList.Length());
   for (uint32_t i = 0; i < aCookiesList.Length(); i++) {
-    CookieStruct cookieStruct = aCookiesList.ElementAt(i);
-    RecvRemoveCookie(cookieStruct, aAttrsList.ElementAt(i));
+    RecvRemoveCookie(std::move(aCookiesList.ElementAt(i)),
+                     std::move(aAttrsList.ElementAt(i)));
   }
   return IPC_OK();
 }
