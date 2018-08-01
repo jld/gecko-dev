@@ -50,7 +50,7 @@ struct MemoryPorts {
    : mSender(sender), mReceiver(receiver) {}
 };
 
-class SharedMemoryBasic final : public SharedMemoryCommon<mach_port_t>
+class SharedMemoryBasicMach final : public SharedMemoryCommon<mach_port_t>
 {
 public:
   static void SetupMachMemory(pid_t pid,
@@ -68,7 +68,7 @@ public:
                               MachSendMessage& message,
                               MachReceiveMessage* response);
 
-  SharedMemoryBasic();
+  SharedMemoryBasicMach();
 
   virtual bool SetHandle(const Handle& aHandle, OpenRights aRights) override;
 
@@ -104,7 +104,7 @@ public:
                               Handle* aNewHandle) override;
 
 private:
-  ~SharedMemoryBasic();
+  ~SharedMemoryBasicMach();
 
   void Unmap();
   mach_port_t mPort;

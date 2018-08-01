@@ -60,6 +60,7 @@ static const char contentSandboxRules[] = R"SANDBOX_LITERAL(
   (define testingReadPath2 (param "TESTING_READ_PATH2"))
   (define testingReadPath3 (param "TESTING_READ_PATH3"))
   (define testingReadPath4 (param "TESTING_READ_PATH4"))
+  (define shmPrefix (param "SHM_PREFIX"))
 
   (if (string=? should-log "TRUE")
     (deny default)
@@ -185,6 +186,10 @@ static const char contentSandboxRules[] = R"SANDBOX_LITERAL(
     (ipc-posix-name-regex #"^CFPBS:"))
 
   (allow signal (target self))
+
+  (if shmPrefix
+    (allow ipc-posix-shm*
+      (ipc-posix-name-regex (string-append "^" (regex-quote shmPrefix)))))
 
   (if (>= macosMinorVersion 13)
     (allow mach-lookup

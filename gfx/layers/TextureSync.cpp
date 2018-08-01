@@ -219,7 +219,7 @@ TextureSync::UpdateTextureLocks(base::ProcessId aProcessId)
 
   MachSendMessage smsg(ipc::kUpdateTextureLocksMsg);
   smsg.SetData(&aProcessId, sizeof(aProcessId));
-  ipc::SharedMemoryBasic::SendMachMessage(aProcessId, smsg, NULL);
+  ipc::SharedMemoryBasicMach::SendMachMessage(aProcessId, smsg, NULL);
 }
 
 bool
@@ -253,7 +253,7 @@ TextureSync::WaitForTextures(base::ProcessId aProcessId, const nsTArray<uint64_t
   }
 
   MachReceiveMessage msg;
-  bool success = ipc::SharedMemoryBasic::SendMachMessage(aProcessId, smsg, &msg);
+  bool success = ipc::SharedMemoryBasicMach::SendMachMessage(aProcessId, smsg, &msg);
   if (!success) {
     return false;
   }

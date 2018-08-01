@@ -1727,6 +1727,11 @@ StartMacOSContentSandbox()
     info.testingReadPath4.assign(objDirPath.get());
   }
 
+  if (!base::SharedMemory::AppendPosixShmPrefix(&info.shmPrefix,
+                                                base::GetCurrentProcId())) {
+    info.shmPrefix.clear();
+  }
+
   if (profileDir) {
     info.hasSandboxedProfile = true;
     info.profileDir.assign(profileDirPath.get());

@@ -112,7 +112,7 @@ GeckoChildProcessHost::~GeckoChildProcessHost()
 
   if (mChildProcessHandle != 0) {
 #if defined(MOZ_WIDGET_COCOA)
-    SharedMemoryBasic::CleanupForPid(mChildProcessHandle);
+    SharedMemoryBasicMach::CleanupForPid(mChildProcessHandle);
 #endif
     ProcessWatcher::EnsureProcessTerminated(mChildProcessHandle
 #ifdef NS_FREE_PERMANENT_DATA
@@ -892,8 +892,8 @@ GeckoChildProcessHost::PerformAsyncLaunchInternal(std::vector<std::string>& aExt
     return false;
   }
 
-  SharedMemoryBasic::SetupMachMemory(process, parent_recv_port_memory, parent_recv_port_memory_ack,
-                                     parent_send_port_memory, parent_send_port_memory_ack, false);
+  SharedMemoryBasicMach::SetupMachMemory(process, parent_recv_port_memory, parent_recv_port_memory_ack,
+                                         parent_send_port_memory, parent_send_port_memory_ack, false);
 
 # endif // MOZ_WIDGET_COCOA
 

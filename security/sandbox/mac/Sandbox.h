@@ -67,6 +67,8 @@ typedef struct _MacSandboxInfo {
   std::string testingReadPath3;
   std::string testingReadPath4;
 
+  std::string shmPrefix;
+
   bool shouldLog;
 } MacSandboxInfo;
 

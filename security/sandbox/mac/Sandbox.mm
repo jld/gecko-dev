@@ -256,6 +256,10 @@ bool StartMacSandbox(MacSandboxInfo const &aInfo, std::string &aErrorMessage)
         params.push_back(aInfo.debugWriteDir.c_str());
       }
 #endif // DEBUG
+      if (!aInfo.shmPrefix.empty()) {
+        params.push_back("SHM_PREFIX");
+        params.push_back(aInfo.shmPrefix.c_str());
+      }
 
       if (aInfo.hasFilePrivileges) {
         profile.append(fileContentProcessAddend);

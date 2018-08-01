@@ -632,8 +632,8 @@ XRE_InitChildProcess(int aArgc,
   parentPID = recordreplay::RecordReplayValue(parentPID);
 
 #ifdef XP_MACOSX
-  mozilla::ipc::SharedMemoryBasic::SetupMachMemory(parentPID, ports_in_receiver, ports_in_sender,
-                                                   ports_out_sender, ports_out_receiver, true);
+  mozilla::ipc::SharedMemoryBasicMach::SetupMachMemory(parentPID, ports_in_receiver, ports_in_sender,
+                                                       ports_out_sender, ports_out_receiver, true);
 #endif
 
 #if defined(XP_WIN)
@@ -776,7 +776,7 @@ XRE_InitChildProcess(int aArgc,
 
 #if defined(XP_MACOSX)
       // Everybody should be done using shared memory by now.
-      mozilla::ipc::SharedMemoryBasic::Shutdown();
+      mozilla::ipc::SharedMemoryBasicMach::Shutdown();
 #endif
     }
   }

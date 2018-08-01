@@ -412,7 +412,7 @@ PortServerThread(void *argument)
           continue;
         }
         pid = reinterpret_cast<pid_t*>(rmsg.GetData());
-        SharedMemoryBasic::CleanupForPid(*pid);
+        SharedMemoryBasicMach::CleanupForPid(*pid);
         break;
       default:
         LOG_ERROR("Unknown message\n");
@@ -422,7 +422,7 @@ PortServerThread(void *argument)
 }
 
 void
-SharedMemoryBasic::SetupMachMemory(pid_t pid,
+SharedMemoryBasicMach::SetupMachMemory(pid_t pid,
                                    ReceivePort* listen_port,
                                    MachPortSender* listen_port_ack,
                                    MachPortSender* send_port,
@@ -434,7 +434,7 @@ SharedMemoryBasic::SetupMachMemory(pid_t pid,
 }
 
 void
-SharedMemoryBasic::Shutdown()
+SharedMemoryBasicMach::Shutdown()
 {
   StaticMutexAutoLock smal(gMutex);
 
@@ -454,7 +454,7 @@ SharedMemoryBasic::Shutdown()
 }
 
 void
-SharedMemoryBasic::CleanupForPid(pid_t pid)
+SharedMemoryBasicMach::CleanupForPid(pid_t pid)
 {
   if (gThreads.find(pid) == gThreads.end()) {
     return;
@@ -487,7 +487,7 @@ SharedMemoryBasic::CleanupForPid(pid_t pid)
 }
 
 bool
-SharedMemoryBasic::SendMachMessage(pid_t pid,
+SharedMemoryBasicMach::SendMachMessage(pid_t pid,
                                    MachSendMessage& message,
                                    MachReceiveMessage* response)
 {
@@ -520,21 +520,21 @@ SharedMemoryBasic::SendMachMessage(pid_t pid,
   return true;
 }
 
-SharedMemoryBasic::SharedMemoryBasic()
+SharedMemoryBasicMach::SharedMemoryBasicMach()
   : mPort(MACH_PORT_NULL)
   , mMemory(nullptr)
   , mOpenRights(RightsReadWrite)
 {
 }
 
-SharedMemoryBasic::~SharedMemoryBasic()
+SharedMemoryBasicMach::~SharedMemoryBasicMach()
 {
   Unmap();
   CloseHandle();
 }
 
 bool
-SharedMemoryBasic::SetHandle(const Handle& aHandle, OpenRights aRights)
+SharedMemoryBasicMach::SetHandle(const Handle& aHandle, OpenRights aRights)
 {
   MOZ_ASSERT(mPort == MACH_PORT_NULL, "already initialized");
 
@@ -556,7 +556,7 @@ toVMAddress(void* pointer)
 }
 
 bool
-SharedMemoryBasic::Create(size_t size)
+SharedMemoryBasicMach::Create(size_t size)
 {
   MOZ_ASSERT(mPort == MACH_PORT_NULL, "already initialized");
 
@@ -580,7 +580,7 @@ SharedMemoryBasic::Create(size_t size)
 }
 
 bool
-SharedMemoryBasic::Map(size_t size)
+SharedMemoryBasicMach::Map(size_t size)
 {
   MOZ_ASSERT(mMemory == nullptr);
 
@@ -610,7 +610,7 @@ SharedMemoryBasic::Map(size_t size)
 }
 
 bool
-SharedMemoryBasic::ShareToProcess(base::ProcessId pid,
+SharedMemoryBasicMach::ShareToProcess(base::ProcessId pid,
                                   Handle* aNewHandle)
 {
   if (pid == getpid()) {
@@ -665,7 +665,7 @@ SharedMemoryBasic::ShareToProcess(base::ProcessId pid,
 }
 
 void
-SharedMemoryBasic::Unmap()
+SharedMemoryBasicMach::Unmap()
 {
   if (!mMemory) {
     return;
@@ -680,7 +680,7 @@ SharedMemoryBasic::Unmap()
 }
 
 void
-SharedMemoryBasic::CloseHandle()
+SharedMemoryBasicMach::CloseHandle()
 {
   if (mPort != MACH_PORT_NULL) {
     mach_port_deallocate(mach_task_self(), mPort);
@@ -690,7 +690,7 @@ SharedMemoryBasic::CloseHandle()
 }
 
 bool
-SharedMemoryBasic::IsHandleValid(const Handle& aHandle) const
+SharedMemoryBasicMach::IsHandleValid(const Handle& aHandle) const
 {
   return aHandle > 0;
 }
