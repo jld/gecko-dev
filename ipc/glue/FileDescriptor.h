@@ -40,16 +40,6 @@ public:
   using UniquePlatformHandle = mozilla::UniqueFileHandle;
   using PlatformHandleType = UniquePlatformHandle::ElementType;
 
-#ifdef XP_WIN
-  typedef PlatformHandleType PickleType;
-#else
-  typedef base::FileDescriptor PickleType;
-#endif
-
-  // This should only ever be created by IPDL.
-  struct IPDLPrivate
-  {};
-
   // Represents an invalid handle.
   FileDescriptor();
 
@@ -62,11 +52,8 @@ public:
   // The caller still have to close aHandle.
   explicit FileDescriptor(PlatformHandleType aHandle);
 
+  // This constructor takes ownership of the handle.
   explicit FileDescriptor(UniquePlatformHandle&& aHandle);
-
-  // This constructor WILL NOT duplicate the handle.
-  // FileDescriptor takes the ownership from IPC message.
-  FileDescriptor(const IPDLPrivate&, const PickleType& aPickle);
 
   ~FileDescriptor();
 
@@ -76,11 +63,6 @@ public:
   FileDescriptor&
   operator=(FileDescriptor&& aOther);
 
-  // Performs platform-specific actions to duplicate mHandle in the other
-  // process (e.g. dup() on POSIX, DuplicateHandle() on Windows). Returns a
-  // pickled value that can be passed to the other process via IPC.
-  PickleType
-  ShareTo(const IPDLPrivate&, ProcessId aTargetPid) const;
 
   // Tests mHandle against a well-known invalid platform-specific file handle
   // (e.g. -1 on POSIX, INVALID_HANDLE_VALUE on Windows).
@@ -106,12 +88,24 @@ private:
   Clone(PlatformHandleType aHandle);
 
   UniquePlatformHandle mHandle;
+
+  // Performs platform-specific actions to duplicate mHandle in the other
+  // process (e.g. dup() on POSIX, DuplicateHandle() on Windows). Returns a
+  // pickled value that can be passed to the other process via IPC.
+  PlatformHandleType ShareTo(ProcessId aTargetPid) const;
+
+  friend struct IPDLParamTraits<FileDescriptor>;
 };
 
 template<>
 struct IPDLParamTraits<FileDescriptor> {
   typedef FileDescriptor paramType;
 
+#ifndef XP_WIN
+  // The move overload isn't usable yet (bug 1441651), but it could be....
+  // (It's also not helpful on Windows because it doesn't save any work.)
+  static void Write(IPC::Message* aMsg, IProtocol* aActor, paramType&& aParam);
+#endif
   static void Write(IPC::Message* aMsg, IProtocol* aActor, const paramType& aParam);
   static bool Read(const IPC::Message* aMsg, PickleIterator* aIter, IProtocol* aActor, paramType* aResult);
 };

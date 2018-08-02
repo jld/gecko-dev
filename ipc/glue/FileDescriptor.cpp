@@ -38,15 +38,6 @@ FileDescriptor::FileDescriptor(UniquePlatformHandle&& aHandle)
   : mHandle(std::move(aHandle))
 { }
 
-FileDescriptor::FileDescriptor(const IPDLPrivate&, const PickleType& aPickle)
-{
-#ifdef XP_WIN
-  mHandle.reset(aPickle);
-#else
-  mHandle.reset(aPickle.fd);
-#endif
-}
-
 FileDescriptor::~FileDescriptor() = default;
 
 FileDescriptor&
@@ -67,9 +58,8 @@ FileDescriptor::operator=(FileDescriptor&& aOther)
   return *this;
 }
 
-FileDescriptor::PickleType
-FileDescriptor::ShareTo(const FileDescriptor::IPDLPrivate&,
-                        FileDescriptor::ProcessId aTargetPid) const
+FileDescriptor::PlatformHandleType
+FileDescriptor::ShareTo(FileDescriptor::ProcessId aTargetPid) const
 {
   PlatformHandleType newHandle;
 #ifdef XP_WIN
@@ -85,11 +75,11 @@ FileDescriptor::ShareTo(const FileDescriptor::IPDLPrivate&,
   if (IsValid()) {
     newHandle = dup(mHandle.get());
     if (newHandle >= 0) {
-      return base::FileDescriptor(newHandle, /* auto_close */ true);
+      return newHandle;
     }
     NS_WARNING("Failed to duplicate file handle for other process!");
   }
-  return base::FileDescriptor();
+  return -1;
 #endif
 
   MOZ_CRASH("Must not get here!");
@@ -146,15 +136,40 @@ FileDescriptor::Clone(PlatformHandleType aHandle)
   return UniqueFileHandle();
 }
 
+static void
+WriteFileDesc(IPC::Message* aMsg,
+              IProtocol* aActor,
+              UniqueFileHandle&& aDesc)
+{
+#ifdef XP_WIN
+  WriteIPDLParam(aMsg, aActor, aDesc.release());
+#else // !XP_WIN
+  bool sendable = aDesc != nullptr;
+  WriteIPDLParam(aMsg, aActor, sendable);
+  if (sendable) {
+    aMsg->WriteFileDescriptor(base::FileDescriptor(aDesc.release(), true));
+  }
+#endif // !XP_WIN
+}
+
 void
 IPDLParamTraits<FileDescriptor>::Write(IPC::Message* aMsg,
                                        IProtocol* aActor,
                                        const FileDescriptor& aParam)
 {
-  FileDescriptor::PickleType pfd =
-    aParam.ShareTo(FileDescriptor::IPDLPrivate(), aActor->OtherPid());
-  WriteIPDLParam(aMsg, aActor, pfd);
+  UniqueFileHandle ufd(aParam.ShareTo(aActor->OtherPid()));
+  WriteFileDesc(aMsg, aActor, std::move(ufd));
 }
+
+#ifndef XP_WIN
+void
+IPDLParamTraits<FileDescriptor>::Write(IPC::Message* aMsg,
+                                       IProtocol* aActor,
+                                       FileDescriptor&& aParam)
+{
+  WriteFileDesc(aMsg, aActor, aParam.TakePlatformHandle());
+}
+#endif
 
 bool
 IPDLParamTraits<FileDescriptor>::Read(const IPC::Message* aMsg,
@@ -162,12 +177,29 @@ IPDLParamTraits<FileDescriptor>::Read(const IPC::Message* aMsg,
                                       IProtocol* aActor,
                                       FileDescriptor* aResult)
 {
-  FileDescriptor::PickleType pfd;
+  UniqueFileHandle ufd;
+#ifdef XP_WIN
+  FileDescriptor::PlatformHandleType pfd;
   if (!ReadIPDLParam(aMsg, aIter, aActor, &pfd)) {
     return false;
   }
+  ufd.reset(pfd);
+#else
+  bool was_sent;
+  base::FileDescriptor pfd;
+  if (!ReadIPDLParam(aMsg, aIter, aActor, &was_sent)) {
+    return false;
+  }
+  if (was_sent) {
+    if (!aMsg->ReadFileDescriptor(aIter, &pfd)) {
+      return false;
+    }
+    ufd.reset(pfd.fd);
+    MOZ_ASSERT(ufd != nullptr);
+  }
+#endif
 
-  *aResult = FileDescriptor(FileDescriptor::IPDLPrivate(), pfd);
+  *aResult = FileDescriptor(std::move(ufd));
   if (!aResult->IsValid()) {
     printf_stderr("IPDL protocol Error: Received an invalid file descriptor\n");
   }
