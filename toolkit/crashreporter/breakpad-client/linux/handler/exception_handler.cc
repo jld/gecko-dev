@@ -410,12 +410,12 @@ void ExceptionHandler::SignalHandler(int sig, siginfo_t* info, void* uc) {
     // In order to retrigger it, we have to queue a new signal by calling
     // kill() ourselves.  The special case (si_pid == 0 && sig == SIGABRT) is
     // due to the kernel sending a SIGABRT from a user request via SysRQ.
-    if (sys_tgkill(getpid(), syscall(__NR_gettid), sig) < 0) {
-      // If we failed to kill ourselves (e.g. because a sandbox disallows us
-      // to do so), we instead resort to terminating our process. This will
-      // result in an incorrect exit code.
-      _exit(1);
-    }
+    sys_tgkill(sys_getpid(), sys_gettid(), sig);
+    // If we failed to kill ourselves (e.g. because a sandbox disallows us
+    // to do so, or sys_getpid() == 1 and the signal was unhandled), we
+    // instead resort to terminating our process. This will result in an
+    // incorrect exit code.
+    _exit(1);
   } else {
     // This was a synchronous signal triggered by a hard fault (e.g. SIGSEGV).
     // No need to reissue the signal. It will automatically trigger again,
@@ -475,7 +475,7 @@ bool ExceptionHandler::HandleSignal(int /*sig*/, siginfo_t* info, void* uc) {
   bool signal_trusted = info->si_code > 0;
   bool signal_pid_trusted = info->si_code == SI_USER ||
       info->si_code == SI_TKILL;
-  if (signal_trusted || (signal_pid_trusted && info->si_pid == getpid())) {
+  if (signal_trusted || (signal_pid_trusted && info->si_pid == sys_getpid())) {
     sys_prctl(PR_SET_DUMPABLE, 1, 0, 0, 0);
   }
 
@@ -519,7 +519,7 @@ bool ExceptionHandler::SimulateSignalDelivery(int sig) {
   // Mimic a trusted signal to allow tracing the process (see
   // ExceptionHandler::HandleSignal().
   siginfo.si_code = SI_USER;
-  siginfo.si_pid = getpid();
+  siginfo.si_pid = sys_getpid();
   ucontext_t context;
   getcontext(&context);
   return HandleSignal(sig, &siginfo, &context);
@@ -545,7 +545,7 @@ bool ExceptionHandler::GenerateDump(
   ThreadArgument thread_arg;
   thread_arg.handler = this;
   thread_arg.minidump_descriptor = &minidump_descriptor_;
-  thread_arg.pid = getpid();
+  thread_arg.pid = sys_getpid();
   thread_arg.context = context;
   thread_arg.context_size = sizeof(*context);
 
