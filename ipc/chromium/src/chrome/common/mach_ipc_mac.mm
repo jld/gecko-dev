@@ -243,6 +243,21 @@ ReceivePort::ReceivePort(mach_port_t receive_port)
 }
 
 //==============================================================================
+// Move constructor.
+ReceivePort::ReceivePort(ReceivePort&& aOther)
+{
+  if (this == &aOther) {
+    return;
+  }
+
+  port_ = aOther.port_;
+  init_result_ = aOther.init_result_;
+
+  aOther.port_ = MACH_PORT_NULL;
+  aOther.init_result_ = KERN_FAILURE;
+}
+
+//==============================================================================
 ReceivePort::~ReceivePort() {
   if (init_result_ == KERN_SUCCESS)
     mach_port_deallocate(mach_task_self(), port_);
@@ -324,6 +339,21 @@ MachPortSender::MachPortSender(const char *receive_port_name) {
 MachPortSender::MachPortSender(mach_port_t send_port)
   : send_port_(send_port),
     init_result_(KERN_SUCCESS) {
+}
+
+//==============================================================================
+// Move constructor.
+MachPortSender::MachPortSender(MachPortSender&& aOther)
+{
+  if (this == &aOther) {
+    return;
+  }
+
+  send_port_ = aOther.send_port_;
+  init_result_ = aOther.init_result_;
+
+  aOther.send_port_ = MACH_PORT_NULL;
+  aOther.init_result_ = KERN_FAILURE;
 }
 
 //==============================================================================

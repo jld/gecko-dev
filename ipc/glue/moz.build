@@ -134,6 +134,12 @@ if CONFIG['OS_ARCH'] != 'WINNT':
         'FileDescriptorShuffle.cpp',
     ]
 
+if CONFIG['OS_ARCH'] == 'Darwin':
+    EXPORTS.mozilla.ipc += ['MachEndpoint.h']
+    UNIFIED_SOURCES += [
+        'MachEndpoint.cpp'
+    ]
+
 EXPORTS.ipc += [
     'IPCMessageUtils.h',
 ]

@@ -270,6 +270,8 @@ class ReceivePort {
   // Create a new mach port for receiving messages
   ReceivePort();
 
+  ReceivePort(ReceivePort&&);
+
   ~ReceivePort();
 
   // Waits on the mach port until message received or timeout
@@ -296,12 +298,16 @@ class MachPortSender {
   // get a port with send rights corresponding to a named registered service
   explicit MachPortSender(const char *receive_port_name);
 
-
   // Given an already existing mach port, use it.
   explicit MachPortSender(mach_port_t send_port);
 
+  MachPortSender(MachPortSender&&);
+
   kern_return_t SendMessage(MachSendMessage &message,
                             mach_msg_timeout_t timeout);
+
+  // The underlying mach port that we wrap
+  mach_port_t GetSendPort() const { return send_port_; }
 
  private:
   mach_port_t   send_port_;
