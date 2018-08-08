@@ -19,6 +19,8 @@ namespace ipc {
 
 class IProtocol;
 
+#ifdef XP_DARWIN
+
 class MachEndpoint {
 public:
   MachEndpoint(); // For IPDL; sigh.
@@ -47,7 +49,7 @@ private:
 template<>
 struct IPDLParamTraits<MachEndpoint> {
   typedef MachEndpoint paramType;
-  
+
   static void Write(IPC::Message* aMsg, IProtocol* aActor, paramType& aParam);
   static bool Read(const IPC::Message* aMsg, PickleIterator* aIter, IProtocol* aActor, paramType* aResult);
 };
@@ -70,6 +72,35 @@ private:
   Maybe<ReceivePort> mReceiver;
   Maybe<MachPortSender> mSender;
 };
+
+#else
+// Dummy MachEndpoint for non-Mac, to avoid ifdefs in IPDL
+
+class MachEndpoint {
+public:
+  MachEndpoint() = default;
+  MachEndpoint(MachEndpoint&&) = default;
+  ~MachEndpoint = default;
+
+private:
+  MachEndpoint(const MachEndpoint&) = delete;
+  MachEndpoint& operator=(const MachEndpoint&) = delete;
+};
+
+template<>
+struct IPDLParamTraits<MachEndpoint> {
+  typedef MachEndpoint paramType;
+
+  static void Write(IPC::Message* aMsg, IProtocol* aActor, paramType& aParam) {
+    /* nothing */
+  }
+
+  static bool Read(const IPC::Message* aMsg, PickleIterator* aIter, IProtocol* aActor, paramType* aResult) {
+    return true;
+  }
+};
+
+#endif // XP_DARWIN
 
 } // namespace ipc
 } // namespace mozilla

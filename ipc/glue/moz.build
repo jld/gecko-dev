@@ -135,10 +135,11 @@ if CONFIG['OS_ARCH'] != 'WINNT':
     ]
 
 if CONFIG['OS_ARCH'] == 'Darwin':
-    EXPORTS.mozilla.ipc += ['MachEndpoint.h']
     UNIFIED_SOURCES += [
         'MachEndpoint.cpp'
     ]
+# The header has a stub implementation for non-Mac to avoid IPDL ifdefs.
+EXPORTS.mozilla.ipc += ['MachEndpoint.h']
 
 EXPORTS.ipc += [
     'IPCMessageUtils.h',
