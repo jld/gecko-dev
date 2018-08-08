@@ -277,6 +277,8 @@
 // For VP9Benchmark::sBenchmarkFpsPref
 #include "Benchmark.h"
 
+#include "mozilla/ipc/MachEndpoint.h"
+
 static NS_DEFINE_CID(kCClipboardCID, NS_CLIPBOARD_CID);
 
 using base::KillProcess;
@@ -2549,13 +2551,15 @@ ContentParent::InitInternal(ProcessPriority aInitialPriority)
   GPUProcessManager* gpm = GPUProcessManager::Get();
 
   Endpoint<PCompositorManagerChild> compositor;
+  MachEndpoint compositorMach;
   Endpoint<PImageBridgeChild> imageBridge;
   Endpoint<PVRManagerChild> vrBridge;
   Endpoint<PVideoDecoderManagerChild> videoManager;
   AutoTArray<uint32_t, 3> namespaces;
 
-  DebugOnly<bool> opened = gpm->CreateContentBridges(OtherPid(),
+  DebugOnly<bool> opened = gpm->CreateContentBridges(this,
                                                      &compositor,
+                                                     &compositorMach,
                                                      &imageBridge,
                                                      &vrBridge,
                                                      &videoManager,
@@ -2563,6 +2567,7 @@ ContentParent::InitInternal(ProcessPriority aInitialPriority)
   MOZ_ASSERT(opened);
 
   Unused << SendInitRendering(std::move(compositor),
+                              compositorMach,
                               std::move(imageBridge),
                               std::move(vrBridge),
                               std::move(videoManager),
@@ -2713,14 +2718,16 @@ ContentParent::OnCompositorUnexpectedShutdown()
   GPUProcessManager* gpm = GPUProcessManager::Get();
 
   Endpoint<PCompositorManagerChild> compositor;
+  MachEndpoint compositorMach;
   Endpoint<PImageBridgeChild> imageBridge;
   Endpoint<PVRManagerChild> vrBridge;
   Endpoint<PVideoDecoderManagerChild> videoManager;
   AutoTArray<uint32_t, 3> namespaces;
 
   DebugOnly<bool> opened = gpm->CreateContentBridges(
-    OtherPid(),
+    this,
     &compositor,
+    &compositorMach,
     &imageBridge,
     &vrBridge,
     &videoManager,
@@ -2729,6 +2736,7 @@ ContentParent::OnCompositorUnexpectedShutdown()
 
   Unused << SendReinitRendering(
     std::move(compositor),
+    compositorMach,
     std::move(imageBridge),
     std::move(vrBridge),
     std::move(videoManager),

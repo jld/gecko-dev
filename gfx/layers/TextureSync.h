@@ -41,6 +41,7 @@ public:
   static void SetTexturesLocked(base::ProcessId aProcessId, const nsTArray<uint64_t>& aTextureIds);
   static void SetTexturesUnlocked(base::ProcessId aProcessId, const nsTArray<uint64_t>& aTextureIds);
   static void Shutdown();
+  // FIXME this needs to be called not where it is now.
   static void CleanupForPid(base::ProcessId aProcessId);
 };
 

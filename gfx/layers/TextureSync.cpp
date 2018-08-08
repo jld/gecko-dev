@@ -405,8 +405,8 @@ void
 TextureSync::InitClient(base::ProcessId aProcessId,
                         mozilla::ipc::MachBridge&& aBridge)
 {
+  // FIXME this also acts as ReinitClient; should it be separate for asserts?
   gClient.emplace(aProcessId, std::move(aBridge));
-  // FIXME should this also store the pid for assertions?
 }
 
 } // namespace layers

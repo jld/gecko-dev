@@ -534,7 +534,7 @@ class _ConvertToCxxType(TypeVisitor):
 
     def visitImportedCxxType(self, t):
         cxxtype = Type(self.typename(t))
-        if t.isRefcounted():
+        if t.lifetime() == 'refcounted':
             cxxtype = _refptr(cxxtype)
         return cxxtype
 
@@ -592,12 +592,15 @@ def _cxxConstRefType(ipdltype, side):
     if ipdltype.isIPDL() and ipdltype.isByteBuf():
         t.ref = 1
         return t
+    if ipdltype.lifetime() == 'moveonly':
+        t.ref = 1
+        return t
     if ipdltype.isIPDL() and ipdltype.isArray():
         # Keep same constness as inner type.
         t.const = _cxxConstRefType(ipdltype.basetype, side).const
         t.ref = 1
         return t
-    if ipdltype.isCxx() and ipdltype.isRefcounted():
+    if ipdltype.isCxx() and ipdltype.lifetime() == 'refcounted':
         # Use T* instead of const RefPtr<T>&
         t = t.T
         t.ptr = 1
@@ -608,10 +611,11 @@ def _cxxConstRefType(ipdltype, side):
 
 
 def _cxxTypeNeedsMove(ipdltype):
-    return ipdltype.isIPDL() and (ipdltype.isArray() or
-                                  ipdltype.isShmem() or
-                                  ipdltype.isByteBuf() or
-                                  ipdltype.isEndpoint())
+    return ((ipdltype.isIPDL() and (ipdltype.isArray() or
+                                    ipdltype.isShmem() or
+                                    ipdltype.isByteBuf() or
+                                    ipdltype.isEndpoint())) or 
+            ipdltype.lifetime() == 'moveonly')
 
 
 def _cxxTypeCanMove(ipdltype):
@@ -821,6 +825,8 @@ class _StructField(_CompoundTypeComponent):
             refexpr = ExprCast(refexpr, Type('ByteBuf', ref=1), const=1)
         if 'FileDescriptor' == self.ipdltype.name():
             refexpr = ExprCast(refexpr, Type('FileDescriptor', ref=1), const=1)
+        if 'moveonly' == self.ipdltype.lifetime():
+            refexpr = ExprCast(refexpr, Type(ipdltype.fullname(), ref=1), const=1)
         return refexpr
 
     def argVar(self):
@@ -985,6 +991,8 @@ IPDL union type."""
             v = ExprCast(v, Type('Shmem', ref=1), const=1)
         if 'FileDescriptor' == self.ipdltype.name():
             v = ExprCast(v, Type('FileDescriptor', ref=1), const=1)
+        if 'moveonly' == self.ipdltype.lifetime():
+            v = ExprCast(v, Type(ipdltype.fullname(), ref=1), const=1)
         return v
 
 # --------------------------------------------------

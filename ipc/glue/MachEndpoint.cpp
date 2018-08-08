@@ -34,9 +34,16 @@ MachEndpoint::MachEndpoint(pid_t aRecipient)
 { }
 
 MachEndpoint::MachEndpoint(MachEndpoint&& aOther)
+: MachEndpoint()
+{
+  *this = std::move(aOther);
+}
+
+MachEndpoint&
+MachEndpoint::operator=(MachEndpoint&& aOther)
 {
   if (this == &aOther) {
-    return;
+    return *this;
   }
 
   mRecipient = aOther.mRecipient;
@@ -46,6 +53,8 @@ MachEndpoint::MachEndpoint(MachEndpoint&& aOther)
   aOther.mRecipient = 0;
   aOther.mMachOwner = MACH_PORT_NULL;
   aOther.mRecvPort = MACH_PORT_NULL;
+
+  return *this;
 }
 
 MachEndpoint::~MachEndpoint()
@@ -78,28 +87,28 @@ ExtractRecvToSend(mach_port_t aTask, mach_port_t aRecv, mach_port_t* aSendOut)
 /* static */ kern_return_t
 MachEndpoint::CreateEndpoints(mach_port_t task0,
                               mach_port_t task1,
-                              MachEndpoint& end0,
-                              MachEndpoint& end1)
+                              MachEndpoint* end0,
+                              MachEndpoint* end1)
 {
-  MOZ_RELEASE_ASSERT(!end0.IsCreated());
-  MOZ_RELEASE_ASSERT(!end1.IsCreated());
+  MOZ_RELEASE_ASSERT(!end0->IsCreated());
+  MOZ_RELEASE_ASSERT(!end1->IsCreated());
 
-  end0.mMachOwner = task0;
-  end1.mMachOwner = task1;
+  end0->mMachOwner = task0;
+  end1->mMachOwner = task1;
 
   MACH_TRY(mach_port_allocate(task0, MACH_PORT_RIGHT_RECEIVE,
-                              &end0.mRecvPort));
+                              &end0->mRecvPort));
   MACH_TRY(mach_port_allocate(task1, MACH_PORT_RIGHT_RECEIVE,
-                              &end1.mRecvPort));
+                              &end1->mRecvPort));
 
   mach_port_t send0, send1;
 
-  MACH_TRY(ExtractRecvToSend(task0, end0.mRecvPort, &send0));
+  MACH_TRY(ExtractRecvToSend(task0, end0->mRecvPort, &send0));
   auto guard0 = mozilla::MakeScopeExit([&]() {
     mach_port_deallocate(mach_task_self(), send0);
   });
 
-  MACH_TRY(ExtractRecvToSend(task1, end1.mRecvPort, &send1));
+  MACH_TRY(ExtractRecvToSend(task1, end1->mRecvPort, &send1));
   auto guard1 = mozilla::MakeScopeExit([&]() {
     mach_port_deallocate(mach_task_self(), send0);
   });

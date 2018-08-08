@@ -15,6 +15,9 @@
 #include "mozilla/layers/PCompositorManagerChild.h"
 
 namespace mozilla {
+namespace ipc {
+class MachEndpoint;
+}
 namespace layers {
 
 class CompositorManagerParent;
@@ -28,6 +31,7 @@ public:
   static bool IsInitialized(uint64_t aProcessToken);
   static void InitSameProcess(uint32_t aNamespace, uint64_t aProcessToken);
   static bool Init(Endpoint<PCompositorManagerChild>&& aEndpoint,
+                   ipc::MachEndpoint&& aEndpointMach,
                    uint32_t aNamespace,
                    uint64_t aProcessToken = 0);
   static void Shutdown();

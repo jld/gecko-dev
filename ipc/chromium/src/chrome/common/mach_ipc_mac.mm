@@ -246,10 +246,6 @@ ReceivePort::ReceivePort(mach_port_t receive_port)
 // Move constructor.
 ReceivePort::ReceivePort(ReceivePort&& aOther)
 {
-  if (this == &aOther) {
-    return;
-  }
-
   port_ = aOther.port_;
   init_result_ = aOther.init_result_;
 
@@ -345,10 +341,6 @@ MachPortSender::MachPortSender(mach_port_t send_port)
 // Move constructor.
 MachPortSender::MachPortSender(MachPortSender&& aOther)
 {
-  if (this == &aOther) {
-    return;
-  }
-
   send_port_ = aOther.send_port_;
   init_result_ = aOther.init_result_;
 

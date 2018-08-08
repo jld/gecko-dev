@@ -47,13 +47,21 @@ CompositorManagerParent::CreateSameProcess()
 }
 
 /* static */ void
-CompositorManagerParent::Create(Endpoint<PCompositorManagerParent>&& aEndpoint)
+CompositorManagerParent::Create(Endpoint<PCompositorManagerParent>&& aEndpoint,
+                                MachEndpoint&& aMachEndpoint)
 {
   MOZ_ASSERT(NS_IsMainThread());
 
   // We are creating a manager for the another process, inside the GPU process
   // (or UI process if it subsumbed the GPU process).
   MOZ_ASSERT(aEndpoint.OtherPid() != base::GetCurrentProcId());
+
+#ifdef XP_DARWIN
+  MachBridge machBridge;
+  machBridge.Init(std::move(aMachEndpoint));
+  TextureSync::InitForPid(aEndpoint.OtherPid(), std::move(machBridge));
+  // FIXME errors?
+#endif
 
   RefPtr<CompositorManagerParent> bridge = new CompositorManagerParent();
 

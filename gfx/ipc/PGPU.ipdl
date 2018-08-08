@@ -18,6 +18,7 @@ include protocol PVideoDecoderManager;
 
 using base::ProcessId from "base/process.h";
 using mozilla::dom::NativeThreadId from "mozilla/dom/TabMessageUtils.h";
+using moveonly class mozilla::ipc::MachEndpoint from "mozilla/ipc/MachEndpoint.h";
 using mozilla::Telemetry::HistogramAccumulation from "mozilla/TelemetryComms.h";
 using mozilla::Telemetry::KeyedHistogramAccumulation from "mozilla/TelemetryComms.h";
 using mozilla::Telemetry::ScalarAction from "mozilla/TelemetryComms.h";
@@ -54,7 +55,8 @@ parent:
              DevicePrefs devicePrefs,
              LayerTreeIdMapping[] mapping);
 
-  async InitCompositorManager(Endpoint<PCompositorManagerParent> endpoint);
+  async InitCompositorManager(Endpoint<PCompositorManagerParent> endpoint,
+                              MachEndpoint machEndpoint);
   async InitVsyncBridge(Endpoint<PVsyncBridgeParent> endpoint);
   async InitImageBridge(Endpoint<PImageBridgeParent> endpoint);
   async InitVRManager(Endpoint<PVRManagerParent> endpoint);
@@ -67,7 +69,8 @@ parent:
   async UpdateVar(GfxVarUpdate var);
 
   // Create a new content-process compositor bridge.
-  async NewContentCompositorManager(Endpoint<PCompositorManagerParent> endpoint);
+  async NewContentCompositorManager(Endpoint<PCompositorManagerParent> endpoint,
+                                    MachEndpoint machEndpoint);
   async NewContentImageBridge(Endpoint<PImageBridgeParent> endpoint);
   async NewContentVRManager(Endpoint<PVRManagerParent> endpoint);
   async NewContentVideoDecoderManager(Endpoint<PVideoDecoderManagerParent> endpoint);

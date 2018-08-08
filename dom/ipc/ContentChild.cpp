@@ -1426,6 +1426,7 @@ ContentChild::RecvRequestPerformanceMetrics(const nsID& aID)
 
 mozilla::ipc::IPCResult
 ContentChild::RecvInitRendering(Endpoint<PCompositorManagerChild>&& aCompositor,
+                                MachEndpoint&& aCompositorMach,
                                 Endpoint<PImageBridgeChild>&& aImageBridge,
                                 Endpoint<PVRManagerChild>&& aVRBridge,
                                 Endpoint<PVideoDecoderManagerChild>&& aVideoManager,
@@ -1440,7 +1441,9 @@ ContentChild::RecvInitRendering(Endpoint<PCompositorManagerChild>&& aCompositor,
   // should crash itself (because we are actually talking to the UI process). If
   // there are localized failures (e.g. failed to spawn a thread), then it
   // should MOZ_RELEASE_ASSERT or MOZ_CRASH as necessary instead.
-  if (!CompositorManagerChild::Init(std::move(aCompositor), namespaces[0])) {
+  if (!CompositorManagerChild::Init(std::move(aCompositor),
+                                    std::move(aCompositorMach),
+                                    namespaces[0])) {
     return GetResultForRenderingInitFailure(aCompositor.OtherPid());
   }
   if (!CompositorManagerChild::CreateContentCompositorBridge(namespaces[1])) {
@@ -1458,6 +1461,7 @@ ContentChild::RecvInitRendering(Endpoint<PCompositorManagerChild>&& aCompositor,
 
 mozilla::ipc::IPCResult
 ContentChild::RecvReinitRendering(Endpoint<PCompositorManagerChild>&& aCompositor,
+                                  MachEndpoint&& aCompositorMach,
                                   Endpoint<PImageBridgeChild>&& aImageBridge,
                                   Endpoint<PVRManagerChild>&& aVRBridge,
                                   Endpoint<PVideoDecoderManagerChild>&& aVideoManager,
@@ -1474,7 +1478,9 @@ ContentChild::RecvReinitRendering(Endpoint<PCompositorManagerChild>&& aComposito
   }
 
   // Re-establish singleton bridges to the compositor.
-  if (!CompositorManagerChild::Init(std::move(aCompositor), namespaces[0])) {
+  if (!CompositorManagerChild::Init(std::move(aCompositor),
+                                    std::move(aCompositorMach),
+                                    namespaces[0])) {
     return GetResultForRenderingInitFailure(aCompositor.OtherPid());
   }
   if (!CompositorManagerChild::CreateContentCompositorBridge(namespaces[1])) {

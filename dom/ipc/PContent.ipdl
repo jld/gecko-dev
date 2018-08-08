@@ -82,6 +82,7 @@ using mozilla::hal::ProcessPriority from "mozilla/HalTypes.h";
 using mozilla::gfx::IntSize from "mozilla/gfx/2D.h";
 using mozilla::dom::TabId from "mozilla/dom/ipc/IdType.h";
 using mozilla::dom::ContentParentId from "mozilla/dom/ipc/IdType.h";
+using moveonly class mozilla::ipc::MachEndpoint from "mozilla/ipc/MachEndpoint.h";
 using mozilla::LayoutDeviceIntPoint from "Units.h";
 using struct LookAndFeelInt from "mozilla/widget/WidgetMessageUtils.h";
 using class mozilla::dom::MessagePort from "mozilla/dom/MessagePort.h";
@@ -378,6 +379,7 @@ child:
     // Give the content process its endpoints to the compositor.
     async InitRendering(
       Endpoint<PCompositorManagerChild> compositor,
+      MachEndpoint compositorMach,
       Endpoint<PImageBridgeChild> imageBridge,
       Endpoint<PVRManagerChild> vr,
       Endpoint<PVideoDecoderManagerChild> video,
@@ -388,6 +390,7 @@ child:
     // newly launched GPU process, or the compositor thread of the UI process.
     async ReinitRendering(
       Endpoint<PCompositorManagerChild> compositor,
+      MachEndpoint compositorMach,
       Endpoint<PImageBridgeChild> bridge,
       Endpoint<PVRManagerChild> vr,
       Endpoint<PVideoDecoderManagerChild> video,

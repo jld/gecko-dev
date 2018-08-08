@@ -124,6 +124,7 @@ reserved = set((
     'intr',
     'manager',
     'manages',
+    'moveonly',
     'namespace',
     'nested',
     'nullable',
@@ -282,16 +283,17 @@ def p_UsingKind(p):
     p[0] = p[1] if 2 == len(p) else None
 
 
-def p_MaybeRefcounted(p):
-    """MaybeRefcounted : REFCOUNTED
-                       |"""
-    p[0] = 2 == len(p)
+def p_Lifetime(p):
+    """Lifetime : REFCOUNTED
+                | MOVEONLY
+                |"""
+    p[0] = p[1] if 2 == len(p) else 'default'
 
 
 def p_UsingStmt(p):
-    """UsingStmt : USING MaybeRefcounted UsingKind CxxType FROM STRING"""
+    """UsingStmt : USING Lifetime UsingKind CxxType FROM STRING"""
     p[0] = UsingStmt(locFromTok(p, 1),
-                     refcounted=p[2],
+                     lifetime=p[2],
                      kind=p[3],
                      cxxTypeSpec=p[4],
                      cxxHeader=p[6])

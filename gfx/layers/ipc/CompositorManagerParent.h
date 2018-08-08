@@ -31,7 +31,8 @@ class CompositorManagerParent final : public PCompositorManagerParent
 
 public:
   static already_AddRefed<CompositorManagerParent> CreateSameProcess();
-  static void Create(Endpoint<PCompositorManagerParent>&& aEndpoint);
+  static void Create(Endpoint<PCompositorManagerParent>&& aEndpoint,
+                     ipc::MachEndpoint&& aMachEndpoint);
   static void Shutdown();
 
   static already_AddRefed<CompositorBridgeParent>

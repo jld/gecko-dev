@@ -4,8 +4,6 @@
  * License, v. 2.0. If a copy of the MPL was not distributed with this
  * file, You can obtain one at http://mozilla.org/MPL/2.0/. */
 
-// FIXME should this file be named MachBridge instead?
-
 #ifndef mozilla_ipc_MachEndpoint_h
 #define mozilla_ipc_MachEndpoint_h
 
@@ -28,12 +26,13 @@ public:
   MachEndpoint(); // For IPDL; sigh.
   explicit MachEndpoint(pid_t aRecipient);
   MachEndpoint(MachEndpoint&&);
+  MachEndpoint& operator=(MachEndpoint&&);
   ~MachEndpoint();
 
   static kern_return_t CreateEndpoints(mach_port_t task0,
                                        mach_port_t task1,
-                                       MachEndpoint& end0,
-                                       MachEndpoint& end1);
+                                       MachEndpoint* end0,
+                                       MachEndpoint* end1);
   bool IsCreated() const;
 
 private:
@@ -85,7 +84,8 @@ class MachEndpoint {
 public:
   MachEndpoint() = default;
   MachEndpoint(MachEndpoint&&) = default;
-  ~MachEndpoint = default;
+  MachEndpoint& operator=(MachEndpoint&&) = default;
+  ~MachEndpoint() = default;
 
 private:
   MachEndpoint(const MachEndpoint&) = delete;

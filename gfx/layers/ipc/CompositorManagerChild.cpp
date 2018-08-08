@@ -7,9 +7,11 @@
 #include "mozilla/layers/CompositorManagerChild.h"
 
 #include "gfxPrefs.h"
+#include "mozilla/ipc/MachEndpoint.h"
 #include "mozilla/layers/CompositorBridgeChild.h"
 #include "mozilla/layers/CompositorManagerParent.h"
 #include "mozilla/layers/CompositorThread.h"
+#include "mozilla/layers/TextureSync.h"
 #include "mozilla/gfx/gfxVars.h"
 #include "mozilla/gfx/GPUProcessManager.h"
 #include "mozilla/dom/ContentChild.h"   // for ContentChild
@@ -57,6 +59,7 @@ CompositorManagerChild::InitSameProcess(uint32_t aNamespace,
 
 /* static */ bool
 CompositorManagerChild::Init(Endpoint<PCompositorManagerChild>&& aEndpoint,
+                             MachEndpoint&& aEndpointMach,
                              uint32_t aNamespace,
                              uint64_t aProcessToken /* = 0 */)
 {
@@ -64,9 +67,16 @@ CompositorManagerChild::Init(Endpoint<PCompositorManagerChild>&& aEndpoint,
   if (sInstance) {
     MOZ_ASSERT(sInstance->mNamespace != aNamespace);
   }
+#ifdef XP_DARWIN
+  MachBridge machBridge;
+  machBridge.Init(std::move(aEndpointMach));
+  TextureSync::InitClient(aEndpoint.OtherPid(), std::move(machBridge));
+  // FIXME errors
+#endif
 
   sInstance = new CompositorManagerChild(std::move(aEndpoint), aProcessToken,
                                          aNamespace);
+  
   return sInstance->CanSend();
 }
 

@@ -47,6 +47,7 @@ class PVideoDecoderManagerChild;
 } // namespace dom
 namespace ipc {
 class GeckoChildProcessHost;
+class MachEndpoint;
 } // namespace ipc
 namespace gfx {
 
@@ -102,8 +103,9 @@ public:
     bool* aRetry);
 
   bool CreateContentBridges(
-    base::ProcessId aOtherProcess,
+    const dom::ContentParent* aOtherProcess,
     mozilla::ipc::Endpoint<PCompositorManagerChild>* aOutCompositor,
+    mozilla::ipc::MachEndpoint* aOutCompositorMach,
     mozilla::ipc::Endpoint<PImageBridgeChild>* aOutImageBridge,
     mozilla::ipc::Endpoint<PVRManagerChild>* aOutVRBridge,
     mozilla::ipc::Endpoint<dom::PVideoDecoderManagerChild>* aOutVideoManager,
@@ -189,8 +191,9 @@ private:
   // Called from our xpcom-shutdown observer.
   void OnXPCOMShutdown();
 
-  bool CreateContentCompositorManager(base::ProcessId aOtherProcess,
-                                      mozilla::ipc::Endpoint<PCompositorManagerChild>* aOutEndpoint);
+  bool CreateContentCompositorManager(const dom::ContentParent* aOtherProcess,
+                                      mozilla::ipc::Endpoint<PCompositorManagerChild>* aOutEndpoint,
+                                      mozilla::ipc::MachEndpoint *aOutMachEndpoint);
   bool CreateContentImageBridge(base::ProcessId aOtherProcess,
                                 mozilla::ipc::Endpoint<PImageBridgeChild>* aOutEndpoint);
   bool CreateContentVRManager(base::ProcessId aOtherProcess,

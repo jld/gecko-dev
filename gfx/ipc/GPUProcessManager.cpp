@@ -15,6 +15,7 @@
 #include "mozilla/StaticPrefs.h"
 #include "mozilla/dom/ContentParent.h"
 #include "mozilla/gfx/gfxVars.h"
+#include "mozilla/ipc/MachEndpoint.h"
 #include "mozilla/layers/APZCTreeManagerChild.h"
 #include "mozilla/layers/CompositorBridgeParent.h"
 #include "mozilla/layers/CompositorManagerChild.h"
@@ -247,6 +248,8 @@ GPUProcessManager::EnsureCompositorManagerChild()
     return;
   }
 
+  ipc::MachEndpoint parentMach(mGPUChild->OtherPid());
+  ipc::MachEndpoint childMach(base::GetCurrentProcId());
   ipc::Endpoint<PCompositorManagerParent> parentPipe;
   ipc::Endpoint<PCompositorManagerChild> childPipe;
   nsresult rv = PCompositorManager::CreateEndpoints(
@@ -259,8 +262,24 @@ GPUProcessManager::EnsureCompositorManagerChild()
     return;
   }
 
-  mGPUChild->SendInitCompositorManager(std::move(parentPipe));
-  CompositorManagerChild::Init(std::move(childPipe), AllocateNamespace(),
+#ifdef XP_DARWIN
+  mach_port_t parentTask = mGPUChild->Process()->GetChildTask();
+  mach_port_t childTask = mach_task_self();
+  kern_return_t kr = ipc::MachEndpoint::CreateEndpoints(parentTask,
+                                                        childTask,
+                                                        &parentMach,
+                                                        &childMach);
+  if (kr != KERN_SUCCESS) {
+    DisableGPUProcess("Failed to set up UI compositor mach IPC");
+    return;
+  }
+#endif
+
+  mGPUChild->SendInitCompositorManager(parentPipe,
+                                       parentMach);
+  CompositorManagerChild::Init(std::move(childPipe),
+                               std::move(childMach),
+                               AllocateNamespace(),
                                mProcessToken);
 }
 
@@ -850,22 +869,25 @@ GPUProcessManager::CreateRemoteSession(nsBaseWidget* aWidget,
 }
 
 bool
-GPUProcessManager::CreateContentBridges(base::ProcessId aOtherProcess,
+GPUProcessManager::CreateContentBridges(const dom::ContentParent* aOtherProcess,
                                         ipc::Endpoint<PCompositorManagerChild>* aOutCompositor,
+                                        ipc::MachEndpoint* aOutCompositorMach,
                                         ipc::Endpoint<PImageBridgeChild>* aOutImageBridge,
                                         ipc::Endpoint<PVRManagerChild>* aOutVRBridge,
                                         ipc::Endpoint<dom::PVideoDecoderManagerChild>* aOutVideoManager,
                                         nsTArray<uint32_t>* aNamespaces)
 {
-  if (!CreateContentCompositorManager(aOtherProcess, aOutCompositor) ||
-      !CreateContentImageBridge(aOtherProcess, aOutImageBridge) ||
-      !CreateContentVRManager(aOtherProcess, aOutVRBridge))
+  base::ProcessId otherPid = aOtherProcess->OtherPid();
+  
+  if (!CreateContentCompositorManager(aOtherProcess, aOutCompositor, aOutCompositorMach) ||
+      !CreateContentImageBridge(otherPid, aOutImageBridge) ||
+      !CreateContentVRManager(otherPid, aOutVRBridge))
   {
     return false;
   }
   // VideoDeocderManager is only supported in the GPU process, so we allow this to be
   // fallible.
-  CreateContentVideoDecoderManager(aOtherProcess, aOutVideoManager);
+  CreateContentVideoDecoderManager(otherPid, aOutVideoManager);
   // Allocates 3 namespaces(for CompositorManagerChild, CompositorBridgeChild and ImageBridgeChild)
   aNamespaces->AppendElement(AllocateNamespace());
   aNamespaces->AppendElement(AllocateNamespace());
@@ -874,19 +896,24 @@ GPUProcessManager::CreateContentBridges(base::ProcessId aOtherProcess,
 }
 
 bool
-GPUProcessManager::CreateContentCompositorManager(base::ProcessId aOtherProcess,
-                                                  ipc::Endpoint<PCompositorManagerChild>* aOutEndpoint)
+GPUProcessManager::CreateContentCompositorManager(const dom::ContentParent* aOtherProcess,
+                                                  ipc::Endpoint<PCompositorManagerChild>* aOutEndpoint,
+                                                  ipc::MachEndpoint* aOutMachEndpoint)
 {
   ipc::Endpoint<PCompositorManagerParent> parentPipe;
   ipc::Endpoint<PCompositorManagerChild> childPipe;
 
+  base::ProcessId childPid = aOtherProcess->OtherPid();
   base::ProcessId parentPid = EnsureGPUReady()
                               ? mGPUChild->OtherPid()
                               : base::GetCurrentProcId();
 
+  ipc::MachEndpoint parentMach(parentPid);
+  ipc::MachEndpoint childMach(childPid);
+
   nsresult rv = PCompositorManager::CreateEndpoints(
     parentPid,
-    aOtherProcess,
+    childPid,
     &parentPipe,
     &childPipe);
   if (NS_FAILED(rv)) {
@@ -894,10 +921,26 @@ GPUProcessManager::CreateContentCompositorManager(base::ProcessId aOtherProcess,
     return false;
   }
 
+#ifdef XP_DARWIN
+  mach_port_t parentTask = mGPUChild
+                           ? mGPUChild->Process()->GetChildTask()
+                           : mach_task_self();
+  mach_port_t childTask = aOtherProcess->Process()->GetChildTask();
+  kern_return_t kr = ipc::MachEndpoint::CreateEndpoints(parentTask,
+                                                        childTask,
+                                                        &parentMach,
+                                                        &childMach);
+  if (kr != KERN_SUCCESS) {
+    gfxCriticalNote << "Could not set up content compositor Mach IPC: " << hexa(int(kr));
+    return false;
+  }
+  *aOutMachEndpoint = std::move(childMach);
+#endif // XP_DARWIN
+
   if (mGPUChild) {
-    mGPUChild->SendNewContentCompositorManager(std::move(parentPipe));
+    mGPUChild->SendNewContentCompositorManager(std::move(parentPipe), parentMach);
   } else {
-    CompositorManagerParent::Create(std::move(parentPipe));
+    CompositorManagerParent::Create(std::move(parentPipe), std::move(parentMach));
   }
 
   *aOutEndpoint = std::move(childPipe);

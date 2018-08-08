@@ -74,6 +74,10 @@ public:
 
   static void Destroy(UniquePtr<GPUChild>&& aChild);
 
+  GPUProcessHost* Process() const {
+    return mHost;
+  }
+
 private:
   GPUProcessHost* mHost;
   UniquePtr<ipc::CrashReporterHost> mCrashReporter;

@@ -280,9 +280,11 @@ GPUParent::RecvInit(nsTArray<GfxPrefSetting>&& prefs,
 }
 
 mozilla::ipc::IPCResult
-GPUParent::RecvInitCompositorManager(Endpoint<PCompositorManagerParent>&& aEndpoint)
+GPUParent::RecvInitCompositorManager(Endpoint<PCompositorManagerParent>&& aEndpoint,
+                                     MachEndpoint&& aMachEndpoint)
 {
-  CompositorManagerParent::Create(std::move(aEndpoint));
+  CompositorManagerParent::Create(std::move(aEndpoint),
+                                  std::move(aMachEndpoint));
   return IPC_OK();
 }
 
@@ -401,9 +403,10 @@ GPUParent::RecvSimulateDeviceReset(GPUDeviceData* aOut)
 }
 
 mozilla::ipc::IPCResult
-GPUParent::RecvNewContentCompositorManager(Endpoint<PCompositorManagerParent>&& aEndpoint)
+GPUParent::RecvNewContentCompositorManager(Endpoint<PCompositorManagerParent>&& aEndpoint, MachEndpoint&& aMachEndpoint)
 {
-  CompositorManagerParent::Create(std::move(aEndpoint));
+  CompositorManagerParent::Create(std::move(aEndpoint),
+                                  std::move(aMachEndpoint));
   return IPC_OK();
 }
 
