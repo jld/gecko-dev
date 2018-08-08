@@ -111,9 +111,6 @@ GeckoChildProcessHost::~GeckoChildProcessHost()
   MOZ_COUNT_DTOR(GeckoChildProcessHost);
 
   if (mChildProcessHandle != 0) {
-#if defined(MOZ_WIDGET_COCOA)
-    SharedMemoryBasicMach::CleanupForPid(mChildProcessHandle);
-#endif
     ProcessWatcher::EnsureProcessTerminated(mChildProcessHandle
 #ifdef NS_FREE_PERMANENT_DATA
     // If we're doing leak logging, shutdown can be slow.
@@ -857,31 +854,9 @@ GeckoChildProcessHost::PerformAsyncLaunchInternal(std::vector<std::string>& aExt
   }
   MachPortSender parent_sender(child_message.GetTranslatedPort(1));
 
-  if (child_message.GetTranslatedPort(2) == MACH_PORT_NULL) {
-    CHROMIUM_LOG(ERROR) << "parent GetTranslatedPort(2) failed.";
-  }
-  auto* parent_recv_port_memory_ack = new MachPortSender(child_message.GetTranslatedPort(2));
-
-  if (child_message.GetTranslatedPort(3) == MACH_PORT_NULL) {
-    CHROMIUM_LOG(ERROR) << "parent GetTranslatedPort(3) failed.";
-  }
-  auto* parent_send_port_memory = new MachPortSender(child_message.GetTranslatedPort(3));
-
   MachSendMessage parent_message(/* id= */0);
   if (!parent_message.AddDescriptor(MachMsgPortDescriptor(bootstrap_port))) {
     CHROMIUM_LOG(ERROR) << "parent AddDescriptor(" << bootstrap_port << ") failed.";
-    return false;
-  }
-
-  auto* parent_recv_port_memory = new ReceivePort();
-  if (!parent_message.AddDescriptor(MachMsgPortDescriptor(parent_recv_port_memory->GetPort()))) {
-    CHROMIUM_LOG(ERROR) << "parent AddDescriptor(" << parent_recv_port_memory->GetPort() << ") failed.";
-    return false;
-  }
-
-  auto* parent_send_port_memory_ack = new ReceivePort();
-  if (!parent_message.AddDescriptor(MachMsgPortDescriptor(parent_send_port_memory_ack->GetPort()))) {
-    CHROMIUM_LOG(ERROR) << "parent AddDescriptor(" << parent_send_port_memory_ack->GetPort() << ") failed.";
     return false;
   }
 
@@ -891,10 +866,6 @@ GeckoChildProcessHost::PerformAsyncLaunchInternal(std::vector<std::string>& aExt
     CHROMIUM_LOG(ERROR) << "parent SendMessage() failed: " << errString;
     return false;
   }
-
-  SharedMemoryBasicMach::SetupMachMemory(process, parent_recv_port_memory, parent_recv_port_memory_ack,
-                                         parent_send_port_memory, parent_send_port_memory_ack, false);
-
 # endif // MOZ_WIDGET_COCOA
 
 //--------------------------------------------------

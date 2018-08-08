@@ -10,9 +10,6 @@
 #ifdef ANDROID
 #  include "mozilla/ipc/SharedMemoryBasic_android.h"
 #else
-# ifdef XP_DARWIN
-#  include "mozilla/ipc/SharedMemoryBasic_mach.h"
-# endif
 #  include "mozilla/ipc/SharedMemoryBasic_chromium.h"
 #endif
 

@@ -333,7 +333,9 @@ TextureSync::CleanupForPid(base::ProcessId aProcessId)
     lockedTextureIds->clear();
 
     auto serverIter = gServerThreads.find(aProcessId);
-    MOZ_ASSERT(serverIter != gServerThreads.end());
+    MOZ_ASSERT(serverIter != gServerThreads.end(),
+               "TextureSync::CleanupForPid called twice for same pid,"
+               " or on bad pid");
     server = serverIter->second;
     gServerThreads.erase(serverIter);
   }

@@ -102,11 +102,6 @@ if CONFIG['OS_TARGET'] == 'Android':
         'SharedMemoryBasic_android.cpp',
     ]
 else:
-    if CONFIG['OS_ARCH'] == 'Darwin':
-        EXPORTS.mozilla.ipc += ['SharedMemoryBasic_mach.h']
-        SOURCES += [
-            'SharedMemoryBasic_mach.mm',
-        ]
     EXPORTS.mozilla.ipc += ['SharedMemoryBasic_chromium.h']
 
 if CONFIG['OS_ARCH'] == 'Linux':

@@ -157,6 +157,7 @@ void
 CompositorManagerParent::ActorDestroy(ActorDestroyReason aReason)
 {
   SharedSurfacesParent::DestroyProcess(OtherPid());
+  TextureSync::CleanupForPid(OtherPid());
 
   StaticMutexAutoLock lock(sMutex);
   if (sInstance == this) {
