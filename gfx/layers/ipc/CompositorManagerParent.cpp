@@ -10,6 +10,9 @@
 #include "mozilla/layers/CrossProcessCompositorBridgeParent.h"
 #include "mozilla/layers/CompositorThread.h"
 #include "mozilla/layers/SharedSurfacesParent.h"
+#ifdef XP_DARWIN
+#include "mozilla/layers/TextureSync.h"
+#endif // XP_DARWIN
 #include "nsAutoPtr.h"
 #include "VsyncSource.h"
 
@@ -157,7 +160,9 @@ void
 CompositorManagerParent::ActorDestroy(ActorDestroyReason aReason)
 {
   SharedSurfacesParent::DestroyProcess(OtherPid());
+#ifdef XP_DARWIN
   TextureSync::CleanupForPid(OtherPid());
+#endif
 
   StaticMutexAutoLock lock(sMutex);
   if (sInstance == this) {

@@ -746,8 +746,10 @@ XRE_InitChildProcess(int aArgc,
       process->CleanUp();
       mozilla::Omnijar::CleanUp();
 
+#ifdef XP_DARWIN
       // FIXME does this really need to be this late?
       mozilla::layers::TextureSync::Shutdown();
+#endif
     }
   }
 

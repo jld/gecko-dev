@@ -7,12 +7,15 @@
 #ifndef mozilla_ipc_MachEndpoint_h
 #define mozilla_ipc_MachEndpoint_h
 
-#include <mach/port.h>
-#include <unistd.h>
-
 #include "mozilla/ipc/IPDLParamTraits.h"
+#include "base/process_util.h"
+
+#ifdef XP_DARWIN
 #include "mozilla/Maybe.h"
 #include "chrome/common/mach_ipc_mac.h"
+
+#include <mach/port.h>
+#endif
 
 namespace mozilla {
 namespace ipc {
@@ -24,7 +27,7 @@ class IProtocol;
 class MachEndpoint {
 public:
   MachEndpoint(); // For IPDL; sigh.
-  explicit MachEndpoint(pid_t aRecipient);
+  explicit MachEndpoint(base::ProcessId aRecipient);
   MachEndpoint(MachEndpoint&&);
   MachEndpoint& operator=(MachEndpoint&&);
   ~MachEndpoint();
@@ -83,6 +86,7 @@ private:
 class MachEndpoint {
 public:
   MachEndpoint() = default;
+  explicit MachEndpoint(base::ProcessId) : MachEndpoint() { }
   MachEndpoint(MachEndpoint&&) = default;
   MachEndpoint& operator=(MachEndpoint&&) = default;
   ~MachEndpoint() = default;
