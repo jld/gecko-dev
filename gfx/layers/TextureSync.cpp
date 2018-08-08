@@ -44,6 +44,7 @@ public:
     kStopMsg = 1,
     kWaitForTexturesMsg,
     kUpdateTextureLocksMsg,
+    kReturnWaitForTexturesMsg,
   };
 
 private:
@@ -179,7 +180,7 @@ TextureSync::HandleWaitForTexturesMessage(MachReceiveMessage* aMsg, ipc::MachBri
     LOG_ERROR("Waiting for textures to unlock failed.\n");
   }
 
-  MachSendMessage msg(ipc::kReturnWaitForTexturesMsg);
+  MachSendMessage msg(TextureSyncServer::kReturnWaitForTexturesMsg);
   WaitForTexturesReply replydata;
   replydata.success = success;
   msg.SetData(&replydata, sizeof(WaitForTexturesReply));
@@ -266,7 +267,7 @@ TextureSync::UpdateTextureLocks(base::ProcessId aProcessId)
     return;
   }
 
-  MachSendMessage smsg(ipc::kUpdateTextureLocksMsg);
+  MachSendMessage smsg(TextureSyncServer::kUpdateTextureLocksMsg);
   smsg.SetData(&aProcessId, sizeof(aProcessId));
   gClient->SendAsyncMessage(aProcessId, smsg);
 }
@@ -283,7 +284,7 @@ TextureSync::WaitForTextures(base::ProcessId aProcessId, const nsTArray<uint64_t
     return success;
   }
 
-  MachSendMessage smsg(ipc::kWaitForTexturesMsg);
+  MachSendMessage smsg(TextureSyncServer::kWaitForTexturesMsg);
   size_t messageSize = sizeof(WaitForTexturesRequest) + textureIds.Length() * sizeof(uint64_t);
   UniquePtr<uint8_t[]> messageData = MakeUnique<uint8_t[]>(messageSize);
   WaitForTexturesRequest* req = (WaitForTexturesRequest*)messageData.get();
