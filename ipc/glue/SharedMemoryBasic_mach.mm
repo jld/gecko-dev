@@ -387,11 +387,7 @@ PortServerThread(void *argument)
       delete ports;
       return nullptr;
     }
-    if (rmsg.GetMessageID() == kWaitForTexturesMsg) {
-      layers::TextureSync::HandleWaitForTexturesMessage(&rmsg, ports);
-    } else if (rmsg.GetMessageID() == kUpdateTextureLocksMsg) {
-      layers::TextureSync::DispatchCheckTexturesForUnlock();
-    } else {
+    {
       StaticMutexAutoLock smal(gMutex);
       switch (rmsg.GetMessageID()) {
       case kSharePortsMsg:

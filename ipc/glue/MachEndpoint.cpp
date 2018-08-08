@@ -151,7 +151,7 @@ MachBridge::~MachBridge()
 }
 
 kern_return_t
-MachBridge::SendMessage(MachSendMessage &message,
+MachBridge::SendMessage(MachSendMessage& message,
                         mach_msg_timeout_t timeout)
 {
   MOZ_RELEASE_ASSERT(mSender);
@@ -159,13 +159,20 @@ MachBridge::SendMessage(MachSendMessage &message,
 }
 
 kern_return_t
-MachBridge::WaitForMessage(MachReceiveMessage *out_message,
+MachBridge::WaitForMessage(MachReceiveMessage* out_message,
                            mach_msg_timeout_t timeout)
 {
   MOZ_RELEASE_ASSERT(mReceiver);
   return mReceiver->WaitForMessage(out_message, timeout);
 }
 
+kern_return_t
+MachBridge::SendMessageToSelf(MachSendMessage& message,
+                              mach_msg_timeout_t timeout)
+{
+  MOZ_RELEASE_ASSERT(mReceiver);
+  return mReceiver->SendMessageToSelf(message, timeout);
+}
 
 /* static */ void
 IPDLParamTraits<MachEndpoint>::Write(IPC::Message* aMsg,

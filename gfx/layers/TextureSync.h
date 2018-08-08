@@ -18,7 +18,7 @@ class MachReceiveMessage;
 
 namespace mozilla {
 namespace ipc {
-  struct MemoryPorts;
+class MachBridge;
 } // namespace ipc
 
 namespace layers {
@@ -26,10 +26,16 @@ namespace layers {
 class TextureSync
 {
 public:
+  static bool InitForPid(base::ProcessId aProcessId,
+                         mozilla::ipc::MachBridge&& aBridge);
+  static void InitClient(base::ProcessId aProcessId,
+                         mozilla::ipc::MachBridge&& aBridge);
+
   static void RegisterTextureSourceProvider(layers::TextureSourceProvider* aTextureSourceProvider);
   static void UnregisterTextureSourceProvider(layers::TextureSourceProvider* aTextureSourceProvider);
   static void DispatchCheckTexturesForUnlock();
-  static void HandleWaitForTexturesMessage(MachReceiveMessage* rmsg, ipc::MemoryPorts* ports);
+  static void HandleWaitForTexturesMessage(MachReceiveMessage* aMsg,
+                                           mozilla::ipc::MachBridge* aBridge);
   static void UpdateTextureLocks(base::ProcessId aProcessId);
   static bool WaitForTextures(base::ProcessId aProcessId, const nsTArray<uint64_t>& aTextureIds);
   static void SetTexturesLocked(base::ProcessId aProcessId, const nsTArray<uint64_t>& aTextureIds);

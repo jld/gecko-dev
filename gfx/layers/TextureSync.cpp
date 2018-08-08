@@ -10,7 +10,7 @@
 
 #include "base/process_util.h"
 #include "chrome/common/mach_ipc_mac.h"
-#include "mozilla/ipc/SharedMemoryBasic.h"
+#include "mozilla/ipc/MachEndpoint.h"
 #include "mozilla/layers/CompositorThread.h"
 #include "mozilla/StaticMonitor.h"
 #include "mozilla/StaticPtr.h"
@@ -29,6 +29,54 @@ namespace mozilla {
 
 namespace layers {
 
+class TextureSyncServer : public mozilla::Runnable
+{
+public:
+  TextureSyncServer(mozilla::ipc::MachBridge&& aBridge)
+  : mozilla::Runnable("TextureSyncServer")
+  , mBridge(std::move(aBridge))
+  { }
+
+  NS_IMETHOD Run() override;
+  void Stop();
+
+  enum {
+    kStopMsg = 1,
+    kWaitForTexturesMsg,
+    kUpdateTextureLocksMsg,
+  };
+
+private:
+  mozilla::ipc::MachBridge mBridge;
+};
+
+class TextureSyncClient
+{
+public:
+  TextureSyncClient(base::ProcessId aProcessId,
+                    mozilla::ipc::MachBridge&& aBridge)
+  : mProcessId(aProcessId)
+  , mBridge(std::move(aBridge))
+  { }
+
+  bool SendAsyncMessage(base::ProcessId aPid, MachSendMessage& aMsg) {
+    MOZ_ASSERT(aPid == mProcessId);
+    return mBridge.SendMessage(aMsg, 0 /* FIXME */) == KERN_SUCCESS;
+  }
+
+  bool SendSyncMessage(base::ProcessId aPid,
+                       MachSendMessage& aSMsg, 
+                       MachReceiveMessage* aRMsg) {
+    MOZ_ASSERT(aPid == mProcessId);
+    return mBridge.SendMessage(aSMsg, 0 /* FIXME */) == KERN_SUCCESS && 
+           mBridge.WaitForMessage(aRMsg, 0 /* FIXME */) == KERN_SUCCESS;
+  }
+
+private:
+  base::ProcessId mProcessId;
+  mozilla::ipc::MachBridge mBridge;
+};
+
 // Hold raw pointers and trust that TextureSourceProviders will be
 // unregistered in their destructors - we don't want to keep these
 // alive, and destroying them from the main thread will be an
@@ -36,13 +84,14 @@ namespace layers {
 StaticAutoPtr<nsTArray<TextureSourceProvider*>> gTextureSourceProviders;
 
 static std::map<pid_t, std::unordered_set<uint64_t>> gProcessTextureIds;
+static std::map<pid_t, RefPtr<TextureSyncServer>> gServerThreads;
+static mozilla::Maybe<TextureSyncClient> gClient;
 static StaticMonitor gTextureLockMonitor;
 
 const int kSendMessageTimeout = 1000;
 const int kTextureLockTimeout = 32; // We really don't want to wait more than
                                     // two frames for a texture to unlock. This
                                     // will in any case be very uncommon.
-
 struct WaitForTexturesReply
 {
   bool success;
@@ -118,11 +167,11 @@ TextureSync::DispatchCheckTexturesForUnlock()
 }
 
 void
-TextureSync::HandleWaitForTexturesMessage(MachReceiveMessage* rmsg, ipc::MemoryPorts* ports)
+TextureSync::HandleWaitForTexturesMessage(MachReceiveMessage* aMsg, ipc::MachBridge* aBridge)
 {
-  WaitForTexturesRequest* req = reinterpret_cast<WaitForTexturesRequest*>(rmsg->GetData());
+  WaitForTexturesRequest* req = reinterpret_cast<WaitForTexturesRequest*>(aMsg->GetData());
   uint64_t* textureIds = (uint64_t*)(req + 1);
-  uint32_t textureIdsLength = (rmsg->GetDataLength() - sizeof(WaitForTexturesRequest)) / sizeof(uint64_t);
+  uint32_t textureIdsLength = (aMsg->GetDataLength() - sizeof(WaitForTexturesRequest)) / sizeof(uint64_t);
 
   bool success = WaitForTextureIdsToUnlock(req->pid, MakeSpan<uint64_t>(textureIds, textureIdsLength));
 
@@ -134,7 +183,7 @@ TextureSync::HandleWaitForTexturesMessage(MachReceiveMessage* rmsg, ipc::MemoryP
   WaitForTexturesReply replydata;
   replydata.success = success;
   msg.SetData(&replydata, sizeof(WaitForTexturesReply));
-  kern_return_t err = ports->mSender->SendMessage(msg, kSendMessageTimeout);
+  kern_return_t err = aBridge->SendMessage(msg, kSendMessageTimeout);
   if (KERN_SUCCESS != err) {
     LOG_ERROR("SendMessage failed 0x%x %s\n", err, mach_error_string(err));
   }
@@ -219,7 +268,7 @@ TextureSync::UpdateTextureLocks(base::ProcessId aProcessId)
 
   MachSendMessage smsg(ipc::kUpdateTextureLocksMsg);
   smsg.SetData(&aProcessId, sizeof(aProcessId));
-  ipc::SharedMemoryBasicMach::SendMachMessage(aProcessId, smsg, NULL);
+  gClient->SendAsyncMessage(aProcessId, smsg);
 }
 
 bool
@@ -253,7 +302,7 @@ TextureSync::WaitForTextures(base::ProcessId aProcessId, const nsTArray<uint64_t
   }
 
   MachReceiveMessage msg;
-  bool success = ipc::SharedMemoryBasicMach::SendMachMessage(aProcessId, smsg, &msg);
+  bool success = gClient->SendSyncMessage(aProcessId, smsg, &msg);
   if (!success) {
     return false;
   }
@@ -272,15 +321,92 @@ TextureSync::WaitForTextures(base::ProcessId aProcessId, const nsTArray<uint64_t
   return true;
 }
 
+
 void
 TextureSync::CleanupForPid(base::ProcessId aProcessId)
 {
+  RefPtr<TextureSyncServer> server;
   {
     StaticMonitorAutoLock lock(gTextureLockMonitor);
     std::unordered_set<uint64_t>* lockedTextureIds = GetLockedTextureIdsForProcess(aProcessId);
     lockedTextureIds->clear();
+
+    auto serverIter = gServerThreads.find(aProcessId);
+    MOZ_ASSERT(serverIter != gServerThreads.end());
+    server = serverIter->second;
+    gServerThreads.erase(serverIter);
   }
   gTextureLockMonitor.NotifyAll();
+  server->Stop();
+}
+
+/* static */ bool
+TextureSync::InitForPid(base::ProcessId aProcessId,
+                        mozilla::ipc::MachBridge&& aBridge)
+{
+  RefPtr<TextureSyncServer> server =
+    new TextureSyncServer(std::move(aBridge));
+
+  nsPrintfCString threadName("TextureSync %d", aProcessId);
+  nsCOMPtr<nsIThread> thread;
+  if (NS_FAILED(NS_NewNamedThread(threadName,
+                                  getter_AddRefs(thread),
+                                  server))
+      || !thread) {
+    return false;
+  }
+
+  StaticMonitorAutoLock lock(gTextureLockMonitor);
+  MOZ_ASSERT(gServerThreads.find(aProcessId) == gServerThreads.end());
+  gServerThreads[aProcessId] = std::move(server);
+  return true;
+}
+
+NS_IMETHODIMP
+TextureSyncServer::Run()
+{
+  MachReceiveMessage msgIn;
+  bool done = false;
+    
+  while (!done && mBridge.WaitForMessage(&msgIn, MACH_MSG_TIMEOUT_NONE) == KERN_SUCCESS) {
+    switch (msgIn.GetMessageID()) {
+      case kStopMsg:
+        done = true;
+        break;
+      case kWaitForTexturesMsg:
+        TextureSync::HandleWaitForTexturesMessage(&msgIn, &mBridge);
+        break;
+      case kUpdateTextureLocksMsg:
+        TextureSync::DispatchCheckTexturesForUnlock();
+        break;
+      default:
+        MOZ_ASSERT(false, "bad message type");
+    }
+  }
+
+  nsCOMPtr<nsIThread> thread;
+  NS_GetCurrentThread(getter_AddRefs(thread));
+  MOZ_ASSERT(thread);
+  if (thread) {
+    NS_DispatchToMainThread(NewRunnableMethod(
+      "nsIThread::AsyncShutdown", thread, &nsIThread::AsyncShutdown));
+  }
+  return NS_OK;
+}
+
+void
+TextureSyncServer::Stop()
+{
+  MachSendMessage stopMsg(kStopMsg);
+  mBridge.SendMessageToSelf(stopMsg, 0 /* FIXME */);
+}
+
+void
+TextureSync::InitClient(base::ProcessId aProcessId,
+                        mozilla::ipc::MachBridge&& aBridge)
+{
+  gClient.emplace(aProcessId, std::move(aBridge));
+  // FIXME should this also store the pid for assertions?
 }
 
 } // namespace layers

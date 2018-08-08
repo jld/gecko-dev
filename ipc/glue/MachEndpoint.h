@@ -4,6 +4,8 @@
  * License, v. 2.0. If a copy of the MPL was not distributed with this
  * file, You can obtain one at http://mozilla.org/MPL/2.0/. */
 
+// FIXME should this file be named MachBridge instead?
+
 #ifndef mozilla_ipc_MachEndpoint_h
 #define mozilla_ipc_MachEndpoint_h
 
@@ -64,6 +66,9 @@ public:
 
   kern_return_t SendMessage(MachSendMessage &message,
                             mach_msg_timeout_t timeout);
+
+  kern_return_t SendMessageToSelf(MachSendMessage& message,
+                                  mach_msg_timeout_t timeout);
 
   kern_return_t WaitForMessage(MachReceiveMessage *out_message,
                                mach_msg_timeout_t timeout);
