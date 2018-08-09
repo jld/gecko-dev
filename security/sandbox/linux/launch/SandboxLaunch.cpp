@@ -590,7 +590,10 @@ SandboxFork::StartChrootServer()
     MOZ_DIAGNOSTIC_ASSERT(false);
   }
 
-  base::CloseSuperfluousFds([this](int fd) { return fd == mChrootServer; });
+  // Stack-allocate the closure; implicit conversion of closure rvalue
+  // to std::function will heap allocate, which isn't safe here.
+  auto fdFilter = [this](int fd) { return fd == mChrootServer; };
+  base::CloseSuperfluousFds(std::ref(fdFilter));
 
   char msg;
   ssize_t msgLen = HANDLE_EINTR(read(mChrootServer, &msg, 1));

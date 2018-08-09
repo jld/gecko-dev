@@ -93,6 +93,10 @@ void SetAllFDsToCloseOnExec();
 // for which the given function returns true.  Only call this function
 // in a child process where you know that there aren't any other
 // threads.
+//
+// WARNING: passing a lambda expression rvalue to this function will
+// malloc in the implicit conversion to std::function; use std::ref on
+// a stack-allocated closure instead.
 void CloseSuperfluousFds(std::function<bool(int)>&& should_preserve);
 
 typedef std::vector<std::pair<int, int> > file_handle_mapping_vector;
