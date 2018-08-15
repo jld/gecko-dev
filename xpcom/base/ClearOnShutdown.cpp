@@ -26,6 +26,8 @@ KillClearOnShutdown(ShutdownPhase aPhase)
   // Shutdown only goes one direction...
   MOZ_ASSERT(static_cast<size_t>(sCurrentShutdownPhase) < static_cast<size_t>(aPhase));
 
+  sCurrentShutdownPhase = aPhase;
+
   // It's impossible to add an entry for a "past" phase; this is blocked in
   // ClearOnShutdown, but clear them out anyways in case there are phases
   // that weren't passed to KillClearOnShutdown.
