@@ -1290,6 +1290,11 @@ nsThread::SetPriority(int32_t aPriority)
     return NS_ERROR_NOT_INITIALIZED;
   }
 
+  if (PR_GetCurrentThread() != mThread) {
+    NS_WARNING("Setting priority on other threads not supported.");
+    return NS_ERROR_FAILURE;
+  }
+
   // NSPR defines the following four thread priorities:
   //   PR_PRIORITY_LOW
   //   PR_PRIORITY_NORMAL

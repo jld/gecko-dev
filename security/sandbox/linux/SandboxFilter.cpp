@@ -115,6 +115,22 @@ protected:
     return ConvertError(syscall(nr, args...));
   }
 
+  static intptr_t SchedTrap(ArgsRef aArgs, void* aux)
+  {
+    const pid_t tid = syscall(__NR_gettid);
+    if (aArgs.args[0] == static_cast<uint64_t>(tid)) {
+      return DoSyscall(aArgs.nr,
+                       0,
+                       static_cast<uintptr_t>(aArgs.args[1]),
+                       static_cast<uintptr_t>(aArgs.args[2]),
+                       static_cast<uintptr_t>(aArgs.args[3]),
+                       static_cast<uintptr_t>(aArgs.args[4]),
+                       static_cast<uintptr_t>(aArgs.args[5]));
+    }
+    SANDBOX_LOG_ERROR("unsupported tid in SchedTrap");
+    return BlockedSyscallTrap(aArgs, nullptr);
+  }
+
 private:
   // Bug 1093893: Translate tkill to tgkill for pthread_kill; fixed in
   // bionic commit 10c8ce59a (in JB and up; API level 16 = Android 4.1).
@@ -1087,10 +1103,9 @@ public:
     case __NR_msync:
       return Allow();
 
-    case __NR_getpriority:
-    case __NR_setpriority:
     case __NR_sched_get_priority_min:
     case __NR_sched_get_priority_max:
+      return Allow();
     case __NR_sched_getscheduler:
     case __NR_sched_setscheduler:
     case __NR_sched_getparam:
@@ -1098,7 +1113,11 @@ public:
 #ifdef DESKTOP
     case __NR_sched_getaffinity:
 #endif
-      return Allow();
+    {
+      Arg<pid_t> pid(0);
+      return If(pid == 0, Allow())
+        .Else(Trap(SchedTrap, nullptr));
+    }
 
 #ifdef DESKTOP
     case __NR_sched_setaffinity:
@@ -1277,22 +1296,6 @@ class GMPSandboxPolicy : public SandboxPolicyCommon {
       return -ENOENT;
     }
     return fd;
-  }
-
-  static intptr_t SchedTrap(ArgsRef aArgs, void* aux)
-  {
-    const pid_t tid = syscall(__NR_gettid);
-    if (aArgs.args[0] == static_cast<uint64_t>(tid)) {
-      return DoSyscall(aArgs.nr,
-                       0,
-                       static_cast<uintptr_t>(aArgs.args[1]),
-                       static_cast<uintptr_t>(aArgs.args[2]),
-                       static_cast<uintptr_t>(aArgs.args[3]),
-                       static_cast<uintptr_t>(aArgs.args[4]),
-                       static_cast<uintptr_t>(aArgs.args[5]));
-    }
-    SANDBOX_LOG_ERROR("unsupported tid in SchedTrap");
-    return BlockedSyscallTrap(aArgs, nullptr);
   }
 
   static intptr_t UnameTrap(const sandbox::arch_seccomp_data& aArgs,
