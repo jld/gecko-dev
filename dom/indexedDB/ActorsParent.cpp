@@ -103,6 +103,7 @@
 #include "nsStreamUtils.h"
 #include "nsString.h"
 #include "nsStringStream.h"
+#include "nsThread.h"
 #include "nsThreadPool.h"
 #include "nsThreadUtils.h"
 #include "nsXPCOMCID.h"
@@ -10002,11 +10003,8 @@ IncreaseBusyCount()
     if (kDEBUGThreadPriority != nsISupportsPriority::PRIORITY_NORMAL) {
       NS_WARNING("PBackground thread debugging enabled, priority has been "
                  "modified!");
-      nsCOMPtr<nsISupportsPriority> thread =
-        do_QueryInterface(NS_GetCurrentThread());
-      MOZ_ASSERT(thread);
-
-      MOZ_ALWAYS_SUCCEEDS(thread->SetPriority(kDEBUGThreadPriority));
+      MOZ_ALWAYS_SUCCEEDS(
+        nsThread::SetPriorityForCurrentThread(kDEBUGThreadPriority));
     }
 
     if (kDEBUGThreadSleepMS) {
@@ -10047,12 +10045,9 @@ DecreaseBusyCount()
 
 #ifdef DEBUG
     if (kDEBUGThreadPriority != nsISupportsPriority::PRIORITY_NORMAL) {
-      nsCOMPtr<nsISupportsPriority> thread =
-        do_QueryInterface(NS_GetCurrentThread());
-      MOZ_ASSERT(thread);
-
       MOZ_ALWAYS_SUCCEEDS(
-        thread->SetPriority(nsISupportsPriority::PRIORITY_NORMAL));
+        nsThread::SetPriorityForCurrentThread(
+          nsISupportsPriority::PRIORITY_NORMAL));
     }
 
     if (kDEBUGThreadSleepMS) {
@@ -13042,20 +13037,14 @@ ThreadRunnable::Run()
     // Scope for the profiler label.
     AUTO_PROFILER_LABEL("ConnectionPool::ThreadRunnable::Run", DOM);
 
-    DebugOnly<nsIThread*> currentThread = NS_GetCurrentThread();
-    MOZ_ASSERT(currentThread);
-
 #ifdef DEBUG
     if (kDEBUGTransactionThreadPriority !=
           nsISupportsPriority::PRIORITY_NORMAL) {
       NS_WARNING("ConnectionPool thread debugging enabled, priority has been "
                  "modified!");
 
-      nsCOMPtr<nsISupportsPriority> thread = do_QueryInterface(currentThread);
-      MOZ_ASSERT(thread);
-
       MOZ_ALWAYS_SUCCEEDS(
-        thread->SetPriority(kDEBUGTransactionThreadPriority));
+        nsThread::SetPriorityForCurrentThread(kDEBUGTransactionThreadPriority));
     }
 
     if (kDEBUGTransactionThreadSleepMS) {
