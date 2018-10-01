@@ -1640,6 +1640,7 @@ RuntimeService::ScheduleWorker(WorkerPrivate* aWorkerPrivate)
     }
   }
 
+#ifdef FIXME_FIXME_FIXME
   int32_t priority = aWorkerPrivate->IsChromeWorker() ?
                      nsISupportsPriority::PRIORITY_NORMAL :
                      nsISupportsPriority::PRIORITY_LOW;
@@ -1647,6 +1648,7 @@ RuntimeService::ScheduleWorker(WorkerPrivate* aWorkerPrivate)
   if (NS_FAILED(thread->SetPriority(priority))) {
     NS_WARNING("Could not set the thread's priority!");
   }
+#endif
 
   JSContext* cx = CycleCollectedJSContext::Get()->Context();
   nsCOMPtr<nsIRunnable> runnable =

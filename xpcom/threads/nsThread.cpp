@@ -26,6 +26,7 @@
 #include "mozilla/CycleCollectedJSContext.h"
 #include "mozilla/Logging.h"
 #include "nsIObserverService.h"
+#include "nsISupportsPriority.h"
 #include "mozilla/IOInterposer.h"
 #include "mozilla/ipc/MessageChannel.h"
 #include "mozilla/ipc/BackgroundChild.h"
@@ -201,7 +202,6 @@ NS_INTERFACE_MAP_BEGIN(nsThread)
   NS_INTERFACE_MAP_ENTRY(nsIThreadInternal)
   NS_INTERFACE_MAP_ENTRY(nsIEventTarget)
   NS_INTERFACE_MAP_ENTRY(nsISerialEventTarget)
-  NS_INTERFACE_MAP_ENTRY(nsISupportsPriority)
   NS_INTERFACE_MAP_ENTRY_AMBIGUOUS(nsISupports, nsIThread)
   if (aIID.Equals(NS_GET_IID(nsIClassInfo))) {
     static nsThreadClassInfo sThreadClassInfo;
@@ -209,7 +209,7 @@ NS_INTERFACE_MAP_BEGIN(nsThread)
   } else
 NS_INTERFACE_MAP_END
 NS_IMPL_CI_INTERFACE_GETTER(nsThread, nsIThread, nsIThreadInternal,
-                            nsIEventTarget, nsISupportsPriority)
+                            nsIEventTarget)
 
 //-----------------------------------------------------------------------------
 
@@ -643,7 +643,6 @@ nsThread::nsThread(NotNull<SynchronizedEventQueue*> aQueue,
   , mNestedEventLoopDepth(0)
   , mCurrentEventLoopDepth(-1)
   , mShutdownRequired(false)
-  , mPriority(PRIORITY_NORMAL)
   , mIsMainThread(uint8_t(aMainThread))
   , mCanInvokeJS(false)
   , mCurrentEvent(nullptr)
@@ -663,7 +662,6 @@ nsThread::nsThread()
   , mNestedEventLoopDepth(0)
   , mCurrentEventLoopDepth(-1)
   , mShutdownRequired(false)
-  , mPriority(PRIORITY_NORMAL)
   , mIsMainThread(NOT_MAIN_THREAD)
   , mCanInvokeJS(false)
   , mCurrentEvent(nullptr)
@@ -1274,26 +1272,12 @@ nsThread::ProcessNextEvent(bool aMayWait, bool* aResult)
 }
 
 //-----------------------------------------------------------------------------
-// nsISupportsPriority
+// Priority (but not cross-thread)
 
-NS_IMETHODIMP
-nsThread::GetPriority(int32_t* aPriority)
+/* static */ nsresult
+nsThread::SetPriorityForCurrentThread(int32_t aPriority)
 {
-  *aPriority = mPriority;
-  return NS_OK;
-}
-
-NS_IMETHODIMP
-nsThread::SetPriority(int32_t aPriority)
-{
-  if (NS_WARN_IF(!mThread)) {
-    return NS_ERROR_NOT_INITIALIZED;
-  }
-
-  if (PR_GetCurrentThread() != mThread) {
-    NS_WARNING("Setting priority on other threads not supported.");
-    return NS_ERROR_FAILURE;
-  }
+  auto thread = PR_GetCurrentThread();
 
   // NSPR defines the following four thread priorities:
   //   PR_PRIORITY_LOW
@@ -1302,30 +1286,22 @@ nsThread::SetPriority(int32_t aPriority)
   //   PR_PRIORITY_URGENT
   // We map the priority values defined on nsISupportsPriority to these values.
 
-  mPriority = aPriority;
-
   PRThreadPriority pri;
-  if (mPriority <= PRIORITY_HIGHEST) {
+  if (aPriority <= nsISupportsPriority::PRIORITY_HIGHEST) {
     pri = PR_PRIORITY_URGENT;
-  } else if (mPriority < PRIORITY_NORMAL) {
+  } else if (aPriority < nsISupportsPriority::PRIORITY_NORMAL) {
     pri = PR_PRIORITY_HIGH;
-  } else if (mPriority > PRIORITY_NORMAL) {
+  } else if (aPriority > nsISupportsPriority::PRIORITY_NORMAL) {
     pri = PR_PRIORITY_LOW;
   } else {
     pri = PR_PRIORITY_NORMAL;
   }
   // If chaos mode is active, retain the randomly chosen priority
   if (!ChaosMode::isActive(ChaosFeature::ThreadScheduling)) {
-    PR_SetThreadPriority(mThread, pri);
+    PR_SetThreadPriority(thread, pri);
   }
 
   return NS_OK;
-}
-
-NS_IMETHODIMP
-nsThread::AdjustPriority(int32_t aDelta)
-{
-  return SetPriority(mPriority + aDelta);
 }
 
 //-----------------------------------------------------------------------------

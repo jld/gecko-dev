@@ -10,7 +10,6 @@
 #include "mozilla/Mutex.h"
 #include "nsIIdlePeriod.h"
 #include "nsIThreadInternal.h"
-#include "nsISupportsPriority.h"
 #include "nsThreadUtils.h"
 #include "nsString.h"
 #include "nsTObserverArray.h"
@@ -38,7 +37,6 @@ class nsThreadEnumerator;
 // A native thread
 class nsThread
   : public nsIThreadInternal
-  , public nsISupportsPriority
   , private mozilla::LinkedListElement<nsThread>
 {
   friend mozilla::LinkedList<nsThread>;
@@ -48,7 +46,6 @@ public:
   NS_DECL_NSIEVENTTARGET_FULL
   NS_DECL_NSITHREAD
   NS_DECL_NSITHREADINTERNAL
-  NS_DECL_NSISUPPORTSPRIORITY
 
   enum MainThreadFlag
   {
@@ -152,6 +149,8 @@ public:
 
   static uint32_t MaxActiveThreads();
 
+  static nsresult SetPriorityForCurrentThread(int32_t aPriority);
+
 private:
   void DoMainThreadSpecificProcessing(bool aReallyWait);
 
@@ -214,8 +213,6 @@ protected:
   uint32_t  mCurrentEventLoopDepth;
 
   mozilla::Atomic<bool> mShutdownRequired;
-
-  int8_t   mPriority;
 
   uint8_t  mIsMainThread;
 
