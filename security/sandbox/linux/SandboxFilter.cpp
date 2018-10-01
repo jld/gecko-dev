@@ -127,7 +127,7 @@ protected:
                        static_cast<uintptr_t>(aArgs.args[4]),
                        static_cast<uintptr_t>(aArgs.args[5]));
     }
-    SANDBOX_LOG_ERROR("unsupported tid in SchedTrap");
+    SANDBOX_LOG_ERROR("cross-thread scheduler operations are not allowed");
     return BlockedSyscallTrap(aArgs, nullptr);
   }
 
