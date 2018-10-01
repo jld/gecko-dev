@@ -64,6 +64,7 @@
 #include "nsLayoutStatics.h"
 #include "nsNetUtil.h"
 #include "nsServiceManagerUtils.h"
+#include "nsThread.h"
 #include "nsThreadUtils.h"
 #include "nsXPCOM.h"
 #include "nsXPCOMPrivate.h"
@@ -1640,16 +1641,6 @@ RuntimeService::ScheduleWorker(WorkerPrivate* aWorkerPrivate)
     }
   }
 
-#ifdef FIXME_FIXME_FIXME
-  int32_t priority = aWorkerPrivate->IsChromeWorker() ?
-                     nsISupportsPriority::PRIORITY_NORMAL :
-                     nsISupportsPriority::PRIORITY_LOW;
-
-  if (NS_FAILED(thread->SetPriority(priority))) {
-    NS_WARNING("Could not set the thread's priority!");
-  }
-#endif
-
   JSContext* cx = CycleCollectedJSContext::Get()->Context();
   nsCOMPtr<nsIRunnable> runnable =
     new WorkerThreadPrimaryRunnable(aWorkerPrivate, thread,
@@ -2688,6 +2679,14 @@ WorkerThreadPrimaryRunnable::Run()
 {
   AUTO_PROFILER_LABEL_DYNAMIC_LOSSY_NSSTRING(
     "WorkerThreadPrimaryRunnable::Run", OTHER, mWorkerPrivate->ScriptURL());
+
+  int32_t priority = mWorkerPrivate->IsChromeWorker() ?
+                     nsISupportsPriority::PRIORITY_NORMAL :
+                     nsISupportsPriority::PRIORITY_LOW;
+
+  if (NS_FAILED(nsThread::SetPriorityForCurrentThread(priority))) {
+    NS_WARNING("Could not set the thread's priority!");
+  }
 
   using mozilla::ipc::BackgroundChild;
 
