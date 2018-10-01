@@ -372,7 +372,7 @@ bool PlatformThread::SetPriority(ThreadPriority priority) {
 #elif defined(__native_client__)
   // Setting thread priorities is not supported in NaCl.
   return true;
-#elif defined(WEBRTC_CHROMIUM_BUILD) && defined(WEBRTC_LINUX)
+#elif (defined(WEBRTC_CHROMIUM_BUILD) || defined(MOZ_SANDBOX)) && defined(WEBRTC_LINUX)
   // TODO(tommi): Switch to the same mechanism as Chromium uses for changing
   // thread priorities.
   return true;
