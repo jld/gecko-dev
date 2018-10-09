@@ -352,7 +352,12 @@ void SandboxLaunchPrepare(GeckoProcessType aType,
       break;
   }
 
-  if (const auto envVar = PR_GetEnv("MOZ_NO_PID_SANDBOX")) {
+  // The workaround for multithreaded seccomp without tsync requires a
+  // /proc that matches the process's own pid namespace, and it's not
+  // worth dealing with mount namespaces just for this.
+  if (!info.Test(SandboxInfo::kHasSeccompTSync)) {
+    flags &= ~CLONE_NEWPID;
+  } else if (const auto envVar = PR_GetEnv("MOZ_NO_PID_SANDBOX")) {
     if (envVar[0] != '\0' && envVar[0] != '0') {
       flags &= ~CLONE_NEWPID;
     }

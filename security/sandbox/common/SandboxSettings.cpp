@@ -11,6 +11,10 @@
 #include "mozilla/StaticPrefs_media.h"
 #include "mozilla/StaticPrefs_security.h"
 
+#ifdef XP_LINUX
+#include "mozilla/SandboxInfo.h"
+#endif
+
 #include "prenv.h"
 
 using namespace mozilla;
@@ -34,7 +38,13 @@ int GetEffectiveContentSandboxLevel() {
   if (level > 3 && !StaticPrefs::media_cubeb_sandbox()) {
     level = 3;
   }
-#endif
+  // See comment in SandboxLaunch for why level 5 needs this.  The
+  // sandbox won't try pid namespaces without tsync in any case; this
+  // is just to fix what's displayed in about:support.
+  if (level > 4 && !SandboxInfo::Get().Test(SandboxInfo::kHasSeccompTSync)) {
+    level = 4;
+  }
+#endif  // XP_LINUX
 
   return level;
 }
