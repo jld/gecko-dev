@@ -121,11 +121,11 @@ bool SocketProcessHost::Launch() {
 #if defined(XP_WIN)
   // Record the handle as to-be-shared, and pass it via a command flag. This
   // works because Windows handles are system-wide.
-  HANDLE prefsHandle = prefSerializer.GetSharedMemoryHandle();
-  AddHandleToShare(prefsHandle);
+  AddHandleToShare(prefSerializer.GetPrefsHandle().get());
   AddHandleToShare(prefSerializer.GetPrefMapHandle().get());
   extraArgs.push_back("-prefsHandle");
-  extraArgs.push_back(formatPtrArg(prefsHandle).get());
+  extraArgs.push_back(
+      formatPtrArg(prefSerializer.GetPrefsHandle().get()).get());
   extraArgs.push_back("-prefMapHandle");
   extraArgs.push_back(
       formatPtrArg(prefSerializer.GetPrefMapHandle().get()).get());
@@ -137,13 +137,13 @@ bool SocketProcessHost::Launch() {
   // Note: on Android, AddFdToRemap() sets up the fd to be passed via a Parcel,
   // and the fixed fd isn't used. However, we still need to mark it for
   // remapping so it doesn't get closed in the child.
-  AddFdToRemap(prefSerializer.GetSharedMemoryHandle().fd, kPrefsFileDescriptor);
+  AddFdToRemap(prefSerializer.GetPrefsHandle().get(), kPrefsFileDescriptor);
   AddFdToRemap(prefSerializer.GetPrefMapHandle().get(), kPrefMapFileDescriptor);
 #endif
 
   // Pass the lengths via command line flags.
   extraArgs.push_back("-prefsLen");
-  extraArgs.push_back(formatPtrArg(prefSerializer.GetPrefLength()).get());
+  extraArgs.push_back(formatPtrArg(prefSerializer.GetPrefsLength()).get());
   extraArgs.push_back("-prefMapSize");
   extraArgs.push_back(formatPtrArg(prefSerializer.GetPrefMapSize()).get());
 

@@ -23,32 +23,36 @@ SharedPreferenceSerializer::~SharedPreferenceSerializer() {
 SharedPreferenceSerializer::SharedPreferenceSerializer(
     SharedPreferenceSerializer&& aOther)
     : mPrefMapSize(aOther.mPrefMapSize),
+      mPrefsLength(aOther.mPrefsLength),
       mPrefMapHandle(std::move(aOther.mPrefMapHandle)),
-      mShm(std::move(aOther.mShm)),
-      mPrefs(std::move(aOther.mPrefs)) {
+      mPrefsHandle(std::move(aOther.mPrefsHandle)) {
   MOZ_COUNT_CTOR(SharedPreferenceSerializer);
 }
 
 bool SharedPreferenceSerializer::SerializeToSharedMemory() {
   mPrefMapHandle =
-      Preferences::EnsureSnapshot(&mPrefMapSize).ClonePlatformHandle();
+      Preferences::EnsureSnapshot(&mPrefMapSize).TakePlatformHandle();
 
   // Serialize the early prefs.
-  Preferences::SerializePreferences(mPrefs);
+  nsAutoCStringN<1024> prefs;
+  Preferences::SerializePreferences(prefs);
+  mPrefsLength = prefs.Length();
 
+  base::SharedMemory shm;
   // Set up the shared memory.
-  if (!mShm.Create(mPrefs.Length())) {
+  if (!shm.Create(prefs.Length())) {
     NS_ERROR("failed to create shared memory in the parent");
     return false;
   }
-  if (!mShm.Map(mPrefs.Length())) {
+  if (!shm.Map(prefs.Length())) {
     NS_ERROR("failed to map shared memory in the parent");
     return false;
   }
 
   // Copy the serialized prefs into the shared memory.
-  memcpy(static_cast<char*>(mShm.memory()), mPrefs.get(), mPrefs.Length());
+  memcpy(static_cast<char*>(shm.memory()), prefs.get(), mPrefsLength);
 
+  mPrefsHandle = shm.TakeHandle();
   return true;
 }
 

@@ -25,24 +25,23 @@ class SharedPreferenceSerializer final {
 
   bool SerializeToSharedMemory();
 
-  base::SharedMemoryHandle GetSharedMemoryHandle() const {
-    return mShm.handle();
+  size_t GetPrefMapSize() const { return mPrefMapSize; }
+  size_t GetPrefsLength() const { return mPrefsLength; }
+
+  const UniqueFileHandle& GetPrefsHandle() const {
+    return mPrefsHandle;
   }
 
-  const FileDescriptor::UniquePlatformHandle& GetPrefMapHandle() const {
+  const UniqueFileHandle& GetPrefMapHandle() const {
     return mPrefMapHandle;
   }
-
-  nsACString::size_type GetPrefLength() const { return mPrefs.Length(); }
-
-  size_t GetPrefMapSize() const { return mPrefMapSize; }
 
  private:
   DISALLOW_COPY_AND_ASSIGN(SharedPreferenceSerializer);
   size_t mPrefMapSize;
-  FileDescriptor::UniquePlatformHandle mPrefMapHandle;
-  base::SharedMemory mShm;
-  nsAutoCStringN<1024> mPrefs;
+  size_t mPrefsLength;
+  UniqueFileHandle mPrefMapHandle;
+  UniqueFileHandle mPrefsHandle;
 };
 
 class SharedPreferenceDeserializer final {
