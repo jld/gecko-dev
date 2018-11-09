@@ -579,21 +579,18 @@ public:
 private:
     mutable GLenum mTopError = 0;
 
-    GLenum RawGetErrorAndClear() const;
-
-    GLenum FlushErrors() const {
-        const auto err = RawGetErrorAndClear();
-        if (!mTopError) {
-            mTopError = err;
-        }
-        return err;
-    }
+    GLenum FlushErrors() const;
 
     ////////////////////////////////////
     // Use this safer option.
 
 public:
     class LocalErrorScope;
+
+    static bool IsBadCallError(const GLenum err) {
+        return !(err == 0 ||
+                 err == LOCAL_GL_CONTEXT_LOST);
+    }
 
 private:
     std::stack<const LocalErrorScope*> mLocalErrorScopeStack;
@@ -611,8 +608,7 @@ public:
         {
             mGL.mLocalErrorScopeStack.push(this);
 
-            mGL.FlushErrors();
-
+            (void)mGL.FlushErrors();
             mOldTop = mGL.mTopError;
             mGL.mTopError = 0;
         }
@@ -621,20 +617,17 @@ public:
             MOZ_ASSERT(!mHasBeenChecked);
             mHasBeenChecked = true;
 
-            mGL.FlushErrors();
-
+            (void)mGL.FlushErrors();
             const auto ret = mGL.mTopError;
             mGL.mTopError = 0;
+
             return ret;
         }
 
         ~LocalErrorScope() {
             MOZ_ASSERT(mHasBeenChecked);
 
-#ifdef DEBUG
-            const auto err = mGL.fGetError();
-            MOZ_ASSERT(!err && err == LOCAL_GL_CONTEXT_LOST);
-#endif
+            MOZ_ASSERT(!IsBadCallError(mGL.fGetError()));
 
             MOZ_ASSERT(mGL.mLocalErrorScopeStack.top() == this);
             mGL.mLocalErrorScopeStack.pop();
@@ -649,7 +642,7 @@ public:
         fGetIntegerv(pname, param);
 
         GLenum err = localError.GetError();
-        MOZ_ASSERT_IF(err != LOCAL_GL_NO_ERROR, err == LOCAL_GL_INVALID_ENUM);
+        MOZ_ASSERT_IF(IsBadCallError(err), err == LOCAL_GL_INVALID_ENUM);
         return err == LOCAL_GL_NO_ERROR;
     }
 

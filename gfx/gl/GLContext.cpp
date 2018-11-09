@@ -849,8 +849,8 @@ GLContext::InitWithPrefixImpl(const char* prefix, bool trygl)
 
     ////////////////
 
-    const auto err = mSymbols.fGetError();
-    MOZ_RELEASE_ASSERT(!err);
+    const auto err = fGetError();
+    MOZ_RELEASE_ASSERT(!IsBadCallError(err));
     if (err)
         return false;
 
@@ -1650,8 +1650,7 @@ GLContext::InitExtensions()
             SplitByChar(exts, ' ', &driverExtensionList);
         }
     }();
-    const auto err = fGetError();
-    MOZ_ALWAYS_TRUE(!err);
+    MOZ_ALWAYS_TRUE(!IsBadCallError(fGetError()));
 
     const bool shouldDumpExts = ShouldDumpExts();
     if (shouldDumpExts) {
@@ -2061,22 +2060,34 @@ GLContext::MarkDestroyed()
 // -
 
 GLenum
-GLContext::RawGetErrorAndClear() const
+GLContext::FlushErrors() const
 {
-    const auto ret = mSymbols.fGetError();
+    const auto fnGetError = [&]() {
+        const auto ret = mSymbols.fGetError();
+        if (ret == LOCAL_GL_CONTEXT_LOST) {
+            mContextLost = true;
+            mTopError = LOCAL_GL_CONTEXT_LOST;
+        }
+        return ret;
+    };
+
+    const auto ret = fnGetError();
 
     auto flushedErr = ret;
     uint32_t i = 1;
-    while (flushedErr && flushedErr != LOCAL_GL_CONTEXT_LOST) {
+    while (flushedErr && !mContextLost) {
         if (i == 100) {
             gfxCriticalError() << "Flushing glGetError still " << gfx::hexa(flushedErr)
                                << " after " << i << " calls.";
             break;
         }
-        flushedErr = mSymbols.fGetError();
+        flushedErr = fnGetError();
         i += 1;
     }
 
+    if (!mTopError) {
+        mTopError = ret;
+    }
     return ret;
 }
 
@@ -3031,9 +3042,7 @@ GLContext::AfterGLCall_Debug(const char* const funcName) const
                       GLErrorToString(err), err);
     }
 
-    if (!mLocalErrorScopeStack.size() &&
-        err && err != LOCAL_GL_CONTEXT_LOST)
-    {
+    if (IsBadCallError(err) && !mLocalErrorScopeStack.size()) {
         printf_stderr("[gl:%p] %s: Generated unexpected %s error."
                       " (0x%04x)\n", this, funcName,
                       GLErrorToString(err), err);
