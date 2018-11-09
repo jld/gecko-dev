@@ -2063,7 +2063,7 @@ GLContext::MarkDestroyed()
 GLenum
 GLContext::RawGetErrorAndClear() const
 {
-    const GLenum ret = mSymbols.fGetError();
+    const auto ret = mSymbols.fGetError();
 
     auto flushedErr = ret;
     uint32_t i = 1;
@@ -3024,15 +3024,15 @@ GLContext::AfterGLCall_Debug(const char* const funcName) const
     // the stack trace will actually point to it. Otherwise, OpenGL being an asynchronous API, stack traces
     // tend to be meaningless
     mSymbols.fFinish();
-    GLenum err = FlushErrors();
+    const auto err = FlushErrors();
 
     if (mDebugFlags & DebugFlagTrace) {
         printf_stderr("[gl:%p] < %s [%s (0x%04x)]\n", this, funcName,
                       GLErrorToString(err), err);
     }
 
-    if (err != LOCAL_GL_NO_ERROR &&
-        !mLocalErrorScopeStack.size())
+    if (!mLocalErrorScopeStack.size() &&
+        err && err != LOCAL_GL_CONTEXT_LOST)
     {
         printf_stderr("[gl:%p] %s: Generated unexpected %s error."
                       " (0x%04x)\n", this, funcName,

@@ -582,9 +582,10 @@ private:
     GLenum RawGetErrorAndClear() const;
 
     GLenum FlushErrors() const {
-        GLenum err = RawGetErrorAndClear();
-        if (!mTopError)
+        const auto err = RawGetErrorAndClear();
+        if (!mTopError) {
             mTopError = err;
+        }
         return err;
     }
 
@@ -613,24 +614,27 @@ public:
             mGL.FlushErrors();
 
             mOldTop = mGL.mTopError;
-            mGL.mTopError = LOCAL_GL_NO_ERROR;
+            mGL.mTopError = 0;
         }
 
         GLenum GetError() {
             MOZ_ASSERT(!mHasBeenChecked);
             mHasBeenChecked = true;
 
-            const GLenum ret = mGL.fGetError();
+            mGL.FlushErrors();
 
-            while (mGL.fGetError()) {}
-
+            const auto ret = mGL.mTopError;
+            mGL.mTopError = 0;
             return ret;
         }
 
         ~LocalErrorScope() {
             MOZ_ASSERT(mHasBeenChecked);
 
-            MOZ_ASSERT(mGL.fGetError() == LOCAL_GL_NO_ERROR);
+#ifdef DEBUG
+            const auto err = mGL.fGetError();
+            MOZ_ASSERT(!err && err == LOCAL_GL_CONTEXT_LOST);
+#endif
 
             MOZ_ASSERT(mGL.mLocalErrorScopeStack.top() == this);
             mGL.mLocalErrorScopeStack.pop();
@@ -796,7 +800,7 @@ public:
 
         FlushErrors();
         err = mTopError;
-        mTopError = LOCAL_GL_NO_ERROR;
+        mTopError = 0;
 
         AFTER_GL_CALL;
         return err;
