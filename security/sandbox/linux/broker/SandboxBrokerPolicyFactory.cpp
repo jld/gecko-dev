@@ -200,6 +200,15 @@ AddLdconfigPaths(SandboxBroker::Policy* aPolicy)
   AddPathsFromFile(aPolicy, ldconfigPath);
 }
 
+static void
+AddSharedMemoryPaths(SandboxBroker::Policy* aPolicy, pid_t aPid)
+{
+  std::string shmPath("/dev/shm");
+  if (base::SharedMemory::AppendPosixShmPrefix(&shmPath, aPid)) {
+    aPolicy->AddPrefix(rdwrcr, shmPath.c_str());
+  }
+}
+
 SandboxBrokerPolicyFactory::SandboxBrokerPolicyFactory()
 {
   // Policy entries that are the same in every process go here, and
@@ -527,10 +536,7 @@ SandboxBrokerPolicyFactory::GetContentPolicy(int aPid, bool aFileProcess)
   if (allowPulse) {
     policy->AddDir(rdwrcr, "/dev/shm");
   } else {
-    std::string shmPath("/dev/shm");
-    if (base::SharedMemory::AppendPosixShmPrefix(&shmPath, aPid)) {
-      policy->AddPrefix(rdwrcr, shmPath.c_str());
-    }
+    AddSharedMemoryPaths(policy.get(), aPid);
   }
 
 #ifdef MOZ_WIDGET_GTK
@@ -585,6 +591,19 @@ SandboxBrokerPolicyFactory::AddDynamicPathList(SandboxBroker::Policy *policy,
       policy->AddDynamic(perms, trimPath.get());
     }
   }
+}
+
+/* static */ UniquePtr<SandboxBroker::Policy>
+SandboxBrokerPolicyFactory::GetUtilityPolicy(int aPid)
+{
+  auto policy = MakeUnique<SandboxBroker::Policy>();
+
+  AddSharedMemoryPaths(policy.get(), aPid);
+
+  if (policy->IsEmpty()) {
+    policy = nullptr;
+  }
+  return policy;
 }
 
 #endif // MOZ_CONTENT_SANDBOX
