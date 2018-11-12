@@ -1570,7 +1570,9 @@ CheckContextLost(GLContext* gl, bool* const out_isGuilty)
         // If we can't tell, assume guilty.
         break;
     default:
+#if 0
         MOZ_ASSERT(false, "Unreachable.");
+#endif
         // If we do get here, let's pretend to be guilty as an escape plan.
         break;
     }
