@@ -24,7 +24,7 @@ class RDDParent final : public PRDDParent {
   bool Init(base::ProcessId aParentPid, const char* aParentBuildID,
             MessageLoop* aIOLoop, IPC::Channel* aChannel);
 
-  mozilla::ipc::IPCResult RecvInit() override;
+  mozilla::ipc::IPCResult RecvInit(const MaybeFileDesc& aBrokerFd) override;
   mozilla::ipc::IPCResult RecvInitProfiler(
       Endpoint<PProfilerChild>&& aEndpoint) override;
 

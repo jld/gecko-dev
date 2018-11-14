@@ -228,6 +228,8 @@ static int GetEffectiveSandboxLevel(GeckoProcessType aType) {
       }
       return 0;
 #endif
+    case GeckoProcessType_RDD:
+      return PR_GetEnv("MOZ_DISABLE_RDD_SANDBOX") == nullptr ? 1 : 0;
     default:
       return 0;
   }
@@ -275,6 +277,7 @@ void SandboxLaunchPrepare(GeckoProcessType aType,
   }
 
   switch (aType) {
+    case GeckoProcessType_RDD:
 #ifdef MOZ_GMP_SANDBOX
     case GeckoProcessType_GMPlugin:
       if (level >= 1) {
