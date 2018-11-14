@@ -74,6 +74,9 @@ NS_IMETHODIMP SandboxReportWrapper::GetProcType(nsACString& aProcType) {
     case SandboxReport::ProcType::MEDIA_PLUGIN:
       aProcType.AssignLiteral("mediaPlugin");
       return NS_OK;
+    case SandboxReport::ProcType::DATA_DECODER:
+      aProcType.AssignLiteral("dataDecoder");
+      return NS_OK;
     default:
       MOZ_ASSERT(false);
       return NS_ERROR_UNEXPECTED;
