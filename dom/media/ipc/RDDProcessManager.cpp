@@ -204,7 +204,9 @@ bool RDDProcessManager::CreateContentBridge(
     return false;
   }
 
-  mRDDParent->SendNewContentRemoteDecoderManager(std::move(parentPipe));
+  if (NS_WARN_IF(!mRDDParent->SendNewContentRemoteDecoderManager(std::move(parentPipe)))) {
+    return false;
+  }
 
   *aOutRemoteDecoderManager = std::move(childPipe);
   return true;

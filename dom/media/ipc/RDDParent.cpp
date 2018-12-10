@@ -24,7 +24,8 @@ RDDParent::RDDParent(RDDProcessHost* aHost) : mHost(aHost), mRDDReady(false) {
 RDDParent::~RDDParent() { MOZ_COUNT_DTOR(RDDParent); }
 
 void RDDParent::Init() {
-  SendInit();
+  // FIXME: should this propagate the errors instead?
+  Unused << SendInit();
 
 #ifdef MOZ_GECKO_PROFILER
   Unused << SendInitProfiler(ProfilerParent::CreateForProcess(OtherPid()));
