@@ -14,11 +14,11 @@ namespace mozilla {
 
 // This protocol allows the UI process to talk to the RDD
 // (RemoteDataDecoder) process. There is one instance of this protocol,
-// with the RDDParent living on the main thread of the RDD process and
-// the RDDChild living on the main thread of the UI process.
+// with the RDDParent living on the main thread of the UI process and
+// the RDDChild living on the main thread of the RDD process.
 protocol PRDD
 {
-parent:
+child:
 
   // args TBD, sent by UI process to initiate core settings
   async Init();
@@ -33,7 +33,7 @@ parent:
                             bool minimizeMemoryUsage,
                             MaybeFileDesc DMDFile);
 
-child:
+parent:
   // args TBD, sent when init complete. Occurs once, after Init().
   async InitComplete();
 

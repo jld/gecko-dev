@@ -3,46 +3,61 @@
 /* This Source Code Form is subject to the terms of the Mozilla Public
  * License, v. 2.0. If a copy of the MPL was not distributed with this
  * file, You can obtain one at http://mozilla.org/MPL/2.0/. */
-#ifndef _include_dom_media_ipc_RDDParent_h__
-#define _include_dom_media_ipc_RDDParent_h__
-#include "mozilla/PRDDParent.h"
+#ifndef _include_dom_media_ipc_RDDChild_h_
+#define _include_dom_media_ipc_RDDChild_h_
+#include "mozilla/PRDDChild.h"
 
 #include "mozilla/RefPtr.h"
+#include "mozilla/UniquePtr.h"
 
 namespace mozilla {
 
-class TimeStamp;
-class ChildProfilerController;
+namespace ipc {
+class CrashReporterHost;
+}  // namespace ipc
+namespace dom {
+class MemoryReportRequestHost;
+}  // namespace dom
 
-class RDDParent final : public PRDDParent {
+class RDDProcessHost;
+
+class RDDChild final : public PRDDChild {
+  typedef mozilla::dom::MemoryReportRequestHost MemoryReportRequestHost;
+
  public:
-  RDDParent();
-  ~RDDParent();
+  explicit RDDChild(RDDProcessHost* aHost);
+  ~RDDChild();
 
-  static RDDParent* GetSingleton();
+  void Init();
 
-  bool Init(base::ProcessId aParentPid, const char* aParentBuildID,
-            MessageLoop* aIOLoop, IPC::Channel* aChannel);
+  bool EnsureRDDReady();
 
-  mozilla::ipc::IPCResult RecvInit() override;
-  mozilla::ipc::IPCResult RecvInitProfiler(
-      Endpoint<PProfilerChild>&& aEndpoint) override;
-
-  mozilla::ipc::IPCResult RecvNewContentRemoteDecoderManager(
-      Endpoint<PRemoteDecoderManagerParent>&& aEndpoint) override;
-  mozilla::ipc::IPCResult RecvRequestMemoryReport(
-      const uint32_t& generation, const bool& anonymize,
-      const bool& minimizeMemoryUsage, const MaybeFileDesc& DMDFile) override;
+  // PRDDChild overrides.
+  mozilla::ipc::IPCResult RecvInitComplete() override;
+  mozilla::ipc::IPCResult RecvInitCrashReporter(
+      Shmem&& shmem, const NativeThreadId& aThreadId) override;
 
   void ActorDestroy(ActorDestroyReason aWhy) override;
 
+  mozilla::ipc::IPCResult RecvAddMemoryReport(
+      const MemoryReport& aReport) override;
+  mozilla::ipc::IPCResult RecvFinishMemoryReport(
+      const uint32_t& aGeneration) override;
+
+  bool SendRequestMemoryReport(const uint32_t& aGeneration,
+                               const bool& aAnonymize,
+                               const bool& aMinimizeMemoryUsage,
+                               const MaybeFileDesc& aDMDFile);
+
+  static void Destroy(UniquePtr<RDDChild>&& aChild);
+
  private:
-  const TimeStamp mLaunchTime;
-#ifdef MOZ_GECKO_PROFILER
-  RefPtr<ChildProfilerController> mProfilerController;
-#endif
+  RDDProcessHost* mHost;
+  UniquePtr<ipc::CrashReporterHost> mCrashReporter;
+  UniquePtr<MemoryReportRequestHost> mMemoryReportRequest;
+  bool mRDDReady;
 };
 
 }  // namespace mozilla
 
-#endif  // _include_dom_media_ipc_RDDParent_h__
+#endif  // _include_dom_media_ipc_RDDChild_h_
