@@ -9,7 +9,7 @@
 #include "mozilla/Preferences.h"
 #include "mozilla/StaticPrefs.h"
 
-#include "RDDChild.h"
+#include "RDDParent.h"
 
 namespace mozilla {
 
@@ -30,7 +30,7 @@ RDDProcessHost::~RDDProcessHost() { MOZ_COUNT_DTOR(RDDProcessHost); }
 
 bool RDDProcessHost::Launch(StringVector aExtraOpts) {
   MOZ_ASSERT(mLaunchPhase == LaunchPhase::Unlaunched);
-  MOZ_ASSERT(!mRDDChild);
+  MOZ_ASSERT(!mRDDParent);
 
 #if defined(XP_WIN) && defined(MOZ_SANDBOX)
   mSandboxLevel = Preferences::GetInt("security.sandbox.rdd.level");
@@ -48,7 +48,7 @@ bool RDDProcessHost::Launch(StringVector aExtraOpts) {
 
 bool RDDProcessHost::WaitForLaunch() {
   if (mLaunchPhase == LaunchPhase::Complete) {
-    return !!mRDDChild;
+    return !!mRDDParent;
   }
 
   int32_t timeoutMs = StaticPrefs::MediaRddProcessStartupTimeoutMs();
@@ -117,18 +117,18 @@ static uint64_t sRDDProcessTokenCounter = 0;
 
 void RDDProcessHost::InitAfterConnect(bool aSucceeded) {
   MOZ_ASSERT(mLaunchPhase == LaunchPhase::Waiting);
-  MOZ_ASSERT(!mRDDChild);
+  MOZ_ASSERT(!mRDDParent);
 
   mLaunchPhase = LaunchPhase::Complete;
 
   if (aSucceeded) {
     mProcessToken = ++sRDDProcessTokenCounter;
-    mRDDChild = MakeUnique<RDDChild>(this);
+    mRDDParent = MakeUnique<RDDParent>(this);
     DebugOnly<bool> rv =
-        mRDDChild->Open(GetChannel(), base::GetProcId(GetChildProcessHandle()));
+        mRDDParent->Open(GetChannel(), base::GetProcId(GetChildProcessHandle()));
     MOZ_ASSERT(rv);
 
-    mRDDChild->Init();
+    mRDDParent->Init();
   }
 
   if (mListener) {
@@ -141,14 +141,14 @@ void RDDProcessHost::Shutdown() {
 
   mListener = nullptr;
 
-  if (mRDDChild) {
+  if (mRDDParent) {
     // OnChannelClosed uses this to check if the shutdown was expected or
     // unexpected.
     mShutdownRequested = true;
 
     // The channel might already be closed if we got here unexpectedly.
     if (!mChannelClosed) {
-      mRDDChild->Close();
+      mRDDParent->Close();
     }
 
 #ifndef NS_FREE_PERMANENT_DATA
@@ -158,10 +158,10 @@ void RDDProcessHost::Shutdown() {
 #endif
 
     // If we're shutting down unexpectedly, we're in the middle of handling an
-    // ActorDestroy for PRDDChild, which is still on the stack. We'll return
+    // ActorDestroy for PRDDParent, which is still on the stack. We'll return
     // back to OnChannelClosed.
     //
-    // Otherwise, we'll wait for OnChannelClose to be called whenever PRDDChild
+    // Otherwise, we'll wait for OnChannelClose to be called whenever PRDDParent
     // acknowledges shutdown.
     return;
   }
@@ -180,8 +180,8 @@ void RDDProcessHost::OnChannelClosed() {
   }
 
   // Release the actor.
-  RDDChild::Destroy(std::move(mRDDChild));
-  MOZ_ASSERT(!mRDDChild);
+  RDDParent::Destroy(std::move(mRDDParent));
+  MOZ_ASSERT(!mRDDParent);
 }
 
 void RDDProcessHost::KillHard(const char* aReason) {

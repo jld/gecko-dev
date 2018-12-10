@@ -13,7 +13,7 @@ namespace mozilla {
 
 class MemoryReportingProcess;
 class PRemoteDecoderManagerChild;
-class RDDChild;
+class RDDParent;
 
 // The RDDProcessManager is a singleton responsible for creating RDD-bound
 // objects that may live in another process. Currently, it provides access
@@ -56,7 +56,7 @@ class RDDProcessManager final : public RDDProcessHost::Listener {
   RefPtr<MemoryReportingProcess> GetProcessMemoryReporter();
 
   // Returns access to the PRDD protocol if a RDD process is present.
-  RDDChild* GetRDDChild() { return mRDDChild; }
+  RDDParent* GetRDDParent() { return mRDDParent; }
 
   // Returns whether or not a RDD process was ever launched.
   bool AttemptedRDDProcess() const { return mNumProcessAttempts > 0; }
@@ -94,7 +94,7 @@ class RDDProcessManager final : public RDDProcessHost::Listener {
   // Fields that are associated with the current RDD process.
   RDDProcessHost* mProcess;
   uint64_t mProcessToken;
-  RDDChild* mRDDChild;
+  RDDParent* mRDDParent;
 };
 
 }  // namespace mozilla

@@ -3,9 +3,9 @@
 /* This Source Code Form is subject to the terms of the Mozilla Public
  * License, v. 2.0. If a copy of the MPL was not distributed with this
  * file, You can obtain one at http://mozilla.org/MPL/2.0/. */
-#ifndef _include_dom_media_ipc_RDDParent_h__
-#define _include_dom_media_ipc_RDDParent_h__
-#include "mozilla/PRDDParent.h"
+#ifndef _include_dom_media_ipc_RDDChild_h__
+#define _include_dom_media_ipc_RDDChild_h__
+#include "mozilla/PRDDChild.h"
 
 #include "mozilla/RefPtr.h"
 
@@ -14,12 +14,12 @@ namespace mozilla {
 class TimeStamp;
 class ChildProfilerController;
 
-class RDDParent final : public PRDDParent {
+class RDDChild final : public PRDDChild {
  public:
-  RDDParent();
-  ~RDDParent();
+  RDDChild();
+  ~RDDChild();
 
-  static RDDParent* GetSingleton();
+  static RDDChild* GetSingleton();
 
   bool Init(base::ProcessId aParentPid, const char* aParentBuildID,
             MessageLoop* aIOLoop, IPC::Channel* aChannel);
@@ -45,4 +45,4 @@ class RDDParent final : public PRDDParent {
 
 }  // namespace mozilla
 
-#endif  // _include_dom_media_ipc_RDDParent_h__
+#endif  // _include_dom_media_ipc_RDDChild_h__

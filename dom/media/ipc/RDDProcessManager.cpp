@@ -12,7 +12,7 @@
 
 #include "nsAppRunner.h"
 #include "nsContentUtils.h"
-#include "RDDChild.h"
+#include "RDDParent.h"
 #include "RDDProcessHost.h"
 
 namespace mozilla {
@@ -35,7 +35,7 @@ RDDProcessManager::RDDProcessManager()
       mNumProcessAttempts(0),
       mProcess(nullptr),
       mProcessToken(0),
-      mRDDChild(nullptr) {
+      mRDDParent(nullptr) {
   MOZ_COUNT_CTOR(RDDProcessManager);
 
   mObserver = new Observer(this);
@@ -46,7 +46,7 @@ RDDProcessManager::~RDDProcessManager() {
   MOZ_COUNT_DTOR(RDDProcessManager);
 
   // The RDD process should have already been shut down.
-  MOZ_ASSERT(!mProcess && !mRDDChild);
+  MOZ_ASSERT(!mProcess && !mRDDParent);
 
   // We should have already removed observers.
   MOZ_ASSERT(!mObserver);
@@ -100,13 +100,13 @@ bool RDDProcessManager::EnsureRDDReady() {
     if (!mProcess->WaitForLaunch()) {
       // If this fails, we should have fired OnProcessLaunchComplete and
       // removed the process.
-      MOZ_ASSERT(!mProcess && !mRDDChild);
+      MOZ_ASSERT(!mProcess && !mRDDParent);
       return false;
     }
   }
 
-  if (mRDDChild) {
-    if (mRDDChild->EnsureRDDReady()) {
+  if (mRDDParent) {
+    if (mRDDParent->EnsureRDDReady()) {
       return true;
     }
 
@@ -126,7 +126,7 @@ void RDDProcessManager::OnProcessLaunchComplete(RDDProcessHost* aHost) {
     return;
   }
 
-  mRDDChild = mProcess->GetActor();
+  mRDDParent = mProcess->GetActor();
   mProcessToken = mProcess->GetProcessToken();
 
   CrashReporter::AnnotateCrashReport(
@@ -157,7 +157,7 @@ void RDDProcessManager::NotifyRemoteActorDestroyed(
   // One of the bridged top-level actors for the RDD process has been
   // prematurely terminated, and we're receiving a notification. This
   // can happen if the ActorDestroy for a bridged protocol fires
-  // before the ActorDestroy for PRDDChild.
+  // before the ActorDestroy for PRDDParent.
   OnProcessUnexpectedShutdown(mProcess);
 }
 
@@ -179,7 +179,7 @@ void RDDProcessManager::DestroyProcess() {
   mProcess->Shutdown();
   mProcessToken = 0;
   mProcess = nullptr;
-  mRDDChild = nullptr;
+  mRDDParent = nullptr;
 
   CrashReporter::AnnotateCrashReport(
       CrashReporter::Annotation::RDDProcessStatus,
@@ -197,21 +197,21 @@ bool RDDProcessManager::CreateContentBridge(
   ipc::Endpoint<PRemoteDecoderManagerChild> childPipe;
 
   nsresult rv = PRemoteDecoderManager::CreateEndpoints(
-      mRDDChild->OtherPid(), aOtherProcess, &parentPipe, &childPipe);
+      mRDDParent->OtherPid(), aOtherProcess, &parentPipe, &childPipe);
   if (NS_FAILED(rv)) {
     MOZ_LOG(sPDMLog, LogLevel::Debug,
             ("Could not create content remote decoder: %d", int(rv)));
     return false;
   }
 
-  mRDDChild->SendNewContentRemoteDecoderManager(std::move(parentPipe));
+  mRDDParent->SendNewContentRemoteDecoderManager(std::move(parentPipe));
 
   *aOutRemoteDecoderManager = std::move(childPipe);
   return true;
 }
 
 base::ProcessId RDDProcessManager::RDDProcessPid() {
-  base::ProcessId rddPid = mRDDChild ? mRDDChild->OtherPid() : -1;
+  base::ProcessId rddPid = mRDDParent ? mRDDParent->OtherPid() : -1;
   return rddPid;
 }
 
@@ -225,7 +225,7 @@ class RDDMemoryReporter : public MemoryReportingProcess {
                                const bool& aAnonymize,
                                const bool& aMinimizeMemoryUsage,
                                const dom::MaybeFileDesc& aDMDFile) override {
-    RDDChild* child = GetChild();
+    RDDParent* child = GetChild();
     if (!child) {
       return false;
     }
@@ -235,16 +235,16 @@ class RDDMemoryReporter : public MemoryReportingProcess {
   }
 
   int32_t Pid() const override {
-    if (RDDChild* child = GetChild()) {
+    if (RDDParent* child = GetChild()) {
       return (int32_t)child->OtherPid();
     }
     return 0;
   }
 
  private:
-  RDDChild* GetChild() const {
+  RDDParent* GetChild() const {
     if (RDDProcessManager* rddpm = RDDProcessManager::Get()) {
-      if (RDDChild* child = rddpm->GetRDDChild()) {
+      if (RDDParent* child = rddpm->GetRDDParent()) {
         return child;
       }
     }

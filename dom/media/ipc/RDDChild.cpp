@@ -3,7 +3,7 @@
 /* This Source Code Form is subject to the terms of the Mozilla Public
  * License, v. 2.0. If a copy of the MPL was not distributed with this
  * file, You can obtain one at http://mozilla.org/MPL/2.0/. */
-#include "RDDParent.h"
+#include "RDDChild.h"
 
 #if defined(XP_WIN)
 #include <process.h>
@@ -37,15 +37,15 @@ namespace mozilla {
 
 using namespace ipc;
 
-static RDDParent* sRDDParent;
+static RDDChild* sRDDChild;
 
-RDDParent::RDDParent() : mLaunchTime(TimeStamp::Now()) { sRDDParent = this; }
+RDDChild::RDDChild() : mLaunchTime(TimeStamp::Now()) { sRDDChild = this; }
 
-RDDParent::~RDDParent() { sRDDParent = nullptr; }
+RDDChild::~RDDChild() { sRDDChild = nullptr; }
 
-/* static */ RDDParent* RDDParent::GetSingleton() { return sRDDParent; }
+/* static */ RDDChild* RDDChild::GetSingleton() { return sRDDChild; }
 
-bool RDDParent::Init(base::ProcessId aParentPid, const char* aParentBuildID,
+bool RDDChild::Init(base::ProcessId aParentPid, const char* aParentBuildID,
                      MessageLoop* aIOLoop, IPC::Channel* aChannel) {
   // Initialize the thread manager before starting IPC. Otherwise, messages
   // may be posted to the main thread and we won't be able to process them.
@@ -123,7 +123,7 @@ static void StartRDDMacSandbox() {
 }
 #endif
 
-mozilla::ipc::IPCResult RDDParent::RecvInit() {
+mozilla::ipc::IPCResult RDDChild::RecvInit() {
   Unused << SendInitComplete();
 
 #if defined(XP_MACOSX) && defined(MOZ_SANDBOX)
@@ -133,7 +133,7 @@ mozilla::ipc::IPCResult RDDParent::RecvInit() {
   return IPC_OK();
 }
 
-mozilla::ipc::IPCResult RDDParent::RecvInitProfiler(
+mozilla::ipc::IPCResult RDDChild::RecvInitProfiler(
     Endpoint<PProfilerChild>&& aEndpoint) {
 #ifdef MOZ_GECKO_PROFILER
   mProfilerController = ChildProfilerController::Create(std::move(aEndpoint));
@@ -141,7 +141,7 @@ mozilla::ipc::IPCResult RDDParent::RecvInitProfiler(
   return IPC_OK();
 }
 
-mozilla::ipc::IPCResult RDDParent::RecvNewContentRemoteDecoderManager(
+mozilla::ipc::IPCResult RDDChild::RecvNewContentRemoteDecoderManager(
     Endpoint<PRemoteDecoderManagerParent>&& aEndpoint) {
   if (!RemoteDecoderManagerParent::CreateForContent(std::move(aEndpoint))) {
     return IPC_FAIL_NO_REASON(this);
@@ -149,7 +149,7 @@ mozilla::ipc::IPCResult RDDParent::RecvNewContentRemoteDecoderManager(
   return IPC_OK();
 }
 
-mozilla::ipc::IPCResult RDDParent::RecvRequestMemoryReport(
+mozilla::ipc::IPCResult RDDChild::RecvRequestMemoryReport(
     const uint32_t& aGeneration, const bool& aAnonymize,
     const bool& aMinimizeMemoryUsage, const MaybeFileDesc& aDMDFile) {
   nsPrintfCString processName("RDD (pid %u)", (unsigned)getpid());
@@ -159,7 +159,7 @@ mozilla::ipc::IPCResult RDDParent::RecvRequestMemoryReport(
   return IPC_OK();
 }
 
-void RDDParent::ActorDestroy(ActorDestroyReason aWhy) {
+void RDDChild::ActorDestroy(ActorDestroyReason aWhy) {
   if (AbnormalShutdown == aWhy) {
     NS_WARNING("Shutting down RDD process early due to a crash!");
     ProcessChild::QuickExit();

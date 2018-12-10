@@ -5,7 +5,7 @@
  * file, You can obtain one at http://mozilla.org/MPL/2.0/. */
 
 #include "MemoryReportRequest.h"
-#include "mozilla/RDDParent.h"
+#include "mozilla/RDDChild.h"
 #include "mozilla/Unused.h"
 #include "mozilla/dom/ContentChild.h"
 #include "mozilla/gfx/GPUParent.h"
@@ -107,7 +107,7 @@ class HandleReportCallback final : public nsIHandleReportCallback {
             memreport);
         break;
       case GeckoProcessType_RDD:
-        Unused << RDDParent::GetSingleton()->SendAddMemoryReport(memreport);
+        Unused << RDDChild::GetSingleton()->SendAddMemoryReport(memreport);
         break;
       default:
         MOZ_ASSERT_UNREACHABLE("Unhandled process type");
@@ -143,7 +143,7 @@ class FinishReportingCallback final : public nsIFinishReportingCallback {
             gfx::GPUParent::GetSingleton()->SendFinishMemoryReport(mGeneration);
         break;
       case GeckoProcessType_RDD:
-        sent = RDDParent::GetSingleton()->SendFinishMemoryReport(mGeneration);
+        sent = RDDChild::GetSingleton()->SendFinishMemoryReport(mGeneration);
         break;
       default:
         MOZ_ASSERT_UNREACHABLE("Unhandled process type");

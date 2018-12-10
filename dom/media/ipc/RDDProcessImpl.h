@@ -11,12 +11,12 @@
 #include "mozilla/mscom/MainThreadRuntime.h"
 #endif
 
-#include "RDDParent.h"
+#include "RDDChild.h"
 
 namespace mozilla {
 
 // This class owns the subprocess instance of a PRDD - which in this case,
-// is a RDDParent. It is instantiated as a singleton in XRE_InitChildProcess.
+// is a RDDChild. It is instantiated as a singleton in XRE_InitChildProcess.
 class RDDProcessImpl final : public ipc::ProcessChild {
  public:
   explicit RDDProcessImpl(ProcessId aParentPid);
@@ -28,7 +28,7 @@ class RDDProcessImpl final : public ipc::ProcessChild {
  private:
   DISALLOW_COPY_AND_ASSIGN(RDDProcessImpl);
 
-  RDDParent mRDD;
+  RDDChild mRDD;
 
 #if defined(XP_WIN)
   // This object initializes and configures COM.

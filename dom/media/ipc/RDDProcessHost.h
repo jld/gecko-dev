@@ -17,17 +17,17 @@ class nsITimer;
 
 namespace mozilla {
 
-class RDDChild;
+class RDDParent;
 
 // RDDProcessHost is the "parent process" container for a subprocess handle and
 // IPC connection. It owns the parent process IPDL actor, which in this case,
-// is a RDDChild.
+// is a RDDParent.
 //
 // RDDProcessHosts are allocated and managed by RDDProcessManager. For all
 // intents and purposes it is a singleton, though more than one may be allocated
 // at a time due to its shutdown being asynchronous.
 class RDDProcessHost final : public mozilla::ipc::GeckoChildProcessHost {
-  friend class RDDChild;
+  friend class RDDParent;
 
  public:
   class Listener {
@@ -68,13 +68,13 @@ class RDDProcessHost final : public mozilla::ipc::GeckoChildProcessHost {
 
   // Return the actor for the top-level actor of the process. If the process
   // has not connected yet, this returns null.
-  RDDChild* GetActor() const { return mRDDChild.get(); }
+  RDDParent* GetActor() const { return mRDDParent.get(); }
 
   // Return a unique id for this process, guaranteed not to be shared with any
   // past or future instance of RDDProcessHost.
   uint64_t GetProcessToken() const;
 
-  bool IsConnected() const { return !!mRDDChild; }
+  bool IsConnected() const { return !!mRDDParent; }
 
   // Return the time stamp for when we tried to launch the RDD process.
   // This is currently used for Telemetry so that we can determine how
@@ -99,7 +99,7 @@ class RDDProcessHost final : public mozilla::ipc::GeckoChildProcessHost {
   // Called on the main thread after a connection has been established.
   void InitAfterConnect(bool aSucceeded);
 
-  // Called on the main thread when the mRDDChild actor is shutting down.
+  // Called on the main thread when the mRDDParent actor is shutting down.
   void OnChannelClosed();
 
   // Kill the remote process, triggering IPC shutdown.
@@ -116,7 +116,7 @@ class RDDProcessHost final : public mozilla::ipc::GeckoChildProcessHost {
   enum class LaunchPhase { Unlaunched, Waiting, Complete };
   LaunchPhase mLaunchPhase;
 
-  UniquePtr<RDDChild> mRDDChild;
+  UniquePtr<RDDParent> mRDDParent;
   uint64_t mProcessToken;
 
   bool mShutdownRequested;

@@ -3,9 +3,9 @@
 /* This Source Code Form is subject to the terms of the Mozilla Public
  * License, v. 2.0. If a copy of the MPL was not distributed with this
  * file, You can obtain one at http://mozilla.org/MPL/2.0/. */
-#ifndef _include_dom_media_ipc_RDDChild_h_
-#define _include_dom_media_ipc_RDDChild_h_
-#include "mozilla/PRDDChild.h"
+#ifndef _include_dom_media_ipc_RDDParent_h_
+#define _include_dom_media_ipc_RDDParent_h_
+#include "mozilla/PRDDParent.h"
 
 #include "mozilla/RefPtr.h"
 #include "mozilla/UniquePtr.h"
@@ -21,18 +21,18 @@ class MemoryReportRequestHost;
 
 class RDDProcessHost;
 
-class RDDChild final : public PRDDChild {
+class RDDParent final : public PRDDParent {
   typedef mozilla::dom::MemoryReportRequestHost MemoryReportRequestHost;
 
  public:
-  explicit RDDChild(RDDProcessHost* aHost);
-  ~RDDChild();
+  explicit RDDParent(RDDProcessHost* aHost);
+  ~RDDParent();
 
   void Init();
 
   bool EnsureRDDReady();
 
-  // PRDDChild overrides.
+  // PRDDParent overrides.
   mozilla::ipc::IPCResult RecvInitComplete() override;
   mozilla::ipc::IPCResult RecvInitCrashReporter(
       Shmem&& shmem, const NativeThreadId& aThreadId) override;
@@ -49,7 +49,7 @@ class RDDChild final : public PRDDChild {
                                const bool& aMinimizeMemoryUsage,
                                const MaybeFileDesc& aDMDFile);
 
-  static void Destroy(UniquePtr<RDDChild>&& aChild);
+  static void Destroy(UniquePtr<RDDParent>&& aChild);
 
  private:
   RDDProcessHost* mHost;
@@ -60,4 +60,4 @@ class RDDChild final : public PRDDChild {
 
 }  // namespace mozilla
 
-#endif  // _include_dom_media_ipc_RDDChild_h_
+#endif  // _include_dom_media_ipc_RDDParent_h_
