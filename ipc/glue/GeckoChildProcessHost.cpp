@@ -38,8 +38,8 @@
 #include "mozilla/ipc/BrowserProcessSubThread.h"
 #include "mozilla/ipc/EnvironmentMap.h"
 #include "mozilla/Omnijar.h"
-#include "mozilla/Scoped.h"
 #include "mozilla/Telemetry.h"
+#include "mozilla/UniquePtrExtensions.h"
 #include "ProtocolUtils.h"
 #include <sys/stat.h>
 
@@ -68,13 +68,6 @@
 
 using mozilla::MonitorAutoLock;
 using mozilla::ipc::GeckoChildProcessHost;
-
-namespace mozilla {
-MOZ_TYPE_SPECIFIC_SCOPED_POINTER_TEMPLATE(ScopedPRFileDesc, PRFileDesc,
-                                          PR_Close)
-}
-
-using mozilla::ScopedPRFileDesc;
 
 #ifdef MOZ_WIDGET_ANDROID
 #include "AndroidBridge.h"
@@ -608,11 +601,16 @@ bool GeckoChildProcessHost::PerformAsyncLaunch(
   const char* const childProcessType =
       XRE_ChildProcessTypeToString(mProcessType);
 
-  ScopedPRFileDesc crashAnnotationReadPipe;
-  ScopedPRFileDesc crashAnnotationWritePipe;
-  if (PR_CreatePipe(&crashAnnotationReadPipe.rwget(),
-                    &crashAnnotationWritePipe.rwget()) != PR_SUCCESS) {
-    return false;
+  mozilla::UniquePRFileDesc crashAnnotationReadPipe;
+  mozilla::UniquePRFileDesc crashAnnotationWritePipe;
+  {
+    PRFileDesc* rawReadPipe;
+    PRFileDesc* rawWritePipe;
+    if (PR_CreatePipe(&rawReadPipe, &rawWritePipe) != PR_SUCCESS) {
+      return false;
+    }
+    crashAnnotationReadPipe.reset(rawReadPipe);
+    crashAnnotationWritePipe.reset(rawWritePipe);
   }
 
 //--------------------------------------------------
@@ -767,7 +765,7 @@ bool GeckoChildProcessHost::PerformAsyncLaunch(
 #endif  // defined(OS_LINUX) || defined(OS_BSD) || defined(OS_SOLARIS)
   }
 
-  int fd = PR_FileDesc2NativeHandle(crashAnnotationWritePipe);
+  int fd = PR_FileDesc2NativeHandle(crashAnnotationWritePipe.get());
   mLaunchOptions->fds_to_remap.push_back(
       std::make_pair(fd, CrashReporter::GetAnnotationTimeCrashFd()));
 
@@ -1034,7 +1032,7 @@ bool GeckoChildProcessHost::PerformAsyncLaunch(
       UTF8ToWide(CrashReporter::GetChildNotificationPipe()));
 
   if (!CrashReporter::IsDummy()) {
-    PROsfd h = PR_FileDesc2NativeHandle(crashAnnotationWritePipe);
+    PROsfd h = PR_FileDesc2NativeHandle(crashAnnotationWritePipe.get());
     mLaunchOptions->handles_to_inherit.push_back(reinterpret_cast<HANDLE>(h));
     std::string hStr = std::to_string(h);
     cmdLine.AppendLooseValue(UTF8ToWide(hStr));
@@ -1109,7 +1107,7 @@ bool GeckoChildProcessHost::PerformAsyncLaunch(
   }
 
   CrashReporter::RegisterChildCrashAnnotationFileDescriptor(
-      base::GetProcId(process), crashAnnotationReadPipe.forget());
+      base::GetProcId(process), std::move(crashAnnotationReadPipe));
 
   MonitorAutoLock lock(mMonitor);
   mProcessState = PROCESS_CREATED;

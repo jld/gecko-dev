@@ -97,7 +97,7 @@ int GetAnnotationTimeCrashFd() { return 7; }
 #endif
 
 void RegisterChildCrashAnnotationFileDescriptor(ProcessId aProcess,
-                                                PRFileDesc* aFd) {}
+                                                mozilla::UniquePRFileDesc&& aFd) {}
 
 void DeregisterChildCrashAnnotationFileDescriptor(ProcessId aProcess) {}
 

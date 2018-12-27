@@ -14,6 +14,7 @@
 
 #include "mozilla/Assertions.h"
 #include "mozilla/EnumeratedArray.h"
+#include "mozilla/UniquePtrExtensions.h"
 
 #include "CrashAnnotations.h"
 
@@ -201,7 +202,7 @@ typedef int FileHandle;
 int GetAnnotationTimeCrashFd();
 #endif
 void RegisterChildCrashAnnotationFileDescriptor(ProcessId aProcess,
-                                                PRFileDesc* aFd);
+                                                mozilla::UniquePRFileDesc&& aFd);
 void DeregisterChildCrashAnnotationFileDescriptor(ProcessId aProcess);
 
 // Return the current thread's ID.

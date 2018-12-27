@@ -243,7 +243,7 @@ static bool sIncludeContextHeap = false;
 
 // OOP crash reporting
 static CrashGenerationServer* crashServer;  // chrome process has this
-static std::map<ProcessId, PRFileDesc*> processToCrashFd;
+static std::map<ProcessId, UniquePRFileDesc> processToCrashFd;
 
 static std::terminate_handler oldTerminateHandler = nullptr;
 
@@ -2891,23 +2891,23 @@ static bool WriteExtraForMinidump(nsIFile* minidump, uint32_t pid, bool content,
     }
   }
 
-  if (pid && processToCrashFd.count(pid)) {
-    PRFileDesc* prFd = processToCrashFd[pid];
+  // This should use std::map::extract, but we can't have C++17 yet.
+  if (pid != 0 && processToCrashFd.count(pid) > 0) {
+    UniquePRFileDesc crashFd = std::move(processToCrashFd[pid]);
     processToCrashFd.erase(pid);
-    FILE* fd;
+    FILE* fd; // FIXME are we leaking memory by not fclose()ing this?
 #if defined(XP_WIN)
-    int nativeFd = _open_osfhandle(PR_FileDesc2NativeHandle(prFd), 0);
+    int nativeFd = _open_osfhandle(PR_FileDesc2NativeHandle(crashFd.get()), 0);
     if (nativeFd == -1) {
       return false;
     }
     fd = fdopen(nativeFd, "r");
 #else
-    fd = fdopen(PR_FileDesc2NativeHandle(prFd), "r");
+    fd = fdopen(PR_FileDesc2NativeHandle(crashFd.get()), "r");
 #endif
     if (fd) {
       AnnotationTable exceptionTimeAnnotations;
       ReadAndValidateExceptionTimeAnnotations(fd, exceptionTimeAnnotations);
-      PR_Close(prFd);
       if (!AppendExtraData(extra, exceptionTimeAnnotations)) {
         return false;
       }
@@ -3257,16 +3257,12 @@ int GetAnnotationTimeCrashFd() {
 #endif
 
 void RegisterChildCrashAnnotationFileDescriptor(ProcessId aProcess,
-                                                PRFileDesc* aFd) {
-  processToCrashFd[aProcess] = aFd;
+                                                UniquePRFileDesc&& aFd) {
+  processToCrashFd[aProcess] = std::move(aFd);
 }
 
 void DeregisterChildCrashAnnotationFileDescriptor(ProcessId aProcess) {
-  auto it = processToCrashFd.find(aProcess);
-  if (it != processToCrashFd.end()) {
-    PR_Close(it->second);
-    processToCrashFd.erase(it);
-  }
+  processToCrashFd.erase(aProcess);
 }
 
 #if defined(XP_WIN)
