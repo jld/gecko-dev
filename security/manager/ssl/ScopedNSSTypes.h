@@ -18,7 +18,7 @@
 #include "cryptohi.h"
 #include "keyhi.h"
 #include "mozilla/Likely.h"
-#include "mozilla/UniquePtr.h"
+#include "mozilla/UniquePtrExtensions.h"
 #include "nsDebug.h"
 #include "nsError.h"
 #include "NSSErrorsService.h"
@@ -286,7 +286,6 @@ MOZ_TYPE_SPECIFIC_UNIQUE_PTR_TEMPLATE(UniquePK11SymKey, PK11SymKey,
 MOZ_TYPE_SPECIFIC_UNIQUE_PTR_TEMPLATE(UniquePLArenaPool, PLArenaPool,
                                       internal::PORT_FreeArena_false)
 MOZ_TYPE_SPECIFIC_UNIQUE_PTR_TEMPLATE(UniquePORTString, char, PORT_Free)
-MOZ_TYPE_SPECIFIC_UNIQUE_PTR_TEMPLATE(UniquePRFileDesc, PRFileDesc, PR_Close)
 MOZ_TYPE_SPECIFIC_UNIQUE_PTR_TEMPLATE(UniquePRString, char, PR_Free)
 
 MOZ_TYPE_SPECIFIC_UNIQUE_PTR_TEMPLATE(UniqueSECAlgorithmID, SECAlgorithmID,

@@ -11,6 +11,7 @@
 
 #include "mozilla/fallible.h"
 #include "mozilla/UniquePtr.h"
+#include "prio.h"
 
 namespace mozilla {
 
@@ -42,10 +43,16 @@ struct FreePolicy {
   void operator()(const void* ptr) { free(const_cast<void*>(ptr)); }
 };
 
+struct PRClosePolicy {
+  void operator()(PRFileDesc* fd) { PR_Close(fd); }
+};
+
 }  // namespace detail
 
 template <typename T>
 using UniqueFreePtr = UniquePtr<T, detail::FreePolicy<T>>;
+
+using UniquePRFileDesc = UniquePtr<PRFileDesc, detail::PRClosePolicy>;
 
 }  // namespace mozilla
 
