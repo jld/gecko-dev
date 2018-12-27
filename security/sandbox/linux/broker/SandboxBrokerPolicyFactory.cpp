@@ -591,6 +591,10 @@ SandboxBrokerPolicyFactory::GetUtilityPolicy(int aPid) {
 
   AddSharedMemoryPaths(policy.get(), aPid);
 
+  // FOR TESTING ONLY
+  policy->AddPath(SandboxBroker::CRASH_INSTEAD,
+                  "/sys/devices/system/cpu/present");
+
   if (policy->IsEmpty()) {
     policy = nullptr;
   }
