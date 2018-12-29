@@ -12,6 +12,8 @@
 #include "mozilla/BinarySearch.h"
 #include "mozilla/ipc/FileDescriptor.h"
 
+#define SHARED_STRING_MAP_MAGIC 0x9e3779b9
+
 using namespace mozilla::loader;
 
 namespace mozilla {
@@ -30,6 +32,7 @@ SharedStringMap::SharedStringMap(const FileDescriptor& aMapFile,
                                  size_t aMapSize) {
   auto result = mMap.initWithHandle(aMapFile, aMapSize);
   MOZ_RELEASE_ASSERT(result.isOk());
+  MOZ_RELEASE_ASSERT(GetHeader().mMagic == SHARED_STRING_MAP_MAGIC);
   // We return literal nsStrings and nsCStrings pointing to the mapped data,
   // which means that we may still have references to the mapped data even
   // after this instance is destroyed. That means that we need to keep the
@@ -40,6 +43,7 @@ SharedStringMap::SharedStringMap(const FileDescriptor& aMapFile,
 SharedStringMap::SharedStringMap(SharedStringMapBuilder&& aBuilder) {
   auto result = aBuilder.Finalize(mMap);
   MOZ_RELEASE_ASSERT(result.isOk());
+  MOZ_RELEASE_ASSERT(GetHeader().mMagic == SHARED_STRING_MAP_MAGIC);
   mMap.setPersistent();
 }
 
@@ -92,7 +96,7 @@ Result<Ok, nsresult> SharedStringMapBuilder::Finalize(
   }
   keys.Sort();
 
-  Header header = {uint32_t(keys.Length())};
+  Header header = {SHARED_STRING_MAP_MAGIC, uint32_t(keys.Length())};
 
   size_t offset = sizeof(header);
   offset += GetAlignmentOffset(offset, alignof(Header));
