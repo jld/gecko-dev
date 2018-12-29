@@ -159,6 +159,7 @@ class SharedMemory {
   HANDLE mapped_file_;
 #elif defined(OS_POSIX)
   int mapped_file_;
+  size_t mapped_size_;
 #endif
   void* memory_;
   bool read_only_;

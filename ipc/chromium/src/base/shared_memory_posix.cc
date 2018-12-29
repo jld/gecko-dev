@@ -25,7 +25,11 @@
 namespace base {
 
 SharedMemory::SharedMemory()
-    : mapped_file_(-1), memory_(NULL), read_only_(false), max_size_(0) {}
+    : mapped_file_(-1),
+      mapped_size_(0),
+      memory_(NULL),
+      read_only_(false),
+      max_size_(0) {}
 
 SharedMemory::SharedMemory(SharedMemory&& other) {
   if (this == &other) {
@@ -175,7 +179,7 @@ bool SharedMemory::Map(size_t bytes, void* fixed_address) {
       return false;
     }
 
-    max_size_ = bytes;
+    mapped_size_ = bytes;
   }
 
   return mmap_succeeded;
@@ -184,9 +188,9 @@ bool SharedMemory::Map(size_t bytes, void* fixed_address) {
 bool SharedMemory::Unmap() {
   if (memory_ == NULL) return false;
 
-  munmap(memory_, max_size_);
+  munmap(memory_, mapped_size_);
   memory_ = NULL;
-  max_size_ = 0;
+  mapped_size_ = 0;
   return true;
 }
 
