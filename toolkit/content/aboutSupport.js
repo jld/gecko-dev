@@ -783,7 +783,7 @@ var snapshotFormatters = {
       document.l10n.setAttributes(th, keyStrId);
       tbody.appendChild($.new("tr", [
         th,
-        $.new("td", data[key]),
+        $.new("td", String(data[key])),
       ]));
     }
 
