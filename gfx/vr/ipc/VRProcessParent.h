@@ -20,8 +20,11 @@ class VRChild;
 class VRProcessParent final : public mozilla::ipc::GeckoChildProcessHost {
  public:
   explicit VRProcessParent();
+
+ private:
   ~VRProcessParent();
 
+ public:
   bool Launch();
   void Shutdown();
   void DestroyProcess();

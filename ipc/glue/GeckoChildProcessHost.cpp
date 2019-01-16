@@ -94,6 +94,7 @@ GeckoChildProcessHost::GeckoChildProcessHost(GeckoProcessType aProcessType,
       mMonitor("mozilla.ipc.GeckChildProcessHost.mMonitor"),
       mLaunchOptions(MakeUnique<base::LaunchOptions>()),
       mProcessState(CREATING_CHANNEL),
+      mDestroying(false),
 #ifdef XP_WIN
       mGroupId(u"-"),
 #endif
@@ -114,6 +115,7 @@ GeckoChildProcessHost::~GeckoChildProcessHost()
 
 {
   AssertIOThread();
+  MOZ_ASSERT(mDestroying);
 
   MOZ_COUNT_DTOR(GeckoChildProcessHost);
 
@@ -156,6 +158,7 @@ void GeckoChildProcessHost::Destroy() {
   }
 
   using Value = HandlePromise::ResolveOrRejectValue;
+  mDestroying = true;
   whenReady->Then(XRE_GetIOMessageLoop()->SerialEventTarget(), __func__,
                   [this](const Value&) { delete this; });
 }

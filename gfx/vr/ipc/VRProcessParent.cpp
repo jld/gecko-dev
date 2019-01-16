@@ -85,16 +85,13 @@ void VRProcessParent::Shutdown() {
   DestroyProcess();
 }
 
-static void DelayedDeleteSubprocess(GeckoChildProcessHost* aSubprocess) {
-  XRE_GetIOMessageLoop()->PostTask(
-      mozilla::MakeAndAddRef<DeleteTask<GeckoChildProcessHost>>(aSubprocess));
-}
-
 void VRProcessParent::DestroyProcess() {
   if (mLaunchThread) {
-    mLaunchThread->Dispatch(NewRunnableFunction("DestroyProcessRunnable",
-                                                DelayedDeleteSubprocess, this));
+    // FIXME does this need an additional dispatch?
+    mLaunchThread->Dispatch(NS_NewRunnableFunction("DestroyProcessRunnable",
+                                                   [this] { Destroy(); }));
   }
+  // FIXME what happens in the other case?
 }
 
 void VRProcessParent::InitAfterConnect(bool aSucceeded) {

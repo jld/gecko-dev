@@ -1691,8 +1691,7 @@ void ContentParent::ActorDestroy(ActorDestroyReason why) {
   }
   mIdleListeners.Clear();
 
-  // FIXME does this really need to be bounced off the current
-  // thread's event queue as well?
+  // FIXME does this need an additional dispatch?
   MessageLoop::current()->PostTask(NS_NewRunnableFunction(
       "DelayedDeleteSubprocessRunnable",
       [subprocess = mSubprocess] { subprocess->Destroy(); }));

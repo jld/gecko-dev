@@ -45,8 +45,11 @@ class GPUProcessHost final : public mozilla::ipc::GeckoChildProcessHost {
 
  public:
   explicit GPUProcessHost(Listener* listener);
+
+ private:
   ~GPUProcessHost();
 
+ public:
   // Launch the subprocess asynchronously. On failure, false is returned.
   // Otherwise, true is returned, and the OnProcessLaunchComplete listener
   // callback will be invoked either when a connection has been established, or

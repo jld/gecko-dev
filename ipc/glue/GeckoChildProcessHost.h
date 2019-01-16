@@ -41,8 +41,10 @@ class GeckoChildProcessHost : public ChildProcessHost {
   explicit GeckoChildProcessHost(GeckoProcessType aProcessType,
                                  bool aIsFileContent = false);
 
+ protected:
   ~GeckoChildProcessHost();
 
+ public:
   // FIXME comment
   void Destroy();
 
@@ -156,6 +158,8 @@ class GeckoChildProcessHost : public ChildProcessHost {
     PROCESS_CONNECTED,
     PROCESS_ERROR
   } mProcessState;
+
+  DebugOnly<bool> mDestroying;
 
   static int32_t mChildCounter;
 

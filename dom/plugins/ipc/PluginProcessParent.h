@@ -37,11 +37,14 @@ class LaunchCompleteTask : public Runnable {
   bool mLaunchSucceeded;
 };
 
-class PluginProcessParent : public mozilla::ipc::GeckoChildProcessHost {
+class PluginProcessParent final : public mozilla::ipc::GeckoChildProcessHost {
  public:
   explicit PluginProcessParent(const std::string& aPluginFilePath);
+
+ private:
   ~PluginProcessParent();
 
+ public:
   /**
    * Launch the plugin process. If the process fails to launch,
    * this method will return false.
@@ -56,8 +59,6 @@ class PluginProcessParent : public mozilla::ipc::GeckoChildProcessHost {
   bool Launch(UniquePtr<LaunchCompleteTask> aLaunchCompleteTask =
                   UniquePtr<LaunchCompleteTask>(),
               int32_t aSandboxLevel = 0, bool aIsSandboxLoggingEnabled = false);
-
-  void Delete();
 
   virtual bool CanShutdown() override { return true; }
 

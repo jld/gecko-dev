@@ -41,8 +41,11 @@ class RDDProcessHost final : public mozilla::ipc::GeckoChildProcessHost {
   };
 
   explicit RDDProcessHost(Listener* listener);
+
+ private:
   ~RDDProcessHost();
 
+ public:
   // Launch the subprocess asynchronously. On failure, false is returned.
   // Otherwise, true is returned, and the OnProcessLaunchComplete listener
   // callback will be invoked either when a connection has been established, or

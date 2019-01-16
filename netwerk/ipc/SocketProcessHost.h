@@ -40,10 +40,12 @@ class SocketProcessHost final : public mozilla::ipc::GeckoChildProcessHost {
     virtual ~Listener() = default;
   };
 
- public:
   explicit SocketProcessHost(Listener* listener);
+
+ private:
   ~SocketProcessHost();
 
+ public:
   // Launch the socket process asynchronously.
   // The OnProcessLaunchComplete listener callback will be invoked
   // either when a connection has been established, or if a connection
