@@ -148,11 +148,16 @@ GeckoChildProcessHost::~GeckoChildProcessHost()
 }
 
 void GeckoChildProcessHost::Destroy() {
-  // FIXME doesn't work right if never launched
+  RefPtr<HandlePromise> whenReady = mHandlePromise;
+
+  if (whenReady == nullptr) {
+    // AsyncLaunch not called yet, so dispatch immediately.
+    whenReady = HandlePromise::CreateAndReject(LaunchError{}, __func__);
+  }
+
   using Value = HandlePromise::ResolveOrRejectValue;
-  WhenProcessHandleReady()->Then(XRE_GetIOMessageLoop()->SerialEventTarget(),
-                                 __func__,
-                                 [this](const Value&) { delete this; });
+  whenReady->Then(XRE_GetIOMessageLoop()->SerialEventTarget(), __func__,
+                  [this](const Value&) { delete this; });
 }
 
 // static
@@ -484,7 +489,6 @@ bool GeckoChildProcessHost::RunPerformAsyncLaunch(
     // If something failed let's set the error state and notify.
     MonitorAutoLock lock(mMonitor);
     mProcessState = PROCESS_ERROR;
-    mHandlePromise->Reject(LaunchError{}, __func__);
     lock.Notify();
     CHROMIUM_LOG(ERROR) << "Failed to launch "
                         << XRE_ChildProcessTypeToString(mProcessType)
@@ -493,6 +497,8 @@ bool GeckoChildProcessHost::RunPerformAsyncLaunch(
         Telemetry::SUBPROCESS_LAUNCH_FAILURE,
         nsDependentCString(XRE_ChildProcessTypeToString(mProcessType)));
   }
+  // Warning: rejecting the promise allows `this` to be deleted.
+  mHandlePromise->Reject(LaunchError{}, __func__);
   return ok;
 }
 
@@ -1100,15 +1106,18 @@ bool GeckoChildProcessHost::PerformAsyncLaunch(
   CrashReporter::RegisterChildCrashAnnotationFileDescriptor(
       base::GetProcId(process), crashAnnotationReadPipe.forget());
 
-  MonitorAutoLock lock(mMonitor);
-  mProcessState = PROCESS_CREATED;
-  mHandlePromise->Resolve(process, __func__);
-  lock.Notify();
+  {
+    MonitorAutoLock lock(mMonitor);
+    mProcessState = PROCESS_CREATED;
+    lock.Notify();
+  }
 
   mLaunchOptions = nullptr;
 
   Telemetry::AccumulateTimeDelta(Telemetry::CHILD_PROCESS_LAUNCH_MS, startTS);
 
+  // Warning: resolving the promise allows `this` to be deleted.
+  mHandlePromise->Resolve(process, __func__);
   return true;
 }
 
