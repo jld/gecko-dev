@@ -94,7 +94,6 @@ GeckoChildProcessHost::GeckoChildProcessHost(GeckoProcessType aProcessType,
       mMonitor("mozilla.ipc.GeckChildProcessHost.mMonitor"),
       mLaunchOptions(MakeUnique<base::LaunchOptions>()),
       mProcessState(CREATING_CHANNEL),
-      mDestroying(false),
 #ifdef XP_WIN
       mGroupId(u"-"),
 #endif
@@ -102,11 +101,11 @@ GeckoChildProcessHost::GeckoChildProcessHost(GeckoProcessType aProcessType,
       mEnableSandboxLogging(false),
       mSandboxLevel(0),
 #endif
-      mChildProcessHandle(0)
+      mChildProcessHandle(0),
 #if defined(MOZ_WIDGET_COCOA)
-      ,
-      mChildTask(MACH_PORT_NULL)
+      mChildTask(MACH_PORT_NULL),
 #endif
+      mDestroying(false)
 {
   MOZ_COUNT_CTOR(GeckoChildProcessHost);
 }
@@ -115,7 +114,7 @@ GeckoChildProcessHost::~GeckoChildProcessHost()
 
 {
   AssertIOThread();
-  MOZ_ASSERT(mDestroying);
+  MOZ_RELEASE_ASSERT(mDestroying);
 
   MOZ_COUNT_DTOR(GeckoChildProcessHost);
 

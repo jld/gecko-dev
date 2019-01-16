@@ -12,7 +12,6 @@
 #include "base/waitable_event.h"
 #include "chrome/common/child_process_host.h"
 
-#include "mozilla/DebugOnly.h"
 #include "mozilla/ipc/FileDescriptor.h"
 #include "mozilla/Monitor.h"
 #include "mozilla/MozPromise.h"
@@ -159,8 +158,6 @@ class GeckoChildProcessHost : public ChildProcessHost {
     PROCESS_ERROR
   } mProcessState;
 
-  DebugOnly<bool> mDestroying;
-
   static int32_t mChildCounter;
 
   void PrepareLaunch();
@@ -218,6 +215,8 @@ class GeckoChildProcessHost : public ChildProcessHost {
 #if defined(OS_LINUX)
   nsCString mTmpDirName;
 #endif
+
+  bool mDestroying;
 
   static uint32_t sNextUniqueID;
 
