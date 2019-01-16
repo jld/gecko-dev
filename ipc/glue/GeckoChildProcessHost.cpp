@@ -147,6 +147,14 @@ GeckoChildProcessHost::~GeckoChildProcessHost()
   }
 }
 
+void GeckoChildProcessHost::Destroy() {
+  // FIXME doesn't work right if never launched
+  using Value = HandlePromise::ResolveOrRejectValue;
+  WhenProcessHandleReady()->Then(XRE_GetIOMessageLoop()->SerialEventTarget(),
+                                 __func__,
+                                 [this](const Value&) { delete this; });
+}
+
 // static
 auto GeckoChildProcessHost::GetPathToBinary(FilePath& exePath,
                                             GeckoProcessType processType)

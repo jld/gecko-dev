@@ -43,6 +43,9 @@ class GeckoChildProcessHost : public ChildProcessHost {
 
   ~GeckoChildProcessHost();
 
+  // FIXME comment
+  void Destroy();
+
   static uint32_t GetUniqueID();
 
   // Does not block.  The IPC channel may not be initialized yet, and
