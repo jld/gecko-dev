@@ -83,6 +83,7 @@ class SharedMemory {
   NS_INLINE_DECL_THREADSAFE_REFCOUNTING(SharedMemory)
 
   static void SystemProtect(char* aAddr, size_t aSize, int aRights);
+  static bool SystemProtectFallible(char* aAddr, size_t aSize, int aRights);
   static size_t SystemPageSize();
   static size_t PageAlignedSize(size_t aSize);
 
