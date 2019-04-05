@@ -18,6 +18,7 @@
 
 #include "base/basictypes.h"
 #include "base/process.h"
+#include "mozilla/Attributes.h"
 #include "mozilla/UniquePtrExtensions.h"
 
 namespace base {
@@ -64,9 +65,12 @@ class SharedMemory {
   // Return invalid handle (see comment above for exact definition).
   static SharedMemoryHandle NULLHandle();
 
-  // Creates a shared memory segment.
+  // Creates a shared memory segment.  The freezeable parameter
+  // determines whether the Freeze() method may be used later.
+  // (Warning: creating freezeable shared memory within a sandboxed
+  // process isn't possible on some platforms.)
   // Returns true on success, false on failure.
-  bool Create(size_t size);
+  bool Create(size_t size, bool freezeable = false);
 
   // Maps the shared memory into the caller's address space.
   // Returns true on success, false otherwise.  The memory address
@@ -105,6 +109,16 @@ class SharedMemory {
     return mapped_file_;
   }
 #endif
+
+  // Make the shared memory object read-only, such that it cannot be
+  // written even if it's sent to an untrusted process.  If it was
+  // mapped in this process, it will be unmapped.  The object must
+  // have been created with the freezeable parameter set, and must not
+  // have already been shared to another process.
+  //
+  // (See bug 1479960 comment #0 for OS-specific implementation
+  // details.)
+  MOZ_MUST_USE bool Freeze();
 
   // Closes the open shared memory segment.
   // It is safe to call Close repeatedly.
@@ -159,10 +173,12 @@ class SharedMemory {
   HANDLE mapped_file_;
 #elif defined(OS_POSIX)
   int mapped_file_;
+  int frozen_file_;
   size_t mapped_size_;
 #endif
   void* memory_;
   bool read_only_;
+  bool freezeable_;
   size_t max_size_;
 
   DISALLOW_EVIL_CONSTRUCTORS(SharedMemory);
