@@ -30,6 +30,7 @@
 #include "mozilla/SandboxReporter.h"
 #include "mozilla/SandboxSettings.h"
 #include "mozilla/Services.h"
+#include "mozilla/UniquePtrExtensions.h"
 #include "mozilla/Unused.h"
 #include "nsCOMPtr.h"
 #include "nsDebug.h"
@@ -194,19 +195,25 @@ static void AttachSandboxReporter(base::file_handle_mapping_vector* aFdMap) {
 class SandboxFork : public base::LaunchOptions::ForkDelegate {
  public:
   explicit SandboxFork(int aFlags, bool aChroot);
-  virtual ~SandboxFork();
+  ~SandboxFork() override = default;
 
-  void PrepareMapping(base::file_handle_mapping_vector* aMap);
+  uint32_t ToFlags() override;
+  void Prepare(base::LaunchOptions* aOptions) override;
   pid_t Fork() override;
 
  private:
+  UniqueFileHandle mChrootServer;
+  UniqueFileHandle mChrootClient;
   int mFlags;
-  int mChrootServer;
-  int mChrootClient;
+  bool mChroot;
 
   void StartChrootServer();
   SandboxFork(const SandboxFork&) = delete;
   SandboxFork& operator=(const SandboxFork&) = delete;
+
+  // The low 8 bits of the real flags are used for the termination
+  // signal, so we can repurpose them.
+  static const uint32_t kChrootFlag = 1;
 };
 
 static int GetEffectiveSandboxLevel(GeckoProcessType aType) {
@@ -305,41 +312,31 @@ void SandboxLaunchPrepare(GeckoProcessType aType,
   }
 
   if (canChroot || flags != 0) {
-    auto forker = MakeUnique<SandboxFork>(flags | CLONE_NEWUSER, canChroot);
-    forker->PrepareMapping(&aOptions->fds_to_remap);
-    aOptions->fork_delegate = std::move(forker);
-    if (canChroot) {
-      aOptions->env_map[kSandboxChrootEnvFlag] = "1";
-    }
+    aOptions->fork_delegate = MakeUnique<SandboxFork>(flags | CLONE_NEWUSER, canChroot);
   }
 }
 
 SandboxFork::SandboxFork(int aFlags, bool aChroot)
-    : mFlags(aFlags), mChrootServer(-1), mChrootClient(-1) {
-  if (aChroot) {
+    : mFlags(aFlags), mChroot(aChroot) { }
+
+uint32_t SandboxFork::ToFlags() {
+  MOZ_ASSERT((mFlags & CSIGNAL) == 0);
+  return static_cast<uint32_t>(mFlags) | (mChroot ? kChrootFlag : 0);
+}
+
+void SandboxFork::Prepare(base::LaunchOptions* aOptions) {
+  MOZ_ASSERT(!mChrootClient && !mChrootServer);
+  if (mChroot) {
     int fds[2];
     int rv = socketpair(AF_UNIX, SOCK_STREAM | SOCK_CLOEXEC, 0, fds);
     if (rv != 0) {
       SANDBOX_LOG_ERROR("socketpair: %s", strerror(errno));
       MOZ_CRASH("socketpair failed");
     }
-    mChrootClient = fds[0];
-    mChrootServer = fds[1];
-  }
-}
-
-void SandboxFork::PrepareMapping(base::file_handle_mapping_vector* aMap) {
-  if (mChrootClient >= 0) {
-    aMap->push_back({mChrootClient, kSandboxChrootClientFd});
-  }
-}
-
-SandboxFork::~SandboxFork() {
-  if (mChrootClient >= 0) {
-    close(mChrootClient);
-  }
-  if (mChrootServer >= 0) {
-    close(mChrootServer);
+    mChrootClient.reset(fds[0]);
+    mChrootServer.reset(fds[1]);
+    aOptions->env_map[kSandboxChrootEnvFlag] = "1";
+    aOptions->fds_to_remap.push_back({mChrootClient.get(), kSandboxChrootClientFd});
   }
 }
 
@@ -487,8 +484,10 @@ static void DropAllCaps() {
 }
 
 pid_t SandboxFork::Fork() {
+  MOZ_ASSERT(mChroot == !!mChrootServer);
+
   if (mFlags == 0) {
-    MOZ_ASSERT(mChrootServer < 0);
+    MOZ_ASSERT(!mChrootServer);
     return fork();
   }
 
@@ -519,7 +518,7 @@ pid_t SandboxFork::Fork() {
   RestoreSignals(&oldSigs);
   ConfigureUserNamespace(uid, gid);
 
-  if (mChrootServer >= 0) {
+  if (mChrootServer) {
     StartChrootServer();
   }
 
@@ -549,11 +548,11 @@ void SandboxFork::StartChrootServer() {
   }
 
   base::CloseSuperfluousFds(this, [](void* aCtx, int aFd) {
-    return aFd == static_cast<decltype(this)>(aCtx)->mChrootServer;
+    return aFd == static_cast<decltype(this)>(aCtx)->mChrootServer.get();
   });
 
   char msg;
-  ssize_t msgLen = HANDLE_EINTR(read(mChrootServer, &msg, 1));
+  ssize_t msgLen = HANDLE_EINTR(read(mChrootServer.get(), &msg, 1));
   if (msgLen == 0) {
     // Process exited before chrooting (or chose not to chroot?).
     _exit(0);
@@ -580,7 +579,7 @@ void SandboxFork::StartChrootServer() {
   MOZ_RELEASE_ASSERT(rv == 0);
 
   msg = kSandboxChrootResponse;
-  msgLen = HANDLE_EINTR(write(mChrootServer, &msg, 1));
+  msgLen = HANDLE_EINTR(write(mChrootServer.get(), &msg, 1));
   MOZ_RELEASE_ASSERT(msgLen == 1);
   _exit(0);
 }

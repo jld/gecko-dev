@@ -950,7 +950,7 @@ bool GeckoChildProcessHost::PerformAsyncLaunch(
   LaunchAndroidService(childProcessType, childArgv,
                        mLaunchOptions->fds_to_remap, &process);
 #  else   // goes with defined(MOZ_WIDGET_ANDROID)
-  if (!base::LaunchApp(childArgv, *mLaunchOptions, &process)) {
+  if (!base::LaunchApp(childArgv, std::move(*mLaunchOptions), &process)) {
     return false;
   }
 #  endif  // defined(MOZ_WIDGET_ANDROID)
@@ -1230,7 +1230,7 @@ bool GeckoChildProcessHost::PerformAsyncLaunch(
   } else
 #  endif  // defined(MOZ_SANDBOX)
   {
-    if (!base::LaunchApp(cmdLine, *mLaunchOptions, &process)) {
+    if (!base::LaunchApp(cmdLine, std::move(*mLaunchOptions), &process)) {
       return false;
     }
 

@@ -290,7 +290,7 @@ std::wstring AlterEnvironment(const wchar_t* env,
   return result;
 }
 
-bool LaunchApp(const std::wstring& cmdline, const LaunchOptions& options,
+bool LaunchApp(const std::wstring& cmdline, LaunchOptions&& options,
                ProcessHandle* process_handle) {
   // We want to inherit the std handles so dump() statements and assertion
   // messages in the child process can be seen - but we *do not* want to
@@ -380,9 +380,9 @@ bool LaunchApp(const std::wstring& cmdline, const LaunchOptions& options,
   return true;
 }
 
-bool LaunchApp(const CommandLine& cl, const LaunchOptions& options,
+bool LaunchApp(const CommandLine& cl, LaunchOptions&& options,
                ProcessHandle* process_handle) {
-  return LaunchApp(cl.command_line_string(), options, process_handle);
+  return LaunchApp(cl.command_line_string(), std::move(options), process_handle);
 }
 
 bool KillProcess(ProcessHandle process, int exit_code, bool wait) {

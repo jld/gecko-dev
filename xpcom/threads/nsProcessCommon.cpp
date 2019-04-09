@@ -522,7 +522,7 @@ nsresult nsProcess::RunProcess(bool aBlocking, char** aMyArgv,
     argvVec.push_back(*arg);
   }
   pid_t newPid;
-  if (base::LaunchApp(argvVec, options, &newPid)) {
+  if (base::LaunchApp(argvVec, std::move(options), &newPid)) {
     static_assert(sizeof(pid_t) <= sizeof(int32_t),
                   "mPid is large enough to hold a pid");
     mPid = static_cast<int32_t>(newPid);

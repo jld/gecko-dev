@@ -28,7 +28,15 @@ static mozilla::EnvironmentLog gProcessLog("MOZ_PROCESS_LOG");
 namespace base {
 
 bool LaunchApp(const std::vector<std::string>& argv,
-               const LaunchOptions& options, ProcessHandle* process_handle) {
+               LaunchOptions&& options, ProcessHandle* process_handle) {
+  // FIXME I'm not so sure about passing options by move so I can
+  // side-effect the fds, but mutable pointer seems wronger.
+#ifdef OS_LINUX
+  if (options.fork_delegate) {
+    options.fork_delegate->Prepare(&options);
+  }
+#endif
+
   mozilla::UniquePtr<char*[]> argv_cstr(new char*[argv.size() + 1]);
 
   EnvironmentArray envp = BuildEnvironmentArray(options.env_map);
@@ -87,9 +95,9 @@ bool LaunchApp(const std::vector<std::string>& argv,
   return true;
 }
 
-bool LaunchApp(const CommandLine& cl, const LaunchOptions& options,
+bool LaunchApp(const CommandLine& cl, LaunchOptions&& options,
                ProcessHandle* process_handle) {
-  return LaunchApp(cl.argv(), options, process_handle);
+  return LaunchApp(cl.argv(), std::move(options), process_handle);
 }
 
 }  // namespace base

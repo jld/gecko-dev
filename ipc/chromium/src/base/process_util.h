@@ -118,6 +118,8 @@ struct LaunchOptions {
 #if defined(OS_LINUX)
   struct ForkDelegate {
     virtual ~ForkDelegate() {}
+    virtual uint32_t ToFlags() { return 0; } // FIXME name
+    virtual void Prepare(LaunchOptions*) {}
     virtual pid_t Fork() = 0;
   };
 
@@ -139,7 +141,7 @@ struct LaunchOptions {
 // stored there on a successful launch.
 // NOTE: In this case, the caller is responsible for closing the handle so
 //       that it doesn't leak!
-bool LaunchApp(const std::wstring& cmdline, const LaunchOptions& options,
+bool LaunchApp(const std::wstring& cmdline, LaunchOptions&& options,
                ProcessHandle* process_handle);
 
 #elif defined(OS_POSIX)
@@ -151,7 +153,7 @@ bool LaunchApp(const std::wstring& cmdline, const LaunchOptions& options,
 // Note that the first argument in argv must point to the filename,
 // and must be fully specified (i.e., this will not search $PATH).
 bool LaunchApp(const std::vector<std::string>& argv,
-               const LaunchOptions& options, ProcessHandle* process_handle);
+               LaunchOptions&& options, ProcessHandle* process_handle);
 
 // Deleter for the array of strings allocated within BuildEnvironmentArray.
 struct FreeEnvVarsArray {
@@ -167,7 +169,7 @@ EnvironmentArray BuildEnvironmentArray(const environment_map& env_vars_to_set);
 
 // Executes the application specified by cl. This function delegates to one
 // of the above two platform-specific functions.
-bool LaunchApp(const CommandLine& cl, const LaunchOptions&,
+bool LaunchApp(const CommandLine& cl, LaunchOptions&&,
                ProcessHandle* process_handle);
 
 // Attempts to kill the process identified by the given process
