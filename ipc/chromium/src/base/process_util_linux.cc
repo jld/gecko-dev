@@ -27,8 +27,8 @@ static mozilla::EnvironmentLog gProcessLog("MOZ_PROCESS_LOG");
 
 namespace base {
 
-bool LaunchApp(const std::vector<std::string>& argv,
-               LaunchOptions&& options, ProcessHandle* process_handle) {
+bool LaunchApp(const std::vector<std::string>& argv, LaunchOptions&& options,
+               ProcessHandle* process_handle) {
   // FIXME I'm not so sure about passing options by move so I can
   // side-effect the fds, but mutable pointer seems wronger.
 #ifdef OS_LINUX

@@ -382,7 +382,8 @@ bool LaunchApp(const std::wstring& cmdline, LaunchOptions&& options,
 
 bool LaunchApp(const CommandLine& cl, LaunchOptions&& options,
                ProcessHandle* process_handle) {
-  return LaunchApp(cl.command_line_string(), std::move(options), process_handle);
+  return LaunchApp(cl.command_line_string(), std::move(options),
+                   process_handle);
 }
 
 bool KillProcess(ProcessHandle process, int exit_code, bool wait) {

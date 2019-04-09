@@ -312,12 +312,13 @@ void SandboxLaunchPrepare(GeckoProcessType aType,
   }
 
   if (canChroot || flags != 0) {
-    aOptions->fork_delegate = MakeUnique<SandboxFork>(flags | CLONE_NEWUSER, canChroot);
+    aOptions->fork_delegate =
+        MakeUnique<SandboxFork>(flags | CLONE_NEWUSER, canChroot);
   }
 }
 
 SandboxFork::SandboxFork(int aFlags, bool aChroot)
-    : mFlags(aFlags), mChroot(aChroot) { }
+    : mFlags(aFlags), mChroot(aChroot) {}
 
 uint32_t SandboxFork::ToFlags() {
   MOZ_ASSERT((mFlags & CSIGNAL) == 0);
@@ -325,15 +326,15 @@ uint32_t SandboxFork::ToFlags() {
 }
 
 void SandboxLaunchPrepareSerialized(uint32_t aFlags,
-                                    base::LaunchOptions* aOptions)
-{
+                                    base::LaunchOptions* aOptions) {
   MOZ_ASSERT(!aOptions->fork_delegate);
   if (aFlags == 0) {
     return;
   }
-  aOptions->fork_delegate = MakeUnique<SandboxFork>(static_cast<int>(aFlags & ~CSIGNAL), (aFlags & SandboxFork::kChrootFlag) != 0);
+  aOptions->fork_delegate =
+      MakeUnique<SandboxFork>(static_cast<int>(aFlags & ~CSIGNAL),
+                              (aFlags & SandboxFork::kChrootFlag) != 0);
 }
-
 
 void SandboxFork::Prepare(base::LaunchOptions* aOptions) {
   MOZ_ASSERT(!mChrootClient && !mChrootServer);
@@ -347,7 +348,8 @@ void SandboxFork::Prepare(base::LaunchOptions* aOptions) {
     mChrootClient.reset(fds[0]);
     mChrootServer.reset(fds[1]);
     aOptions->env_map[kSandboxChrootEnvFlag] = "1";
-    aOptions->fds_to_remap.push_back({mChrootClient.get(), kSandboxChrootClientFd});
+    aOptions->fds_to_remap.push_back(
+        {mChrootClient.get(), kSandboxChrootClientFd});
   }
 }
 

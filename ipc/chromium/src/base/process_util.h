@@ -118,7 +118,7 @@ struct LaunchOptions {
 #if defined(OS_LINUX)
   struct ForkDelegate {
     virtual ~ForkDelegate() {}
-    virtual uint32_t ToFlags() { return 0; } // FIXME name
+    virtual uint32_t ToFlags() { return 0; }  // FIXME name
     virtual void Prepare(LaunchOptions*) {}
     virtual pid_t Fork() = 0;
   };
@@ -152,8 +152,8 @@ bool LaunchApp(const std::wstring& cmdline, LaunchOptions&& options,
 //
 // Note that the first argument in argv must point to the filename,
 // and must be fully specified (i.e., this will not search $PATH).
-bool LaunchApp(const std::vector<std::string>& argv,
-               LaunchOptions&& options, ProcessHandle* process_handle);
+bool LaunchApp(const std::vector<std::string>& argv, LaunchOptions&& options,
+               ProcessHandle* process_handle);
 
 // Deleter for the array of strings allocated within BuildEnvironmentArray.
 struct FreeEnvVarsArray {
