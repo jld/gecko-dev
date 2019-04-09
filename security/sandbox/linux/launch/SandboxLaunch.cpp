@@ -201,6 +201,10 @@ class SandboxFork : public base::LaunchOptions::ForkDelegate {
   void Prepare(base::LaunchOptions* aOptions) override;
   pid_t Fork() override;
 
+  // The low 8 bits of the real flags are used for the termination
+  // signal, so we can repurpose them.
+  static const uint32_t kChrootFlag = 1;
+
  private:
   UniqueFileHandle mChrootServer;
   UniqueFileHandle mChrootClient;
@@ -210,10 +214,6 @@ class SandboxFork : public base::LaunchOptions::ForkDelegate {
   void StartChrootServer();
   SandboxFork(const SandboxFork&) = delete;
   SandboxFork& operator=(const SandboxFork&) = delete;
-
-  // The low 8 bits of the real flags are used for the termination
-  // signal, so we can repurpose them.
-  static const uint32_t kChrootFlag = 1;
 };
 
 static int GetEffectiveSandboxLevel(GeckoProcessType aType) {
@@ -323,6 +323,17 @@ uint32_t SandboxFork::ToFlags() {
   MOZ_ASSERT((mFlags & CSIGNAL) == 0);
   return static_cast<uint32_t>(mFlags) | (mChroot ? kChrootFlag : 0);
 }
+
+void SandboxLaunchPrepareSerialized(uint32_t aFlags,
+                                    base::LaunchOptions* aOptions)
+{
+  MOZ_ASSERT(!aOptions->fork_delegate);
+  if (aFlags == 0) {
+    return;
+  }
+  aOptions->fork_delegate = MakeUnique<SandboxFork>(static_cast<int>(aFlags & ~CSIGNAL), (aFlags & SandboxFork::kChrootFlag) != 0);
+}
+
 
 void SandboxFork::Prepare(base::LaunchOptions* aOptions) {
   MOZ_ASSERT(!mChrootClient && !mChrootServer);

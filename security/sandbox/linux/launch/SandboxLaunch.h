@@ -17,6 +17,8 @@ namespace mozilla {
 // called on the main thread in order to access prefs.
 void SandboxLaunchPrepare(GeckoProcessType aType,
                           base::LaunchOptions* aOptions);
+void SandboxLaunchPrepareSerialized(uint32_t aFlags,
+                                    base::LaunchOptions* aOptions);
 bool HasAtiDrivers();
 
 }  // namespace mozilla
