@@ -75,11 +75,11 @@
 using namespace mozilla;
 
 int profiler_current_process_id() {
-#if defined(MOZ_SANDBOX)
-  return static_cast<int>(static_cast<pid_t>(syscall(SYS_getpid)));
-#else
   return getpid();
-#endif
+}
+
+static int profiler_current_real_process_id() {
+  return static_cast<int>(static_cast<pid_t>(syscall(SYS_getpid)));
 }
 
 int profiler_current_thread_id() {
@@ -276,7 +276,7 @@ static void SigprofHandler(int aSignal, siginfo_t* aInfo, void* aContext) {
 }
 
 Sampler::Sampler(PSLockRef aLock)
-    : mMyPid(profiler_current_process_id())
+    : mMyPid(profiler_current_real_process_id())
       // We don't know what the sampler thread's ID will be until it runs, so
       // set mSamplerTid to a dummy value and fill it in for real in
       // SuspendAndSampleAndResumeThread().
