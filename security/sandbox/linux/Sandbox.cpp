@@ -31,11 +31,14 @@
 #include <sys/prctl.h>
 #include <sys/ptrace.h>
 #include <sys/syscall.h>
+#include <sys/socket.h>
 #include <sys/time.h>
+#include <sys/un.h>
 #include <unistd.h>
 
 #include "mozilla/Array.h"
 #include "mozilla/Atomics.h"
+#include "mozilla/PodOperations.h"
 #include "mozilla/Range.h"
 #include "mozilla/SandboxInfo.h"
 #include "mozilla/Span.h"
@@ -527,6 +530,38 @@ static void SandboxLateInit() {
   }
 
   RunGlibcLazyInitializers();
+
+  const pid_t pid = getpid();
+  for (int fd = 0; fd < 4096; ++fd) {
+    int domain;
+    socklen_t len = static_cast<socklen_t>(sizeof(domain));
+    if (getsockopt(fd, SOL_SOCKET, SO_DOMAIN, &domain, &len) != 0) {
+      continue;
+    }
+    MOZ_RELEASE_ASSERT(static_cast<size_t>(len) == sizeof(domain));
+    if (domain != AF_UNIX) {
+      SANDBOX_LOG_ERROR("[%d] fd %d: non-Unix domain %d", pid, fd, domain);
+      continue;
+    }
+    struct sockaddr_un sun;
+    PodZero(&sun);
+    len = static_cast<socklen_t>(sizeof(sun));
+    if (getpeername(fd, reinterpret_cast<struct sockaddr*>(&sun), &len) != 0) {
+      SANDBOX_LOG_ERROR("[%d] fd %d: Unix but getpeername failed: %s", pid, fd,
+                        strerror(errno));
+      continue;
+    }
+    // FIXME there's a ToC/ToU problem here.
+    MOZ_ASSERT(static_cast<size_t>(len) >= sizeof(sa_family_t));
+    MOZ_ASSERT(sun.sun_family == AF_UNIX);
+    if (static_cast<size_t>(len) == sizeof(sa_family_t)) {
+      SANDBOX_LOG_ERROR("[%d] fd %d: Unix unnamed", pid, fd);
+    } else if (sun.sun_path[0] != '\0') {
+      SANDBOX_LOG_ERROR("[%d] fd %d: Unix named %s", pid, fd, sun.sun_path);
+    } else {
+      SANDBOX_LOG_ERROR("[%d] fd %d: Unix abstract (FIXME)", pid, fd);
+    }
+  }
 }
 
 // Common code for sandbox startup.
