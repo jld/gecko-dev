@@ -129,6 +129,12 @@ ifeq ($(MOZ_PKG_FORMAT),TGZ)
   INNER_UNMAKE_PACKAGE	= gunzip -c $(UNPACKAGE) | $(UNPACK_TAR)
 endif
 
+ifeq ($(MOZ_PKG_FORMAT),TPIGZ)
+  PKG_SUFFIX	= .tar.gz
+  INNER_MAKE_PACKAGE 	= $(CREATE_FINAL_TAR) - $(MOZ_PKG_DIR) | pigz -vf9 > $(PACKAGE)
+  INNER_UNMAKE_PACKAGE	= unpigz -c $(UNPACKAGE) | $(UNPACK_TAR)
+endif
+
 ifeq ($(MOZ_PKG_FORMAT),BZ2)
   PKG_SUFFIX	= .tar.bz2
   ifeq (cocoa,$(MOZ_WIDGET_TOOLKIT))
