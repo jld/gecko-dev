@@ -8,6 +8,7 @@
 
 #include "nsExceptionHandler.h"
 #include "nsExceptionHandlerUtils.h"
+#include "prio.h"
 
 namespace CrashReporter {
 
@@ -100,7 +101,9 @@ int GetAnnotationTimeCrashFd() { return 7; }
 #endif
 
 void RegisterChildCrashAnnotationFileDescriptor(ProcessId aProcess,
-                                                PRFileDesc* aFd) {}
+                                                PRFileDesc* aFd) {
+  PR_Close(aFd);
+}
 
 void DeregisterChildCrashAnnotationFileDescriptor(ProcessId aProcess) {}
 
