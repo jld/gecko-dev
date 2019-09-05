@@ -155,6 +155,8 @@ void ProcessLink::SendMessage(Message* msg) {
     mChan->AssertWorkerThread();
   }
   mChan->mMonitor->AssertCurrentThreadOwns();
+  
+  msg->record_send_time();
 
   mIOLoop->PostTask(NewNonOwningRunnableMethod<Message*>(
       "IPC::Channel::Send", mTransport, &Transport::Send, msg));

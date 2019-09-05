@@ -260,6 +260,8 @@ class Message : public Pickle {
   const char* name() const { return StringFromIPCMessageType(type()); }
 
   const mozilla::TimeStamp& create_time() const { return create_time_; }
+  const mozilla::TimeStamp& send_time() const { return header()->send_time; }
+  void record_send_time() { header()->send_time = mozilla::TimeStamp::Now(); }
 
 #if defined(OS_POSIX)
   uint32_t num_fds() const;
@@ -380,6 +382,8 @@ class Message : public Pickle {
     uint32_t interrupt_local_stack_depth;
     // Sequence number
     int32_t seqno;
+    // Creation time
+    mozilla::TimeStamp send_time;
   };
 
 #ifdef MOZ_TASK_TRACER
