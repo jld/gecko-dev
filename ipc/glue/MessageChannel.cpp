@@ -1227,9 +1227,11 @@ void MessageChannel::OnMessageReceivedFromLink(Message&& aMsg) {
 
   mListener->OnChannelReceivedMessage(aMsg);
 
-  char tbuf[256];
-  sprintf(tbuf, "IPDL message received (%s) latency: %.0f us\n", IPC::StringFromIPCMessageType(aMsg.type()), (mozilla::TimeStamp::Now() - aMsg.send_time()).ToMicroseconds());
-  ::OutputDebugStringA(tbuf);
+  static const auto my_pid = static_cast<unsigned long>(base::GetCurrentProcId());
+  const auto latency = (mozilla::TimeStamp::Now() - aMsg.send_time()).ToMicroseconds();
+  if (latency < 1e9 && latency > 1e4) {
+    fprintf(stderr, "[%lu] IPDL message received (%s) latency: %.0f us\n", my_pid, IPC::StringFromIPCMessageType(aMsg.type()), latency);
+  }
 
   // Regardless of the Interrupt stack, if we're awaiting a sync reply,
   // we know that it needs to be immediately handled to unblock us.
