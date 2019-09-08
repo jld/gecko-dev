@@ -33,6 +33,7 @@
 #include "chrome/common/ipc_message_utils.h"
 #include "mozilla/ipc/ProtocolUtils.h"
 #include "mozilla/StaticMutex.h"
+#include "mozilla/TimeStamp.h"
 #include "mozilla/UniquePtr.h"
 
 #ifdef FUZZING
@@ -618,6 +619,12 @@ bool Channel::ChannelImpl::ProcessOutgoingMessages() {
 #endif
     Message* msg = output_queue_.front();
 
+    static const auto my_pid = static_cast<unsigned long>(base::GetCurrentProcId());
+    const auto latency = (mozilla::TimeStamp::Now() - msg->send_time()).ToMicroseconds();
+    if (latency < 60e9 && latency > 5e3) {
+      fprintf(stderr, "[%lu] IPDL message being-sent (%s) latency: %.0f us\n", my_pid, IPC::StringFromIPCMessageType(msg->type()), latency);
+    }
+
     struct msghdr msgh = {0};
 
     static const int tmp =
@@ -795,6 +802,12 @@ bool Channel::ChannelImpl::Send(Message* message) {
     }
     delete message;
     return false;
+  }
+
+  static const auto my_pid = static_cast<unsigned long>(base::GetCurrentProcId());
+  const auto latency = (mozilla::TimeStamp::Now() - message->send_time()).ToMicroseconds();
+  if (latency > 0.5e3) {
+    fprintf(stderr, "[%lu] IPDL message sendable (%s) latency: %.0f us\n", my_pid, IPC::StringFromIPCMessageType(message->type()), latency);
   }
 
   OutputQueuePush(message);

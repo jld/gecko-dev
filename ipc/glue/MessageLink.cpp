@@ -155,7 +155,7 @@ void ProcessLink::SendMessage(Message* msg) {
     mChan->AssertWorkerThread();
   }
   mChan->mMonitor->AssertCurrentThreadOwns();
-  
+
   msg->record_send_time();
 
   mIOLoop->PostTask(NewNonOwningRunnableMethod<Message*>(
@@ -214,6 +214,8 @@ void ThreadLink::SendMessage(Message* msg) {
     mChan->AssertWorkerThread();
   }
   mChan->mMonitor->AssertCurrentThreadOwns();
+
+  msg->record_send_time();
 
   if (mTargetChan) mTargetChan->OnMessageReceivedFromLink(std::move(*msg));
   delete msg;

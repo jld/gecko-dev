@@ -1229,8 +1229,8 @@ void MessageChannel::OnMessageReceivedFromLink(Message&& aMsg) {
 
   static const auto my_pid = static_cast<unsigned long>(base::GetCurrentProcId());
   const auto latency = (mozilla::TimeStamp::Now() - aMsg.send_time()).ToMicroseconds();
-  if (latency < 1e9 && latency > 1e4) {
-    fprintf(stderr, "[%lu] IPDL message received (%s) latency: %.0f us\n", my_pid, IPC::StringFromIPCMessageType(aMsg.type()), latency);
+  if (latency > 10e3) {
+    fprintf(stderr, "[%lu] IPDL message received (%s) %zub, latency: %.0f us\n", my_pid, IPC::StringFromIPCMessageType(aMsg.type()), aMsg.Buffers().Size(), latency);
   }
 
   // Regardless of the Interrupt stack, if we're awaiting a sync reply,
