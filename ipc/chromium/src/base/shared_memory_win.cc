@@ -63,7 +63,7 @@ SharedMemory::SharedMemory()
       mapped_file_(NULL),
       memory_(NULL),
       read_only_(false),
-      freezeable_(false),
+      freeze_cap_(FreezeCap::NONE),
       max_size_(0) {}
 
 SharedMemory::SharedMemory(SharedMemory&& other) {
@@ -75,7 +75,7 @@ SharedMemory::SharedMemory(SharedMemory&& other) {
   memory_ = other.memory_;
   read_only_ = other.read_only_;
   max_size_ = other.max_size_;
-  freezeable_ = other.freezeable_;
+  freeze_cap_ = other.freeze_cap_;
   external_section_ = other.external_section_;
 
   other.mapped_file_ = nullptr;
@@ -91,7 +91,7 @@ bool SharedMemory::SetHandle(SharedMemoryHandle handle, bool read_only) {
   DCHECK(mapped_file_ == NULL);
 
   external_section_ = true;
-  freezeable_ = false;  // just in case
+  freeze_cap_ = FreezeCap::NONE;  // just in case
   mapped_file_ = handle;
   read_only_ = read_only;
   return true;
@@ -107,7 +107,7 @@ bool SharedMemory::IsValid() const { return mapped_file_ != NULL; }
 // static
 SharedMemoryHandle SharedMemory::NULLHandle() { return NULL; }
 
-bool SharedMemory::CreateInternal(size_t size, bool freezeable) {
+bool SharedMemory::CreateInternal(size_t size, FreezeCap freeze_cap) {
   DCHECK(mapped_file_ == NULL);
   read_only_ = false;
 
@@ -116,7 +116,7 @@ bool SharedMemory::CreateInternal(size_t size, bool freezeable) {
   ACL dacl;
   nsAutoStringN<sizeof("MozSharedMem_") + 16 * 4> name;
 
-  if (freezeable) {
+  if (freeze_cap != FreezeCap::NONE) {
     psa = &sa;
     sa.nLength = sizeof(sa);
     sa.lpSecurityDescriptor = &sd;
@@ -147,13 +147,13 @@ bool SharedMemory::CreateInternal(size_t size, bool freezeable) {
   if (!mapped_file_) return false;
 
   max_size_ = size;
-  freezeable_ = freezeable;
+  freeze_cap_ = freeze_cap;
   return true;
 }
 
 bool SharedMemory::Freeze() {
   DCHECK(!read_only_);
-  CHECK(freezeable_);
+  CHECK(freeze_cap_ != FreezeCap::NONE);
   Unmap();
 
   if (!::DuplicateHandle(GetCurrentProcess(), mapped_file_, GetCurrentProcess(),
@@ -163,8 +163,21 @@ bool SharedMemory::Freeze() {
   }
 
   read_only_ = true;
-  freezeable_ = false;
+  freeze_cap_ = FreezeCap::NONE;
   return true;
+}
+
+bool SharedMemory::FrozenCopy(SharedMemory* frozen_out) {
+  DCHECK(!read_only_);
+  CHECK(freeze_cap_ == FreezeCap::FROZEN_COPY);
+
+  HANDLE frozen;
+  if (!::DuplicateHandle(GetCurrentProcess(), mapped_file_, GetCurrentProcess(),
+                         &frozen, GENERIC_READ | FILE_MAP_READ, false, 0)) {
+    return false;
+  }
+
+  return frozen_out->SetHandle(frozen, /* read_only = */ true);
 }
 
 bool SharedMemory::Map(size_t bytes, void* fixed_address) {
@@ -204,7 +217,7 @@ void* SharedMemory::FindFreeAddressSpace(size_t size) {
 bool SharedMemory::ShareToProcessCommon(ProcessId processId,
                                         SharedMemoryHandle* new_handle,
                                         bool close_self) {
-  freezeable_ = false;
+  freeze_cap_ = FreezeCap::NONE;
   *new_handle = 0;
   DWORD access = FILE_MAP_READ | SECTION_QUERY;
   DWORD options = 0;

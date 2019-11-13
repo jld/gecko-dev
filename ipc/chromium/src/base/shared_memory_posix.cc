@@ -31,7 +31,7 @@ SharedMemory::SharedMemory()
       mapped_size_(0),
       memory_(nullptr),
       read_only_(false),
-      freezeable_(false),
+      freeze_cap_(FreezeCap::NONE),
       max_size_(0) {}
 
 SharedMemory::SharedMemory(SharedMemory&& other) {
@@ -44,7 +44,7 @@ SharedMemory::SharedMemory(SharedMemory&& other) {
   frozen_file_ = other.frozen_file_;
   memory_ = other.memory_;
   read_only_ = other.read_only_;
-  freezeable_ = other.freezeable_;
+  freeze_cap_ = other.freeze_cap_;
   max_size_ = other.max_size_;
 
   other.mapped_file_ = -1;
@@ -59,7 +59,7 @@ bool SharedMemory::SetHandle(SharedMemoryHandle handle, bool read_only) {
   DCHECK(mapped_file_ == -1);
   DCHECK(frozen_file_ == -1);
 
-  freezeable_ = false;
+  freeze_cap_ = FreezeCap::NONE;
   mapped_file_ = handle.fd;
   read_only_ = read_only;
   return true;
@@ -189,7 +189,8 @@ bool SharedMemory::AppendPosixShmPrefix(std::string* str, pid_t pid) {
 #endif    // !ANDROID
 }
 
-bool SharedMemory::CreateInternal(size_t size, bool freezeable) {
+bool SharedMemory::CreateInternal(size_t size, FreezeCap freeze_cap) {
+  bool freezeable = freeze_cap != FreezeCap::NONE;
   read_only_ = false;
 
   DCHECK(size > 0);
@@ -201,6 +202,11 @@ bool SharedMemory::CreateInternal(size_t size, bool freezeable) {
   bool needs_truncate = true;
 
 #ifdef ANDROID
+  // ashmem doesn't support this
+  if (freeze_cap == FreezeCap::FREEZE_COPY) {
+    errno = ENOSYS;
+    return false;
+  }
   // Android has its own shared memory facility:
   fd.reset(open("/" ASHMEM_NAME_DEF, O_RDWR, 0600));
   if (!fd) {
@@ -261,13 +267,13 @@ bool SharedMemory::CreateInternal(size_t size, bool freezeable) {
   mapped_file_ = fd.release();
   frozen_file_ = frozen_fd.release();
   max_size_ = size;
-  freezeable_ = freezeable;
+  freeze_cap_ = freeze_cap;
   return true;
 }
 
 bool SharedMemory::Freeze() {
   DCHECK(!read_only_);
-  CHECK(freezeable_);
+  CHECK(freeze_cap_ != FreezeCap::NONE);
   Unmap();
 
 #ifdef ANDROID
@@ -284,8 +290,21 @@ bool SharedMemory::Freeze() {
 #endif
 
   read_only_ = true;
-  freezeable_ = false;
+  freeze_cap_ = FreezeCap::NONE;
   return true;
+}
+
+bool SharedMemory::FrozenCopy(SharedMemory* frozen_out) {
+  DCHECK(!read_only_);
+  CHECK(freeze_cap_ == FreezeCap::FROZEN_COPY);
+
+  DCHECK(frozen_file_ >= 0);
+  FileDescriptor frozen(dup(frozen_file_), true);
+  if (frozen.fd < 0) {
+    return false;
+  }
+
+  return frozen_out->SetHandle(frozen, /* read_only = */ true);
 }
 
 bool SharedMemory::Map(size_t bytes, void* fixed_address) {
@@ -333,7 +352,7 @@ void* SharedMemory::FindFreeAddressSpace(size_t size) {
 bool SharedMemory::ShareToProcessCommon(ProcessId processId,
                                         SharedMemoryHandle* new_handle,
                                         bool close_self) {
-  freezeable_ = false;
+  freeze_cap_ = FreezeCap::NONE;
   const int new_fd = dup(mapped_file_);
   DCHECK(new_fd >= -1);
   new_handle->fd = new_fd;
