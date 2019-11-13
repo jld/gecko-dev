@@ -33,7 +33,14 @@ typedef FileDescriptor SharedMemoryHandle;
 
 // Platform abstraction for shared memory.  Provides a C++ wrapper
 // around the OS primitive for a memory mapped file.
-class SharedMemory {
+class SharedMemory final {
+ private:
+  enum class FreezeCap : uint8_t {
+    NONE,
+    FREEZE,
+    FROZEN_COPY,
+  };
+
  public:
   // Create a new SharedMemory object.
   SharedMemory();
@@ -67,13 +74,16 @@ class SharedMemory {
 
   // Creates a shared memory segment.
   // Returns true on success, false on failure.
-  bool Create(size_t size) { return CreateInternal(size, false); }
+  MOZ_MUST_USE bool Create(size_t size) { return CreateInternal(size, FreezeCap::NONE); }
 
   // Creates a shared memory segment that supports the Freeze()
   // method; see below.  (Warning: creating freezeable shared memory
   // within a sandboxed process isn't possible on some platforms.)
   // Returns true on success, false on failure.
-  bool CreateFreezeable(size_t size) { return CreateInternal(size, true); }
+  MOZ_MUST_USE bool CreateFreezeable(size_t size) { return CreateInternal(size, FreezeCap::FREEZE); }
+
+  // FIXME comment
+  MOZ_MUST_USE bool CreateFrozenCopyable(size_t size) { return CreateInternal(size, FreezeCap::FROZEN_COPY); }
 
   // Maps the shared memory into the caller's address space.
   // Returns true on success, false otherwise.  The memory address
@@ -109,7 +119,7 @@ class SharedMemory {
   // Used only in gfx/ipc/SharedDIBWin.cpp; should be removable once
   // NPAPI goes away.
   HANDLE GetHandle() {
-    freezeable_ = false;
+    freeze_cap_ = FreezeCap::NONE;
     return mapped_file_;
   }
 #endif
@@ -123,6 +133,8 @@ class SharedMemory {
   // (See bug 1479960 comment #0 for OS-specific implementation
   // details.)
   MOZ_MUST_USE bool Freeze();
+
+  MOZ_MUST_USE bool FrozenCopy(SharedMemory* frozen_out);
 
   // Closes the open shared memory segment.
   // It is safe to call Close repeatedly.
@@ -170,7 +182,7 @@ class SharedMemory {
   bool ShareToProcessCommon(ProcessId target_pid,
                             SharedMemoryHandle* new_handle, bool close_self);
 
-  bool CreateInternal(size_t size, bool freezeable);
+  bool CreateInternal(size_t size, FreezeCap freeze_cap);
 
 #if defined(OS_WIN)
   // If true indicates this came from an external source so needs extra checks
@@ -184,7 +196,7 @@ class SharedMemory {
 #endif
   void* memory_;
   bool read_only_;
-  bool freezeable_;
+  FreezeCap freeze_cap_;
   size_t max_size_;
 
   DISALLOW_EVIL_CONSTRUCTORS(SharedMemory);
