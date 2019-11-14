@@ -38,7 +38,7 @@ class SharedMemory final {
   enum class FreezeCap : uint8_t {
     NONE,
     FREEZE,
-    FROZEN_COPY,
+    RO_COPY,
   };
 
  public:
@@ -87,8 +87,8 @@ class SharedMemory final {
   }
 
   // FIXME comment
-  MOZ_MUST_USE bool CreateFrozenCopyable(size_t size) {
-    return CreateInternal(size, FreezeCap::FROZEN_COPY);
+  MOZ_MUST_USE bool CreateReadOnlyCopyable(size_t size) {
+    return CreateInternal(size, FreezeCap::RO_COPY);
   }
 
   // Maps the shared memory into the caller's address space.
@@ -140,7 +140,7 @@ class SharedMemory final {
   // details.)
   MOZ_MUST_USE bool Freeze();
 
-  MOZ_MUST_USE bool FrozenCopy(SharedMemory* frozen_out);
+  MOZ_MUST_USE bool ReadOnlyCopy(SharedMemory* frozen_out);
 
   // Closes the open shared memory segment.
   // It is safe to call Close repeatedly.

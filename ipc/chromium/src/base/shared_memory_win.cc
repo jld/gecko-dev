@@ -167,9 +167,9 @@ bool SharedMemory::Freeze() {
   return true;
 }
 
-bool SharedMemory::FrozenCopy(SharedMemory* frozen_out) {
+bool SharedMemory::ReadOnlyCopy(SharedMemory* frozen_out) {
   DCHECK(!read_only_);
-  CHECK(freeze_cap_ == FreezeCap::FROZEN_COPY);
+  CHECK(freeze_cap_ == FreezeCap::RO_COPY);
 
   HANDLE frozen;
   if (!::DuplicateHandle(GetCurrentProcess(), mapped_file_, GetCurrentProcess(),

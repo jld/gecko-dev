@@ -203,7 +203,7 @@ bool SharedMemory::CreateInternal(size_t size, FreezeCap freeze_cap) {
 
 #ifdef ANDROID
   // ashmem doesn't support this
-  if (freeze_cap == FreezeCap::FREEZE_COPY) {
+  if (freeze_cap == FreezeCap::RO_COPY) {
     errno = ENOSYS;
     return false;
   }
@@ -294,9 +294,9 @@ bool SharedMemory::Freeze() {
   return true;
 }
 
-bool SharedMemory::FrozenCopy(SharedMemory* frozen_out) {
+bool SharedMemory::ReadOnlyCopy(SharedMemory* frozen_out) {
   DCHECK(!read_only_);
-  CHECK(freeze_cap_ == FreezeCap::FROZEN_COPY);
+  CHECK(freeze_cap_ == FreezeCap::RO_COPY);
 
   DCHECK(frozen_file_ >= 0);
   FileDescriptor frozen(dup(frozen_file_), true);
