@@ -10,10 +10,15 @@
 #include <fcntl.h>
 #include <sys/mman.h>
 #include <sys/stat.h>
+#include <sys/syscall.h>
 #include <unistd.h>
 
 #ifdef ANDROID
 #  include <linux/ashmem.h>
+#endif
+
+#ifdef __FreeBSD__
+#  include <sys/capsicum.h>
 #endif
 
 #include "base/eintr_wrapper.h"
@@ -26,30 +31,28 @@
 namespace base {
 
 SharedMemory::SharedMemory()
-    : mapped_file_(-1),
+    : memory_(nullptr),
+      max_size_(0),
+      mapped_file_(-1),
       frozen_file_(-1),
       mapped_size_(0),
-      memory_(nullptr),
+      is_memfd_(false),
       read_only_(false),
-      freeze_cap_(FreezeCap::NONE),
-      max_size_(0) {}
+      freeze_cap_(FreezeCap::NONE) {}
 
 SharedMemory::SharedMemory(SharedMemory&& other) {
-  if (this == &other) {
-    return;
-  }
-
-  mapped_file_ = other.mapped_file_;
-  mapped_size_ = other.mapped_size_;
-  frozen_file_ = other.frozen_file_;
   memory_ = other.memory_;
+  max_size_ = other.max_size_;
+  mapped_file_ = other.mapped_file_;
+  frozen_file_ = other.frozen_file_;
+  mapped_size_ = other.mapped_size_;
+  is_memfd_ = other.is_memfd_;
   read_only_ = other.read_only_;
   freeze_cap_ = other.freeze_cap_;
-  max_size_ = other.max_size_;
 
   other.mapped_file_ = -1;
-  other.mapped_size_ = 0;
   other.frozen_file_ = -1;
+  other.mapped_size_ = 0;
   other.memory_ = nullptr;
 }
 
@@ -62,6 +65,7 @@ bool SharedMemory::SetHandle(SharedMemoryHandle handle, bool read_only) {
   freeze_cap_ = FreezeCap::NONE;
   mapped_file_ = handle.fd;
   read_only_ = read_only;
+  // is_memfd_ only matters for freezing, which isn't possible
   return true;
 }
 
@@ -158,11 +162,82 @@ static int SafeShmUnlink(bool freezeable, const char* name) {
 }
 #endif
 
+// memfd_create is an interface for creating anonymous shared memory
+// accessible as a file descriptor but not tied to any filesystem,
+// introduced in Linux 3.17 and also implemented by FreeBSD as of the
+// upcoming 13.0 release.
+//
+// Linux allows using procfs to downgrade a read/write fd to read-only
+// by opening /proc/self/fd/N with the desired access mode, even if it
+// doesn't otherwise exist in the filesystem.  This is sufficient to
+// implement freezing.
+//
+// memfd_create also allows freezing via the F_ADD_SEALS fcntl, which
+// prevents even an unsandboxed process from regaining write access,
+// but on Linux this requires closing all fds with write access first.
+
+#if defined(OS_LINUX)
+#if !defined(__GLIBC__) || __GLIBC__ < 2 || (__GLIBC__ == 2 && __GLIBC_MINOR__ < 27)
+  // FIXME get the syscall numbers.  And constants.
+  // Also do something about unknown arch.
+#else // Linux, new glibc
+#define HAVE_MEMFD_CREATE
+#endif // glibc version
+
+static const bool kHaveDupReadOnly = true;
+
+static int DupReadOnly(int fd) {
+  std::string path = StringPrintf("/proc/self/fd/%d", fd);
+  return open(path.c_str(), O_RDONLY | O_CLOEXEC);
+}
+
+#elif defined(__FreeBSD__) && __FreeBSD_version >= 1300048
+
+#define HAVE_MEMFD_CREATE
+
+static int DupReadOnly(int fd) {
+  int rofd = dup(fd);
+  if (rofd < 0) {
+    return -1;
+  }
+
+  cap_rights_t rights;
+  cap_rights_init(&rights, CAP_FSTAT, CAP_MMAP_R);
+  if (cap_rights_limit(rofd, &rights) < 0) {
+    close(rofd);
+    return -1;
+  }
+
+  return ro;
+}
+
+#endif // OS stuff
+
+static bool HaveMemfd() {
+#ifdef HAVE_MEMFD_CREATE
+  static const bool kHave = [] {
+      int fd = memfd_create("mozilla-ipc-test", MFD_CLOEXEC);
+      if (fd < 0) {
+        DCHECK(errno == ENOSYS);
+        return false;
+      }
+      close(fd);
+      return true;
+    }();
+  return kHave;
+#else
+  return false;
+#endif // HAVE_MEMFD_CREATE
+}
+
 // static
 bool SharedMemory::AppendPosixShmPrefix(std::string* str, pid_t pid) {
 #if defined(ANDROID)
   return false;
 #else
+  if (HaveMemfd()) {
+    return false;
+  }
   *str += '/';
 #  ifdef OS_LINUX
   // The Snap package environment doesn't provide a private /dev/shm
@@ -200,57 +275,80 @@ bool SharedMemory::CreateInternal(size_t size, FreezeCap freeze_cap) {
   mozilla::UniqueFileHandle fd;
   mozilla::UniqueFileHandle frozen_fd;
   bool needs_truncate = true;
+  bool is_memfd = false;
 
-#ifdef ANDROID
-  // ashmem doesn't support this
-  if (freeze_cap == FreezeCap::RO_COPY) {
-    errno = ENOSYS;
-    return false;
-  }
-  // Android has its own shared memory facility:
-  fd.reset(open("/" ASHMEM_NAME_DEF, O_RDWR, 0600));
-  if (!fd) {
-    CHROMIUM_LOG(WARNING) << "failed to open shm: " << strerror(errno);
-    return false;
-  }
-  if (ioctl(fd.get(), ASHMEM_SET_SIZE, size) != 0) {
-    CHROMIUM_LOG(WARNING) << "failed to set shm size: " << strerror(errno);
-    return false;
-  }
-  needs_truncate = false;
-#else
-  // Generic Unix: shm_open + shm_unlink
-  do {
-    // The names don't need to be unique, but it saves time if they
-    // usually are.
-    static mozilla::Atomic<size_t> sNameCounter;
-    std::string name;
-    CHECK(AppendPosixShmPrefix(&name, getpid()));
-    StringAppendF(&name, "%zu", sNameCounter++);
-    // O_EXCL means the names being predictable shouldn't be a problem.
-    fd.reset(HANDLE_EINTR(SafeShmOpen(freezeable, name.c_str(),
-                                      O_RDWR | O_CREAT | O_EXCL, 0600)));
-    if (fd) {
-      if (freezeable) {
-        frozen_fd.reset(HANDLE_EINTR(
-            SafeShmOpen(freezeable, name.c_str(), O_RDONLY, 0400)));
-        if (!frozen_fd) {
-          int open_err = errno;
-          SafeShmUnlink(freezeable, name.c_str());
-          DLOG(FATAL) << "failed to re-open freezeable shm: "
-                      << strerror(open_err);
-          return false;
-        }
-      }
-      if (SafeShmUnlink(freezeable, name.c_str()) != 0) {
-        // This shouldn't happen, but if it does: assume the file is
-        // in fact leaked, and bail out now while it's still 0-length.
-        DLOG(FATAL) << "failed to unlink shm: " << strerror(errno);
+#ifdef HAVE_MEMFD_CREATE
+  if (HaveMemfd()) {
+    fd.reset(memfd_create("mozilla-ipc", MFD_CLOEXEC | MFD_ALLOW_SEALING));
+    if (!fd) {
+      // In general it's too late to fall back here -- in a sandboxed
+      // child process, shm_open is already blocked.
+      CHROMIUM_LOG(WARNING) << "failed to create memfd: " << strerror(errno);
+      return false;
+    }
+    is_memfd = true;
+    if (freezeable) {
+      frozen_fd.reset(DupReadOnly(fd.get()));
+      if (!frozen_fd) {
+        CHROMIUM_LOG(WARNING) << "failed to create read-only memfd: " << strerror(errno);
         return false;
       }
     }
-  } while (!fd && errno == EEXIST);
+  }
 #endif
+
+  if (!fd) {
+#ifdef ANDROID
+    // ashmem doesn't support this
+    if (freeze_cap == FreezeCap::RO_COPY) {
+      errno = ENOSYS;
+      return false;
+    }
+    // Android has its own shared memory facility:
+    fd.reset(open("/" ASHMEM_NAME_DEF, O_RDWR, 0600));
+    if (!fd) {
+      CHROMIUM_LOG(WARNING) << "failed to open shm: " << strerror(errno);
+      return false;
+    }
+    if (ioctl(fd.get(), ASHMEM_SET_SIZE, size) != 0) {
+      CHROMIUM_LOG(WARNING) << "failed to set shm size: " << strerror(errno);
+      return false;
+    }
+    needs_truncate = false;
+#else
+    // Generic Unix: shm_open + shm_unlink
+    do {
+      // The names don't need to be unique, but it saves time if they
+      // usually are.
+      static mozilla::Atomic<size_t> sNameCounter;
+      std::string name;
+      CHECK(AppendPosixShmPrefix(&name, getpid()));
+      StringAppendF(&name, "%zu", sNameCounter++);
+      // O_EXCL means the names being predictable shouldn't be a problem.
+      fd.reset(HANDLE_EINTR(SafeShmOpen(freezeable, name.c_str(),
+                                        O_RDWR | O_CREAT | O_EXCL, 0600)));
+      if (fd) {
+        if (freezeable) {
+          frozen_fd.reset(HANDLE_EINTR(
+              SafeShmOpen(freezeable, name.c_str(), O_RDONLY, 0400)));
+          if (!frozen_fd) {
+            int open_err = errno;
+            SafeShmUnlink(freezeable, name.c_str());
+            DLOG(FATAL) << "failed to re-open freezeable shm: "
+                        << strerror(open_err);
+            return false;
+          }
+        }
+        if (SafeShmUnlink(freezeable, name.c_str()) != 0) {
+          // This shouldn't happen, but if it does: assume the file is
+          // in fact leaked, and bail out now while it's still 0-length.
+          DLOG(FATAL) << "failed to unlink shm: " << strerror(errno);
+          return false;
+        }
+      }
+    } while (!fd && errno == EEXIST);
+#endif
+  }
 
   if (!fd) {
     CHROMIUM_LOG(WARNING) << "failed to open shm: " << strerror(errno);
@@ -268,6 +366,7 @@ bool SharedMemory::CreateInternal(size_t size, FreezeCap freeze_cap) {
   frozen_file_ = frozen_fd.release();
   max_size_ = size;
   freeze_cap_ = freeze_cap;
+  is_memfd_ = is_memfd;
   return true;
 }
 
@@ -275,19 +374,30 @@ bool SharedMemory::Freeze() {
   DCHECK(!read_only_);
   CHECK(freeze_cap_ != FreezeCap::NONE);
   Unmap();
+  bool is_ashmem = false;
 
 #ifdef ANDROID
-  if (ioctl(mapped_file_, ASHMEM_SET_PROT_MASK, PROT_READ) != 0) {
+  is_ashmem = !is_memfd_;
+  if (is_ashmem && ioctl(mapped_file_, ASHMEM_SET_PROT_MASK, PROT_READ) != 0) {
     CHROMIUM_LOG(WARNING) << "failed to freeze shm: " << strerror(errno);
     return false;
   }
-#else
-  DCHECK(frozen_file_ >= 0);
-  DCHECK(mapped_file_ >= 0);
-  close(mapped_file_);
-  mapped_file_ = frozen_file_;
-  frozen_file_ = -1;
 #endif
+
+  if (!is_ashmem) {
+    DCHECK(frozen_file_ >= 0);
+    DCHECK(mapped_file_ >= 0);
+    close(mapped_file_);
+    mapped_file_ = frozen_file_;
+    frozen_file_ = -1;
+
+#ifdef HAVE_MEMFD_CREATE
+    if (is_memfd_ && fcntl(mapped_file_, F_ADD_SEALS, F_SEAL_WRITE | F_SEAL_GROW | F_SEAL_SHRINK | F_SEAL_SEAL) != 0) {
+      CHROMIUM_LOG(WARNING) << "failed to seal memfd: " << strerror(errno);
+      return false;
+    }
+#endif
+  }
 
   read_only_ = true;
   freeze_cap_ = FreezeCap::NONE;

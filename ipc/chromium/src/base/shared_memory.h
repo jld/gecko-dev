@@ -190,20 +190,21 @@ class SharedMemory final {
 
   bool CreateInternal(size_t size, FreezeCap freeze_cap);
 
+  void* memory_;
+  size_t max_size_;
 #if defined(OS_WIN)
   // If true indicates this came from an external source so needs extra checks
   // before being mapped.
-  bool external_section_;
   HANDLE mapped_file_;
+  bool external_section_;
 #elif defined(OS_POSIX)
   int mapped_file_;
   int frozen_file_;
   size_t mapped_size_;
+  bool is_memfd_;
 #endif
-  void* memory_;
   bool read_only_;
   FreezeCap freeze_cap_;
-  size_t max_size_;
 
   DISALLOW_EVIL_CONSTRUCTORS(SharedMemory);
 };

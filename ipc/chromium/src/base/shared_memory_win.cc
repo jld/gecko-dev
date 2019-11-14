@@ -59,24 +59,20 @@ bool IsSectionSafeToMap(HANDLE handle) {
 namespace base {
 
 SharedMemory::SharedMemory()
-    : external_section_(false),
-      mapped_file_(NULL),
-      memory_(NULL),
+    : memory_(nullptr),
+      max_size_(0),
+      mapped_file_(nullptr),
+      external_section_(false),
       read_only_(false),
-      freeze_cap_(FreezeCap::NONE),
-      max_size_(0) {}
+      freeze_cap_(FreezeCap::NONE) {}
 
 SharedMemory::SharedMemory(SharedMemory&& other) {
-  if (this == &other) {
-    return;
-  }
-
-  mapped_file_ = other.mapped_file_;
   memory_ = other.memory_;
-  read_only_ = other.read_only_;
   max_size_ = other.max_size_;
-  freeze_cap_ = other.freeze_cap_;
+  mapped_file_ = other.mapped_file_;
   external_section_ = other.external_section_;
+  read_only_ = other.read_only_;
+  freeze_cap_ = other.freeze_cap_;
 
   other.mapped_file_ = nullptr;
   other.memory_ = nullptr;
