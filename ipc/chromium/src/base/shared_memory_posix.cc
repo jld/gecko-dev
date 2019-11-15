@@ -170,12 +170,13 @@ static int SafeShmUnlink(bool freezeable, const char* name) {
 // FIXME write about seals and freezing but make it not false
 
 #if defined(OS_LINUX)
-#if !defined(__GLIBC__) || __GLIBC__ < 2 || (__GLIBC__ == 2 && __GLIBC_MINOR__ < 27)
-  // FIXME get the syscall numbers.  And constants.
-  // Also do something about unknown arch.
-#else // Linux, new glibc
-#define HAVE_MEMFD_CREATE
-#endif // glibc version
+#  if !defined(__GLIBC__) || __GLIBC__ < 2 || \
+      (__GLIBC__ == 2 && __GLIBC_MINOR__ < 27)
+// FIXME get the syscall numbers.  And constants.
+// Also do something about unknown arch.
+#  else  // Linux, new glibc
+#    define HAVE_MEMFD_CREATE
+#  endif  // glibc version
 
 static int DupReadOnly(int fd) {
   std::string path = StringPrintf("/proc/self/fd/%d", fd);
@@ -184,7 +185,7 @@ static int DupReadOnly(int fd) {
 
 #elif defined(__FreeBSD__) && __FreeBSD_version >= 1300048
 
-#define HAVE_MEMFD_CREATE
+#  define HAVE_MEMFD_CREATE
 
 static int DupReadOnly(int fd) {
   int rofd = dup(fd);
@@ -202,27 +203,27 @@ static int DupReadOnly(int fd) {
   return ro;
 }
 
-#endif // OS stuff
+#endif  // OS stuff
 
 static bool HaveMemfd() {
 #ifdef HAVE_MEMFD_CREATE
   static const bool kHave = [] {
-      // FIXME cite the Tor Browser thing
-      if (access("/proc/self/fd", R_OK | X_OK) < 0) {
-        return false;
-      }
-      int fd = memfd_create("mozilla-ipc-test", MFD_CLOEXEC);
-      if (fd < 0) {
-        DCHECK(errno == ENOSYS);
-        return false;
-      }
-      close(fd);
-      return true;
-    }();
+    // FIXME cite the Tor Browser thing
+    if (access("/proc/self/fd", R_OK | X_OK) < 0) {
+      return false;
+    }
+    int fd = memfd_create("mozilla-ipc-test", MFD_CLOEXEC);
+    if (fd < 0) {
+      DCHECK(errno == ENOSYS);
+      return false;
+    }
+    close(fd);
+    return true;
+  }();
   return kHave;
 #else
   return false;
-#endif // HAVE_MEMFD_CREATE
+#endif  // HAVE_MEMFD_CREATE
 }
 
 // static
@@ -286,7 +287,8 @@ bool SharedMemory::CreateInternal(size_t size, FreezeCap freeze_cap) {
     if (freezeable) {
       frozen_fd.reset(DupReadOnly(fd.get()));
       if (!frozen_fd) {
-        CHROMIUM_LOG(WARNING) << "failed to create read-only memfd: " << strerror(errno);
+        CHROMIUM_LOG(WARNING)
+            << "failed to create read-only memfd: " << strerror(errno);
         return false;
       }
     }
@@ -387,7 +389,8 @@ bool SharedMemory::Freeze() {
 
 #ifdef HAVE_MEMFD_CREATE
   if (is_memfd_) {
-    if (fcntl(mapped_file_, F_ADD_SEALS, F_SEAL_WRITE | F_SEAL_GROW | F_SEAL_SHRINK | F_SEAL_SEAL) != 0) {
+    if (fcntl(mapped_file_, F_ADD_SEALS,
+              F_SEAL_WRITE | F_SEAL_GROW | F_SEAL_SHRINK | F_SEAL_SEAL) != 0) {
       CHROMIUM_LOG(WARNING) << "failed to seal memfd: " << strerror(errno);
       return false;
     }
