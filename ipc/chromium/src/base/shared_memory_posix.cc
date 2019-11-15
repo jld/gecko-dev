@@ -167,14 +167,7 @@ static int SafeShmUnlink(bool freezeable, const char* name) {
 // introduced in Linux 3.17 and also implemented by FreeBSD as of the
 // upcoming 13.0 release.
 //
-// Linux allows using procfs to downgrade a read/write fd to read-only
-// by opening /proc/self/fd/N with the desired access mode, even if it
-// doesn't otherwise exist in the filesystem.  This is sufficient to
-// implement freezing.
-//
-// memfd_create also allows freezing via the F_ADD_SEALS fcntl, which
-// prevents even an unsandboxed process from regaining write access,
-// but on Linux this requires closing all fds with write access first.
+// FIXME write about seals and freezing but make it not false
 
 #if defined(OS_LINUX)
 #if !defined(__GLIBC__) || __GLIBC__ < 2 || (__GLIBC__ == 2 && __GLIBC_MINOR__ < 27)
@@ -183,8 +176,6 @@ static int SafeShmUnlink(bool freezeable, const char* name) {
 #else // Linux, new glibc
 #define HAVE_MEMFD_CREATE
 #endif // glibc version
-
-static const bool kHaveDupReadOnly = true;
 
 static int DupReadOnly(int fd) {
   std::string path = StringPrintf("/proc/self/fd/%d", fd);
@@ -216,6 +207,10 @@ static int DupReadOnly(int fd) {
 static bool HaveMemfd() {
 #ifdef HAVE_MEMFD_CREATE
   static const bool kHave = [] {
+      // FIXME cite the Tor Browser thing
+      if (access("/proc/self/fd", R_OK | X_OK) < 0) {
+        return false;
+      }
       int fd = memfd_create("mozilla-ipc-test", MFD_CLOEXEC);
       if (fd < 0) {
         DCHECK(errno == ENOSYS);
@@ -282,7 +277,8 @@ bool SharedMemory::CreateInternal(size_t size, FreezeCap freeze_cap) {
     fd.reset(memfd_create("mozilla-ipc", MFD_CLOEXEC | MFD_ALLOW_SEALING));
     if (!fd) {
       // In general it's too late to fall back here -- in a sandboxed
-      // child process, shm_open is already blocked.
+      // child process, shm_open is already blocked.  And it shouldn't
+      // be necessary.
       CHROMIUM_LOG(WARNING) << "failed to create memfd: " << strerror(errno);
       return false;
     }
@@ -371,32 +367,40 @@ bool SharedMemory::CreateInternal(size_t size, FreezeCap freeze_cap) {
 }
 
 bool SharedMemory::Freeze() {
+  DCHECK(mapped_file_ >= 0);
   DCHECK(!read_only_);
   CHECK(freeze_cap_ != FreezeCap::NONE);
   Unmap();
+
   bool is_ashmem = false;
 
 #ifdef ANDROID
-  is_ashmem = !is_memfd_;
-  if (is_ashmem && ioctl(mapped_file_, ASHMEM_SET_PROT_MASK, PROT_READ) != 0) {
-    CHROMIUM_LOG(WARNING) << "failed to freeze shm: " << strerror(errno);
-    return false;
+  if (!is_memfd_) {
+    is_ashmem = true;
+    DCHECK(frozen_file_ < 0);
+    if (ioctl(mapped_file_, ASHMEM_SET_PROT_MASK, PROT_READ) != 0) {
+      CHROMIUM_LOG(WARNING) << "failed to freeze shm: " << strerror(errno);
+      return false;
+    }
   }
+#endif
+
+#ifdef HAVE_MEMFD_CREATE
+  if (is_memfd_) {
+    if (fcntl(mapped_file_, F_ADD_SEALS, F_SEAL_WRITE | F_SEAL_GROW | F_SEAL_SHRINK | F_SEAL_SEAL) != 0) {
+      CHROMIUM_LOG(WARNING) << "failed to seal memfd: " << strerror(errno);
+      return false;
+    }
+  }
+#else
+  DCHECK(!is_memfd_);
 #endif
 
   if (!is_ashmem) {
     DCHECK(frozen_file_ >= 0);
-    DCHECK(mapped_file_ >= 0);
     close(mapped_file_);
     mapped_file_ = frozen_file_;
     frozen_file_ = -1;
-
-#ifdef HAVE_MEMFD_CREATE
-    if (is_memfd_ && fcntl(mapped_file_, F_ADD_SEALS, F_SEAL_WRITE | F_SEAL_GROW | F_SEAL_SHRINK | F_SEAL_SEAL) != 0) {
-      CHROMIUM_LOG(WARNING) << "failed to seal memfd: " << strerror(errno);
-      return false;
-    }
-#endif
   }
 
   read_only_ = true;
@@ -483,7 +487,9 @@ void SharedMemory::Close(bool unmap_view) {
     mapped_file_ = -1;
   }
   if (frozen_file_ >= 0) {
-    CHROMIUM_LOG(WARNING) << "freezeable shared memory was never frozen";
+    if (freeze_cap_ != FreezeCap::RO_COPY) {
+      CHROMIUM_LOG(WARNING) << "freezeable shared memory was never frozen";
+    }
     close(frozen_file_);
     frozen_file_ = -1;
   }
