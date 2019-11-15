@@ -172,9 +172,67 @@ static int SafeShmUnlink(bool freezeable, const char* name) {
 #if defined(OS_LINUX)
 #  if !defined(__GLIBC__) || __GLIBC__ < 2 || \
       (__GLIBC__ == 2 && __GLIBC_MINOR__ < 27)
-// FIXME get the syscall numbers.  And constants.
-// Also do something about unknown arch.
-#  else  // Linux, new glibc
+
+// glibc before 2.27 didn't have a memfd_create wrapper, and if the
+// build system is old enough then it won't have the syscall number
+// and various related constants either.
+
+#    if defined(__x86_64__)
+#      define MEMFD_CREATE_NR 319
+#    elif defined(__i386__)
+#      define MEMFD_CREATE_NR 356
+#    elif defined(__aarch64__)
+#      define MEMFD_CREATE_NR 385
+#    elif defined(__arm__)
+#      define MEMFD_CREATE_NR 385
+#    elif defined(__powerpc__)
+#      define MEMFD_CREATE_NR 360
+#    elif defined(__s390__)
+#      define MEMFD_CREATE_NR 350
+#    elif defined(__mips__)
+#      include <sgidefs.h>
+#      if _MIPS_SIM == _MIPS_SIM_ABI32
+#        define MEMFD_CREATE_NR 4354
+#      elif _MIPS_SIM == _MIPS_SIM_ABI64
+#        define MEMFD_CREATE_NR 5314
+#      elif _MIPS_SIM == _MIPS_SIM_NABI32
+#        define MEMFD_CREATE_NR 6318
+#      endif  // mips subarch
+#    endif    // arch
+
+#    ifdef MEMFD_CREATE_NR
+#      ifdef SYS_memfd_create
+static_assert(MEMFD_CREATE_NR == SYS_memfd_create,
+              "MEMFD_CREATE_NR should match the actual SYS_memfd_create value");
+#      else  // defined here but not in system headers
+#        define SYS_memfd_create MEMFD_CREATE_NR
+#      endif
+#    endif
+
+#    ifdef SYS_memfd_create
+#      define HAVE_MEMFD_CREATE
+
+static int memfd_create(const char* name, unsigned int flags) {
+  return syscall(SYS_memfd_create, name, flags);
+}
+
+#      ifndef MFD_CLOEXEC
+#        define MFD_CLOEXEC 0x0001U
+#        define MFD_ALLOW_SEALING 0x0002U
+#      endif
+
+#      ifndef F_ADD_SEALS
+#        define F_ADD_SEALS (F_LINUX_SPECIFIC_BASE + 9)
+#        define F_GET_SEALS (F_LINUX_SPECIFIC_BASE + 10)
+#        define F_SEAL_SEAL 0x0001   /* prevent further seals from being set */
+#        define F_SEAL_SHRINK 0x0002 /* prevent file from shrinking */
+#        define F_SEAL_GROW 0x0004   /* prevent file from growing */
+#        define F_SEAL_WRITE 0x0008  /* prevent writes */
+#      endif
+
+#    endif  // have SYS_memfd_create
+
+#  else  // Linux, new glibc; has memfd_create stub
 #    define HAVE_MEMFD_CREATE
 #  endif  // glibc version
 
