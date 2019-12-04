@@ -180,11 +180,13 @@ class SANDBOX_EXPORT InsnPtr {
  public:
   InsnPtr() = default;
 
-  friend BoolExpr operator==(const InsnPtr& lhs, uint64_t rhs) {
-    return lhs.EqualTo(rhs);
+  template<class Int>
+  friend BoolExpr operator==(const InsnPtr& lhs, Int rhs) {
+    return lhs.EqualTo((uint64_t)rhs);
   }
 
-  friend BoolExpr operator!=(const InsnPtr& lhs, uint64_t rhs) {
+  template<class Int>
+  friend BoolExpr operator!=(const InsnPtr& lhs, Int rhs) {
     return Not(lhs == rhs);
   }
 
