@@ -568,16 +568,18 @@ class SandboxPolicyCommon : public SandboxPolicyBase {
         return Allow();
 
         // FIXME explain this
-      CASES_FOR_sigprocmask: {
+      CASES_FOR_sigprocmask : {
         Arg<int> how(0);
-        Arg<uintptr_t> oldSet(1);
-        return If(AnyOf(how == SIG_UNBLOCK, oldSet == 0), Allow())
-            .Else(Trap([](ArgsRef aArgs, void* aAux) -> intptr_t {
-                         // This case is handled specially in the
-                         // SIGSYS handler in Sandbox.cpp.
-                         MOZ_CRASH("unreachable");
-                         return -ENOSYS;
-                       }, nullptr));
+        Arg<uintptr_t> set(1);
+        return If(AnyOf(how == SIG_UNBLOCK, set == 0), Allow())
+            .Else(Trap(
+                [](ArgsRef aArgs, void* aAux) -> intptr_t {
+                  // This case is handled specially in the
+                  // SIGSYS handler in Sandbox.cpp.
+                  MOZ_CRASH("unreachable");
+                  return -ENOSYS;
+                },
+                nullptr));
       }
 
         // Send signals within the process (raise(), profiling, etc.)

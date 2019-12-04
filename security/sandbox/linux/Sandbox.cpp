@@ -148,6 +148,9 @@ bool MaybeHandleSignalMask(ucontext_t* aContext) {
   auto newSet = reinterpret_cast<const unsigned long*>(SECCOMP_PARM2(aContext));
   auto oldSet = reinterpret_cast<unsigned long*>(SECCOMP_PARM3(aContext));
 
+  // The filter passes SIG_UNBLOCK and the read-only case where newSet
+  // is null, so neither of those need to be handled here.
+
   if (how != SIG_BLOCK && how != SIG_SETMASK) {
     SANDBOX_LOG_ERROR("Bad sigprocmask operation %d", how);
     return true;
@@ -159,15 +162,13 @@ bool MaybeHandleSignalMask(ucontext_t* aContext) {
     }
   }
 
-  if (newSet) {
-    if (how == SIG_BLOCK) {
-      for (size_t i = 0; i < setWords; ++i) {
-        ctxMaskRaw[i] |= newSet[i];
-      }
-    } else {
-      for (size_t i = 0; i < kWordsPerSet; ++i) {
-        ctxMaskRaw[i] = i < setWords ? newSet[i] : 0;
-      }
+  if (how == SIG_BLOCK) {
+    for (size_t i = 0; i < setWords; ++i) {
+      ctxMaskRaw[i] |= newSet[i];
+    }
+  } else {
+    for (size_t i = 0; i < kWordsPerSet; ++i) {
+      ctxMaskRaw[i] = i < setWords ? newSet[i] : 0;
     }
   }
 
