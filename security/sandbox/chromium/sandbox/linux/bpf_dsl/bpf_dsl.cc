@@ -197,6 +197,21 @@ class OrBoolExprImpl : public internal::BoolExprImpl {
   DISALLOW_COPY_AND_ASSIGN(OrBoolExprImpl);
 };
 
+class InsnPtrEqualImpl : public internal::BoolExprImpl {
+ public:
+  explicit InsnPtrEqualImpl(uint64_t pc) : pc_(pc) {}
+  ~InsnPtrEqualImpl() override {}
+
+  CodeGen::Node Compile(PolicyCompiler* pc,
+                        CodeGen::Node then_node,
+                        CodeGen::Node else_node) const override {
+    return pc->InsnPtrEqual(pc_, then_node, else_node);
+  }
+
+ private:
+  uint64_t pc_;
+};
+
 }  // namespace
 
 namespace internal {
@@ -332,6 +347,10 @@ ResultExpr Elser::Else(ResultExpr else_result) const {
                                                   std::move(expr));
   }
   return expr;
+}
+
+BoolExpr InsnPtr::EqualTo(uint64_t val) const {
+  return std::make_shared<InsnPtrEqualImpl>(val);
 }
 
 }  // namespace bpf_dsl

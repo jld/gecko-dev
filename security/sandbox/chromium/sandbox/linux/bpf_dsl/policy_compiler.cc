@@ -424,6 +424,24 @@ CodeGen::Node PolicyCompiler::MaskedEqualHalf(int argno,
               BPF_JMP + BPF_JEQ + BPF_K, value, passed, failed)));
 }
 
+CodeGen::Node PolicyCompiler::InsnPtrEqual(uint64_t ip,
+                                           CodeGen::Node passed,
+                                           CodeGen::Node failed)
+{
+  const uint32_t lopc = static_cast<uint32_t>(ip);
+  const uint32_t hipc = static_cast<uint32_t>(ip >> 32);
+
+  return gen_.MakeInstruction(
+      BPF_LD + BPF_W + BPF_ABS, SECCOMP_IP_LSB_IDX,
+      gen_.MakeInstruction(
+          BPF_JMP + BPF_JEQ + BPF_K, lopc,
+          gen_.MakeInstruction(
+              BPF_LD + BPF_W + BPF_ABS, SECCOMP_IP_MSB_IDX,
+              gen_.MakeInstruction(BPF_JMP + BPF_JEQ + BPF_K, hipc,
+                                   passed, failed)),
+          failed));
+}
+
 CodeGen::Node PolicyCompiler::Unexpected64bitArgument() {
   return CompileResult(panic_func_("Unexpected 64bit argument detected"));
 }

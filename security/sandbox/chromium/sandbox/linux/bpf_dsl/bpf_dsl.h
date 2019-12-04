@@ -176,6 +176,24 @@ class SANDBOX_EXPORT Arg {
   DISALLOW_ASSIGN(Arg);
 };
 
+class SANDBOX_EXPORT InsnPtr {
+ public:
+  InsnPtr() = default;
+
+  friend BoolExpr operator==(const InsnPtr& lhs, uint64_t rhs) {
+    return lhs.EqualTo(rhs);
+  }
+
+  friend BoolExpr operator!=(const InsnPtr& lhs, uint64_t rhs) {
+    return Not(lhs == rhs);
+  }
+
+ private:
+  BoolExpr EqualTo(uint64_t val) const;
+
+  DISALLOW_ASSIGN(InsnPtr);
+};
+
 // If begins a conditional result expression predicated on the
 // specified boolean expression.
 SANDBOX_EXPORT Elser If(BoolExpr cond, ResultExpr then_result);

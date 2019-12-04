@@ -71,6 +71,10 @@ class SANDBOX_EXPORT PolicyCompiler {
                             CodeGen::Node passed,
                             CodeGen::Node failed);
 
+ CodeGen::Node InsnPtrEqual(uint64_t ip,
+                            CodeGen::Node passed,
+                            CodeGen::Node failed);
+
  private:
   struct Range;
   typedef std::vector<Range> Ranges;
