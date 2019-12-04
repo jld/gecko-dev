@@ -564,9 +564,21 @@ class SandboxPolicyCommon : public SandboxPolicyBase {
       case __NR_sigaltstack:
 #endif
       CASES_FOR_sigreturn:
-      CASES_FOR_sigprocmask:
       CASES_FOR_sigaction:
         return Allow();
+
+        // FIXME explain this
+      CASES_FOR_sigprocmask: {
+        Arg<int> how(0);
+        Arg<uintptr_t> oldSet(1);
+        return If(AnyOf(how == SIG_UNBLOCK, oldSet == 0), Allow())
+            .Else(Trap([](ArgsRef aArgs, void* aAux) -> intptr_t {
+                         // This case is handled specially in the
+                         // SIGSYS handler in Sandbox.cpp.
+                         MOZ_CRASH("unreachable");
+                         return -ENOSYS;
+                       }, nullptr));
+      }
 
         // Send signals within the process (raise(), profiling, etc.)
       case __NR_tgkill: {

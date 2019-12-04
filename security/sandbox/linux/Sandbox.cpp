@@ -103,6 +103,65 @@ static bool ContextIsError(const ucontext_t* aContext, int aError) {
 #endif
 }
 
+bool MaybeHandleSignalMask(ucontext_t* aContext) {
+  sigset_t* ctxMask = &aContext->uc_sigmask;
+  size_t setSize;
+
+  switch (SECCOMP_SYSCALL(aContext)) {
+    case __NR_rt_sigprocmask:
+      setSize = static_cast<size_t>(SECCOMP_PARM4(aContext));
+      break;
+#ifdef __NR_sigprocmask
+    case __NR_sigprocmask:
+      // FIXME is this even the right fallback?
+      setSize = 4;
+      break;
+#endif
+    default:
+      return false;
+  }
+
+  // FIXME is this even the right test?
+  if (setSize > sizeof(sigset_t)) {
+    SANDBOX_LOG_ERROR("Unexpectedly large signal set size %d > %d",
+                      setSize, sizeof(sigset_t));
+    SECCOMP_RESULT(aContext) = -EINVAL;
+    return true;
+  }
+
+  auto how = static_cast<int>(SECCOMP_PARM1(aContext));
+  auto newSet = reinterpret_cast<const sigset_t*>(SECCOMP_PARM2(aContext));
+  auto oldSet = reinterpret_cast<sigset_t*>(SECCOMP_PARM3(aContext));
+
+  if (how != SIG_BLOCK && how != SIG_SETMASK) {
+    SANDBOX_LOG_ERROR("Bad sigprocmask operation %d", how);
+    // FIXME mips
+    SECCOMP_RESULT(aContext) = -EINVAL;
+    return true;
+  }
+
+  if (oldSet) {
+    // AAAA
+    memcpy(oldSet, ctxMask, setSize);
+  }
+  if (how == SIG_SETMASK) {
+    sigemptyset(ctxMask);
+  }
+  for (size_t sig = 0; sig < 8 * setSize; ++sig) {
+    if (sigismember(newSet, sig)) {
+      if (sig == SIGSYS) {
+        SANDBOX_LOG_ERROR("*Not* blocking SIGSYS, lol.");
+        continue;
+      }
+      // FIXME there's some weirdness with glibc here
+      // Touch the things directly
+      sigaddset(ctxMask, sig);
+    }
+  }
+  SECCOMP_RESULT(aContext) = 0;
+  return true;
+}
+
 /**
  * This is the SIGSYS handler function.  It delegates to the Chromium
  * TrapRegistry handler (see InstallSigSysHandler, below) and, if the
@@ -121,6 +180,15 @@ static void SigSysHandler(int nr, siginfo_t* info, void* void_context) {
   // that and refrains from crashing, so let's not crash release builds:
   MOZ_DIAGNOSTIC_ASSERT(ctx);
   if (!ctx) {
+    return;
+  }
+
+  // FIXME comment
+  if (nr != SIGSYS || info->si_code != SYS_SECCOMP) {
+    return;
+  }
+
+  if (MaybeHandleSignalMask(ctx)) {
     return;
   }
 
