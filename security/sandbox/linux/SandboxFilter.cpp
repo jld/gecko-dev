@@ -564,9 +564,22 @@ class SandboxPolicyCommon : public SandboxPolicyBase {
       case __NR_sigaltstack:
 #endif
       CASES_FOR_sigreturn:
-      CASES_FOR_sigprocmask:
       CASES_FOR_sigaction:
         return Allow();
+
+      CASES_FOR_sigprocmask:
+        return If(InsnPtr() == sandbox::Syscall::Call(-1),
+                  Allow())
+            .Else(Trap([](ArgsRef aArgs, void* aux) -> intptr_t {
+                         SANDBOX_LOG_ERROR("IM IN UR SIGNAL MASK");
+                         return sandbox::Syscall::Call(aArgs.nr,
+                                                       aArgs.args[0],
+                                                       aArgs.args[1],
+                                                       aArgs.args[2],
+                                                       aArgs.args[3],
+                                                       aArgs.args[4],
+                                                       aArgs.args[5]);
+                       }, nullptr));
 
         // Send signals within the process (raise(), profiling, etc.)
       case __NR_tgkill: {
