@@ -104,61 +104,78 @@ static bool ContextIsError(const ucontext_t* aContext, int aError) {
 }
 
 bool MaybeHandleSignalMask(ucontext_t* aContext) {
+#ifdef __mips__
+  static constexpr size_t kNumSignals = 128;
+#else
+  static constexpr size_t kNumSignals = 64;
+#endif
+  static constexpr size_t kBitsPerWord = 8 * sizeof(unsigned long);
+  static_assert((kNumSignals % kBitsPerWord) == 0,
+                "signal set size makes sense");
+  static constexpr size_t kWordsPerSet = kNumSignals / kBitsPerWord;
+
   sigset_t* ctxMask = &aContext->uc_sigmask;
-  size_t setSize;
+  auto ctxMaskRaw = reinterpret_cast<unsigned long*>(ctxMask);
+  size_t setBytes, setWords;
 
   switch (SECCOMP_SYSCALL(aContext)) {
     case __NR_rt_sigprocmask:
-      setSize = static_cast<size_t>(SECCOMP_PARM4(aContext));
+      setBytes = static_cast<size_t>(SECCOMP_PARM4(aContext));
       break;
 #ifdef __NR_sigprocmask
     case __NR_sigprocmask:
-      // FIXME is this even the right fallback?
-      setSize = 4;
+      setBytes = sizeof(unsigned long);
       break;
 #endif
     default:
       return false;
   }
 
-  // FIXME is this even the right test?
-  if (setSize > sizeof(sigset_t)) {
-    SANDBOX_LOG_ERROR("Unexpectedly large signal set size %d > %d",
-                      setSize, sizeof(sigset_t));
-    SECCOMP_RESULT(aContext) = -EINVAL;
+  sandbox::Syscall::PutValueInUcontext(-EINVAL, aContext);
+
+  if ((setBytes % sizeof(unsigned long)) != 0) {
+    SANDBOX_LOG_ERROR("uneven signal set size %u", setBytes);
+    return true;
+  }
+  setWords = setBytes / sizeof(unsigned long);
+
+  if (setWords > kWordsPerSet) {
+    SANDBOX_LOG_ERROR("signal set size %u too large", setBytes);
     return true;
   }
 
   auto how = static_cast<int>(SECCOMP_PARM1(aContext));
-  auto newSet = reinterpret_cast<const sigset_t*>(SECCOMP_PARM2(aContext));
-  auto oldSet = reinterpret_cast<sigset_t*>(SECCOMP_PARM3(aContext));
+  auto newSet = reinterpret_cast<const unsigned long*>(SECCOMP_PARM2(aContext));
+  auto oldSet = reinterpret_cast<unsigned long*>(SECCOMP_PARM3(aContext));
 
   if (how != SIG_BLOCK && how != SIG_SETMASK) {
     SANDBOX_LOG_ERROR("Bad sigprocmask operation %d", how);
-    // FIXME mips
-    SECCOMP_RESULT(aContext) = -EINVAL;
     return true;
   }
 
   if (oldSet) {
-    // AAAA
-    memcpy(oldSet, ctxMask, setSize);
-  }
-  if (how == SIG_SETMASK) {
-    sigemptyset(ctxMask);
-  }
-  for (size_t sig = 0; sig < 8 * setSize; ++sig) {
-    if (sigismember(newSet, sig)) {
-      if (sig == SIGSYS) {
-        SANDBOX_LOG_ERROR("*Not* blocking SIGSYS, lol.");
-        continue;
-      }
-      // FIXME there's some weirdness with glibc here
-      // Touch the things directly
-      sigaddset(ctxMask, sig);
+    for (size_t i = 0; i < setWords; ++i) {
+      oldSet[i] = ctxMaskRaw[i];
     }
   }
-  SECCOMP_RESULT(aContext) = 0;
+
+  if (newSet) {
+    if (how == SIG_BLOCK) {
+      for (size_t i = 0; i < setWords; ++i) {
+        ctxMaskRaw[i] |= newSet[i];
+      }
+    } else {
+      for (size_t i = 0; i < kWordsPerSet; ++i) {
+        ctxMaskRaw[i] = i < setWords ? newSet[i] : 0;
+      }
+    }
+  }
+
+  if (sigdelset(ctxMask, SIGSYS) != 0) {
+    MOZ_CRASH("sigdelset(_, SIGSYS) failed");
+  }
+
+  sandbox::Syscall::PutValueInUcontext(0, aContext);
   return true;
 }
 
