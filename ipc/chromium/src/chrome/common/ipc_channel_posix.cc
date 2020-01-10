@@ -32,6 +32,7 @@
 #include "chrome/common/file_descriptor_set_posix.h"
 #include "chrome/common/ipc_message_utils.h"
 #include "mozilla/ipc/ProtocolUtils.h"
+#include "mozilla/Atomics.h"
 #include "mozilla/StaticMutex.h"
 #include "mozilla/UniquePtr.h"
 #include "mozilla/Unused.h"
@@ -193,6 +194,8 @@ bool Channel::ChannelImpl::CreatePipe(Mode mode) {
     pipe_ = pipe_fds[0];
     client_pipe_ = pipe_fds[1];
   } else {
+    mozilla::Atomic<bool> consumed(false);
+    CHECK(!consumed.exchange(true)) << "child process main channel can be created only once";
     pipe_ = gClientChannelFd;
     waiting_connect_ = false;
   }
