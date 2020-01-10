@@ -149,7 +149,6 @@ void Channel::ChannelImpl::Init(Mode mode, Listener* listener) {
   is_blocked_on_write_ = false;
   partial_write_iter_.reset();
   input_buf_offset_ = 0;
-  server_listen_pipe_ = -1;
   pipe_ = -1;
   client_pipe_ = -1;
   listener_ = listener;
@@ -163,7 +162,7 @@ void Channel::ChannelImpl::Init(Mode mode, Listener* listener) {
 }
 
 bool Channel::ChannelImpl::CreatePipe(Mode mode) {
-  DCHECK(server_listen_pipe_ == -1 && pipe_ == -1);
+  DCHECK(pipe_ == -1);
 
   if (mode == MODE_SERVER) {
     // socketpair()
@@ -773,11 +772,6 @@ void Channel::ChannelImpl::Close() {
 
   // Unregister libevent for the listening socket and close it.
   server_listen_connection_watcher_.StopWatchingFileDescriptor();
-
-  if (server_listen_pipe_ != -1) {
-    IGNORE_EINTR(close(server_listen_pipe_));
-    server_listen_pipe_ = -1;
-  }
 
   // Unregister libevent for the FIFO and close it.
   read_watcher_.StopWatchingFileDescriptor();

@@ -89,7 +89,6 @@ class Channel::ChannelImpl : public MessageLoopForIO::Watcher {
   // sending.
   mozilla::Maybe<Pickle::BufferList::IterImpl> partial_write_iter_;
 
-  int server_listen_pipe_;
   int pipe_;
   int client_pipe_;  // The client end of our socketpair().
 
