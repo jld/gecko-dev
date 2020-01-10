@@ -11,6 +11,8 @@
 
 #include <queue>
 #include "chrome/common/ipc_message.h"
+#include "mozilla/Tuple.h"
+#include "mozilla/UniquePtrExtensions.h"
 
 namespace IPC {
 
@@ -119,16 +121,10 @@ class Channel {
   // If the kTestingChannelID flag is specified on the command line then
   // a named FIFO is used as the channel transport mechanism rather than a
   // socketpair() in which case this method returns -1 for both parameters.
-  void GetClientFileDescriptorMapping(int* src_fd, int* dest_fd) const;
+  mozilla::Tuple<mozilla::UniqueFileHandle, int> TakeClientFileDescriptorMapping();
 
   // Return the file descriptor for communication with the peer.
-  int GetFileDescriptor() const;
-
-  // Reset the file descriptor for communication with the peer.
-  void ResetFileDescriptor(int fd);
-
-  // Close the client side of the socketpair.
-  void CloseClientFileDescriptor();
+  mozilla::UniqueFileHandle TakeFileDescriptor();
 
 #elif defined(OS_WIN)
   // Return the server pipe handle.

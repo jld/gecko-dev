@@ -42,12 +42,9 @@ class Channel::ChannelImpl : public MessageLoopForIO::Watcher {
     return old;
   }
   bool Send(Message* message);
-  void GetClientFileDescriptorMapping(int* src_fd, int* dest_fd) const;
+  mozilla::Tuple<mozilla::UniqueFileHandle, int> TakeClientFileDescriptorMapping();
 
-  void ResetFileDescriptor(int fd);
-
-  int GetFileDescriptor() const { return pipe_; }
-  void CloseClientFileDescriptor();
+  mozilla::UniqueFileHandle TakeFileDescriptor() { return std::move(pipe_); }
 
   // See the comment in ipc_channel.h for info on Unsound_IsClosed() and
   // Unsound_NumQueuedMessages().
@@ -89,8 +86,8 @@ class Channel::ChannelImpl : public MessageLoopForIO::Watcher {
   // sending.
   mozilla::Maybe<Pickle::BufferList::IterImpl> partial_write_iter_;
 
-  int pipe_;
-  int client_pipe_;  // The client end of our socketpair().
+  mozilla::UniqueFileHandle pipe_;
+  mozilla::UniqueFileHandle client_pipe_; // The client end of our socketpair().
 
   Listener* listener_;
 

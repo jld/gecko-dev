@@ -21,37 +21,17 @@ namespace ipc {
 
 nsresult CreateTransport(base::ProcessId aProcIdOne, TransportDescriptor* aOne,
                          TransportDescriptor* aTwo) {
-  std::wstring id = IPC::Channel::GenerateVerifiedChannelID(std::wstring());
+  std::wstring id; // Unused on Unix
   // Use MODE_SERVER to force creation of the socketpair
   Transport t(id, Transport::MODE_SERVER, nullptr);
-  int fd1 = t.GetFileDescriptor();
-  int fd2, dontcare;
-  t.GetClientFileDescriptorMapping(&fd2, &dontcare);
-  if (fd1 < 0 || fd2 < 0) {
+  mozilla::UniqueFileHandle fd1 = t.TakeFileDescriptor();
+  mozilla::UniqueFileHandle fd2 = mozilla::Get<0>(t.TakeClientFileDescriptorMapping());
+  if (!fd1 || !fd2) {
     return NS_ERROR_TRANSPORT_INIT;
   }
 
-  // The Transport closes these fds when it goes out of scope, so we
-  // dup them here
-  fd1 = dup(fd1);
-  if (fd1 < 0) {
-    AnnotateCrashReportWithErrno(
-        CrashReporter::Annotation::IpcCreateTransportDupErrno, errno);
-  }
-  fd2 = dup(fd2);
-  if (fd2 < 0) {
-    AnnotateCrashReportWithErrno(
-        CrashReporter::Annotation::IpcCreateTransportDupErrno, errno);
-  }
-
-  if (fd1 < 0 || fd2 < 0) {
-    IGNORE_EINTR(close(fd1));
-    IGNORE_EINTR(close(fd2));
-    return NS_ERROR_DUPLICATE_HANDLE;
-  }
-
-  aOne->mFd = base::FileDescriptor(fd1, true /*close after sending*/);
-  aTwo->mFd = base::FileDescriptor(fd2, true /*close after sending*/);
+  aOne->mFd = base::FileDescriptor(fd1.release(), true /*close after sending*/);
+  aTwo->mFd = base::FileDescriptor(fd2.release(), true /*close after sending*/);
   return NS_OK;
 }
 

@@ -136,7 +136,7 @@ Channel::ChannelImpl::ChannelImpl(const std::wstring& channel_id, Mode mode,
 Channel::ChannelImpl::ChannelImpl(int fd, Mode mode, Listener* listener)
     : factory_(this) {
   Init(mode, listener);
-  pipe_ = fd;
+  pipe_.reset(fd);
   waiting_connect_ = (MODE_SERVER == mode);
 
   EnqueueHelloMessage();
@@ -149,8 +149,8 @@ void Channel::ChannelImpl::Init(Mode mode, Listener* listener) {
   is_blocked_on_write_ = false;
   partial_write_iter_.reset();
   input_buf_offset_ = 0;
-  pipe_ = -1;
-  client_pipe_ = -1;
+  pipe_ = nullptr;
+  client_pipe_ = nullptr;
   listener_ = listener;
   waiting_connect_ = true;
   processing_incoming_ = false;
@@ -162,7 +162,7 @@ void Channel::ChannelImpl::Init(Mode mode, Listener* listener) {
 }
 
 bool Channel::ChannelImpl::CreatePipe(Mode mode) {
-  DCHECK(pipe_ == -1);
+  DCHECK(!pipe_);
 
   if (mode == MODE_SERVER) {
     // socketpair()
@@ -190,25 +190,16 @@ bool Channel::ChannelImpl::CreatePipe(Mode mode) {
       return false;
     }
 
-    pipe_ = pipe_fds[0];
-    client_pipe_ = pipe_fds[1];
+    pipe_.reset(pipe_fds[0]);
+    client_pipe_.reset(pipe_fds[1]);
   } else {
     mozilla::Atomic<bool> consumed(false);
     CHECK(!consumed.exchange(true)) << "child process main channel can be created only once";
-    pipe_ = gClientChannelFd;
+    pipe_.reset(gClientChannelFd);
     waiting_connect_ = false;
   }
 
   return true;
-}
-
-/**
- * Reset the file descriptor for communication with the peer.
- */
-void Channel::ChannelImpl::ResetFileDescriptor(int fd) {
-  NS_ASSERTION(fd > 0 && fd == pipe_, "Invalid file descriptor");
-
-  EnqueueHelloMessage();
 }
 
 bool Channel::ChannelImpl::EnqueueHelloMessage() {
@@ -224,12 +215,12 @@ bool Channel::ChannelImpl::EnqueueHelloMessage() {
 }
 
 bool Channel::ChannelImpl::Connect() {
-  if (pipe_ == -1) {
+  if (!pipe_) {
     return false;
   }
 
   MessageLoopForIO::current()->WatchFileDescriptor(
-      pipe_, true, MessageLoopForIO::WATCH_READ, &read_watcher_, this);
+      pipe_.get(), true, MessageLoopForIO::WATCH_READ, &read_watcher_, this);
   waiting_connect_ = false;
 
   if (!waiting_connect_) return ProcessOutgoingMessages();
@@ -247,7 +238,7 @@ bool Channel::ChannelImpl::ProcessIncomingMessages() {
   for (;;) {
     msg.msg_controllen = sizeof(input_cmsg_buf_);
 
-    if (pipe_ == -1) return false;
+    if (!pipe_) return false;
 
     // In some cases the beginning of a message will be stored in input_buf_. We
     // don't want to overwrite that, so we store the new data after it.
@@ -257,7 +248,7 @@ bool Channel::ChannelImpl::ProcessIncomingMessages() {
     // Read from pipe.
     // recvmsg() returns 0 if the connection has closed or EAGAIN if no data
     // is waiting on the pipe.
-    ssize_t bytes_read = HANDLE_EINTR(recvmsg(pipe_, &msg, MSG_DONTWAIT));
+    ssize_t bytes_read = HANDLE_EINTR(recvmsg(pipe_.get(), &msg, MSG_DONTWAIT));
 
     if (bytes_read < 0) {
       if (errno == EAGAIN) {
@@ -265,7 +256,7 @@ bool Channel::ChannelImpl::ProcessIncomingMessages() {
       } else {
         if (!ErrorIsBrokenPipe(errno)) {
           CHROMIUM_LOG(ERROR)
-              << "pipe error (fd " << pipe_ << "): " << strerror(errno);
+              << "pipe error (fd " << pipe_.get() << "): " << strerror(errno);
         }
         return false;
       }
@@ -308,7 +299,7 @@ bool Channel::ChannelImpl::ProcessIncomingMessages() {
           if (msg.msg_flags & MSG_CTRUNC) {
             CHROMIUM_LOG(ERROR)
                 << "SCM_RIGHTS message was truncated"
-                << " cmsg_len:" << cmsg->cmsg_len << " fd:" << pipe_;
+                << " cmsg_len:" << cmsg->cmsg_len << " fd:" << pipe_.get();
             for (unsigned i = 0; i < num_wire_fds; ++i)
               IGNORE_EINTR(close(wire_fds[i]));
             return false;
@@ -508,7 +499,7 @@ bool Channel::ChannelImpl::ProcessOutgoingMessages() {
 
   if (output_queue_.empty()) return true;
 
-  if (pipe_ == -1) return false;
+  if (!pipe_) return false;
 
   // Write out all the messages we can till the write blocks or there are no
   // more outgoing messages.
@@ -590,7 +581,7 @@ bool Channel::ChannelImpl::ProcessOutgoingMessages() {
     msgh.msg_iov = iov;
     msgh.msg_iovlen = iov_count;
 
-    ssize_t bytes_written = HANDLE_EINTR(sendmsg(pipe_, &msgh, MSG_DONTWAIT));
+    ssize_t bytes_written = HANDLE_EINTR(sendmsg(pipe_.get(), &msgh, MSG_DONTWAIT));
 
 #if !defined(OS_MACOSX)
     // On OSX CommitAll gets called later, once we get the
@@ -646,7 +637,7 @@ bool Channel::ChannelImpl::ProcessOutgoingMessages() {
       // Tell libevent to call us back once things are unblocked.
       is_blocked_on_write_ = true;
       MessageLoopForIO::current()->WatchFileDescriptor(
-          pipe_,
+          pipe_.get(),
           false,  // One shot
           MessageLoopForIO::WATCH_WRITE, &write_watcher_, this);
       return true;
@@ -707,23 +698,15 @@ bool Channel::ChannelImpl::Send(Message* message) {
   return true;
 }
 
-void Channel::ChannelImpl::GetClientFileDescriptorMapping(int* src_fd,
-                                                          int* dest_fd) const {
+mozilla::Tuple<mozilla::UniqueFileHandle, int> Channel::ChannelImpl::TakeClientFileDescriptorMapping()
+{
   DCHECK(mode_ == MODE_SERVER);
-  *src_fd = client_pipe_;
-  *dest_fd = gClientChannelFd;
-}
-
-void Channel::ChannelImpl::CloseClientFileDescriptor() {
-  if (client_pipe_ != -1) {
-    IGNORE_EINTR(close(client_pipe_));
-    client_pipe_ = -1;
-  }
+  return mozilla::MakeTuple(std::move(client_pipe_), gClientChannelFd);
 }
 
 // Called by libevent when we can read from th pipe without blocking.
 void Channel::ChannelImpl::OnFileCanReadWithoutBlocking(int fd) {
-  if (!waiting_connect_ && fd == pipe_) {
+  if (!waiting_connect_ && fd == pipe_.get()) {
     if (!ProcessIncomingMessages()) {
       Close();
       listener_->OnChannelError();
@@ -776,14 +759,8 @@ void Channel::ChannelImpl::Close() {
   // Unregister libevent for the FIFO and close it.
   read_watcher_.StopWatchingFileDescriptor();
   write_watcher_.StopWatchingFileDescriptor();
-  if (pipe_ != -1) {
-    IGNORE_EINTR(close(pipe_));
-    pipe_ = -1;
-  }
-  if (client_pipe_ != -1) {
-    IGNORE_EINTR(close(client_pipe_));
-    client_pipe_ = -1;
-  }
+  pipe_ = nullptr;
+  client_pipe_ = nullptr;
 
   while (!output_queue_.empty()) {
     Message* m = output_queue_.front();
@@ -842,20 +819,12 @@ Channel::Listener* Channel::set_listener(Listener* listener) {
 
 bool Channel::Send(Message* message) { return channel_impl_->Send(message); }
 
-void Channel::GetClientFileDescriptorMapping(int* src_fd, int* dest_fd) const {
-  return channel_impl_->GetClientFileDescriptorMapping(src_fd, dest_fd);
+mozilla::Tuple<mozilla::UniqueFileHandle, int> Channel::TakeClientFileDescriptorMapping() {
+  return channel_impl_->TakeClientFileDescriptorMapping();
 }
 
-void Channel::ResetFileDescriptor(int fd) {
-  channel_impl_->ResetFileDescriptor(fd);
-}
-
-int Channel::GetFileDescriptor() const {
-  return channel_impl_->GetFileDescriptor();
-}
-
-void Channel::CloseClientFileDescriptor() {
-  channel_impl_->CloseClientFileDescriptor();
+mozilla::UniqueFileHandle Channel::TakeFileDescriptor() {
+  return channel_impl_->TakeFileDescriptor();
 }
 
 bool Channel::Unsound_IsClosed() const {

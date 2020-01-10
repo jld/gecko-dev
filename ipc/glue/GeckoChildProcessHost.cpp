@@ -252,6 +252,7 @@ class PosixProcessLauncher : public BaseProcessLauncher {
   nsCOMPtr<nsIFile> mProfileDir;
 
   std::vector<std::string> mChildArgv;
+  UniqueFileHandle mSrcChannelFd;
 };
 
 #  if defined(XP_MACOSX)
@@ -1105,10 +1106,10 @@ bool PosixProcessLauncher::DoSetup() {
 
   // remap the IPC socket fd to a well-known int, as the OS does for
   // STDOUT_FILENO, for example
-  int srcChannelFd, dstChannelFd;
-  mChannel->GetClientFileDescriptorMapping(&srcChannelFd, &dstChannelFd);
+  int dstChannelFd;
+  Tie(mSrcChannelFd, dstChannelFd) = mChannel->TakeClientFileDescriptorMapping();
   mLaunchOptions->fds_to_remap.push_back(
-      std::pair<int, int>(srcChannelFd, dstChannelFd));
+      { mSrcChannelFd.get(), dstChannelFd });
 
   // no need for kProcessChannelID, the child process inherits the
   // other end of the socketpair() from us
@@ -1209,7 +1210,7 @@ bool PosixProcessLauncher::DoFinishLaunch() {
   // We're in the parent and the child was launched. Close the child FD in the
   // parent as soon as possible, which will allow the parent to detect when the
   // child closes its FD (either due to normal exit or due to crash).
-  mChannel->CloseClientFileDescriptor();
+  mSrcChannelFd = nullptr;
 
   return true;
 }
