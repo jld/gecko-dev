@@ -332,6 +332,11 @@ void SandboxLaunchPrepare(GeckoProcessType aType,
                                false)) {
         flags |= CLONE_NEWUSER;
       }
+
+      if (Preferences::GetBool("widget.disable-native-theme-for-content")) {
+        aOptions->env_map["MOZ_HEADLESS"] = "1";
+      }
+
       break;
     default:
       // Nothing yet.
