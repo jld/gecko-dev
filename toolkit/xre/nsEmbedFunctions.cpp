@@ -137,10 +137,6 @@ using mozilla::_ipdltest::IPDLUnitTestProcessChild;
 
 #include "VRProcessChild.h"
 
-#ifdef USE_GLX_TEST
-bool fire_glxtest_process();
-#endif
-
 using namespace mozilla;
 
 using mozilla::ipc::BrowserProcessSubThread;
@@ -372,16 +368,6 @@ nsresult XRE_InitChildProcess(int aArgc, char* aArgv[],
   // This just needs to happen before sandboxing, to initialize the
   // cached value, but libmozsandbox can't see this symbol.
   mozilla::GetNumberOfProcessors();
-#endif
-
-#ifdef USE_GLX_TEST
-  // This should happen before setting up the crash reporter so that
-  // the forked child process doesn't inherit that, in case the driver
-  // crashes; see bug 639842, and the comment where this function is
-  // called for the parent process in nsAppRunner.cpp
-  if (XRE_IsGPUProcess()) {
-    fire_glxtest_process();
-  }
 #endif
 
 #ifdef MOZ_JPROF

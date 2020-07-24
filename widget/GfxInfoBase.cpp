@@ -41,7 +41,7 @@ using namespace mozilla;
 using mozilla::MutexAutoLock;
 
 nsTArray<GfxDriverInfo>* GfxInfoBase::sDriverInfo;
-nsTArray<dom::GfxInfoFeatureStatus>* GfxInfoBase::sFeatureStatus;
+nsTArray<gfx::GfxInfoFeatureStatus>* GfxInfoBase::sFeatureStatus;
 bool GfxInfoBase::sDriverInfoObserverInitialized;
 bool GfxInfoBase::sShutdownOccurred;
 
@@ -686,7 +686,7 @@ GfxInfoBase::GetFeatureStatus(int32_t aFeature, nsACString& aFailureId,
     return NS_OK;
   }
 
-  if (XRE_IsContentProcess()) {
+  if (XRE_IsContentProcess() || XRE_IsGPUProcess()) {
     // Use the cached data received from the parent process.
     MOZ_ASSERT(sFeatureStatus);
     bool success = false;
@@ -708,15 +708,15 @@ GfxInfoBase::GetFeatureStatus(int32_t aFeature, nsACString& aFailureId,
   return rv;
 }
 
-void GfxInfoBase::GetAllFeatures(dom::XPCOMInitData& xpcomInit) {
+void GfxInfoBase::GetAllFeatures(nsTArray<gfx::GfxInfoFeatureStatus>& features) {
   MOZ_RELEASE_ASSERT(XRE_IsParentProcess());
   if (!sFeatureStatus) {
-    sFeatureStatus = new nsTArray<dom::GfxInfoFeatureStatus>();
+    sFeatureStatus = new nsTArray<gfx::GfxInfoFeatureStatus>();
     for (int32_t i = 1; i <= nsIGfxInfo::FEATURE_MAX_VALUE; ++i) {
       int32_t status = 0;
       nsAutoCString failureId;
       GetFeatureStatus(i, failureId, &status);
-      dom::GfxInfoFeatureStatus gfxFeatureStatus;
+      gfx::GfxInfoFeatureStatus gfxFeatureStatus;
       gfxFeatureStatus.feature() = i;
       gfxFeatureStatus.status() = status;
       gfxFeatureStatus.failureId() = failureId;
@@ -724,8 +724,8 @@ void GfxInfoBase::GetAllFeatures(dom::XPCOMInitData& xpcomInit) {
     }
   }
   for (const auto& status : *sFeatureStatus) {
-    dom::GfxInfoFeatureStatus copy = status;
-    xpcomInit.gfxFeatureStatus().AppendElement(copy);
+    gfx::GfxInfoFeatureStatus copy = status;
+    features.AppendElement(copy);
   }
 }
 
@@ -1089,9 +1089,9 @@ int32_t GfxInfoBase::FindBlocklistedDeviceInList(
 }
 
 void GfxInfoBase::SetFeatureStatus(
-    const nsTArray<dom::GfxInfoFeatureStatus>& aFS) {
+    nsTArray<gfx::GfxInfoFeatureStatus>&& aFS) {
   MOZ_ASSERT(!sFeatureStatus);
-  sFeatureStatus = new nsTArray<dom::GfxInfoFeatureStatus>(aFS.Clone());
+  sFeatureStatus = new nsTArray<gfx::GfxInfoFeatureStatus>(std::move(aFS));
 }
 
 bool GfxInfoBase::DoesDesktopEnvironmentMatch(
