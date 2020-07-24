@@ -260,6 +260,10 @@ mozilla::ipc::IPCResult GPUParent::RecvInit(
 
     SkInitCairoFT(true);
   }
+
+  // Ensure that GfxInfo::Init is called on the main thread.
+  nsCOMPtr<nsIGfxInfo> gfxInfo = services::GetGfxInfo();
+  Unused << gfxInfo;
 #endif
 
   // Make sure to do this *after* we update gfxVars above.
