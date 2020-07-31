@@ -10412,6 +10412,12 @@
   mirror: always
 #endif
 
+# FIXME: comment; also *DON'T* land this preffed on
+- name: widget.remote-look-and-feel
+  type: bool
+  value: true
+  mirror: once
+
 #---------------------------------------------------------------------------
 # Prefs starting with "xul."
 #---------------------------------------------------------------------------

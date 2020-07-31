@@ -16,7 +16,7 @@ struct LookAndFeelInt {
     int32_t value;
 };
 
-struct LookAndFeelFont {
+comparable struct LookAndFeelFont {
     bool haveFont;
     nsString name;
     float size;
@@ -33,6 +33,26 @@ struct LookAndFeelCache {
     LookAndFeelInt[] mInts;
     LookAndFeelFont[] mFonts;
     LookAndFeelColor[] mColors;
+};
+
+struct FullLookAndFeel {
+    int32_t[] ints;
+    float[] floats;
+    nscolor[] colors;
+    LookAndFeelFont[] fonts;
+
+    uint8_t[] intMap;
+    uint8_t[] floatMap;
+    uint8_t[] colorMap;
+    uint8_t[] fontMap;
+
+    uint16_t passwordChar;
+    bool passwordEcho;
+};
+
+union LookAndFeelData {
+    LookAndFeelCache;
+    FullLookAndFeel;
 };
 
 } // namespace widget
