@@ -100,6 +100,7 @@
 #include "mozilla/plugins/PluginInstanceParent.h"
 #include "mozilla/plugins/PluginModuleParent.h"
 #include "mozilla/RemoteLazyInputStreamChild.h"
+#include "mozilla/widget/RemoteLookAndFeel.h"
 #include "mozilla/widget/ScreenManager.h"
 #include "mozilla/widget/WidgetMessageUtils.h"
 #include "nsBaseDragService.h"
@@ -605,7 +606,7 @@ NS_INTERFACE_MAP_END
 
 mozilla::ipc::IPCResult ContentChild::RecvSetXPCOMProcessAttributes(
     XPCOMInitData&& aXPCOMInit, const StructuredCloneData& aInitialData,
-    LookAndFeelCache&& aLookAndFeelCache,
+    LookAndFeelData&& aLookAndFeelData,
     nsTArray<SystemFontListEntry>&& aFontList,
     const Maybe<SharedMemoryHandle>& aSharedUASheetHandle,
     const uintptr_t& aSharedUASheetAddress,
@@ -614,7 +615,17 @@ mozilla::ipc::IPCResult ContentChild::RecvSetXPCOMProcessAttributes(
     return IPC_OK();
   }
 
-  mLookAndFeelCache = std::move(aLookAndFeelCache);
+  switch (aLookAndFeelData.type()) {
+    case LookAndFeelData::TLookAndFeelCache:
+      mLookAndFeelCache = std::move(aLookAndFeelData.get_LookAndFeelCache());
+      break;
+    case LookAndFeelData::TFullLookAndFeel:
+      RemoteLookAndFeel::SetData(std::move(aLookAndFeelData.get_FullLookAndFeel()));
+      break;
+    default:
+      MOZ_ASSERT(false, "unreachable");
+  }
+
   mFontList = std::move(aFontList);
   mSharedFontListBlocks = std::move(aSharedFontListBlocks);
 #ifdef XP_WIN
@@ -2291,8 +2302,17 @@ mozilla::ipc::IPCResult ContentChild::RecvNotifyVisited(
 }
 
 mozilla::ipc::IPCResult ContentChild::RecvThemeChanged(
-    LookAndFeelCache&& aLookAndFeelCache) {
-  LookAndFeel::SetCache(aLookAndFeelCache);
+    LookAndFeelData&& aLookAndFeelData) {
+  switch (aLookAndFeelData.type()) {
+    case LookAndFeelData::TLookAndFeelCache:
+      LookAndFeel::SetCache(aLookAndFeelData.get_LookAndFeelCache());
+      break;
+    case LookAndFeelData::TFullLookAndFeel:
+      RemoteLookAndFeel::SetData(std::move(aLookAndFeelData.get_FullLookAndFeel()));
+      break;
+    default:
+      MOZ_ASSERT(false, "unreachable");
+  }
   LookAndFeel::NotifyChangedAllWindows();
   return IPC_OK();
 }

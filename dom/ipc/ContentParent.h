@@ -255,6 +255,8 @@ class ContentParent final
 
   static void BroadcastFontListChanged();
 
+  static void BroadcastThemeUpdate();
+
   const nsACString& GetRemoteType() const override;
 
   virtual void DoGetRemoteType(nsACString& aRemoteType,
