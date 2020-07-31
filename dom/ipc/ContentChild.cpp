@@ -100,6 +100,7 @@
 #include "mozilla/plugins/PluginModuleParent.h"
 #include "mozilla/RemoteLazyInputStreamChild.h"
 #include "mozilla/scache/StartupCacheChild.h"
+#include "mozilla/widget/RemoteLookAndFeel.h"
 #include "mozilla/widget/ScreenManager.h"
 #include "mozilla/widget/WidgetMessageUtils.h"
 #include "nsBaseDragService.h"
@@ -606,6 +607,7 @@ NS_INTERFACE_MAP_END
 mozilla::ipc::IPCResult ContentChild::RecvSetXPCOMProcessAttributes(
     XPCOMInitData&& aXPCOMInit, const StructuredCloneData& aInitialData,
     LookAndFeelCache&& aLookAndFeelCache,
+    widget::IPCLookAndFeel&& aFullLookAndFeel,
     nsTArray<SystemFontListEntry>&& aFontList,
     const Maybe<SharedMemoryHandle>& aSharedUASheetHandle,
     const uintptr_t& aSharedUASheetAddress,
@@ -615,6 +617,9 @@ mozilla::ipc::IPCResult ContentChild::RecvSetXPCOMProcessAttributes(
   }
 
   mLookAndFeelCache = std::move(aLookAndFeelCache);
+
+  widget::RemoteLookAndFeel::SetData(std::move(aFullLookAndFeel));
+  
   mFontList = std::move(aFontList);
   mSharedFontListBlocks = std::move(aSharedFontListBlocks);
 #ifdef XP_WIN
@@ -2298,7 +2303,9 @@ mozilla::ipc::IPCResult ContentChild::RecvNotifyVisited(
 }
 
 mozilla::ipc::IPCResult ContentChild::RecvThemeChanged(
-    LookAndFeelCache&& aLookAndFeelCache) {
+    LookAndFeelCache&& aLookAndFeelCache,
+    widget::IPCLookAndFeel&& aFullLookAndFeel) {
+  RemoteLookAndFeel::SetData(std::move(aFullLookAndFeel));
   LookAndFeel::SetCache(aLookAndFeelCache);
   LookAndFeel::NotifyChangedAllWindows();
   return IPC_OK();

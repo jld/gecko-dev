@@ -92,6 +92,7 @@
 #include "mozilla/layers/APZThreadUtils.h"
 #include "MobileViewportManager.h"
 #include "mozilla/dom/ImageTracker.h"
+#include "mozilla/widget/RemoteLookAndFeel.h"
 
 // Needed for Start/Stop of Image Animation
 #include "imgIContainer.h"
@@ -1362,11 +1363,12 @@ void nsPresContext::ThemeChangedInternal() {
     image::SurfaceCacheUtils::DiscardAll();
 
     if (XRE_IsParentProcess()) {
+      widget::IPCLookAndFeel lf = widget::RemoteLookAndFeel::ExtractData();
       nsTArray<ContentParent*> cp;
       ContentParent::GetAll(cp);
       widget::LookAndFeelCache lnfCache = LookAndFeel::GetCache();
       for (ContentParent* c : cp) {
-        Unused << c->SendThemeChanged(lnfCache);
+        Unused << c->SendThemeChanged(lnfCache, lf);
       }
     }
   }

@@ -158,6 +158,7 @@
 #include "mozilla/net/PCookieServiceParent.h"
 #include "mozilla/plugins/PluginBridge.h"
 #include "mozilla/RemoteLazyInputStreamParent.h"
+#include "mozilla/widget/RemoteLookAndFeel.h"
 #include "mozilla/widget/ScreenManager.h"
 #include "mozilla/scache/StartupCacheParent.h"
 #include "nsAnonymousTemporaryFile.h"
@@ -2703,8 +2704,10 @@ bool ContentParent::InitInternal(ProcessPriority aInitialPriority) {
     sharedUASheetAddress = 0;
   }
 
+  widget::IPCLookAndFeel lnfFull = RemoteLookAndFeel::ExtractData();
+
   Unused << SendSetXPCOMProcessAttributes(
-      xpcomInit, initialData, lnfCache, fontList, sharedUASheetHandle,
+      xpcomInit, initialData, lnfCache, lnfFull, fontList, sharedUASheetHandle,
       sharedUASheetAddress, sharedFontListBlocks);
 
   ipc::WritableSharedMap* sharedData =

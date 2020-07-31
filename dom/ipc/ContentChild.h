@@ -307,7 +307,8 @@ class ContentChild final : public PContentChild,
 
   mozilla::ipc::IPCResult RecvNotifyVisited(nsTArray<VisitedQueryResult>&&);
   mozilla::ipc::IPCResult RecvThemeChanged(
-      LookAndFeelCache&& aLookAndFeelCache);
+      LookAndFeelCache&& aLookAndFeelCache,
+      widget::IPCLookAndFeel&&);
 
   mozilla::ipc::IPCResult RecvUpdateSystemParameters(
       nsTArray<SystemParameterKVPair>&& aUpdates);
@@ -545,6 +546,7 @@ class ContentChild final : public PContentChild,
   mozilla::ipc::IPCResult RecvSetXPCOMProcessAttributes(
       XPCOMInitData&& aXPCOMInit, const StructuredCloneData& aInitialData,
       LookAndFeelCache&& aLookAndFeelCache,
+      widget::IPCLookAndFeel&& aFullLookAndFeel,
       nsTArray<SystemFontListEntry>&& aFontList,
       const Maybe<base::SharedMemoryHandle>& aSharedUASheetHandle,
       const uintptr_t& aSharedUASheetAddress,

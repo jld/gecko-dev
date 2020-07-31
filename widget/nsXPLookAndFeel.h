@@ -82,6 +82,8 @@ class nsXPLookAndFeel : public mozilla::LookAndFeel {
 
   virtual void NativeInit() = 0;
 
+  virtual nsresult NativeGetColor(ColorID aID, nscolor& aResult) = 0;
+
  protected:
   nsXPLookAndFeel() = default;
 
@@ -91,7 +93,6 @@ class nsXPLookAndFeel : public mozilla::LookAndFeel {
   void InitFromPref(nsLookAndFeelIntPref* aPref);
   void InitFromPref(nsLookAndFeelFloatPref* aPref);
   void InitColorFromPref(int32_t aIndex);
-  virtual nsresult NativeGetColor(ColorID aID, nscolor& aResult) = 0;
   bool IsSpecialColor(ColorID aID, nscolor& aColor);
   bool ColorIsNotCSSAccessible(ColorID aID);
   nscolor GetStandinForNativeColor(ColorID aID);

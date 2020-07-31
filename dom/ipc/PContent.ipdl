@@ -65,6 +65,7 @@ include PrefsTypes;
 include NeckoChannelParams;
 include PSMIPCTypes;
 include LookAndFeelTypes;
+include RemoteWidgetTypes;
 
 #if defined(MOZ_SANDBOX) && defined(MOZ_DEBUG) && defined(ENABLE_TESTS)
 include protocol PSandboxTesting;
@@ -564,7 +565,8 @@ child:
      * Tell the child that the system theme has changed, and that a repaint
      * is necessary.
      */
-    async ThemeChanged(LookAndFeelCache lookAndFeelCache);
+    async ThemeChanged(LookAndFeelCache lookAndFeelCache,
+                       IPCLookAndFeel fullLookAndFeel);
 
     async UpdateSystemParameters(SystemParameterKVPair[] aUpdates);
 
@@ -673,6 +675,7 @@ child:
     async SetXPCOMProcessAttributes(XPCOMInitData xpcomInit,
                                     StructuredCloneData initialData,
                                     LookAndFeelCache lookAndFeelCache,
+                                    IPCLookAndFeel fullLookAndFeel,
                                     /* used on MacOSX/Linux/Android only: */
                                     SystemFontListEntry[] systemFontList,
                                     SharedMemoryHandle? sharedUASheetHandle,

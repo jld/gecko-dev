@@ -180,7 +180,9 @@ EXPORTS.mozilla.widget += [
     'InProcessCompositorWidget.h',
     'MediaKeysEventSourceFactory.h',
     'nsAutoRollup.h',
+    'nsXPLookAndFeel.h',
     'PuppetBidiKeyboard.h',
+    'RemoteLookAndFeel.h',
     'Screen.h',
     'ScreenManager.h',
     'WidgetMessageUtils.h',
@@ -216,6 +218,7 @@ UNIFIED_SOURCES += [
     'nsXPLookAndFeel.cpp',
     'PuppetBidiKeyboard.cpp',
     'PuppetWidget.cpp',
+    'RemoteLookAndFeel.cpp',
     'Screen.cpp',
     'SharedWidgetUtils.cpp',
     'TextEventDispatcher.cpp',
@@ -351,6 +354,7 @@ else:
 
 IPDL_SOURCES += [
     'LookAndFeelTypes.ipdlh',
+    'RemoteWidgetTypes.ipdlh',
 ]
 
 LOCAL_INCLUDES += [

@@ -10,6 +10,7 @@
 #include "nsXPLookAndFeel.h"
 #include "nsLookAndFeel.h"
 #include "HeadlessLookAndFeel.h"
+#include "RemoteLookAndFeel.h"
 #include "nsContentUtils.h"
 #include "nsCRT.h"
 #include "nsFont.h"
@@ -247,7 +248,9 @@ nsXPLookAndFeel* nsXPLookAndFeel::GetInstance() {
 
   NS_ENSURE_TRUE(!sShutdown, nullptr);
 
-  if (gfxPlatform::IsHeadless()) {
+  if (XRE_IsContentProcess()) {
+    sInstance = widget::RemoteLookAndFeel::Get();
+  } else if (gfxPlatform::IsHeadless()) {
     sInstance = new widget::HeadlessLookAndFeel();
   } else {
     sInstance = new nsLookAndFeel();
