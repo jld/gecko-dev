@@ -349,6 +349,10 @@ else:
         'PlatformWidgetTypes.ipdlh',
     ]
 
+IPDL_SOURCES += [
+    'LookAndFeelTypes.ipdlh',
+]
+
 LOCAL_INCLUDES += [
     '/widget/%s' % toolkit,
 ]

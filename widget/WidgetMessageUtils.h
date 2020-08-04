@@ -12,74 +12,24 @@
 namespace IPC {
 
 template <>
-struct ParamTraits<LookAndFeelInt> {
-  typedef LookAndFeelInt paramType;
-
-  static void Write(Message* aMsg, const paramType& aParam) {
-    WriteParam(aMsg, static_cast<int32_t>(aParam.id));
-    WriteParam(aMsg, aParam.value);
-  }
-
-  static bool Read(const Message* aMsg, PickleIterator* aIter,
-                   paramType* aResult) {
-    int32_t id, value;
-    if (ReadParam(aMsg, aIter, &id) && ReadParam(aMsg, aIter, &value)) {
-      aResult->id = static_cast<mozilla::LookAndFeel::IntID>(id);
-      aResult->value = value;
-      return true;
-    }
-    return false;
-  }
-};
-
-template <>
-struct ParamTraits<LookAndFeelFont> {
-  typedef LookAndFeelFont paramType;
-
-  static void Write(Message* aMsg, const paramType& aParam) {
-    WriteParam(aMsg, aParam.haveFont);
-    WriteParam(aMsg, aParam.fontName);
-    WriteParam(aMsg, aParam.pixelHeight);
-    WriteParam(aMsg, aParam.italic);
-    WriteParam(aMsg, aParam.bold);
-  }
-
-  static bool Read(const Message* aMsg, PickleIterator* aIter,
-                   paramType* aResult) {
-    return ReadParam(aMsg, aIter, &aResult->haveFont) &&
-           ReadParam(aMsg, aIter, &aResult->fontName) &&
-           ReadParam(aMsg, aIter, &aResult->pixelHeight) &&
-           ReadParam(aMsg, aIter, &aResult->italic) &&
-           ReadParam(aMsg, aIter, &aResult->bold);
-  }
-};
-
-template <>
-struct ParamTraits<LookAndFeelCache> {
-  typedef LookAndFeelCache paramType;
-
-  static void Write(Message* aMsg, const paramType& aParam) {
-    WriteParam(aMsg, aParam.mInts);
-    WriteParam(aMsg, aParam.mFonts);
-  }
-
-  static bool Read(const Message* aMsg, PickleIterator* aIter,
-                   paramType* aResult) {
-    return ReadParam(aMsg, aIter, &aResult->mInts) &&
-           ReadParam(aMsg, aIter, &aResult->mFonts);
-  }
+struct ParamTraits<mozilla::LookAndFeel::IntID>
+    : ContiguousEnumSerializer<mozilla::LookAndFeel::IntID,
+                               mozilla::LookAndFeel::IntID::CaretBlinkTime,
+                               mozilla::LookAndFeel::IntID::End>
+{
+  static_assert(static_cast<int32_t>(mozilla::LookAndFeel::IntID::CaretBlinkTime) == 0);
 };
 
 template <>
 struct ParamTraits<nsTransparencyMode>
-    : public ContiguousEnumSerializerInclusive<nsTransparencyMode,
-                                               eTransparencyOpaque,
-                                               eTransparencyBorderlessGlass> {};
+    : ContiguousEnumSerializerInclusive<nsTransparencyMode,
+                                        eTransparencyOpaque,
+                                        eTransparencyBorderlessGlass> {};
 
 template <>
 struct ParamTraits<nsCursor>
-    : public ContiguousEnumSerializer<nsCursor, eCursor_standard,
-                                      eCursorCount> {};
+    : ContiguousEnumSerializer<nsCursor, eCursor_standard,
+                               eCursorCount> {};
 
 }  // namespace IPC
 
