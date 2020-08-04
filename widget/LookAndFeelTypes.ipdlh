@@ -5,6 +5,7 @@
  * file, You can obtain one at http://mozilla.org/MPL/2.0/. */
 
 using mozilla::LookAndFeel::IntID from "mozilla/widget/WidgetMessageUtils.h";
+using nscolor from "nsColor.h";
 
 namespace mozilla {
 namespace widget {
@@ -14,7 +15,7 @@ struct LookAndFeelInt {
     int32_t value;
 };
 
-struct LookAndFeelFont {
+comparable struct LookAndFeelFont {
     bool haveFont;
     nsString name;
     float size;
@@ -25,6 +26,21 @@ struct LookAndFeelFont {
 struct LookAndFeelCache {
     LookAndFeelInt[] mInts;
     LookAndFeelFont[] mFonts;
+};
+
+struct FullLookAndFeel {
+    int32_t[] ints;
+    float[] floats;
+    nscolor[] colors;
+    LookAndFeelFont[] fonts;
+
+    uint8_t[] intMap;
+    uint8_t[] floatMap;
+    uint8_t[] colorMap;
+    uint8_t[] fontMap;
+
+    uint16_t passwordChar;
+    bool passwordEcho;
 };
 
 } // namespace widget

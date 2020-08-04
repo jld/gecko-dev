@@ -354,7 +354,6 @@ else:
 
 IPDL_SOURCES += [
     'LookAndFeelTypes.ipdlh',
-    'RemoteWidgetTypes.ipdlh',
 ]
 
 LOCAL_INCLUDES += [

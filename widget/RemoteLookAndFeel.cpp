@@ -20,7 +20,7 @@
 
 namespace mozilla::widget {
 
-RemoteLookAndFeel::RemoteLookAndFeel(IPCLookAndFeel&& aTables)
+RemoteLookAndFeel::RemoteLookAndFeel(FullLookAndFeel&& aTables)
     : mTables(std::move(aTables))
 {
   MOZ_DIAGNOSTIC_ASSERT(!sSingleton);
@@ -39,7 +39,7 @@ RemoteLookAndFeel* RemoteLookAndFeel::Get() {
 }
 
 // static
-void RemoteLookAndFeel::SetData(IPCLookAndFeel&& aTables) {
+void RemoteLookAndFeel::SetData(FullLookAndFeel&& aTables) {
   MOZ_ASSERT(NS_IsMainThread());
   if (!sSingleton) {
     sSingleton = new RemoteLookAndFeel(std::move(aTables));
@@ -120,7 +120,8 @@ bool RemoteLookAndFeel::GetFontImpl(FontID aID, nsString& aFontName,
     return false;
   }
 
-  const IPCSystemFont& font = *result.unwrap();
+  const LookAndFeelFont& font = *result.unwrap();
+  MOZ_ASSERT(font.haveFont());
   aFontName = font.name();
   aFontStyle = gfxFontStyle();
   aFontStyle.size = font.size();
@@ -141,14 +142,14 @@ bool RemoteLookAndFeel::GetEchoPasswordImpl() {
 }
 
 // static
-IPCLookAndFeel RemoteLookAndFeel::ExtractData() {
+FullLookAndFeel RemoteLookAndFeel::ExtractData() {
   MOZ_ASSERT(!sSingleton, "nesting this is probably wrong?");
   return ExtractData(nsXPLookAndFeel::GetInstance());
 }
 
 // static
-IPCLookAndFeel RemoteLookAndFeel::ExtractData(nsXPLookAndFeel* aImpl) {
-  IPCLookAndFeel lf{};
+FullLookAndFeel RemoteLookAndFeel::ExtractData(nsXPLookAndFeel* aImpl) {
+  FullLookAndFeel lf{};
 
   for (size_t i = 0; i < static_cast<size_t>(IntID::End); ++i) {
     int32_t theInt;
@@ -173,13 +174,14 @@ IPCLookAndFeel RemoteLookAndFeel::ExtractData(nsXPLookAndFeel* aImpl) {
 
   for (size_t i = static_cast<size_t>(FontID::MINIMUM);
        i < static_cast<size_t>(FontID::MAXIMUM); ++i) {
-    IPCSystemFont font{};
+    LookAndFeelFont font{};
     gfxFontStyle fontStyle{};
 
     bool rv = aImpl->GetFontImpl(static_cast<FontID>(i),
                                  font.name(), fontStyle);
-    Maybe<IPCSystemFont> maybeFont;
+    Maybe<LookAndFeelFont> maybeFont;
     if (rv) {
+      font.haveFont() = true;
       font.size() = fontStyle.size;
       font.weight() = fontStyle.weight.ToFloat();
       if (fontStyle.style.IsItalic()) {

@@ -1363,7 +1363,7 @@ void nsPresContext::ThemeChangedInternal() {
     image::SurfaceCacheUtils::DiscardAll();
 
     if (XRE_IsParentProcess()) {
-      widget::IPCLookAndFeel lf = widget::RemoteLookAndFeel::ExtractData();
+      widget::FullLookAndFeel lf = widget::RemoteLookAndFeel::ExtractData();
       nsTArray<ContentParent*> cp;
       ContentParent::GetAll(cp);
       widget::LookAndFeelCache lnfCache = LookAndFeel::GetCache();

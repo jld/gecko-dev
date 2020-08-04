@@ -607,7 +607,7 @@ NS_INTERFACE_MAP_END
 mozilla::ipc::IPCResult ContentChild::RecvSetXPCOMProcessAttributes(
     XPCOMInitData&& aXPCOMInit, const StructuredCloneData& aInitialData,
     LookAndFeelCache&& aLookAndFeelCache,
-    widget::IPCLookAndFeel&& aFullLookAndFeel,
+    widget::FullLookAndFeel&& aFullLookAndFeel,
     nsTArray<SystemFontListEntry>&& aFontList,
     const Maybe<SharedMemoryHandle>& aSharedUASheetHandle,
     const uintptr_t& aSharedUASheetAddress,
@@ -2304,7 +2304,7 @@ mozilla::ipc::IPCResult ContentChild::RecvNotifyVisited(
 
 mozilla::ipc::IPCResult ContentChild::RecvThemeChanged(
     LookAndFeelCache&& aLookAndFeelCache,
-    widget::IPCLookAndFeel&& aFullLookAndFeel) {
+    widget::FullLookAndFeel&& aFullLookAndFeel) {
   RemoteLookAndFeel::SetData(std::move(aFullLookAndFeel));
   LookAndFeel::SetCache(aLookAndFeelCache);
   LookAndFeel::NotifyChangedAllWindows();

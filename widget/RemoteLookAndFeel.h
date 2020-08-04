@@ -9,7 +9,7 @@
 #define mozilla_widget_RemoteLookAndFeel_h__
 
 #include "mozilla/widget/nsXPLookAndFeel.h"
-#include "mozilla/widget/RemoteWidgetTypes.h"
+#include "mozilla/widget/LookAndFeelTypes.h"
 
 namespace mozilla::widget {
 
@@ -30,16 +30,16 @@ class RemoteLookAndFeel final : public nsXPLookAndFeel {
   char16_t GetPasswordCharacterImpl() override;
   bool GetEchoPasswordImpl() override;
 
-  static void SetData(IPCLookAndFeel&& aTables);
-  static IPCLookAndFeel ExtractData(nsXPLookAndFeel* aImpl);
-  static IPCLookAndFeel ExtractData();
+  static void SetData(FullLookAndFeel&& aTables);
+  static FullLookAndFeel ExtractData(nsXPLookAndFeel* aImpl);
+  static FullLookAndFeel ExtractData();
 
  private:
-  IPCLookAndFeel mTables;
+  FullLookAndFeel mTables;
 
   static RemoteLookAndFeel* sSingleton;
 
-  explicit RemoteLookAndFeel(IPCLookAndFeel&& aTables);
+  explicit RemoteLookAndFeel(FullLookAndFeel&& aTables);
 };
 
 } // namespace mozilla::widget

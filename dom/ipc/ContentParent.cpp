@@ -2704,7 +2704,7 @@ bool ContentParent::InitInternal(ProcessPriority aInitialPriority) {
     sharedUASheetAddress = 0;
   }
 
-  widget::IPCLookAndFeel lnfFull = RemoteLookAndFeel::ExtractData();
+  widget::FullLookAndFeel lnfFull = RemoteLookAndFeel::ExtractData();
 
   Unused << SendSetXPCOMProcessAttributes(
       xpcomInit, initialData, lnfCache, lnfFull, fontList, sharedUASheetHandle,
