@@ -34,7 +34,6 @@ RemoteLookAndFeel::~RemoteLookAndFeel() {
 
 // static
 RemoteLookAndFeel* RemoteLookAndFeel::Get() {
-  MOZ_RELEASE_ASSERT(sSingleton, "RemoteLookAndFeel not initialized");
   return sSingleton;
 }
 

@@ -564,8 +564,7 @@ child:
      * Tell the child that the system theme has changed, and that a repaint
      * is necessary.
      */
-    async ThemeChanged(LookAndFeelCache lookAndFeelCache,
-                       FullLookAndFeel fullLookAndFeel);
+    async ThemeChanged(LookAndFeelData lookAndFeelData);
 
     async UpdateSystemParameters(SystemParameterKVPair[] aUpdates);
 
@@ -673,8 +672,7 @@ child:
 
     async SetXPCOMProcessAttributes(XPCOMInitData xpcomInit,
                                     StructuredCloneData initialData,
-                                    LookAndFeelCache lookAndFeelCache,
-                                    FullLookAndFeel fullLookAndFeel,
+                                    LookAndFeelData lookAndFeeldata,
                                     /* used on MacOSX/Linux/Android only: */
                                     SystemFontListEntry[] systemFontList,
                                     SharedMemoryHandle? sharedUASheetHandle,

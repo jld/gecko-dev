@@ -43,5 +43,10 @@ struct FullLookAndFeel {
     bool passwordEcho;
 };
 
+union LookAndFeelData {
+    LookAndFeelCache;
+    FullLookAndFeel;
+};
+
 } // namespace widget
 } // namespace mozilla

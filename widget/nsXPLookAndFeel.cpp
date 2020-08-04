@@ -248,8 +248,8 @@ nsXPLookAndFeel* nsXPLookAndFeel::GetInstance() {
 
   NS_ENSURE_TRUE(!sShutdown, nullptr);
 
-  if (XRE_IsContentProcess()) {
-    sInstance = widget::RemoteLookAndFeel::Get();
+  if (nsXPLookAndFeel* remote = widget::RemoteLookAndFeel::Get()) {
+    sInstance = remote;
   } else if (gfxPlatform::IsHeadless()) {
     sInstance = new widget::HeadlessLookAndFeel();
   } else {

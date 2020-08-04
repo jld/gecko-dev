@@ -73,6 +73,7 @@
 #include "mozilla/Sprintf.h"
 #include "mozilla/StaticPrefs_dom.h"
 #include "mozilla/StaticPrefs_media.h"
+#include "mozilla/StaticPrefs_widget.h"
 #include "mozilla/StyleSheet.h"
 #include "mozilla/StyleSheetInlines.h"
 #include "mozilla/Telemetry.h"
@@ -1481,6 +1482,24 @@ void ContentParent::BroadcastFontListChanged() {
   }
 }
 
+static LookAndFeelData GetLookAndFeelData() {
+  if (StaticPrefs::widget_remote_look_and_feel_AtStartup()) {
+    return RemoteLookAndFeel::ExtractData();
+  } else {
+    return LookAndFeel::GetCache();
+  }
+}
+
+// static
+void ContentParent::BroadcastThemeUpdate() {
+  LookAndFeelData lnfData = GetLookAndFeelData();
+  nsTArray<ContentParent*> cp;
+  GetAll(cp);
+  for (ContentParent* c : cp) {
+    Unused << c->SendThemeChanged(lnfData);
+  }
+}
+
 const nsACString& ContentParent::GetRemoteType() const { return mRemoteType; }
 
 void ContentParent::Init() {
@@ -2648,7 +2667,7 @@ bool ContentParent::InitInternal(ProcessPriority aInitialPriority) {
   nsTArray<SystemFontListEntry> fontList;
   gfxPlatform::GetPlatform()->ReadSystemFontList(&fontList);
 
-  LookAndFeelCache lnfCache = LookAndFeel::GetCache();
+  LookAndFeelData lnfData = GetLookAndFeelData();
 
   // If the shared fontlist is in use, collect its shmem block handles to pass
   // to the child.
@@ -2704,10 +2723,8 @@ bool ContentParent::InitInternal(ProcessPriority aInitialPriority) {
     sharedUASheetAddress = 0;
   }
 
-  widget::FullLookAndFeel lnfFull = RemoteLookAndFeel::ExtractData();
-
   Unused << SendSetXPCOMProcessAttributes(
-      xpcomInit, initialData, lnfCache, lnfFull, fontList, sharedUASheetHandle,
+      xpcomInit, initialData, lnfData, fontList, sharedUASheetHandle,
       sharedUASheetAddress, sharedFontListBlocks);
 
   ipc::WritableSharedMap* sharedData =
