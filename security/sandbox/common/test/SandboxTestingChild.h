@@ -11,6 +11,11 @@
 #include "mozilla/Monitor.h"
 #include "mozilla/UniquePtr.h"
 
+#ifdef XP_UNIX
+#include "nsString.h"
+#include <functional>
+#endif
+
 #if !defined(MOZ_SANDBOX) || !defined(MOZ_DEBUG) || !defined(ENABLE_TESTS)
 #  error "This file should not be used outside of debug with tests"
 #endif
@@ -40,6 +45,10 @@ class SandboxTestingChild : public PSandboxTestingChild {
   explicit SandboxTestingChild(SandboxTestingThread* aThread,
                                Endpoint<PSandboxTestingChild>&& aEndpoint);
   void Bind(Endpoint<PSandboxTestingChild>&& aEndpoint);
+
+#ifdef XP_UNIX
+  void ErrnoTest(const nsCString& aName, bool aExpectSuccess, std::function<int()> aFunction);
+#endif
 
   UniquePtr<SandboxTestingThread> mThread;
 

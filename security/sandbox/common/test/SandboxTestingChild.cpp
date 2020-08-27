@@ -3,8 +3,18 @@
 /* This Source Code Form is subject to the terms of the Mozilla Public
  * License, v. 2.0. If a copy of the MPL was not distributed with this
  * file, You can obtain one at https://mozilla.org/MPL/2.0/. */
+
 #include "SandboxTestingChild.h"
 #include "SandboxTestingThread.h"
+
+#include "nsXULAppAPI.h"
+
+#ifdef XP_LINUX
+#include <fcntl.h>
+#include <sys/stat.h>
+#include <sys/types.h>
+#include <unistd.h>
+#endif
 
 namespace mozilla {
 
@@ -50,11 +60,25 @@ void SandboxTestingChild::Bind(Endpoint<PSandboxTestingChild>&& aEndpoint) {
   DebugOnly<bool> ok = aEndpoint.Bind(this);
   MOZ_ASSERT(ok);
 
-  // Placeholder usage of the APIs needed to report test results.
-  // This will be fleshed out with tests that are OS and process type dependent.
-  SendReportTestResults(nsCString("testId1"), true /* shouldSucceed */,
-                        true /* didSucceed*/,
-                        nsCString("These are some test results!"));
+#ifdef XP_UNIX
+  if (XRE_IsContentProcess()) {
+    struct stat st;
+    const char* const kAllowedPath = "/usr/lib";
+
+    ErrnoTest("fstatat_as_stat"_ns, true, [&] {
+      return fstatat(AT_FDCWD, kAllowedPath, &st, 0);
+    });
+    ErrnoTest("fstatat_as_lstat"_ns, true, [&] {
+      return fstatat(AT_FDCWD, kAllowedPath, &st, AT_SYMLINK_NOFOLLOW);
+    });
+#ifdef XP_LINUX
+    ErrnoTest("fstatat_as_fstat"_ns, true, [&] {
+      return fstatat(0, "", &st, AT_EMPTY_PATH);
+    });
+#endif
+  }
+#endif
+
   // Tell SandboxTest that this process is done with all tests.
   SendTestCompleted();
 }
@@ -76,5 +100,25 @@ bool SandboxTestingChild::RecvShutDown() {
   Close();
   return true;
 }
+
+#ifdef XP_UNIX
+void SandboxTestingChild::ErrnoTest(
+    const nsCString& aName,
+    bool aExpectSuccess,
+    std::function<int()> aFunction)
+{
+  bool succeeded = aFunction() >= 0;
+  int err = errno;
+
+  nsAutoCString message;
+  if (succeeded) {
+    message = "Succeeded"_ns;
+  } else {
+    message.AppendPrintf("Error: %s", strerror(err));
+  }
+
+  SendReportTestResults(aName, aExpectSuccess, succeeded, message);
+}
+#endif // XP_UNIX
 
 }  // namespace mozilla
