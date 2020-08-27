@@ -2793,7 +2793,7 @@ const XREAppData* gAppData = nullptr;
 
 #ifdef MOZ_WIDGET_GTK
 static void MOZ_gdk_display_close(GdkDisplay* display) {
-#  if CLEANUP_MEMORY
+#  if 0
   // XXX wallpaper for bug 417163: don't close the Display if we're using the
   // Qt theme because we crash (in Qt code) when using jemalloc.
   bool skip_display_close = false;
