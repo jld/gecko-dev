@@ -683,6 +683,10 @@ SandboxBrokerPolicyFactory::GetUtilityPolicy(int aPid) {
 
   AddSharedMemoryPaths(policy.get(), aPid);
 
+  // FIXME, for nsSystemInfo, this is bad and we should feel bad
+  policy->AddDir(rdonly, "/sys/devices/system/cpu");
+  policy->AddPath(rdonly, "/proc/cpuinfo");
+
   if (policy->IsEmpty()) {
     policy = nullptr;
   }
