@@ -1635,8 +1635,12 @@ with only_when(compile_environment | artifact_builds):
         elif target.cpu in ('arm', 'aarch64') and \
                 target.kernel not in ('WINNT', 'Darwin'):
             enable = flac_only = True
-            if vpx_as_flags:
-                flags.extend(vpx_as_flags)
+            if target.os == 'Android':
+                if vpx_as_flags:
+                    flags.extend(vpx_as_flags)
+            else:
+                # asm doesn't work
+                flags = None
 
         if use_yasm:
             # default disabled components
