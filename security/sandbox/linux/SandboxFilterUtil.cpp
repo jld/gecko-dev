@@ -124,6 +124,7 @@ sandbox::bpf_dsl::ResultExpr SandboxPolicyBase::EvaluateSyscall(
 }
 
 /* static */ bool SandboxPolicyBase::HasSeparateSocketCalls() {
+  // FIXME memoize now
 #ifdef __NR_socket
   // If there's no socketcall, then obviously there are separate syscalls.
 #  ifdef __NR_socketcall
