@@ -546,6 +546,19 @@ class SandboxPolicyCommon : public SandboxPolicyBase {
                 .Else(InvalidSyscall()));
       }
 
+      case SYS_GETSOCKOPT: {
+        // Reading socket options, from a fd the process has been
+        // given, should be relatively safe (FIXME double check this).
+        // (FIXME how much of a pain is it to add another unpack trap?)
+        if (!aHasArgs) {
+          return Some(Allow());
+        }
+        Arg<int> level(1), optname(2);
+        // SO_SNDBUF is used by IPC (FIXME explain more)
+        return Some(If(AllOf(level == SOL_SOCKET, optname == SO_SNDBUF),
+                       Allow()).Else(InvalidSyscall()));
+      }
+
       default:
         return Nothing();
     }
