@@ -671,6 +671,11 @@ void Pickle::InputBytes(const char* data, uint32_t length) {
   MOZ_ALWAYS_TRUE(buffers_.WriteBytes(data, length));
 }
 
+void Pickle::InputBytesZeroCopy(char* data, uint32_t length, uint32_t capacity) {
+  MOZ_ALWAYS_TRUE(buffers_.WriteBytesZeroCopy(data, length, capacity));
+  // FIXME this is probably infallible… but so is InputBytes?
+}
+
 int32_t* Pickle::GetInt32PtrForTest(uint32_t offset) {
   size_t pos = buffers_.Size() - offset;
   BufferList::IterImpl iter(buffers_);

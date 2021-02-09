@@ -189,6 +189,7 @@ class Pickle {
   int32_t* GetInt32PtrForTest(uint32_t offset);
 
   void InputBytes(const char* data, uint32_t length);
+  void InputBytesZeroCopy(char* data, uint32_t length, uint32_t capacity);
 
   // Payload follows after allocation of Header (header size is customizable).
   struct Header {

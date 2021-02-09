@@ -462,10 +462,18 @@ bool Channel::ChannelImpl::ProcessIncomingMessages() {
         uint32_t remaining = message_length - m.CurrentSize();
 
         // How much data from this message is stored in input_buf_?
-        uint32_t in_buf = std::min(remaining, uint32_t(end - p));
+        uint32_t rest_of_buf = uint32_t(end - p);
+        uint32_t in_buf = std::min(remaining, rest_of_buf);
 
-        m.InputBytes(p, in_buf);
-        p += in_buf;
+        // If the entire buffer belongs to this message, transfer
+        // ownership instead of copying.
+        if (p == input_buf_.get() && remaining >= rest_of_buf) {
+          m.InputBytesZeroCopy(input_buf_.release(), rest_of_buf, rest_of_buf);
+          end = p;
+        } else {
+          m.InputBytes(p, in_buf);
+          p += in_buf;
+        }
 
         // Are we done reading this message?
         partial = in_buf != remaining;
