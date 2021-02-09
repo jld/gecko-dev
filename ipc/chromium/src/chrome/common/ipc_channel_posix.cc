@@ -205,7 +205,6 @@ void Channel::ChannelImpl::Init(Mode mode, Listener* listener) {
   is_blocked_on_write_ = false;
   partial_write_iter_.reset();
   input_buf_offset_ = 0;
-  input_buf_ = mozilla::MakeUnique<char[]>(Channel::kReadBufferSize);
   input_cmsg_buf_ = mozilla::MakeUnique<char[]>(kControlBufferSize);
   server_listen_pipe_ = -1;
   SetPipe(-1);
@@ -308,6 +307,10 @@ bool Channel::ChannelImpl::ProcessIncomingMessages() {
     msg.msg_controllen = kControlBufferSize;
 
     if (pipe_ == -1) return false;
+
+    if (!input_buf_) {
+      input_buf_ = mozilla::MakeUnique<char[]>(Channel::kReadBufferSize);
+    }
 
     // In some cases the beginning of a message will be stored in input_buf_. We
     // don't want to overwrite that, so we store the new data after it.
