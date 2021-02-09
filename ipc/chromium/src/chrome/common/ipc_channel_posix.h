@@ -22,6 +22,7 @@
 #include "mozilla/Maybe.h"
 #include "mozilla/Queue.h"
 #include "mozilla/UniquePtr.h"
+#include "mozilla/UniquePtrExtensions.h"
 
 namespace IPC {
 
@@ -104,7 +105,7 @@ class Channel::ChannelImpl : public MessageLoopForIO::Watcher {
 
   // We read from the pipe into these buffers.
   size_t input_buf_offset_;
-  mozilla::UniquePtr<char[]> input_buf_;
+  mozilla::UniqueFreePtr<char[]> input_buf_;
   mozilla::UniquePtr<char[]> input_cmsg_buf_;
 
   // The control message buffer will hold all of the file descriptors that will

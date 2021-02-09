@@ -34,6 +34,7 @@
 #include "chrome/common/ipc_message_utils.h"
 #include "mozilla/ipc/Endpoint.h"
 #include "mozilla/ipc/ProtocolUtils.h"
+#include "mozilla/mozalloc.h"
 #include "mozilla/Atomics.h"
 #include "mozilla/StaticMutex.h"
 #include "mozilla/UniquePtr.h"
@@ -309,7 +310,7 @@ bool Channel::ChannelImpl::ProcessIncomingMessages() {
     if (pipe_ == -1) return false;
 
     if (!input_buf_) {
-      input_buf_ = mozilla::MakeUnique<char[]>(Channel::kReadBufferSize);
+      input_buf_.reset(reinterpret_cast<char*>(moz_xmalloc(Channel::kReadBufferSize)));
     }
 
     // In some cases the beginning of a message will be stored in input_buf_. We
