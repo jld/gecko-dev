@@ -177,6 +177,7 @@ class BufferList : private AllocPolicy {
     uintptr_t mSegment;
     char* mData;
     char* mDataEnd;
+    size_t mRemaining;
 
     friend class BufferList;
 
@@ -187,6 +188,7 @@ class BufferList : private AllocPolicy {
         mData = aBuffers.mSegments[0].Start();
         mDataEnd = aBuffers.mSegments[0].End();
       }
+      mRemaining = aBuffers.Size();
     }
 
     // Returns a pointer to the raw data. It is valid to access up to
@@ -201,6 +203,10 @@ class BufferList : private AllocPolicy {
     bool HasRoomFor(size_t aBytes) const {
       MOZ_RELEASE_ASSERT(mData <= mDataEnd);
       return size_t(mDataEnd - mData) >= aBytes;
+    }
+
+    size_t Remaining() const {
+      return mRemaining;
     }
 
     // Returns the maximum value aBytes for which HasRoomFor(aBytes) will be
@@ -237,6 +243,7 @@ class BufferList : private AllocPolicy {
 
       MOZ_RELEASE_ASSERT(HasRoomFor(aBytes));
       mData += aBytes;
+      mRemaining -= std::min(mRemaining, aBytes);
 
       if (mData == mDataEnd && mSegment + 1 < aBuffers.mSegments.length()) {
         mSegment++;
