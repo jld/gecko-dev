@@ -1194,6 +1194,16 @@ bool gfxPlatform::IsHeadless() {
 }
 
 /* static */
+bool gfxPlatform::IsBrowserHeadless() {
+  if (XRE_IsContentProcess()) {
+    static const bool kHeadless = !!PR_GetEnv("MOZ_HEADLESS_BROWSER");
+    return kHeadless;
+  } else {
+    return IsHeadless();
+  }
+}
+
+/* static */
 bool gfxPlatform::UseWebRender() { return gfx::gfxVars::UseWebRender(); }
 
 /* static */

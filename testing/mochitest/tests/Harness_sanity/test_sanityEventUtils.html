@@ -35,7 +35,7 @@ const kStrictKeyPressEvents =
 const kStrictKeyDownKeyUpEvents =
   SpecialPowers.getBoolPref("dom.keyboardevent.dispatch_during_composition");
 const kIsHeadless =
-  SpecialPowers.Cc["@mozilla.org/gfx/info;1"].getService(SpecialPowers.Ci.nsIGfxInfo).isHeadless;
+  SpecialPowers.Cc["@mozilla.org/process/environment;1"].getService(SpecialPowers.Ci.nsIEnvironment).exists("MOZ_HEADLESS_BROWSER");
 
 info("\nProfile::EventUtilsLoadTime: " + (loadTime - start) + "\n");
 function starttest() {

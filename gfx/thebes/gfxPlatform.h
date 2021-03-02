@@ -226,7 +226,18 @@ class gfxPlatform : public mozilla::layers::MemoryPressureListener {
   static int32_t MaxAllocSize();
   static void InitMoz2DLogging();
 
+  /**
+   * Returns whether the current process is in headless mode.
+   */
   static bool IsHeadless();
+
+  /**
+   * Returns whether the entire browser is in headless mode.  This can
+   * be false even when `IsHeadless()` is true, if called in a child
+   * process which isn't using the normal GUI toolkit due to
+   * sandboxing or to conserve system resources.
+   */
+  static bool IsBrowserHeadless();
 
   static bool UseWebRender();
 

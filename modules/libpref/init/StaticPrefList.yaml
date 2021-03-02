@@ -2220,6 +2220,19 @@
   mirror: once
 #endif
 
+#ifdef MOZ_WIDGET_GTK
+# Avoid the use of X11 in content processes if possible, by not
+# initializing GTK, to avoid exhausting the X server's connection
+# limit.
+#
+# This does not affect sandbox policies; content processes may still
+# dynamically connect to the X server for, e.g., WebGL.
+- name: dom.ipc.avoid-x11
+  type: bool
+  value: true
+  mirror: always
+#endif
+
 # Whether or not to collect a paired minidump when force-killing a
 # content process.
 - name: dom.ipc.tabs.createKillHardCrashReports

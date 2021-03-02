@@ -249,7 +249,7 @@ bool WebGLContext::CreateAndInitGL(
   const FuncScope funcScope(*this, "<Create>");
 
   // Can't use WebGL in headless mode.
-  if (gfxPlatform::IsHeadless()) {
+  if (gfxPlatform::IsBrowserHeadless()) {
     FailureReason reason;
     reason.info =
         "Can't use WebGL in headless mode (https://bugzil.la/1375585).";
