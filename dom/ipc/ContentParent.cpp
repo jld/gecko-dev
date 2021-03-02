@@ -280,6 +280,7 @@
 
 #ifdef MOZ_WIDGET_GTK
 #  include <gdk/gdk.h>
+#  include "mozilla/WidgetUtilsGtk.h"
 #endif
 
 #include "mozilla/RemoteSpellCheckEngineParent.h"
@@ -2557,6 +2558,21 @@ bool ContentParent::BeginSubprocessLaunch(ProcessPriority aPriority) {
   nsCString parentBuildID(mozilla::PlatformBuildID());
   extraArgs.push_back("-parentBuildID");
   extraArgs.push_back(parentBuildID.get());
+
+#ifdef MOZ_WIDGET_GTK
+  // The file and privileged-about processes are exceptions to
+  // `dom.ipc.avoid-gtk` because they can use moz-icon URLs; see also
+  // bug 1695381.  (FIXME: rebase this onto the icon branch and remove
+  // that.)
+  //
+  // This is X11-only pending a solution for WebGL in Wayland mode.
+  if (StaticPrefs::dom_ipc_avoid_gtk() &&
+      StaticPrefs::widget_non_native_theme_enabled() &&
+      widget::GdkIsX11Display() && mRemoteType != FILE_REMOTE_TYPE &&
+      mRemoteType != PRIVILEGEDABOUT_REMOTE_TYPE) {
+    mSubprocess->SetEnv("MOZ_HEADLESS", "1");
+  }
+#endif
 
   // See also ActorDealloc.
   mSelfRef = this;
