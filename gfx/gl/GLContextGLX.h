@@ -20,7 +20,7 @@ class GLContextGLX : public GLContext {
  public:
   MOZ_DECLARE_REFCOUNTED_VIRTUAL_TYPENAME(GLContextGLX, override)
   static already_AddRefed<GLContextGLX> CreateGLContext(
-      const GLContextDesc&, Display* display, GLXDrawable drawable,
+      const GLContextDesc&, gfx::XlibDisplay::Ref display, GLXDrawable drawable,
       GLXFBConfig cfg, bool deleteDrawable, gfxXlibSurface* pixmap);
 
   static bool FindVisual(Display* display, int screen, bool useWebRender,
@@ -67,12 +67,12 @@ class GLContextGLX : public GLContext {
  private:
   friend class GLContextProviderGLX;
 
-  GLContextGLX(const GLContextDesc&, Display* aDisplay, GLXDrawable aDrawable,
-               GLXContext aContext, bool aDeleteDrawable, bool aDoubleBuffered,
-               gfxXlibSurface* aPixmap);
+  GLContextGLX(const GLContextDesc&, gfx::XlibDisplay::Ref aDisplay,
+               GLXDrawable aDrawable, GLXContext aContext, bool aDeleteDrawable,
+               bool aDoubleBuffered, gfxXlibSurface* aPixmap);
 
   const GLXContext mContext;
-  Display* const mDisplay;
+  const gfx::XlibDisplay::Ref mDisplay;
   const GLXDrawable mDrawable;
   const bool mDeleteDrawable;
   const bool mDoubleBuffered;

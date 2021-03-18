@@ -25,7 +25,7 @@ using namespace mozilla::gfx;
 
 gfxXlibSurface::gfxXlibSurface(Display* dpy, Drawable drawable, Visual* visual)
     : mPixmapTaken(false),
-      mDisplay(dpy),
+      mDisplay(XlibDisplay::Borrow(dpy)),
       mDrawable(drawable),
       mGLXPixmap(X11None) {
   const gfx::IntSize size = DoSizeQuery();
@@ -36,6 +36,10 @@ gfxXlibSurface::gfxXlibSurface(Display* dpy, Drawable drawable, Visual* visual)
 
 gfxXlibSurface::gfxXlibSurface(Display* dpy, Drawable drawable, Visual* visual,
                                const gfx::IntSize& size)
+    : gfxXlibSurface(XlibDisplay::Borrow(dpy), drawable, visual, size) {}
+
+gfxXlibSurface::gfxXlibSurface(XlibDisplay::Ref dpy, Drawable drawable,
+                               Visual* visual, const gfx::IntSize& size)
     : mPixmapTaken(false),
       mDisplay(dpy),
       mDrawable(drawable),
@@ -43,8 +47,8 @@ gfxXlibSurface::gfxXlibSurface(Display* dpy, Drawable drawable, Visual* visual,
   NS_ASSERTION(Factory::CheckSurfaceSize(size, XLIB_IMAGE_SIDE_SIZE_LIMIT),
                "Bad size");
 
-  cairo_surface_t* surf =
-      cairo_xlib_surface_create(dpy, drawable, visual, size.width, size.height);
+  cairo_surface_t* surf = cairo_xlib_surface_create(*dpy, drawable, visual,
+                                                    size.width, size.height);
   Init(surf);
 }
 
@@ -52,14 +56,14 @@ gfxXlibSurface::gfxXlibSurface(Screen* screen, Drawable drawable,
                                XRenderPictFormat* format,
                                const gfx::IntSize& size)
     : mPixmapTaken(false),
-      mDisplay(DisplayOfScreen(screen)),
+      mDisplay(XlibDisplay::Borrow(DisplayOfScreen(screen))),
       mDrawable(drawable),
       mGLXPixmap(X11None) {
   NS_ASSERTION(Factory::CheckSurfaceSize(size, XLIB_IMAGE_SIDE_SIZE_LIMIT),
                "Bad Size");
 
   cairo_surface_t* surf = cairo_xlib_surface_create_with_xrender_format(
-      mDisplay, drawable, screen, format, size.width, size.height);
+      *mDisplay, drawable, screen, format, size.width, size.height);
   Init(surf);
 }
 
@@ -69,7 +73,7 @@ gfxXlibSurface::gfxXlibSurface(cairo_surface_t* csurf)
              "Not expecting an error surface");
 
   mDrawable = cairo_xlib_surface_get_drawable(csurf);
-  mDisplay = cairo_xlib_surface_get_display(csurf);
+  mDisplay = XlibDisplay::Borrow(cairo_xlib_surface_get_display(csurf));
 
   Init(csurf, true);
 }
@@ -78,9 +82,9 @@ gfxXlibSurface::~gfxXlibSurface() {
   // gfxASurface's destructor calls RecordMemoryFreed().
   if (mPixmapTaken) {
     if (mGLXPixmap) {
-      gl::sGLXLibrary.DestroyPixmap(mDisplay, mGLXPixmap);
+      gl::sGLXLibrary.DestroyPixmap(*mDisplay, mGLXPixmap);
     }
-    XFreePixmap(mDisplay, mDrawable);
+    XFreePixmap(*mDisplay, mDrawable);
   }
 }
 
@@ -171,12 +175,22 @@ cairo_surface_t* gfxXlibSurface::CreateCairoSurface(Screen* screen,
 already_AddRefed<gfxXlibSurface> gfxXlibSurface::Create(
     Screen* screen, Visual* visual, const gfx::IntSize& size,
     Drawable relatedDrawable) {
+  return Create(XlibDisplay::Borrow(DisplayOfScreen(screen)), screen, visual,
+                size, relatedDrawable);
+};
+
+/* static */
+already_AddRefed<gfxXlibSurface> gfxXlibSurface::Create(
+    XlibDisplay::Ref display, Screen* screen, Visual* visual,
+    const gfx::IntSize& size, Drawable relatedDrawable) {
+  MOZ_ASSERT(*display == DisplayOfScreen(screen));
+
   Drawable drawable = CreatePixmap(screen, size, DepthOfVisual(screen, visual),
                                    relatedDrawable);
   if (!drawable) return nullptr;
 
   RefPtr<gfxXlibSurface> result =
-      new gfxXlibSurface(DisplayOfScreen(screen), drawable, visual, size);
+      new gfxXlibSurface(display, drawable, visual, size);
   result->TakePixmap();
 
   if (result->CairoStatus() != 0) return nullptr;
@@ -218,7 +232,7 @@ already_AddRefed<gfxASurface> gfxXlibSurface::CreateSimilarSurface(
     static bool force24bpp = GetForce24bppPref();
     if (force24bpp && cairo_xlib_surface_get_depth(CairoSurface()) != 24) {
       XRenderPictFormat* format =
-          XRenderFindStandardFormat(mDisplay, PictStandardRGB24);
+          XRenderFindStandardFormat(*mDisplay, PictStandardRGB24);
       if (format) {
         // Cairo only performs simple self-copies as desired if it
         // knows that this is a Pixmap surface.  It only knows that
@@ -240,7 +254,7 @@ already_AddRefed<gfxASurface> gfxXlibSurface::CreateSimilarSurface(
 
 void gfxXlibSurface::Finish() {
   if (mPixmapTaken && mGLXPixmap) {
-    gl::sGLXLibrary.DestroyPixmap(mDisplay, mGLXPixmap);
+    gl::sGLXLibrary.DestroyPixmap(*mDisplay, mGLXPixmap);
     mGLXPixmap = X11None;
   }
   gfxASurface::Finish();
@@ -259,7 +273,7 @@ const gfx::IntSize gfxXlibSurface::DoSizeQuery() {
   int x_ignore, y_ignore;
   unsigned int bwidth_ignore, width, height, depth;
 
-  XGetGeometry(mDisplay, mDrawable, &root_ignore, &x_ignore, &y_ignore, &width,
+  XGetGeometry(*mDisplay, mDrawable, &root_ignore, &x_ignore, &y_ignore, &width,
                &height, &bwidth_ignore, &depth);
 
   return gfx::IntSize(width, height);
