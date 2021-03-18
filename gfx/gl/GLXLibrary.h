@@ -23,6 +23,8 @@ typedef struct __GLXFBConfigRec* GLXFBConfig;
 // end of stuff from glx.h
 #include "prenv.h"
 
+#include <memory>
+
 struct PRLibrary;
 class gfxASurface;
 
@@ -31,9 +33,11 @@ namespace gl {
 
 class GLContextGLX;
 
+class GLXDisplay;
+
 class GLXLibrary final {
  public:
-  bool EnsureInitialized();
+  bool EnsureInitialized(Display* aDisplay);
 
  private:
   class WrapperScope final {
@@ -216,7 +220,7 @@ class GLXLibrary final {
   bool HasVideoMemoryPurge() { return mHasVideoMemoryPurge; }
   bool HasCreateContextAttribs() { return mHasCreateContextAttribs; }
   bool SupportsTextureFromPixmap(gfxASurface* aSurface);
-  bool SupportsVideoSync();
+  bool SupportsVideoSync(Display* aDisplay);
   bool SupportsSwapControl() const { return bool(mSymbols.fSwapIntervalEXT); }
   bool SupportsBufferAge() const {
     MOZ_ASSERT(mInitialized);
@@ -226,6 +230,9 @@ class GLXLibrary final {
   bool IsMesa() { return mClientIsMesa; }
 
   auto GetGetProcAddress() const { return mSymbols.fGetProcAddress; }
+
+  std::shared_ptr<GLXDisplay> GetDisplay();
+  std::shared_ptr<GLXDisplay> TryGetDisplay() const;
 
  private:
   struct {
@@ -276,10 +283,37 @@ class GLXLibrary final {
   bool mIsNVIDIA = false;
   bool mClientIsMesa = false;
   PRLibrary* mOGLLibrary = nullptr;
+  std::weak_ptr<GLXDisplay> mOwnDisplay;
 };
 
 // a global GLXLibrary instance
 extern GLXLibrary sGLXLibrary;
+
+// Represents an X11 display connection which may be either borrowed
+// (e.g., from GTK) or owned; in the latter case it will be closed
+// with this object becomes unreferenced.  See also the `EglDisplay`
+// class.
+class GLXDisplay final {
+  friend class GLXLibrary;
+  struct PrivateUseOnly final {};
+
+ public:
+  Display* get() const { return mDisplay; }
+  ~GLXDisplay();
+
+  // Only public for `make_shared`.
+  GLXDisplay(const PrivateUseOnly&, Display*, bool);
+
+  static std::shared_ptr<GLXDisplay> Borrow(Display* aDisplay) {
+    return Create(aDisplay, false);
+  }
+
+ private:
+  Display* mDisplay;
+  bool mOwned;
+
+  static std::shared_ptr<GLXDisplay> Create(Display*, bool);
+};
 
 } /* namespace gl */
 } /* namespace mozilla */

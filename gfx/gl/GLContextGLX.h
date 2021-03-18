@@ -20,8 +20,9 @@ class GLContextGLX : public GLContext {
  public:
   MOZ_DECLARE_REFCOUNTED_VIRTUAL_TYPENAME(GLContextGLX, override)
   static already_AddRefed<GLContextGLX> CreateGLContext(
-      const GLContextDesc&, Display* display, GLXDrawable drawable,
-      GLXFBConfig cfg, bool deleteDrawable, gfxXlibSurface* pixmap);
+      const GLContextDesc&, std::shared_ptr<GLXDisplay> display,
+      GLXDrawable drawable, GLXFBConfig cfg, bool deleteDrawable,
+      gfxXlibSurface* pixmap);
 
   static bool FindVisual(Display* display, int screen, bool useWebRender,
                          bool useAlpha, int* const out_visualId);
@@ -67,19 +68,19 @@ class GLContextGLX : public GLContext {
  private:
   friend class GLContextProviderGLX;
 
-  GLContextGLX(const GLContextDesc&, Display* aDisplay, GLXDrawable aDrawable,
-               GLXContext aContext, bool aDeleteDrawable, bool aDoubleBuffered,
-               gfxXlibSurface* aPixmap);
+  GLContextGLX(const GLContextDesc&, std::shared_ptr<GLXDisplay> aDisplay,
+               GLXDrawable aDrawable, GLXContext aContext, bool aDeleteDrawable,
+               bool aDoubleBuffered, gfxXlibSurface* aPixmap);
 
   const GLXContext mContext;
-  Display* const mDisplay;
+  const std::shared_ptr<GLXDisplay> mDisplay;
   const GLXDrawable mDrawable;
   const bool mDeleteDrawable;
   const bool mDoubleBuffered;
 
   GLXLibrary* const mGLX;
 
-  const RefPtr<gfxXlibSurface> mPixmap;
+  RefPtr<gfxXlibSurface> mPixmap;
   const bool mOwnsContext = true;
 };
 
