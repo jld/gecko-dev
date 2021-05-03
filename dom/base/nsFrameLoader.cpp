@@ -55,6 +55,10 @@
 #include "nsIXULRuntime.h"
 #include "nsNetUtil.h"
 #include "nsFocusManager.h"
+#include "nsIINIParser.h"
+#include "nsAppRunner.h"
+#include "nsDirectoryService.h"
+#include "nsDirectoryServiceDefs.h"
 
 #include "nsGkAtoms.h"
 #include "nsNameSpaceManager.h"
@@ -3633,6 +3637,37 @@ void nsFrameLoader::SetWillChangeProcess() {
   docshell->SetWillChangeProcess();
 }
 
+// FIXME try to use mozilla::Result
+static nsresult DidBuildIDChange(bool *aResult) {
+  nsresult rv;
+  nsCOMPtr<nsIFile> file;
+
+  *aResult = true;
+
+  rv = NS_GetSpecialDirectory(NS_GRE_DIR, getter_AddRefs(file));
+  NS_ENSURE_SUCCESS(rv, rv);
+
+  rv = file->AppendNative("platform.ini"_ns);
+  NS_ENSURE_SUCCESS(rv, rv);
+
+  nsCOMPtr<nsIINIParserFactory> iniFactory =
+      do_GetService("@mozilla.org/xpcom/ini-parser-factory;1", &rv);
+  NS_ENSURE_SUCCESS(rv, rv);
+
+  nsCOMPtr<nsIINIParser> parser;
+  rv = iniFactory->CreateINIParser(file, getter_AddRefs(parser));
+  NS_ENSURE_SUCCESS(rv, rv);
+
+  nsAutoCString installedBuildID;
+  rv = parser->GetString("Build"_ns, "BuildID"_ns, installedBuildID);
+  NS_ENSURE_SUCCESS(rv, rv);
+
+  nsDependentCString runningBuildID(PlatformBuildID());
+  *aResult = installedBuildID != runningBuildID;
+
+  return NS_OK;
+}
+
 void nsFrameLoader::MaybeNotifyCrashed(BrowsingContext* aBrowsingContext,
                                        ContentParentId aChildID,
                                        mozilla::ipc::MessageChannel* aChannel) {
@@ -3671,7 +3706,15 @@ void nsFrameLoader::MaybeNotifyCrashed(BrowsingContext* aBrowsingContext,
   // Fire the actual crashed event.
   nsString eventName;
   if (aChannel && !aChannel->DoBuildIDsMatch()) {
-    eventName = u"oop-browser-buildid-mismatch"_ns;
+    bool aChanged;
+    nsresult rv = DidBuildIDChange(&aChanged);
+    MOZ_ASSERT(NS_SUCCEEDED(rv));
+    if (aChanged) {
+      eventName = u"oop-browser-buildid-mismatch"_ns;
+    } else {
+      NS_WARNING("build ID mismatch false alarm");
+      eventName = u"oop-browser-crashed"_ns;
+    }
   } else {
     eventName = u"oop-browser-crashed"_ns;
   }
