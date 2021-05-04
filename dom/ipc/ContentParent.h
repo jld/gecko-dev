@@ -1415,6 +1415,9 @@ class ContentParent final
       const MaybeDiscardedBrowsingContext& aContainerContext,
       FeaturePolicy* aContainerFeaturePolicy);
 
+  mozilla::ipc::IPCResult RecvGetSystemIcon(nsIURI* aURI,
+                                            GetSystemIconResolver&& aResolver);
+
  public:
   void SendGetFilesResponseAndForget(const nsID& aID,
                                      const GetFilesResponseResult& aResult);
