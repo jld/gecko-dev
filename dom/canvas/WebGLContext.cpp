@@ -248,15 +248,12 @@ bool WebGLContext::CreateAndInitGL(
     bool forceEnabled, std::vector<FailureReason>* const out_failReasons) {
   const FuncScope funcScope(*this, "<Create>");
 
-  // Can't use WebGL in headless mode.
-  if (gfxPlatform::IsHeadless()) {
-    FailureReason reason;
-    reason.info =
-        "Can't use WebGL in headless mode (https://bugzil.la/1375585).";
-    out_failReasons->push_back(reason);
-    GenerateWarning("%s", reason.info.BeginReading());
-    return false;
-  }
+  // This doesn't test for headless mode, because on some platforms a
+  // "headless" process can still create an offscreen context (EGL/X11
+  // and GLX are known to work), and the general case depends on
+  // enough variables that it's not worth trying to duplicate the
+  // logic here to return an error, given that if it fails we'll
+  // return an error anyway.
 
   // WebGL2 is separately blocked:
   if (IsWebGL2() && !forceEnabled) {
