@@ -15,6 +15,8 @@ const { HiddenFrame } = ChromeUtils.import(
 const { OS } = ChromeUtils.import("resource://gre/modules/osfile.jsm");
 const { Services } = ChromeUtils.import("resource://gre/modules/Services.jsm");
 
+const { setTimeout } = ChromeUtils.import("resource://gre/modules/Timer.jsm");
+
 // Refrences to the progress listeners to keep them from being gc'ed
 // before they are called.
 const progressListeners = new Set();
@@ -101,7 +103,8 @@ async function takeScreenshot(
   contentWidth,
   contentHeight,
   path,
-  url
+  url,
+  delay
 ) {
   let frame;
   try {
@@ -120,6 +123,10 @@ async function takeScreenshot(
     doc.documentElement.appendChild(browser);
 
     await loadContentWindow(browser, url);
+
+    if (delay) {
+      await new Promise(resolve => setTimeout(resolve, delay));
+    }
 
     let actor = browser.browsingContext.currentWindowGlobal.getActor(
       "Screenshot"
@@ -232,6 +239,8 @@ let HeadlessShell = {
         cmdLine.handleFlag("screenshot", true); // Remove `screenshot`
       }
 
+      let delay = cmdLine.handleFlagWithParam("delay", true);
+
       for (let i = 0; i < cmdLine.length; ++i) {
         URLlist.push(cmdLine.getArgument(i)); // Assume that all remaining arguments are URLs
       }
@@ -243,7 +252,8 @@ let HeadlessShell = {
           contentWidth,
           contentHeight,
           path,
-          URLlist[0]
+          URLlist[0],
+	  delay
         );
       } else {
         dump("expected exactly one URL when using `screenshot`\n");
