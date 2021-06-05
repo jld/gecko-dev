@@ -71,11 +71,18 @@ static bool IsDisplayLocal() {
   // case of failure to connect using Unix-domain sockets.
 #ifdef MOZ_X11
   // First, ensure that the parent process's graphics are initialized.
-  Unused << gfxPlatform::GetPlatform();
+  DebugOnly<gfxPlatform*> gfxPlatform = gfxPlatform::GetPlatform();
 
   const auto display = gdk_display_get_default();
-  if (NS_WARN_IF(display == nullptr)) {
-    return false;
+  if (!display) {
+    // In this case, the browser is headless, but WebGL could still
+    // try to use X11.  However, WebGL isn't supported with remote
+    // X11, and in any case these connections are made after sandbox
+    // startup (lazily when WebGL is used), so they aren't being done
+    // directly by the process anyway.  (For local X11, they're
+    // brokered.)
+    MOZ_ASSERT(gfxPlatform->IsHeadless());
+    return true;
   }
   if (mozilla::widget::GdkIsX11Display(display)) {
     const int xSocketFd = ConnectionNumber(GDK_DISPLAY_XDISPLAY(display));
