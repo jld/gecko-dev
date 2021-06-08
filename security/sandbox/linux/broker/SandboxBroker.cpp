@@ -468,7 +468,7 @@ static int DoLink(const char* aPath, const char* aPath2,
   MOZ_CRASH("SandboxBroker: Unknown link operation");
 }
 
-static int DoConnect(const char* aPath, size_t aLen, int aType) {
+static int DoConnect(const char* aPath, size_t aLen, int aType, bool aIsAbstract) {
   // Deny SOCK_DGRAM for the same reason it's denied for socketpair.
   if (aType != SOCK_STREAM && aType != SOCK_SEQPACKET) {
     errno = EACCES;
@@ -484,21 +484,30 @@ static int DoConnect(const char* aPath, size_t aLen, int aType) {
 
   // Try to copy the name into a normal-sized sockaddr_un, with
   // null-termination:
+  // FIXME comment
   struct sockaddr_un sun;
   memset(&sun, 0, sizeof(sun));
   sun.sun_family = AF_UNIX;
-  if (aLen + 1 > sizeof(sun.sun_path)) {
+  char* sunPath = sun.sun_path;
+  size_t sunLen = sizeof(sun.sun_path);
+  size_t addrLen = sizeof(sun);
+  if (aIsAbstract) {
+    *sunPath++ = '\0';
+    sunLen--;
+    addrLen = offsetof(struct sockaddr_un, sun_path) + aLen + 1;
+  }
+  if (aLen + 1 > sunLen) {
     errno = ENAMETOOLONG;
     return -1;
   }
-  memcpy(&sun.sun_path, aPath, aLen);
+  memcpy(sunPath, aPath, aLen);
 
   // Finally, the actual socket connection.
   const int fd = socket(AF_UNIX, aType | SOCK_CLOEXEC, 0);
   if (fd < 0) {
     return -1;
   }
-  if (connect(fd, reinterpret_cast<struct sockaddr*>(&sun), sizeof(sun)) < 0) {
+  if (connect(fd, reinterpret_cast<struct sockaddr*>(&sun), addrLen) < 0) {
     close(fd);
     return -1;
   }
@@ -966,8 +975,10 @@ void SandboxBroker::ThreadMain(void) {
           break;
 
         case SANDBOX_SOCKET_CONNECT:
+        case SANDBOX_SOCKET_CONNECT_ABSTRACT:
           if (permissive || (perms & MAY_CONNECT) != 0) {
-            openedFd = DoConnect(pathBuf, pathLen, req.mFlags);
+            openedFd = DoConnect(pathBuf, pathLen, req.mFlags,
+                                 req.mOp == SANDBOX_SOCKET_CONNECT_ABSTRACT);
             if (openedFd >= 0) {
               resp.mError = 0;
             } else {

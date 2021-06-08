@@ -32,7 +32,9 @@ namespace mozilla {
 
 const char* SandboxBrokerCommon::OperationDescription[] = {
     "open",  "access", "stat",  "chmod",  "link",     "symlink",
-    "mkdir", "rename", "rmdir", "unlink", "readlink", "connect"};
+    "mkdir", "rename", "rmdir", "unlink", "readlink", "connect",
+    "connect-abstract",
+};
 
 /* static */
 ssize_t SandboxBrokerCommon::RecvWithFd(int aFd, const iovec* aIO,
