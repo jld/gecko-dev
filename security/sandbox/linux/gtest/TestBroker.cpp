@@ -16,6 +16,7 @@
 #include <stdlib.h>
 #include <sched.h>
 #include <semaphore.h>
+#include <sys/resource.h>
 #include <sys/stat.h>
 #include <sys/types.h>
 #include <time.h>
@@ -628,5 +629,40 @@ SandboxBrokerSigStress::DoSomething()
   sem_post(&mSemaphore);
 }
 #endif
+
+// TEST and TEST_F can't be mixed in the same test class, and this
+// doesn't need/want the fixture.
+TEST(SandboxBrokerMisc, LeakCheck)
+{
+  static constexpr size_t kCycles = 4096;
+  struct rlimit oldLimit;
+  bool changedLimit = false;
+
+  ASSERT_EQ(getrlimit(RLIMIT_NOFILE, &oldLimit), 0) << strerror(errno);
+  if (oldLimit.rlim_cur == RLIM_INFINITY ||
+      oldLimit.rlim_cur > static_cast<rlim_t>(kCycles)) {
+    struct rlimit newLimit = oldLimit;
+    newLimit.rlim_cur = static_cast<rlim_t>(kCycles);
+    ASSERT_EQ(setrlimit(RLIMIT_NOFILE, &newLimit), 0) << strerror(errno);
+    changedLimit = true;
+  }
+
+  pid_t pid = getpid();
+  for (size_t i = 0; i < kCycles; ++i) {
+    auto policy = MakeUnique<SandboxBroker::Policy>();
+    // Currently nothing in `Create` tries to check for or
+    // special-case an empty policy, but just in case:
+    policy->AddPath(SandboxBroker::MAY_READ, "/dev/null",
+                    SandboxBroker::Policy::AddAlways);
+    ipc::FileDescriptor fd;
+    auto broker = SandboxBroker::Create(std::move(policy), pid, fd);
+    ASSERT_TRUE(broker);
+    ASSERT_TRUE(fd.IsValid());
+  }
+
+  if (changedLimit) {
+    ASSERT_EQ(setrlimit(RLIMIT_NOFILE, &oldLimit), 0) << strerror(errno);
+  }
+}
 
 }  // namespace mozilla
