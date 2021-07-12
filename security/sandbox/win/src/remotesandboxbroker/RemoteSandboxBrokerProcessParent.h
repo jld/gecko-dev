@@ -23,7 +23,7 @@ class RemoteSandboxBrokerProcessParent final
  public:
   RemoteSandboxBrokerProcessParent();
 
-  RefPtr<ipc::ProcessHandlePromise> AsyncLaunch();
+  RefPtr<ipc::ProcessLaunchPromise> AsyncLaunch();
 
   bool CanShutdown() override { return true; }
 

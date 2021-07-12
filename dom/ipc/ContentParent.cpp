@@ -2696,14 +2696,14 @@ RefPtr<ContentParent::LaunchPromise> ContentParent::LaunchSubprocessAsync(
   }
 
   // Otherwise, wait until the process is ready.
-  RefPtr<ProcessHandlePromise> ready = mSubprocess->WhenProcessHandleReady();
+  RefPtr<ProcessLaunchPromise> ready = mSubprocess->WhenProcessHandleReady();
   RefPtr<ContentParent> self = this;
   mLaunchYieldTS = TimeStamp::Now();
 
   return ready->Then(
       GetCurrentSerialEventTarget(), __func__,
       [self, aInitialPriority](
-          const ProcessHandlePromise::ResolveOrRejectValue& aValue) {
+          const ProcessLaunchPromise::ResolveOrRejectValue& aValue) {
         if (aValue.IsResolve() &&
             self->LaunchSubprocessResolve(/* aIsSync = */ false,
                                           aInitialPriority)) {

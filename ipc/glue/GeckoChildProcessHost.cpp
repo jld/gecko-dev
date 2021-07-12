@@ -122,6 +122,21 @@ static bool ShouldHaveDirectoryService() {
 namespace mozilla {
 namespace ipc {
 
+typedef mozilla::MozPromise<base::ProcessHandle, LaunchError, true>
+    ProcessHandlePromise;
+
+struct LaunchResults {
+  base::ProcessHandle mHandle = 0;
+#ifdef XP_MACOSX
+  task_t mChildTask = MACH_PORT_NULL;
+#endif
+#if defined(XP_WIN) && defined(MOZ_SANDBOX)
+  RefPtr<AbstractSandboxBroker> mSandboxBroker;
+#endif
+};
+typedef mozilla::MozPromise<LaunchResults, LaunchError, true>
+    LaunchResultsPromise;
+
 static Atomic<int32_t> gChildCounter;
 
 static inline nsISerialEventTarget* IOThread() {
@@ -166,13 +181,13 @@ class BaseProcessLauncher {
 
   NS_INLINE_DECL_THREADSAFE_REFCOUNTING(BaseProcessLauncher);
 
-  RefPtr<ProcessLaunchPromise> Launch(GeckoChildProcessHost*);
+  RefPtr<LaunchResultsPromise> Launch(GeckoChildProcessHost*);
 
  protected:
   virtual ~BaseProcessLauncher() = default;
 
-  RefPtr<ProcessLaunchPromise> PerformAsyncLaunch();
-  RefPtr<ProcessLaunchPromise> FinishLaunch();
+  RefPtr<LaunchResultsPromise> PerformAsyncLaunch();
+  RefPtr<LaunchResultsPromise> FinishLaunch();
 
   // Overrideable hooks. If superclass behavior is invoked, it's always at the
   // top of the override.
@@ -458,14 +473,14 @@ void GeckoChildProcessHost::Destroy() {
   MOZ_RELEASE_ASSERT(!mDestroying);
   // We can remove from the list before it's really destroyed
   RemoveFromProcessList();
-  RefPtr<ProcessHandlePromise> whenReady = mHandlePromise;
+  RefPtr<ProcessLaunchPromise> whenReady = mLaunchPromise;
 
   if (!whenReady) {
     // AsyncLaunch not called yet, so dispatch immediately.
-    whenReady = ProcessHandlePromise::CreateAndReject(LaunchError{}, __func__);
+    whenReady = ProcessLaunchPromise::CreateAndReject(LaunchError{}, __func__);
   }
 
-  using Value = ProcessHandlePromise::ResolveOrRejectValue;
+  using Value = ProcessLaunchPromise::ResolveOrRejectValue;
   mDestroying = true;
   whenReady->Then(XRE_GetIOMessageLoop()->SerialEventTarget(), __func__,
                   [this](const Value&) { delete this; });
@@ -679,19 +694,20 @@ bool GeckoChildProcessHost::AsyncLaunch(std::vector<std::string> aExtraOpts) {
   RefPtr<BaseProcessLauncher> launcher =
       new ProcessLauncher(this, std::move(aExtraOpts));
 
-  // Note: Destroy() waits on mHandlePromise to delete |this|. As such, we want
+  // Note: Destroy() waits on mLaunchPromise to delete |this|. As such, we want
   // to be sure that all of our post-launch processing on |this| happens before
-  // mHandlePromise notifies.
-  MOZ_ASSERT(mHandlePromise == nullptr);
-  mHandlePromise =
+  // mLaunchPromise notifies.
+  MOZ_ASSERT(mLaunchPromise == nullptr);
+  mLaunchPromise =
       mozilla::InvokeAsync<GeckoChildProcessHost*>(
           IOThread(), launcher.get(), __func__, &BaseProcessLauncher::Launch,
           this)
-          ->Then(
+         ->Then(
               IOThread(), __func__,
               [this](const LaunchResults& aResults) {
+                base::ProcessId pid = base::GetProcId(aResults.mHandle);
                 {
-                  if (!OpenPrivilegedHandle(base::GetProcId(aResults.mHandle))
+                  if (!OpenPrivilegedHandle(pid)
 #ifdef XP_WIN
                       // If we failed in opening the process handle, try harder
                       // by duplicating one.
@@ -706,6 +722,7 @@ bool GeckoChildProcessHost::AsyncLaunch(std::vector<std::string> aExtraOpts) {
                   ) {
                     MOZ_CRASH("cannot open handle to child process");
                   }
+                  base::CloseProcessHandle(aResults.mHandle);
 
 #ifdef XP_MACOSX
                   this->mChildTask = aResults.mChildTask;
@@ -722,8 +739,7 @@ bool GeckoChildProcessHost::AsyncLaunch(std::vector<std::string> aExtraOpts) {
                   }
                   lock.Notify();
                 }
-                return ProcessHandlePromise::CreateAndResolve(aResults.mHandle,
-                                                              __func__);
+                return ProcessLaunchPromise::CreateAndResolve(pid, __func__);
               },
               [this](const LaunchError aError) {
                 // WaitUntilConnected might be waiting for us to signal.
@@ -741,7 +757,7 @@ bool GeckoChildProcessHost::AsyncLaunch(std::vector<std::string> aExtraOpts) {
                   mProcessState = PROCESS_ERROR;
                   lock.Notify();
                 }
-                return ProcessHandlePromise::CreateAndReject(aError, __func__);
+                return ProcessLaunchPromise::CreateAndReject(aError, __func__);
               });
   return true;
 }
@@ -1004,9 +1020,9 @@ static bool Contains(const std::vector<std::string>& aExtraOpts,
 }
 #endif  // defined(XP_WIN) && (defined(MOZ_SANDBOX) || defined(_ARM64_))
 
-RefPtr<ProcessLaunchPromise> BaseProcessLauncher::PerformAsyncLaunch() {
+RefPtr<LaunchResultsPromise> BaseProcessLauncher::PerformAsyncLaunch() {
   if (!DoSetup()) {
-    return ProcessLaunchPromise::CreateAndReject(LaunchError{}, __func__);
+    return LaunchResultsPromise::CreateAndReject(LaunchError{}, __func__);
   }
   RefPtr<BaseProcessLauncher> self = this;
   return DoLaunch()->Then(
@@ -1016,7 +1032,7 @@ RefPtr<ProcessLaunchPromise> BaseProcessLauncher::PerformAsyncLaunch() {
         return self->FinishLaunch();
       },
       [](LaunchError aError) {
-        return ProcessLaunchPromise::CreateAndReject(aError, __func__);
+        return LaunchResultsPromise::CreateAndReject(aError, __func__);
       });
 }
 
@@ -1568,9 +1584,9 @@ bool WindowsProcessLauncher::DoFinishLaunch() {
 }
 #endif  // XP_WIN
 
-RefPtr<ProcessLaunchPromise> BaseProcessLauncher::FinishLaunch() {
+RefPtr<LaunchResultsPromise> BaseProcessLauncher::FinishLaunch() {
   if (!DoFinishLaunch()) {
-    return ProcessLaunchPromise::CreateAndReject(LaunchError{}, __func__);
+    return LaunchResultsPromise::CreateAndReject(LaunchError{}, __func__);
   }
 
   MOZ_DIAGNOSTIC_ASSERT(mResults.mHandle);
@@ -1581,7 +1597,7 @@ RefPtr<ProcessLaunchPromise> BaseProcessLauncher::FinishLaunch() {
   Telemetry::AccumulateTimeDelta(Telemetry::CHILD_PROCESS_LAUNCH_MS,
                                  mStartTimeStamp);
 
-  return ProcessLaunchPromise::CreateAndResolve(mResults, __func__);
+  return LaunchResultsPromise::CreateAndResolve(mResults, __func__);
 }
 
 bool GeckoChildProcessHost::OpenPrivilegedHandle(base::ProcessId aPid) {
@@ -1621,9 +1637,9 @@ void GeckoChildProcessHost::OnChannelError() {
   // FIXME/bug 773925: save up this error for the next listener.
 }
 
-RefPtr<ProcessHandlePromise> GeckoChildProcessHost::WhenProcessHandleReady() {
-  MOZ_ASSERT(mHandlePromise != nullptr);
-  return mHandlePromise;
+RefPtr<ProcessLaunchPromise> GeckoChildProcessHost::WhenProcessHandleReady() {
+  MOZ_ASSERT(mLaunchPromise != nullptr);
+  return mLaunchPromise;
 }
 
 void GeckoChildProcessHost::GetQueuedMessages(std::queue<IPC::Message>& queue) {
@@ -1752,7 +1768,7 @@ void GeckoChildProcessHost::GetAll(const GeckoProcessCallback& aCallback) {
   }
 }
 
-RefPtr<ProcessLaunchPromise> BaseProcessLauncher::Launch(
+RefPtr<LaunchResultsPromise> BaseProcessLauncher::Launch(
     GeckoChildProcessHost* aHost) {
   AssertIOThread();
 
@@ -1771,7 +1787,7 @@ RefPtr<ProcessLaunchPromise> BaseProcessLauncher::Launch(
     }
   });
   if (failed) {
-    return ProcessLaunchPromise::CreateAndReject(LaunchError{}, __func__);
+    return LaunchResultsPromise::CreateAndReject(LaunchError{}, __func__);
   }
   mChannelId = aHost->GetChannelId();
 

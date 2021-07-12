@@ -45,19 +45,8 @@ namespace mozilla {
 namespace ipc {
 
 struct LaunchError {};
-typedef mozilla::MozPromise<base::ProcessHandle, LaunchError, false>
-    ProcessHandlePromise;
 
-struct LaunchResults {
-  base::ProcessHandle mHandle = 0;
-#ifdef XP_MACOSX
-  task_t mChildTask = MACH_PORT_NULL;
-#endif
-#if defined(XP_WIN) && defined(MOZ_SANDBOX)
-  RefPtr<AbstractSandboxBroker> mSandboxBroker;
-#endif
-};
-typedef mozilla::MozPromise<LaunchResults, LaunchError, false>
+typedef mozilla::MozPromise<base::ProcessId, LaunchError, false>
     ProcessLaunchPromise;
 
 class GeckoChildProcessHost : public ChildProcessHost,
@@ -121,9 +110,9 @@ class GeckoChildProcessHost : public ChildProcessHost,
   virtual void OnChannelError() override;
   virtual void GetQueuedMessages(std::queue<IPC::Message>& queue) override;
 
-  // Resolves to the process handle when it's available (see
+  // Resolves to the process ID when it's available (see
   // LaunchAndWaitForProcessHandle); use with AsyncLaunch.
-  RefPtr<ProcessHandlePromise> WhenProcessHandleReady();
+  RefPtr<ProcessLaunchPromise> WhenProcessHandleReady();
 
   void InitializeChannel(
       const std::function<void(IPC::Channel*)>& aChannelReady);
@@ -246,7 +235,7 @@ class GeckoChildProcessHost : public ChildProcessHost,
 #if defined(OS_MACOSX)
   task_t mChildTask;
 #endif
-  RefPtr<ProcessHandlePromise> mHandlePromise;
+  RefPtr<ProcessLaunchPromise> mLaunchPromise;
 
 #if defined(XP_MACOSX) && defined(MOZ_SANDBOX)
   bool mDisableOSActivityMode;

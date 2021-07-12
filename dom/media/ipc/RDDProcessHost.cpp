@@ -104,7 +104,7 @@ RefPtr<GenericNonExclusivePromise> RDDProcessHost::LaunchPromise() {
   WhenProcessHandleReady()->Then(
       GetCurrentSerialEventTarget(), __func__,
       [this, liveToken = mLiveToken](
-          const ipc::ProcessHandlePromise::ResolveOrRejectValue& aResult) {
+          const ipc::ProcessLaunchPromise::ResolveOrRejectValue& aResult) {
         if (!*liveToken) {
           // The RDDProcessHost got deleted. Abort. The promise would have
           // already been rejected.

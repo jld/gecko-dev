@@ -9,7 +9,7 @@
 
 using mozilla::ipc::GeckoChildProcessHost;
 using mozilla::ipc::LaunchError;
-using mozilla::ipc::ProcessHandlePromise;
+using mozilla::ipc::ProcessLaunchPromise;
 
 namespace mozilla {
 
@@ -22,9 +22,9 @@ RemoteSandboxBrokerProcessParent::~RemoteSandboxBrokerProcessParent() {
   MOZ_COUNT_DTOR(RemoteSandboxBrokerProcessParent);
 }
 
-RefPtr<ProcessHandlePromise> RemoteSandboxBrokerProcessParent::AsyncLaunch() {
+RefPtr<ProcessLaunchPromise> RemoteSandboxBrokerProcessParent::AsyncLaunch() {
   if (!GeckoChildProcessHost::AsyncLaunch()) {
-    return ProcessHandlePromise::CreateAndReject(LaunchError{}, __func__);
+    return ProcessLaunchPromise::CreateAndReject(LaunchError{}, __func__);
   }
   return WhenProcessHandleReady();
 }
