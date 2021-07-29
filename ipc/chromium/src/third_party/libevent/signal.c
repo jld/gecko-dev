@@ -64,6 +64,8 @@
 #include "evmap-internal.h"
 #include "evthread-internal.h"
 
+#include "mozilla/Assertions.h"
+
 /*
   signal.c
 
@@ -282,6 +284,7 @@ evsig_add(struct event_base *base, evutil_socket_t evsignal, short old, short ev
 	struct evsig_info *sig = &base->sig;
 	(void)p;
 
+	MOZ_CRASH("Do not.");
 	EVUTIL_ASSERT(evsignal >= 0 && evsignal < NSIG);
 
 	/* catch signals if they happen quickly */
