@@ -18,6 +18,7 @@
 #if defined(XP_LINUX) && defined(MOZ_SANDBOX)
 #  include "mozilla/Sandbox.h"
 #  include "mozilla/SandboxInfo.h"
+#  include "mozilla/Unused.h"
 #endif
 
 #include <string>
@@ -165,6 +166,14 @@ class LinuxSandboxStarter : public mozilla::gmp::SandboxStarter {
     return nullptr;
   }
   bool Start(const char* aLibPath) override {
+    // Bug 1725828: The Widevine CDM depends on lib{dl,pthread,rt};
+    // glibc 2.34 merged them into libc and left stub libraries for
+    // compatibility, so if Gecko is built for a new enough host
+    // (e.g., Fedora 35), it won't already have them loaded, which
+    // will cause the plugin load to fail unless we preload them here:
+    Unused << PR_LoadLibrary("libdl.so.2");
+    Unused << PR_LoadLibrary("libpthread.so.0");
+    Unused << PR_LoadLibrary("librt.so.1");
     mozilla::SetMediaPluginSandbox(aLibPath);
     return true;
   }
