@@ -1575,8 +1575,13 @@ UniquePtr<sandbox::bpf_dsl::Policy> GetContentSandboxPolicy(
 //
 // Be especially careful about what this policy allows.
 class GMPSandboxPolicy : public SandboxPolicyCommon {
+  struct State {
+    const SandboxOpenedFiles* mFiles;
+    SandboxBrokerClient *mBroker;
+  };
+
   static intptr_t OpenTrap(const sandbox::arch_seccomp_data& aArgs, void* aux) {
-    const auto files = static_cast<const SandboxOpenedFiles*>(aux);
+    const auto state = static_cast<const State*>(aux);
     const char* path;
     int flags;
 
@@ -1597,12 +1602,17 @@ class GMPSandboxPolicy : public SandboxPolicyCommon {
         MOZ_CRASH("unexpected syscall number");
     }
 
+    // FIXME comments
+    if (path && strncmp(path, "/dev/shm", sizeof("/dev/shm") - 1) == 0) {
+      return state->mBroker->Open(path, flags);
+    }
+
     if ((flags & O_ACCMODE) != O_RDONLY) {
       SANDBOX_LOG_ERROR("non-read-only open of file %s attempted (flags=0%o)",
                         path, flags);
       return -EROFS;
     }
-    int fd = files->GetDesc(path);
+    int fd = state->mFiles->GetDesc(path);
     if (fd < 0) {
       // SandboxOpenedFile::GetDesc already logged about this, if appropriate.
       return -ENOENT;
@@ -1649,11 +1659,20 @@ class GMPSandboxPolicy : public SandboxPolicyCommon {
     }
   }
 
-  const SandboxOpenedFiles* mFiles;
+  const State* mState;
 
  public:
   explicit GMPSandboxPolicy(const SandboxOpenedFiles* aFiles)
-      : mFiles(aFiles) {}
+      : mState(new State{ aFiles, nullptr }) { }
+
+  GMPSandboxPolicy(const SandboxOpenedFiles* aFiles,
+                   SandboxBrokerClient *aBroker)
+      : SandboxPolicyCommon(aBroker,
+                            ShmemUsage::MAY_CREATE,
+                            AllowUnsafeSocketPair::YES),
+        mState(new State{ aFiles, aBroker }) {
+    MOZ_RELEASE_ASSERT(aBroker);
+  }
 
   ~GMPSandboxPolicy() override = default;
 
@@ -1664,7 +1683,7 @@ class GMPSandboxPolicy : public SandboxPolicyCommon {
       case __NR_open:
 #endif
       case __NR_openat:
-        return Trap(OpenTrap, mFiles);
+        return Trap(OpenTrap, mState);
 
       case __NR_brk:
       // Because Firefox on glibc resorts to the fallback implementation
@@ -1720,8 +1739,17 @@ class GMPSandboxPolicy : public SandboxPolicyCommon {
 };
 
 UniquePtr<sandbox::bpf_dsl::Policy> GetMediaSandboxPolicy(
-    const SandboxOpenedFiles* aFiles) {
-  return UniquePtr<sandbox::bpf_dsl::Policy>(new GMPSandboxPolicy(aFiles));
+    const SandboxOpenedFiles* aFiles,
+    SandboxBrokerClient* aMaybeBroker) {
+  GMPSandboxPolicy* policy;
+
+  if (aMaybeBroker) {
+    policy = new GMPSandboxPolicy(aFiles, aMaybeBroker);
+  } else {
+    policy = new GMPSandboxPolicy(aFiles);
+  }
+
+  return UniquePtr<sandbox::bpf_dsl::Policy>(policy);
 }
 
 // The policy for the data decoder process is similar to the one for

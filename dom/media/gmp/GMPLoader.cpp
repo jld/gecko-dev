@@ -149,11 +149,13 @@ class WinSandboxStarter : public mozilla::gmp::SandboxStarter {
 
 #if defined(XP_LINUX) && defined(MOZ_SANDBOX)
 namespace {
-class LinuxSandboxStarter : public mozilla::gmp::SandboxStarter {
+class LinuxSandboxStarter final : public mozilla::gmp::SandboxStarter {
  private:
   LinuxSandboxStarter() = default;
   friend mozilla::detail::UniqueSelector<LinuxSandboxStarter>::SingleObject
   mozilla::MakeUnique<LinuxSandboxStarter>();
+
+  Maybe<ipc::FileDescriptor> mBrokerSocket;
 
  public:
   static UniquePtr<SandboxStarter> Make() {
@@ -165,8 +167,16 @@ class LinuxSandboxStarter : public mozilla::gmp::SandboxStarter {
     return nullptr;
   }
   bool Start(const char* aLibPath) override {
-    mozilla::SetMediaPluginSandbox(aLibPath);
+    int maybeFd = -1;
+    if (mBrokerSocket) {
+      maybeFd = mBrokerSocket->TakePlatformHandle().release();
+      MOZ_ASSERT(maybeFd >= 0);
+    }
+    mozilla::SetMediaPluginSandbox(aLibPath, maybeFd);
     return true;
+  }
+  void PrepareSandbox(Maybe<ipc::FileDescriptor>&& aBroker) override {
+    mBrokerSocket = std::move(aBroker);
   }
 };
 }  // anonymous namespace

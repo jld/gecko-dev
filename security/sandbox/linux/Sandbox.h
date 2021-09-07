@@ -57,7 +57,7 @@ MOZ_EXPORT bool SetContentProcessSandbox(ContentProcessSandboxParams&& aParams);
 // Call only if SandboxInfo::CanSandboxMedia() returns true.
 // (No-op if MOZ_DISABLE_GMP_SANDBOX is set.)
 // aFilePath is the path to the plugin file.
-MOZ_EXPORT void SetMediaPluginSandbox(const char* aFilePath);
+MOZ_EXPORT void SetMediaPluginSandbox(const char* aFilePath, int aBroker);
 
 MOZ_EXPORT void SetRemoteDataDecoderSandbox(int aBroker);
 

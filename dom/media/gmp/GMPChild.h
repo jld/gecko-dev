@@ -61,6 +61,8 @@ class GMPChild : public PGMPChild {
   mozilla::ipc::IPCResult RecvInitGMPContentChild(
       Endpoint<PGMPContentChild>&& aEndpoint);
 
+  ipc::IPCResult RecvPrepareSandbox(Maybe<ipc::FileDescriptor>&& aBroker);
+
   void ActorDestroy(ActorDestroyReason aWhy) override;
   void ProcessingError(Result aCode, const char* aReason) override;
 
@@ -80,6 +82,7 @@ class GMPChild : public PGMPChild {
   UniquePtr<GMPLoader> mGMPLoader;
 #ifdef XP_LINUX
   nsTArray<void*> mLibHandles;
+  Maybe<ipc::FileDescriptor> mBrokerSocket;
 #endif
 };
 

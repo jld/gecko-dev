@@ -30,7 +30,8 @@ class SandboxOpenedFiles;
 
 // The SandboxOpenedFiles object must live until the process exits.
 UniquePtr<sandbox::bpf_dsl::Policy> GetMediaSandboxPolicy(
-    const SandboxOpenedFiles* aFiles);
+    const SandboxOpenedFiles* aFiles,
+    SandboxBrokerClient* aMaybeBroker);
 
 UniquePtr<sandbox::bpf_dsl::Policy> GetDecoderSandboxPolicy(
     SandboxBrokerClient* aMaybeBroker);

@@ -678,6 +678,16 @@ void GMPChild::GMPContentChildActorDestroy(GMPContentChild* aGMPContentChild) {
   }
 }
 
+ipc::IPCResult GMPChild::RecvPrepareSandbox(
+    Maybe<ipc::FileDescriptor>&& aBroker) {
+#ifdef XP_LINUX
+  mBrokerSocket = std::move(aBroker);
+#else
+  MOZ_CRASH("unimplemented");
+#endif
+  return IPC_OK();
+}
+
 }  // namespace gmp
 }  // namespace mozilla
 

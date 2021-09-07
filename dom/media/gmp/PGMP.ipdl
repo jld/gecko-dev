@@ -31,6 +31,7 @@ child:
   async PreloadLibs(nsCString libs);
   async CloseActive();
   async InitGMPContentChild(Endpoint<PGMPContentChild> endpoint);
+  async PrepareSandbox(FileDescriptor? aBroker);
 };
 
 } // namespace gmp

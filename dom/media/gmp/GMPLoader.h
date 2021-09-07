@@ -16,6 +16,10 @@
 #if defined(XP_MACOSX) && defined(MOZ_SANDBOX)
 #  include "mozilla/Sandbox.h"
 #endif
+#ifdef XP_LINUX
+#  include "mozilla/Maybe.h"
+#  include "mozilla/ipc/FileDescriptor.h"
+#endif
 
 namespace mozilla {
 namespace gmp {
@@ -24,6 +28,9 @@ class SandboxStarter {
  public:
   virtual ~SandboxStarter() = default;
   virtual bool Start(const char* aLibPath) = 0;
+#ifdef XP_LINUX
+  virtual void PrepareSandbox(Maybe<ipc::FileDescriptor>&&) = 0;
+#endif
 };
 
 // Interface that adapts a plugin to the GMP API.
@@ -70,6 +77,12 @@ class GMPLoader {
   void Shutdown();
 
   bool CanSandbox() const;
+
+#ifdef XP_LINUX
+  void PrepareSandbox(Maybe<ipc::FileDescriptor>&& aBroker) {
+    mSandboxStarter->PrepareSandbox(std::move(aBroker));
+  }
+#endif
 
  private:
   UniquePtr<SandboxStarter> mSandboxStarter;

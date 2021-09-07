@@ -636,7 +636,7 @@ bool SetContentProcessSandbox(ContentProcessSandboxParams&& aParams) {
  *
  * Will normally make the process exit on failure.
  */
-void SetMediaPluginSandbox(const char* aFilePath) {
+void SetMediaPluginSandbox(const char* aFilePath, int aBroker) {
   MOZ_RELEASE_ASSERT(aFilePath != nullptr);
   if (!SandboxInfo::Get().Test(SandboxInfo::kEnabledForMedia)) {
     return;
@@ -670,8 +670,14 @@ void SetMediaPluginSandbox(const char* aFilePath) {
   files->Add("/proc/net/unix", SandboxOpenedFile::Error{});
   files->Add("/proc/self/maps", SandboxOpenedFile::Error{});
 
+  // FIXME comments
+  static SandboxBrokerClient *sBroker;
+  if (aBroker >= 0) {
+    sBroker = new SandboxBrokerClient(aBroker);
+  }
+
   // Finally, start the sandbox.
-  SetCurrentProcessSandbox(GetMediaSandboxPolicy(files));
+  SetCurrentProcessSandbox(GetMediaSandboxPolicy(files, sBroker));
 }
 
 void SetRemoteDataDecoderSandbox(int aBroker) {
