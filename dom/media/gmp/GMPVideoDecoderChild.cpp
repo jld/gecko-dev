@@ -11,6 +11,8 @@
 #include "GMPVideoEncodedFrameImpl.h"
 #include "runnable_utils.h"
 
+#define SHMEM_ALLOC_IN_CHILD 1
+
 namespace mozilla::gmp {
 
 GMPVideoDecoderChild::GMPVideoDecoderChild(GMPContentChild* aPlugin)

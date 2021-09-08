@@ -1662,17 +1662,13 @@ class GMPSandboxPolicy : public SandboxPolicyCommon {
   const State* mState;
 
  public:
-  explicit GMPSandboxPolicy(const SandboxOpenedFiles* aFiles)
-      : mState(new State{ aFiles, nullptr }) { }
-
-  GMPSandboxPolicy(const SandboxOpenedFiles* aFiles,
-                   SandboxBrokerClient *aBroker)
-      : SandboxPolicyCommon(aBroker,
+  explicit GMPSandboxPolicy(const SandboxOpenedFiles* aFiles,
+                            SandboxBrokerClient *aMaybeBroker = nullptr)
+      : SandboxPolicyCommon(aMaybeBroker,
                             ShmemUsage::MAY_CREATE,
-                            AllowUnsafeSocketPair::YES),
-        mState(new State{ aFiles, aBroker }) {
-    MOZ_RELEASE_ASSERT(aBroker);
-  }
+                            aMaybeBroker ? AllowUnsafeSocketPair::YES
+                                         : AllowUnsafeSocketPair::NO),
+        mState(new State{ aFiles, aMaybeBroker }) { }
 
   ~GMPSandboxPolicy() override = default;
 
@@ -1741,15 +1737,8 @@ class GMPSandboxPolicy : public SandboxPolicyCommon {
 UniquePtr<sandbox::bpf_dsl::Policy> GetMediaSandboxPolicy(
     const SandboxOpenedFiles* aFiles,
     SandboxBrokerClient* aMaybeBroker) {
-  GMPSandboxPolicy* policy;
-
-  if (aMaybeBroker) {
-    policy = new GMPSandboxPolicy(aFiles, aMaybeBroker);
-  } else {
-    policy = new GMPSandboxPolicy(aFiles);
-  }
-
-  return UniquePtr<sandbox::bpf_dsl::Policy>(policy);
+  return UniquePtr<sandbox::bpf_dsl::Policy>(
+      new GMPSandboxPolicy(aFiles, aMaybeBroker));
 }
 
 // The policy for the data decoder process is similar to the one for
