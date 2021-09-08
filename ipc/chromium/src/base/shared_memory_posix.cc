@@ -214,6 +214,9 @@ static int DupReadOnly(int fd) {
 static bool HaveMemfd() {
 #  ifdef USE_MEMFD_CREATE
   static const bool kHave = [] {
+    if (PR_GetEnv("MOZ_FAKE_NO_MEMFD")) {
+      return false;
+    }
     mozilla::UniqueFileHandle fd(
         memfd_create("mozilla-ipc-test", MFD_CLOEXEC | MFD_ALLOW_SEALING));
     if (!fd) {

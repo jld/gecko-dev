@@ -541,6 +541,10 @@ mozilla::ipc::IPCResult GMPChild::AnswerStartPlugin(const nsString& aAdapter) {
     adapter = new ChromiumCDMAdapter(std::move(paths));
   }
 
+#if defined(XP_LINUX) && defined(MOZ_SANDBOX)
+  mGMPLoader->PrepareSandbox(std::move(mBrokerSocket));
+#endif
+
   if (!mGMPLoader->Load(libPath.get(), libPath.Length(), platformAPI,
                         adapter)) {
     NS_WARNING("Failed to load GMP");
@@ -680,7 +684,7 @@ void GMPChild::GMPContentChildActorDestroy(GMPContentChild* aGMPContentChild) {
 
 ipc::IPCResult GMPChild::RecvPrepareSandbox(
     Maybe<ipc::FileDescriptor>&& aBroker) {
-#ifdef XP_LINUX
+#if defined(XP_LINUX) && defined(MOZ_SANDBOX)
   mBrokerSocket = std::move(aBroker);
 #else
   MOZ_CRASH("unimplemented");

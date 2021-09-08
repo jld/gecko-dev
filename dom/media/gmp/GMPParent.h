@@ -23,6 +23,11 @@
 #include "mozilla/MozPromise.h"
 
 namespace mozilla {
+
+#if defined(XP_LINUX) && defined(MOZ_SANDBOX)
+class SandboxBroker;
+#endif
+
 namespace gmp {
 
 class GMPCapability {
@@ -235,6 +240,10 @@ class GMPParent final
   // The child process architecture to use.
   uint32_t mChildLaunchArch;
   nsCString mPluginFilePath;
+#endif
+
+#if defined(XP_LINUX) && defined(MOZ_SANDBOX)
+  UniquePtr<SandboxBroker> mSandboxBroker;
 #endif
 
   const nsCOMPtr<nsISerialEventTarget> mMainThread;

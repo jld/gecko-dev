@@ -63,13 +63,15 @@ SandboxBroker::SandboxBroker(UniquePtr<const Policy> aPolicy, int aChildPid,
     mFileDesc = -1;
     aClientFd = -1;
   }
-  nsCOMPtr<nsIFile> tmpDir;
-  nsresult rv = NS_GetSpecialDirectory(NS_APP_CONTENT_PROCESS_TEMP_DIR,
-                                       getter_AddRefs(tmpDir));
-  if (NS_SUCCEEDED(rv)) {
-    rv = tmpDir->GetNativePath(mContentTempPath);
-    if (NS_FAILED(rv)) {
-      mContentTempPath.Truncate();
+  if (NS_IsMainThread()) { // XXXjld I hate everything
+    nsCOMPtr<nsIFile> tmpDir;
+    nsresult rv = NS_GetSpecialDirectory(NS_APP_CONTENT_PROCESS_TEMP_DIR,
+                                         getter_AddRefs(tmpDir));
+    if (NS_SUCCEEDED(rv)) {
+      rv = tmpDir->GetNativePath(mContentTempPath);
+      if (NS_FAILED(rv)) {
+        mContentTempPath.Truncate();
+      }
     }
   }
 }
@@ -653,7 +655,7 @@ void SandboxBroker::ThreadMain(void) {
   (void)NS_GetCurrentThread();
 
   char threadName[16];
-  SprintfLiteral(threadName, "FS Broker %d", mChildPid);
+  SprintfLiteral(threadName, "Broker %d", mChildPid);
   PlatformThread::SetName(threadName);
 
   AUTO_PROFILER_REGISTER_THREAD(threadName);

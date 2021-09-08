@@ -16,7 +16,7 @@
 #if defined(XP_MACOSX) && defined(MOZ_SANDBOX)
 #  include "mozilla/Sandbox.h"
 #endif
-#ifdef XP_LINUX
+#if defined(XP_LINUX) && defined(MOZ_SANDBOX)
 #  include "mozilla/Maybe.h"
 #  include "mozilla/ipc/FileDescriptor.h"
 #endif
@@ -28,7 +28,7 @@ class SandboxStarter {
  public:
   virtual ~SandboxStarter() = default;
   virtual bool Start(const char* aLibPath) = 0;
-#ifdef XP_LINUX
+#if defined(XP_LINUX) && defined(MOZ_SANDBOX)
   virtual void PrepareSandbox(Maybe<ipc::FileDescriptor>&&) = 0;
 #endif
 };
@@ -78,7 +78,7 @@ class GMPLoader {
 
   bool CanSandbox() const;
 
-#ifdef XP_LINUX
+#if defined(XP_LINUX) && defined(MOZ_SANDBOX)
   void PrepareSandbox(Maybe<ipc::FileDescriptor>&& aBroker) {
     mSandboxStarter->PrepareSandbox(std::move(aBroker));
   }

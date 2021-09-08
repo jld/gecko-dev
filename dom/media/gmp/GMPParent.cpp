@@ -19,6 +19,7 @@
 #include "mozilla/ipc/GeckoChildProcessHost.h"
 #if defined(XP_LINUX) && defined(MOZ_SANDBOX)
 #  include "mozilla/SandboxInfo.h"
+#  include "mozilla/SandboxBrokerPolicyFactory.h"
 #endif
 #include "mozilla/Services.h"
 #include "mozilla/SSE.h"
@@ -314,6 +315,31 @@ nsresult GMPParent::LoadProcess() {
       }
       GMP_PARENT_LOG_DEBUG("%s: Sent preload-libs ('%s') to child process",
                            __FUNCTION__, mLibs.get());
+    }
+#endif
+
+#if defined(XP_LINUX) && defined(MOZ_SANDBOX)
+    Maybe<ipc::FileDescriptor> brokerFd;
+    auto filePolicy = SandboxBrokerPolicyFactory::GetGMPPolicy(OtherPid());
+
+    if (filePolicy) {
+      brokerFd = Some(FileDescriptor());
+      mSandboxBroker =
+          SandboxBroker::Create(std::move(filePolicy), OtherPid(), brokerFd.ref());
+      // This is unlikely to fail and probably indicates OS resource
+      // exhaustion, but we can at least try to recover.
+      if (!mSandboxBroker) {
+        GMP_PARENT_LOG_DEBUG("%s: Failed to start sandbox file broker",
+                             __FUNCTION__);
+        return NS_ERROR_FAILURE;
+      }
+      MOZ_ASSERT(brokerFd.ref().IsValid());
+    }
+
+    if (!SendPrepareSandbox(brokerFd)) {
+      GMP_PARENT_LOG_DEBUG("%s: Failed to send prepare-sandbox to child process",
+                           __FUNCTION__);
+      return NS_ERROR_FAILURE;
     }
 #endif
 

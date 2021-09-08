@@ -80,7 +80,7 @@ class GMPChild : public PGMPChild {
   nsString mPluginPath;
   nsCString mStorageId;
   UniquePtr<GMPLoader> mGMPLoader;
-#ifdef XP_LINUX
+#if defined(XP_LINUX) && defined(MOZ_SANDBOX)
   nsTArray<void*> mLibHandles;
   Maybe<ipc::FileDescriptor> mBrokerSocket;
 #endif

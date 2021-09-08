@@ -840,4 +840,19 @@ SandboxBrokerPolicyFactory::GetSocketProcessPolicy(int aPid) {
   return policy;
 }
 
+/* static */ UniquePtr<SandboxBroker::Policy>
+SandboxBrokerPolicyFactory::GetGMPPolicy(int aPid) {
+  auto policy = MakeUnique<SandboxBroker::Policy>();
+
+  // This should be the *only* thing in this policy.
+  AddSharedMemoryPaths(policy.get(), aPid);
+
+  // Nothing is needed to create shared memory on kernel 3.17 and up.
+  // In that case: no policy, no broker, no unnecessary attack surface.
+  if (policy->IsEmpty()) {
+    policy = nullptr;
+  }
+  return policy;
+}
+
 }  // namespace mozilla
