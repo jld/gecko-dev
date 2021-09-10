@@ -9,7 +9,29 @@
 #include "mozilla/StaticPtr.h"
 #include "mozilla/ClearOnShutdown.h"
 
+#define SHMEM_ALLOC_SIMPLE 1
+
 namespace mozilla::gmp {
+
+#ifdef SHMEM_ALLOC_SIMPLE
+
+bool GMPSharedMemManager::MgrAllocShmem(
+    GMPSharedMem::GMPMemoryClasses aClass, size_t aSize,
+    ipc::Shmem::SharedMemory::SharedMemoryType aType, ipc::Shmem* aMem) {
+  return Alloc(aSize, aType, aMem);
+}
+
+bool GMPSharedMemManager::MgrDeallocShmem(GMPSharedMem::GMPMemoryClasses aClass,
+                                          ipc::Shmem& aMem) {
+  Dealloc(std::move(aMem));
+  return true;
+}
+
+uint32_t GMPSharedMemManager::NumInUse(GMPSharedMem::GMPMemoryClasses aClass) {
+  return 0;
+}
+
+#else
 
 // Really one set of pools on each side of the plugin API.
 
@@ -86,5 +108,7 @@ bool GMPSharedMemManager::MgrDeallocShmem(GMPSharedMem::GMPMemoryClasses aClass,
 uint32_t GMPSharedMemManager::NumInUse(GMPSharedMem::GMPMemoryClasses aClass) {
   return mData->mGmpAllocated[aClass] - GetGmpFreelist(aClass).Length();
 }
+
+#endif
 
 }  // namespace mozilla::gmp
