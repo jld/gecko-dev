@@ -318,7 +318,7 @@ nsresult GMPParent::LoadProcess() {
 #endif
 
     // Intr call to block initialization on plugin load.
-    if (!CallStartPlugin(mAdapter)) {
+    if (!SendStartPlugin(mAdapter)) {
       GMP_PARENT_LOG_DEBUG("%s: Failed to send start to child process",
                            __FUNCTION__);
       return NS_ERROR_FAILURE;
