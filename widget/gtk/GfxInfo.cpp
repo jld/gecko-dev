@@ -959,6 +959,7 @@ nsresult GfxInfo::GetFeatureStatusImpl(
     return NS_OK;
   }
 
+#if 0
   if (aFeature == nsIGfxInfo::FEATURE_WEBRENDER) {
     for (const nsCString& driver : mDdxDrivers) {
       if (strcasestr(driver.get(), "Intel")) {
@@ -968,6 +969,7 @@ nsresult GfxInfo::GetFeatureStatusImpl(
       }
     }
   }
+#endif
 
   return GfxInfoBase::GetFeatureStatusImpl(
       aFeature, aStatus, aSuggestedDriverVersion, aDriverInfo, aFailureId, &os);
