@@ -8279,7 +8279,7 @@
 #ifdef MOZ_FFMPEG
 - name: media.rdd-ffmpeg.enabled
   type: RelaxedAtomicBool
-  value: false
+  value: true
   mirror: always
 #endif
 
@@ -8439,7 +8439,7 @@
 # Use VA-API for ffmpeg video playback on Linux
 - name: media.ffmpeg.vaapi.enabled
   type: RelaxedAtomicBool
-  value: false
+  value: true
   mirror: always
 
 # Use DRM display for VA-API ffmpeg video decoding on Linux
