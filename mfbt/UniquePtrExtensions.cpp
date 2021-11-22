@@ -32,4 +32,40 @@ void FileHandleDeleter::operator()(FileHandleHelper aHelper) {
 }
 
 }  // namespace detail
+
+UniqueFileHandle CloneFileHandle(UniqueFileHandle::ElementType aHandle) {
+  if (!detail::FileHandleHelper::IsValid(aHandle)) {
+    return nullptr;
+  }
+
+  UniqueFileHandle newHandle = CloneFileHandle(aHandle, fallible);
+  if (!newHandle) {
+    MOZ_CRASH("failed to duplicate file handle");
+  }
+
+  return newHandle;
+}
+
+UniqueFileHandle CloneFileHandle(UniqueFileHandle::ElementType aHandle,
+                                 fallible_t) {
+  if (!detail::FileHandleHelper::IsValid(aHandle)) {
+    return nullptr;
+  }
+
+#ifdef XP_WIN
+  HANDLE osHandle;
+  if (::DuplicateHandle(GetCurrentProcess(), aHandle, GetCurrentProcess(),
+                        &osHandle, 0, FALSE, DUPLICATE_SAME_ACCESS)) {
+    return UniqueFileHandle(osHandle);
+  }
+#else  // not XP_WIN
+  int fd = dup(aHandle);
+  if (fd >= 0) {
+    return UniqueFileHandle(fd);
+  }
+#endif
+
+  return nullptr;
+}
+
 }  // namespace mozilla

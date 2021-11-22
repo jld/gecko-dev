@@ -104,18 +104,20 @@ struct FileHandleHelper {
   MOZ_IMPLICIT constexpr FileHandleHelper(std::nullptr_t)
       : mHandle(kInvalidHandle) {}
 
-  bool operator!=(std::nullptr_t) const {
+  bool operator!=(std::nullptr_t) const { return IsValid(mHandle); }
+
+  static bool IsValid(FileHandleType aHandle) {
 #ifdef XP_WIN
     // Windows uses both nullptr and INVALID_HANDLE_VALUE (-1 cast to
     // HANDLE) in different situations, but nullptr is more reliably
     // null while -1 is also valid input to some calls that take
     // handles.  So class considers both to be null (since neither
     // should be closed) but default-constructs as nullptr.
-    if (mHandle == (void*)-1) {
+    if (aHandle == (void*)-1) {
       return false;
     }
 #endif
-    return mHandle != kInvalidHandle;
+    return aHandle != kInvalidHandle;
   }
 
   operator FileHandleType() const { return mHandle; }
@@ -162,6 +164,20 @@ using UniqueFreePtr = UniquePtr<T, detail::FreePolicy<T>>;
 // objects: a file descriptor on Unix or a handle on Windows.
 using UniqueFileHandle =
     UniquePtr<detail::FileHandleType, detail::FileHandleDeleter>;
+
+// FIXME
+MFBT_API UniqueFileHandle CloneFileHandle(UniqueFileHandle::ElementType);
+MFBT_API UniqueFileHandle CloneFileHandle(UniqueFileHandle::ElementType,
+                                          fallible_t);
+
+inline UniqueFileHandle CloneFileHandle(const UniqueFileHandle& aHandle) {
+  return CloneFileHandle(aHandle.get());
+}
+
+inline UniqueFileHandle CloneFileHandle(const UniqueFileHandle& aHandle,
+                                        fallible_t) {
+  return CloneFileHandle(aHandle.get(), fallible);
+}
 
 // Helper for passing a UniquePtr to an old-style function that uses raw
 // pointers for out params. Example usage:

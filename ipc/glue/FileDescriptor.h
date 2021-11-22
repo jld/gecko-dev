@@ -29,9 +29,6 @@ class FileDescriptor {
   using UniquePlatformHandle = mozilla::UniqueFileHandle;
   using PlatformHandleType = UniquePlatformHandle::ElementType;
 
-  // This should only ever be created by IPDL.
-  struct IPDLPrivate {};
-
   // Represents an invalid handle.
   FileDescriptor();
 
@@ -53,7 +50,7 @@ class FileDescriptor {
   FileDescriptor& operator=(FileDescriptor&& aOther);
 
   // Tests mHandle against a well-known invalid platform-specific file handle
-  // (e.g. -1 on POSIX, INVALID_HANDLE_VALUE on Windows).
+  // (e.g. -1 on POSIX, INVALID_HANDLE_VALUE or nullptr on Windows).
   bool IsValid() const;
 
   // Returns a duplicated handle, it is caller's responsibility to close the
@@ -68,8 +65,6 @@ class FileDescriptor {
   bool operator==(const FileDescriptor& aOther) const;
 
  private:
-  static UniqueFileHandle Clone(PlatformHandleType aHandle);
-
   UniquePlatformHandle mHandle;
 };
 
