@@ -10,6 +10,7 @@
 #include "mozilla/ipc/IPDLParamTraits.h"
 #include "mozilla/ipc/ProtocolMessageUtils.h"
 #include "nsDebug.h"
+#include "private/pprio.h"
 
 #ifdef XP_WIN
 #  include <windows.h>
@@ -52,6 +53,16 @@ FileDescriptor& FileDescriptor::operator=(FileDescriptor&& aOther) {
 }
 
 bool FileDescriptor::IsValid() const { return mHandle != nullptr; }
+
+/* static */
+FileDescriptor FileDescriptor::CloneFrom(PRFileDesc* aFd) {
+  if (!aFd) {
+    return FileDescriptor();
+  }
+
+  return FileDescriptor::CloneFrom(PlatformHandleType(
+      PR_FileDesc2NativeHandle(aFd)));
+}
 
 FileDescriptor::UniquePlatformHandle FileDescriptor::ClonePlatformHandle()
     const {

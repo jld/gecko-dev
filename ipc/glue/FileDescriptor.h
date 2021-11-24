@@ -10,6 +10,7 @@
 #include "base/basictypes.h"
 #include "base/process.h"
 #include "mozilla/UniquePtrExtensions.h"
+#include "prio.h"
 
 namespace mozilla {
 namespace ipc {
@@ -48,6 +49,22 @@ class FileDescriptor {
   FileDescriptor& operator=(const FileDescriptor& aOther);
 
   FileDescriptor& operator=(FileDescriptor&& aOther);
+
+  FileDescriptor Clone() const { return FileDescriptor(ClonePlatformHandle()); }
+
+  static FileDescriptor Consume(PlatformHandleType aHandle) {
+    return FileDescriptor(UniquePlatformHandle(aHandle));
+  }
+
+  static FileDescriptor CloneFrom(PlatformHandleType aHandle) {
+    return FileDescriptor(CloneFileHandle(aHandle));
+  }
+
+  static FileDescriptor CloneFrom(const UniquePlatformHandle& aHandle) {
+    return FileDescriptor(CloneFileHandle(aHandle));
+  }
+
+  static FileDescriptor CloneFrom(PRFileDesc* aFd);
 
   // Tests mHandle against a well-known invalid platform-specific file handle
   // (e.g. -1 on POSIX, INVALID_HANDLE_VALUE or nullptr on Windows).
