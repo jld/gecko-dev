@@ -196,8 +196,7 @@ class ExtensionJARFileOpener final : public nsISupports {
 #endif /* XP_WIN */
 
     if (NS_SUCCEEDED(rv)) {
-      mFD = FileDescriptor(FileDescriptor::PlatformHandleType(
-          PR_FileDesc2NativeHandle(prFileDesc)));
+      mFD = FileDescriptor::CloneFrom(prFileDesc);
     }
 
     nsCOMPtr<nsIRunnable> event =

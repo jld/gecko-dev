@@ -27,14 +27,12 @@ LazyLogModule gFDFileLog("FDFile");
 FileDescriptorFile::FileDescriptorFile(const FileDescriptor& aFD,
                                        nsIFile* aFile) {
   MOZ_ASSERT(aFD.IsValid());
-  auto platformHandle = aFD.ClonePlatformHandle();
-  mFD = FileDescriptor(platformHandle.get());
+  mFD = aFD.Clone();
   mFile = aFile;
 }
 
 FileDescriptorFile::FileDescriptorFile(const FileDescriptorFile& aOther) {
-  auto platformHandle = aOther.mFD.ClonePlatformHandle();
-  mFD = FileDescriptor(platformHandle.get());
+  mFD = aOther.mFD.Clone();
   aOther.mFile->Clone(getter_AddRefs(mFile));
 }
 

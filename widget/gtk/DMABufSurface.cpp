@@ -492,7 +492,7 @@ bool DMABufSurfaceRGBA::Serialize(
   height.AppendElement(mHeight);
   format.AppendElement(mGmbFormat->mFormat);
   for (int i = 0; i < mBufferPlaneCount; i++) {
-    fds.AppendElement(ipc::FileDescriptor(mDmabufFds[i]));
+    fds.AppendElement(ipc::FileDescriptor::CloneFrom(mDmabufFds[i]));
     strides.AppendElement(mStrides[i]);
     offsets.AppendElement(mOffsets[i]);
   }
@@ -500,11 +500,11 @@ bool DMABufSurfaceRGBA::Serialize(
   CloseFileDescriptors(lockFD);
 
   if (mSync) {
-    fenceFDs.AppendElement(ipc::FileDescriptor(mSyncFd));
+    fenceFDs.AppendElement(ipc::FileDescriptor::CloneFrom(mSyncFd));
   }
 
   if (mGlobalRefCountFd) {
-    refCountFDs.AppendElement(ipc::FileDescriptor(mGlobalRefCountFd));
+    refCountFDs.AppendElement(ipc::FileDescriptor::CloneFrom(mGlobalRefCountFd));
   }
 
   aOutDescriptor =
@@ -1103,7 +1103,7 @@ bool DMABufSurfaceYUV::Serialize(
     width.AppendElement(mWidth[i]);
     height.AppendElement(mHeight[i]);
     format.AppendElement(mDrmFormats[i]);
-    fds.AppendElement(ipc::FileDescriptor(mDmabufFds[i]));
+    fds.AppendElement(ipc::FileDescriptor::CloneFrom(mDmabufFds[i]));
     strides.AppendElement(mStrides[i]);
     offsets.AppendElement(mOffsets[i]);
   }
@@ -1111,11 +1111,11 @@ bool DMABufSurfaceYUV::Serialize(
   CloseFileDescriptors(lockFD);
 
   if (mSync) {
-    fenceFDs.AppendElement(ipc::FileDescriptor(mSyncFd));
+    fenceFDs.AppendElement(ipc::FileDescriptor::CloneFrom(mSyncFd));
   }
 
   if (mGlobalRefCountFd) {
-    refCountFDs.AppendElement(ipc::FileDescriptor(mGlobalRefCountFd));
+    refCountFDs.AppendElement(ipc::FileDescriptor::CloneFrom(mGlobalRefCountFd));
   }
 
   aOutDescriptor = SurfaceDescriptorDMABuf(

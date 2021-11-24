@@ -99,9 +99,9 @@ FileDescriptor FILEToFileDescriptor(FILE* aStream) {
   if (fd == -1) {
     return FileDescriptor();
   }
-  return FileDescriptor(reinterpret_cast<HANDLE>(_get_osfhandle(fd)));
+  return FileDescriptor::CloneFrom(reinterpret_cast<HANDLE>(_get_osfhandle(fd)));
 #else
-  return FileDescriptor(fileno(aStream));
+  return FileDescriptor::CloneFrom(fileno(aStream));
 #endif
 }
 

@@ -38,10 +38,6 @@ class FileDescriptor {
 
   FileDescriptor(FileDescriptor&& aOther) = default;
 
-  // This constructor will duplicate a new handle.
-  // The caller still have to close aHandle.
-  explicit FileDescriptor(PlatformHandleType aHandle);
-
   explicit FileDescriptor(UniquePlatformHandle&& aHandle);
 
   ~FileDescriptor() = default;

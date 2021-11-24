@@ -223,7 +223,8 @@ static bool LaunchAppWithForkServer(const std::vector<std::string>& argv,
   }
   for (auto& fdmapping : options.fds_to_remap) {
     fdsremap.AppendElement(mozilla::FdMapping(
-        mozilla::ipc::FileDescriptor(fdmapping.first), fdmapping.second));
+        mozilla::ipc::FileDescriptor::CloneFrom(fdmapping.first),
+        fdmapping.second));
   }
 
   return ForkServiceChild::Get()->SendForkNewSubprocess(_argv, env, fdsremap,

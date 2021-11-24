@@ -45,10 +45,9 @@ HeapSnapshotTempFileHelperParent::RecvOpenHeapSnapshotTempFile(
     return IPC_OK();
   }
 
-  FileDescriptor::PlatformHandleType handle =
-      FileDescriptor::PlatformHandleType(PR_FileDesc2NativeHandle(prfd));
-  FileDescriptor fd(handle);
-  *outResponse = OpenedFile(filePath, snapshotId, fd);
+  auto fd = FileDescriptor::CloneFrom(prfd);
+  PR_Close(prfd);
+  *outResponse = OpenedFile(filePath, snapshotId, std::move(fd));
   return IPC_OK();
 }
 

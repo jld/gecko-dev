@@ -797,7 +797,7 @@ void ContentChild::Init(base::ProcessId aParentPid, const char* aParentBuildID,
     // Send the parent our X socket to act as a proxy reference for our X
     // resources.
     int xSocketFd = ConnectionNumber(DefaultXDisplay());
-    SendBackUpXResources(FileDescriptor(xSocketFd));
+    SendBackUpXResources(FileDescriptor::CloneFrom(xSocketFd));
   }
 #  endif
 #endif

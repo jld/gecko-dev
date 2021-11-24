@@ -75,8 +75,7 @@ void TemporaryIPCBlobChild::AskForBlob(TemporaryIPCBlobChildCallback* aCallback,
     return;
   }
 
-  FileDescriptor fdd = FileDescriptor(
-      FileDescriptor::PlatformHandleType(PR_FileDesc2NativeHandle(aFD)));
+  auto fdd = FileDescriptor::CloneFrom(aFD);
 
   mCallback = aCallback;
   SendOperationDone(nsCString(aContentType), fdd);

@@ -448,9 +448,9 @@ bool Provider::Initialize(HWND aWindowHandle, DWORD aTargetProcessId,
 
 Maybe<RemoteBackbufferHandles> Provider::CreateRemoteHandles() {
   return Some(
-      RemoteBackbufferHandles(ipc::FileDescriptor(mFileMapping),
-                              ipc::FileDescriptor(mRequestReadyEvent),
-                              ipc::FileDescriptor(mResponseReadyEvent)));
+      RemoteBackbufferHandles(ipc::FileDescriptor::CloneFrom(mFileMapping),
+                              ipc::FileDescriptor::CloneFrom(mRequestReadyEvent),
+                              ipc::FileDescriptor::CloneFrom(mResponseReadyEvent)));
 }
 
 void Provider::UpdateTransparencyMode(nsTransparencyMode aTransparencyMode) {

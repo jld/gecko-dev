@@ -25,9 +25,6 @@ namespace ipc {
 FileDescriptor::FileDescriptor(const FileDescriptor& aOther)
     : mHandle(CloneFileHandle(aOther.mHandle)) {}
 
-FileDescriptor::FileDescriptor(PlatformHandleType aHandle)
-    : mHandle(CloneFileHandle(aHandle)) {}
-
 FileDescriptor::FileDescriptor(UniquePlatformHandle&& aHandle)
     : mHandle(std::move(aHandle)) {}
 

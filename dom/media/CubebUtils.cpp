@@ -432,7 +432,7 @@ ipc::FileDescriptor CreateAudioIPCConnectionUnlocked() {
   MOZ_ASSERT(sServerHandle);
   ipc::FileDescriptor::PlatformHandleType rawFD =
       audioipc::audioipc_server_new_client(sServerHandle, sAudioIPCShmAreaSize);
-  ipc::FileDescriptor fd(rawFD);
+  auto fd = ipc::FileDescriptor::CloneFrom(rawFD);
   if (!fd.IsValid()) {
     MOZ_LOG(gCubebLog, LogLevel::Error, ("audioipc_server_new_client failed"));
     return ipc::FileDescriptor();

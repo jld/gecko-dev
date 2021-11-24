@@ -4900,8 +4900,7 @@ class AnonymousTemporaryFileRequestor final : public Runnable {
         // propagate the error and let the child handle it.
         result = mRv;
       } else {
-        result = FileDescriptor(FileDescriptor::PlatformHandleType(
-            PR_FileDesc2NativeHandle(mPRFD)));
+        result = FileDescriptor::CloneFrom(mPRFD);
         // The FileDescriptor object owns a duplicate of the file handle; we
         // must close the original (and clean up the NSPR descriptor).
         PR_Close(mPRFD);

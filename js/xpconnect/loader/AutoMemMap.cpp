@@ -21,12 +21,7 @@ using namespace mozilla::ipc;
 AutoMemMap::~AutoMemMap() { reset(); }
 
 FileDescriptor AutoMemMap::cloneFileDescriptor() const {
-  if (fd.get()) {
-    auto handle =
-        FileDescriptor::PlatformHandleType(PR_FileDesc2NativeHandle(fd.get()));
-    return FileDescriptor(handle);
-  }
-  return FileDescriptor();
+  return FileDescriptor::CloneFrom(fd);
 }
 
 Result<Ok, nsresult> AutoMemMap::init(nsIFile* file, int flags, int mode,
@@ -116,7 +111,7 @@ Result<Ok, nsresult> AutoMemMap::initWithHandle(const FileDescriptor& file,
 }
 
 FileDescriptor AutoMemMap::cloneHandle() const {
-  return FileDescriptor(handle_);
+  return FileDescriptor::CloneFrom(handle_);
 }
 
 #else

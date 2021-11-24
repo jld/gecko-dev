@@ -37,8 +37,7 @@ mozilla::ipc::IPCResult TemporaryIPCBlobParent::CreateAndShareFile() {
     return SendDeleteError(rv);
   }
 
-  FileDescriptor fdd = FileDescriptor(
-      FileDescriptor::PlatformHandleType(PR_FileDesc2NativeHandle(fd)));
+  auto fdd = FileDescriptor::CloneFrom(fd);
 
   // The FileDescriptor object owns a duplicate of the file handle; we
   // must close the original (and clean up the NSPR descriptor).

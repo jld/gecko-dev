@@ -103,8 +103,7 @@ nsresult RemotePrintJobParent::PrepareNextPageFD(FileDescriptor* aFd) {
   if (NS_FAILED(rv)) {
     return rv;
   }
-  *aFd = FileDescriptor(
-      FileDescriptor::PlatformHandleType(PR_FileDesc2NativeHandle(prFd)));
+  *aFd = FileDescriptor::CloneFrom(prFd);
   mCurrentPageStream.OpenFD(prFd);
   return NS_OK;
 }

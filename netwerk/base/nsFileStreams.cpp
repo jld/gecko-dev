@@ -568,10 +568,7 @@ void nsFileInputStream::SerializeInternal(
 
   if (NS_SUCCEEDED(DoPendingOpen())) {
     MOZ_ASSERT(mFD);
-    FileHandleType fd = FileHandleType(PR_FileDesc2NativeHandle(mFD));
-    NS_ASSERTION(fd, "This should never be null!");
-
-    DebugOnly dbgFD = aFileDescriptors.AppendElement(fd);
+    DebugOnly dbgFD = aFileDescriptors.AppendElement(FileDescriptor::CloneFrom(mFD));
     NS_ASSERTION(dbgFD->IsValid(), "Sending an invalid file descriptor!");
 
     params.fileDescriptorIndex() = aFileDescriptors.Length() - 1;
