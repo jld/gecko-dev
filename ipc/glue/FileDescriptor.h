@@ -31,12 +31,12 @@ class FileDescriptor {
   using PlatformHandleType = UniquePlatformHandle::ElementType;
 
   // Represents an invalid handle.
-  FileDescriptor();
+  FileDescriptor() = default;
 
   // Copy constructor will duplicate a new handle.
   FileDescriptor(const FileDescriptor& aOther);
 
-  FileDescriptor(FileDescriptor&& aOther);
+  FileDescriptor(FileDescriptor&& aOther) = default;
 
   // This constructor will duplicate a new handle.
   // The caller still have to close aHandle.
@@ -44,11 +44,11 @@ class FileDescriptor {
 
   explicit FileDescriptor(UniquePlatformHandle&& aHandle);
 
-  ~FileDescriptor();
+  ~FileDescriptor() = default;
 
   FileDescriptor& operator=(const FileDescriptor& aOther);
 
-  FileDescriptor& operator=(FileDescriptor&& aOther);
+  FileDescriptor& operator=(FileDescriptor&& aOther) = default;
 
   FileDescriptor Clone() const { return FileDescriptor(ClonePlatformHandle()); }
 
@@ -68,7 +68,7 @@ class FileDescriptor {
 
   // Tests mHandle against a well-known invalid platform-specific file handle
   // (e.g. -1 on POSIX, INVALID_HANDLE_VALUE or nullptr on Windows).
-  bool IsValid() const;
+  bool IsValid() const { return mHandle != nullptr; }
 
   // Returns a duplicated handle, it is caller's responsibility to close the
   // handle.

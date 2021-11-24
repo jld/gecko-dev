@@ -22,13 +22,8 @@
 namespace mozilla {
 namespace ipc {
 
-FileDescriptor::FileDescriptor() = default;
-
 FileDescriptor::FileDescriptor(const FileDescriptor& aOther)
     : mHandle(CloneFileHandle(aOther.mHandle)) {}
-
-FileDescriptor::FileDescriptor(FileDescriptor&& aOther)
-    : mHandle(std::move(aOther.mHandle)) {}
 
 FileDescriptor::FileDescriptor(PlatformHandleType aHandle)
     : mHandle(CloneFileHandle(aHandle)) {}
@@ -36,23 +31,12 @@ FileDescriptor::FileDescriptor(PlatformHandleType aHandle)
 FileDescriptor::FileDescriptor(UniquePlatformHandle&& aHandle)
     : mHandle(std::move(aHandle)) {}
 
-FileDescriptor::~FileDescriptor() = default;
-
 FileDescriptor& FileDescriptor::operator=(const FileDescriptor& aOther) {
   if (this != &aOther) {
     mHandle = CloneFileHandle(aOther.mHandle);
   }
   return *this;
 }
-
-FileDescriptor& FileDescriptor::operator=(FileDescriptor&& aOther) {
-  if (this != &aOther) {
-    mHandle = std::move(aOther.mHandle);
-  }
-  return *this;
-}
-
-bool FileDescriptor::IsValid() const { return mHandle != nullptr; }
 
 /* static */
 FileDescriptor FileDescriptor::CloneFrom(PRFileDesc* aFd) {
