@@ -271,7 +271,7 @@ bool LaunchApp(const std::vector<std::string>& argv,
 #endif
 
   if (pid < 0) {
-    DLOG(WARNING) << "fork() failed: " << strerror(errno);
+    CHROMIUM_LOG(WARNING) << "fork() failed: " << strerror(errno);
     return false;
   }
 
