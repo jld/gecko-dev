@@ -536,6 +536,40 @@ class SandboxPolicyCommon : public SandboxPolicyBase {
 #endif
   }
 
+  static intptr_t StatFsTrap(ArgsRef aArgs, void* aux) {
+    // Warning: the kernel interface is not the C interface.  The
+    // structs are different (<asm/statfs.h> vs. <sys/statfs.h>), and
+    // the statfs64 version takes an additional size parameter.
+    auto path = reinterpret_cast<const char*>(aArgs.args[0]);
+    int fd = open(path, O_RDONLY | O_LARGEFILE);
+    if (fd < 0) {
+      return -errno;
+    }
+
+    intptr_t rv;
+    switch (aArgs.nr) {
+      case __NR_statfs: {
+        auto buf = reinterpret_cast<void*>(aArgs.args[1]);
+        rv = DoSyscall(__NR_fstatfs, fd, buf);
+        break;
+      }
+#ifdef __NR_statfs64
+      case __NR_statfs64: {
+        auto sz = static_cast<size_t>(aArgs.args[1]);
+        auto buf = reinterpret_cast<void*>(aArgs.args[2]);
+        rv = DoSyscall(__NR_fstatfs64, fd, sz, buf);
+        break;
+      }
+#endif
+      default:
+        MOZ_ASSERT(false);
+        rv = -ENOSYS;
+    }
+
+    close(fd);
+    return rv;
+  }
+
   // This just needs to return something to stand in for the
   // unconnected socket until ConnectTrap, below, and keep track of
   // the socket type somehow.  Half a socketpair *is* a socket, so it
@@ -837,6 +871,8 @@ class SandboxPolicyCommon : public SandboxPolicyBase {
           return Trap(UnlinkAtTrap, mBroker);
         case __NR_readlinkat:
           return Trap(ReadlinkAtTrap, mBroker);
+        CASES_FOR_statfs:
+          return Trap(StatFsTrap, nullptr);
       }
     } else {
       // In the absence of a broker we still need to handle the
@@ -1204,40 +1240,6 @@ class ContentSandboxPolicy : public SandboxPolicyCommon {
     return 0;
   }
 
-  static intptr_t StatFsTrap(ArgsRef aArgs, void* aux) {
-    // Warning: the kernel interface is not the C interface.  The
-    // structs are different (<asm/statfs.h> vs. <sys/statfs.h>), and
-    // the statfs64 version takes an additional size parameter.
-    auto path = reinterpret_cast<const char*>(aArgs.args[0]);
-    int fd = open(path, O_RDONLY | O_LARGEFILE);
-    if (fd < 0) {
-      return -errno;
-    }
-
-    intptr_t rv;
-    switch (aArgs.nr) {
-      case __NR_statfs: {
-        auto buf = reinterpret_cast<void*>(aArgs.args[1]);
-        rv = DoSyscall(__NR_fstatfs, fd, buf);
-        break;
-      }
-#ifdef __NR_statfs64
-      case __NR_statfs64: {
-        auto sz = static_cast<size_t>(aArgs.args[1]);
-        auto buf = reinterpret_cast<void*>(aArgs.args[2]);
-        rv = DoSyscall(__NR_fstatfs64, fd, sz, buf);
-        break;
-      }
-#endif
-      default:
-        MOZ_ASSERT(false);
-        rv = -ENOSYS;
-    }
-
-    close(fd);
-    return rv;
-  }
-
  public:
   ContentSandboxPolicy(SandboxBrokerClient* aBroker,
                        ContentProcessSandboxParams&& aParams)
@@ -1379,9 +1381,6 @@ class ContentSandboxPolicy : public SandboxPolicyCommon {
 #ifdef DESKTOP
       case __NR_getppid:
         return Trap(GetPPidTrap, nullptr);
-
-      CASES_FOR_statfs:
-        return Trap(StatFsTrap, nullptr);
 
         // GTK's theme parsing tries to getcwd() while sandboxed, but
         // only during Talos runs.
