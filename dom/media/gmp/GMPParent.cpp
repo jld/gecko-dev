@@ -261,19 +261,29 @@ class NotifyGMPProcessLoadedTask : public Runnable {
   NS_IMETHOD Run() override {
     MOZ_ASSERT(NS_IsMainThread());
 
-    nsCOMPtr<nsISerialEventTarget> gmpEventTarget =
-        mGMPParent->GMPEventTarget();
-    if (!gmpEventTarget) {
-      return NS_ERROR_FAILURE;
+    bool canProfile = true;
+
+#if defined(XP_LINUX) && defined(MOZ_SANDBOX)
+    if (SandboxInfo::Get().Test(SandboxInfo::kEnabledForMedia)) {
+      canProfile = false;
     }
+#endif
 
-    ipc::Endpoint<PProfilerChild> profilerParent(
-        ProfilerParent::CreateForProcess(mProcessId));
+    if (canProfile) {
+      nsCOMPtr<nsISerialEventTarget> gmpEventTarget =
+          mGMPParent->GMPEventTarget();
+      if (!gmpEventTarget) {
+        return NS_ERROR_FAILURE;
+      }
 
-    gmpEventTarget->Dispatch(
-        NewRunnableMethod<ipc::Endpoint<mozilla::PProfilerChild>&&>(
-            "GMPParent::SendInitProfiler", mGMPParent,
-            &GMPParent::SendInitProfiler, std::move(profilerParent)));
+      ipc::Endpoint<PProfilerChild> profilerParent(
+          ProfilerParent::CreateForProcess(mProcessId));
+
+      gmpEventTarget->Dispatch(
+          NewRunnableMethod<ipc::Endpoint<mozilla::PProfilerChild>&&>(
+              "GMPParent::SendInitProfiler", mGMPParent,
+              &GMPParent::SendInitProfiler, std::move(profilerParent)));
+    }
 
     return NS_OK;
   }
