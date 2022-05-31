@@ -1885,14 +1885,6 @@ class RDDSandboxPolicy final : public SandboxPolicyCommon {
       case __NR_uname:
         return Allow();
 
-        // Bug 1462640: Mesa libEGL uses mincore to test whether values
-        // are pointers, for reasons.
-      case __NR_mincore: {
-        Arg<size_t> length(1);
-        return If(length == getpagesize(), Allow())
-            .Else(SandboxPolicyCommon::EvaluateSyscall(sysno));
-      }
-
         // Pass through the common policy.
       default:
         return SandboxPolicyCommon::EvaluateSyscall(sysno);
