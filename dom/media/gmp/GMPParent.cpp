@@ -20,6 +20,7 @@
 #include "mozilla/ipc/GeckoChildProcessHost.h"
 #if defined(XP_LINUX) && defined(MOZ_SANDBOX)
 #  include "mozilla/SandboxInfo.h"
+#  include "base/shared_memory.h"
 #endif
 #include "mozilla/Services.h"
 #include "mozilla/SSE.h"
@@ -264,7 +265,8 @@ class NotifyGMPProcessLoadedTask : public Runnable {
     bool canProfile = true;
 
 #if defined(XP_LINUX) && defined(MOZ_SANDBOX)
-    if (SandboxInfo::Get().Test(SandboxInfo::kEnabledForMedia)) {
+    if (SandboxInfo::Get().Test(SandboxInfo::kEnabledForMedia) &&
+        base::SharedMemory::UsingPosixShm()) {
       canProfile = false;
     }
 #endif
