@@ -1712,7 +1712,41 @@ class GMPSandboxPolicy : public SandboxPolicyCommon {
     }
   }
 
+  static intptr_t ReadLinkTrap(ArgsRef aArgs, void* aux) {
+    const uintptr_t* argPtr = aArgs.args;
+    switch (aArgs.nr) {
+#ifdef __NR_readlink
+      case __NR_readlink:
+        break;
+#endif
+      case __NR_readlinkat:
+        argPtr++;
+        break;
+      default:
+        MOZ_CRASH("unexpected syscall number");
+    }
+
+    auto exePath = reinterpret_cast<const char*>(aux);
+    auto pathname = reinterpret_cast<const char*>(argPtr[0]);
+    auto buf = reinterpret_cast<char*>(argPtr[1]);
+    auto bufSize = reinterpret_cast<size_t>(argPtr[2]);
+
+    if (!pathname) {
+      return -EFAULT;
+    }
+    if (!exePath || strcmp(pathname, "/proc/self/exe") != 0) {
+      return -EINVAL;
+    }
+
+    SANDBOX_LOG_ERROR("BEES BEES BEES BEES %s => %d", exePath, bufSize);
+
+    size_t lenToWrite = std::min(bufSize, strlen(exePath));
+    memcpy(buf, exePath, lenToWrite);
+    return lenToWrite;
+  }
+
   const SandboxOpenedFiles* mFiles;
+  const char* mExePath = nullptr;
 
  public:
   explicit GMPSandboxPolicy(const SandboxOpenedFiles* aFiles)
@@ -1721,6 +1755,15 @@ class GMPSandboxPolicy : public SandboxPolicyCommon {
     // we are not enabling the file broker, so this will only work if
     // memfd_create is available.
     mMayCreateShmem = true;
+
+    // FIXME: explain
+    char exePath[PATH_MAX];
+    ssize_t exePathLen = readlink("/proc/self/exe", exePath, sizeof(exePath));
+    if (exePathLen >= 0 && exePathLen < PATH_MAX) {
+      exePath[exePathLen] = '\0';
+      // FIXME: explain leak
+      mExePath = strdup(exePath);
+    }
   }
 
   ~GMPSandboxPolicy() override = default;
@@ -1773,6 +1816,13 @@ class GMPSandboxPolicy : public SandboxPolicyCommon {
             .ElseIf(advice == MADV_MERGEABLE, Error(EPERM))  // bug 1705045
             .Else(Error(ENOSYS));
       }
+
+        // FIXME explain
+#ifdef __NR_readlink
+      case __NR_readlink:
+#endif
+      case __NR_readlinkat:
+        return Trap(ReadLinkTrap, mExePath);
 
       default:
         return SandboxPolicyCommon::EvaluateSyscall(sysno);
