@@ -1738,8 +1738,6 @@ class GMPSandboxPolicy : public SandboxPolicyCommon {
       return -EINVAL;
     }
 
-    SANDBOX_LOG_ERROR("BEES BEES BEES BEES %s => %d", exePath, bufSize);
-
     size_t lenToWrite = std::min(bufSize, strlen(exePath));
     memcpy(buf, exePath, lenToWrite);
     return lenToWrite;

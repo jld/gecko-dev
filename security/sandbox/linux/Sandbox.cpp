@@ -690,6 +690,14 @@ void SetMediaPluginSandbox(const char* aFilePath) {
   files->Add("/proc/net/unix", SandboxOpenedFile::Error{});
   files->Add("/proc/self/maps", SandboxOpenedFile::Error{});
 
+  // Profiler?
+  {
+    char path[sizeof("/proc/9223372036854775807/maps")];
+    snprintf(path, sizeof(path), "/proc/%d/maps", getpid());
+    // FIXME bounds
+    files->Add(path, SandboxOpenedFile::Dup::YES);
+  }
+
   // Finally, start the sandbox.
   SetCurrentProcessSandbox(GetMediaSandboxPolicy(files));
 }
