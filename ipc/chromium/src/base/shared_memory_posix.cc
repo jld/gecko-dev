@@ -262,6 +262,9 @@ bool SharedMemory::AppendPosixShmPrefix(std::string* str, pid_t pid) {
   if (HaveMemfd()) {
     return false;
   }
+  if (!str) {
+    return true;
+  }
   *str += '/';
 #  ifdef MOZ_WIDGET_GTK
   // The Snap package environment doesn't provide a private /dev/shm

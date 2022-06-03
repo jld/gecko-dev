@@ -154,7 +154,11 @@ class SharedMemory {
   // the leading '/') that would be used by a process with the given
   // pid to the given string and return true.  If not, return false.
   // (This is public so that the Linux sandboxing code can use it.)
+  //
+  // `str` may be null, to check if named POSIX shm is being used
+  // (rather than memfd_create or Android ashmem).
   static bool AppendPosixShmPrefix(std::string* str, pid_t pid);
+  static bool UsingPosixShm() { return AppendPosixShmPrefix(nullptr, 0); }
 #endif
 
  private:

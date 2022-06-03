@@ -1716,7 +1716,12 @@ class GMPSandboxPolicy : public SandboxPolicyCommon {
 
  public:
   explicit GMPSandboxPolicy(const SandboxOpenedFiles* aFiles)
-      : mFiles(aFiles) {}
+      : mFiles(aFiles) {
+    // Used by the profiler to send data back to the parent process;
+    // we are not enabling the file broker, so this will only work if
+    // memfd_create is available.
+    mMayCreateShmem = true;
+  }
 
   ~GMPSandboxPolicy() override = default;
 
