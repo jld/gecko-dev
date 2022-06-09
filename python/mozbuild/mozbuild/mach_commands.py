@@ -2789,7 +2789,11 @@ def repackage_mar(command_context, input, mar, output, arch, mar_channel_id):
                  metavar="FILENAME",
                  default="/snap/bin/snapcraft",
                  help="Path to the snapcraft command")
-def repackage_snap(command_context, snapcraft):
+@CommandArgument("--output",
+                 type=str,
+                 metavar="FILENAME",
+                 help="File or directory where the snap file will be written")
+def repackage_snap(command_context, snapcraft, output):
     from mozbuild.repackaging.snap import repackage_snap
 
     if not conditions.is_firefox(command_context):
@@ -2817,10 +2821,23 @@ def repackage_snap(command_context, snapcraft):
         append_env = {"MOZ_PKG_DIR": "snap/source"},
     )
 
-    repackage_snap(
+    snappath = repackage_snap(
         srcdir = command_context.topsrcdir,
         snapdir = os.path.join(command_context.distdir, "snap"),
         snapcraft = snapcraft,
+    )
+
+    if output:
+        if os.path.isdir(output):
+            output = os.path.join(output, os.path.basename(snappath))
+        shutil.copyfile(snappath, output)
+        snappath = output
+
+    command_context.log(
+        logging.INFO,
+        "repackage-snap-show-output",
+        {"path": snappath},
+        "Snap package created: {path}",
     )
 
     return 0

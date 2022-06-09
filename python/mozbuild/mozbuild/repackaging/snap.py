@@ -36,10 +36,7 @@ def repackage_snap(srcdir, snapdir, snapcraft, arch='amd64'):
         )
 
     # Copy in some miscellaneous extra files
-    try:
-        os.mkdir(distrib)
-    except FileExistsError:
-        pass
+    os.makedirs(distrib, exist_ok = True)
 
     for (srcfile, dstdir) in [
             ("tmpdir", pkgsrc),
@@ -58,15 +55,18 @@ def repackage_snap(srcdir, snapdir, snapcraft, arch='amd64'):
         cwd = snapdir,
     )
 
-    # Create a symlink to the file for later use.
     snapfile = f"{appname}_{version}-{buildno}_{arch}.snap"
+    snappath = os.path.join(snapdir, snapfile)
 
-    if not os.path.exists(os.path.join(snapdir, snapfile)):
+    if not os.path.exists(snappath):
         raise AssertionError(f"Snap file {snapfile} doesn't exist?")
 
+    # Create a symlink to the file for later use.
     latest_snap = os.path.join(snapdir, "latest.snap")
     try:
         os.unlink(latest_snap)
     except FileNotFoundError:
         pass
     os.symlink(snapfile, latest_snap)
+
+    return snappath
