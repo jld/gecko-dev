@@ -70,3 +70,14 @@ def repackage_snap(srcdir, snapdir, snapcraft, arch='amd64'):
     os.symlink(snapfile, latest_snap)
 
     return snappath
+
+def unpack_tarball(package, destdir):
+    os.makedirs(destdir, exist_ok = True)
+    subprocess.check_call([
+        "tar",
+        "-C",
+        destdir,
+        "-xvf",
+        package,
+        "--strip-components=1",
+    ])

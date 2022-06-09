@@ -2785,17 +2785,40 @@ def repackage_mar(command_context, input, mar, output, arch, mar_channel_id):
     description="Repackage into Snap format",
 )
 @CommandArgument("--snapcraft",
-                 type=str,
                  metavar="FILENAME",
                  default="/snap/bin/snapcraft",
                  help="Path to the snapcraft command")
 @CommandArgument("--output",
-                 type=str,
+                 metavar="FILE|DIR",
+                 help="File or directory where the snap file will be written;"
+                 " by default, it's left in the staging directory")
+@CommandArgument("--input",
                  metavar="FILENAME",
-                 help="File or directory where the snap file will be written")
-def repackage_snap(command_context, snapcraft, output):
-    from mozbuild.repackaging.snap import repackage_snap
+                 dest="input_pkg",
+                 help="Repack an existing package instead of a local build;"
+                 " implies --clean and requires --output")
+@CommandArgument("--tmp-dir",
+                 metavar="FILENAME",
+                 default="/var/tmp",
+                 help="Temp dir for --input (default: /var/tmp;"
+                 " note that /tmp may not work)")
+@CommandArgument("--clean",
+                 action="store_true",
+                 help="Delete staging directory afterwards; requires --output")
+def repackage_snap(
+        command_context,
+        snapcraft,
+        output,
+        input_pkg,
+        tmp_dir,
+        clean
+):
+    from mozbuild.repackaging.snap import (
+        repackage_snap,
+        unpack_tarball,
+    )
 
+    # Validate arguments / environment
     if not conditions.is_firefox(command_context):
         command_context.log(
             logging.ERROR,
@@ -2805,33 +2828,72 @@ def repackage_snap(command_context, snapcraft, output):
         )
         return 1
 
-    if not os.path.exists(command_context.bindir):
+    if input_pkg:
+        clean = True
+
+    if clean and not output:
+        command_context.log(
+            logging.ERROR,
+            "repackage-snap-no-output",
+            {},
+            "When --input or --clean is used, --output is required",
+        )
+        return 1
+
+    if not output and not os.path.exists(command_context.bindir):
         command_context.log(
             logging.ERROR,
             "repackage-snap-no-input",
             {},
-            "No build found in objdir, please run ./mach build",
-            # FIXME: later: or pass --input
+            "No build found in objdir; please run ./mach build"
+            " or pass --input",
         )
         return 1
 
-    command_context._run_make(
-        directory = ".",
-        target = "stage-package",
-        append_env = {"MOZ_PKG_DIR": "snap/source"},
-    )
+    # Set up the staging dir and unpack or copy the payload
+    if input_pkg:
+        # FIXME(jld): This isn't ideal: with multipass, the VM will be
+        # rebuilt whenever the staging dir changes, and this means it
+        # will change every time.  But --input mode is independent of
+        # the local build, so it shouldn't be touching the objdir?
+        snapdir = tempfile.mkdtemp(dir = tmp_dir, prefix = "snap-repackage-")
+        command_context.log(
+            logging.INFO,
+            "repackage-tmp-dir",
+            {"path": snapdir},
+            "Using temp dir: {path}",
+        )
+        unpack_tarball(input_pkg, os.path.join(snapdir, "source"))
+    else:
+        command_context._run_make(
+            directory = ".",
+            target = "stage-package",
+            append_env = {"MOZ_PKG_DIR": "snap/source"},
+        )
+        snapdir = os.path.join(command_context.distdir, "snap")
 
+    # Create the package
     snappath = repackage_snap(
         srcdir = command_context.topsrcdir,
-        snapdir = os.path.join(command_context.distdir, "snap"),
+        snapdir = snapdir,
         snapcraft = snapcraft,
     )
 
+    # Cleanup: move the output, delete temp files, inform the user
     if output:
         if os.path.isdir(output):
             output = os.path.join(output, os.path.basename(snappath))
         shutil.copyfile(snappath, output)
         snappath = output
+
+    if clean:
+        command_context.log(
+            logging.INFO,
+            "repackage-clean",
+            {"path": snapdir},
+            "Deleting staging dir: {path}",
+        )
+        shutil.rmtree(snapdir)
 
     command_context.log(
         logging.INFO,
