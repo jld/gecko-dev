@@ -3,6 +3,7 @@
 # file, You can obtain one at http://mozilla.org/MPL/2.0/.
 
 import os
+import shutil
 import subprocess
 
 from mozbuild.repackaging.application_ini import get_application_ini_values
@@ -14,50 +15,58 @@ def repackage_snap(srcdir, snapdir, snapcraft, arch='amd64'):
     pkgsrc = os.path.join(snapdir, "source")
     distrib = os.path.join(pkgsrc, "distribution")
 
-    snap_appname = "firefox-devel"
-    snap_version, snap_buildno = get_application_ini_values(
+    # Obtain the build's version info
+    appname = "firefox-devel"
+    version, buildno = get_application_ini_values(
         pkgsrc,
         dict(section="App", value="Version"),
         dict(section="App", value="BuildID"),
     )
 
+    # Generate the snapcraft.yaml
     with open(os.path.join(snapdir, "snapcraft.yaml"), "w") as snap_yaml:
         subprocess.check_call(
             ["sed",
-             "-e", "s/@VERSION@/%s/" % snap_version,
-             "-e", "s/@BUILD_NUMBER@/%s/" % snap_buildno,
-             "-e", "s/@APP_NAME@/%s/" % snap_appname,
+             "-e", "s/@VERSION@/%s/" % version,
+             "-e", "s/@BUILD_NUMBER@/%s/" % buildno,
+             "-e", "s/@APP_NAME@/%s/" % appname,
              "-e", "/^summary: /s/$/ (development build)/",
              os.path.join(srcdir, SNAP_YAML_IN)],
             stdout = snap_yaml,
         )
 
-    subprocess.check_call(["mkdir", "-p", distrib])
+    # Copy in some miscellaneous extra files
+    try:
+        os.mkdir(distrib)
+    except FileExistsError:
+        pass
 
-    for (src, dst) in [
+    for (srcfile, dstdir) in [
             ("tmpdir", pkgsrc),
             ("firefox.desktop", distrib),
             ("policies.json", distrib),
     ]:
-        subprocess.check_call(
-            ["cp", os.path.join(srcdir, SNAP_MISC_DIR, src), dst + "/"],
-        )
+        shutil.copy(os.path.join(srcdir, SNAP_MISC_DIR, srcfile),
+                    os.path.join(dstdir, srcfile))
 
     # At last, build the snap.
+    env = dict(os.environ)
+    env["SNAP_ARCH"] = arch
     subprocess.check_call(
-        ["env", "SNAP_ARCH=" + arch, snapcraft],
+        [snapcraft],
+        env = env,
         cwd = snapdir,
     )
 
-    # Create a symlink to the file for other commands' use.
-    snapfile = "%s_%s-%s_%s.snap" % (snap_appname,
-                                    snap_version,
-                                    snap_buildno,
-                                    arch)
+    # Create a symlink to the file for later use.
+    snapfile = f"{appname}_{version}-{buildno}_{arch}.snap"
 
     if not os.path.exists(os.path.join(snapdir, snapfile)):
-        raise AssertionError("Snap file %s doesn't exist?" % snapfile)
+        raise AssertionError(f"Snap file {snapfile} doesn't exist?")
 
-    subprocess.check_call(
-        ["ln", "-nfs", snapfile, os.path.join(snapdir, "latest.snap")]
-    )
+    latest_snap = os.path.join(snapdir, "latest.snap")
+    try:
+        os.unlink(latest_snap)
+    except FileNotFoundError:
+        pass
+    os.symlink(snapfile, latest_snap)
