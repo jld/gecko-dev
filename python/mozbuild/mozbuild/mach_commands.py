@@ -2779,6 +2779,51 @@ def repackage_mar(command_context, input, mar, output, arch, mar_channel_id):
         mar_channel_id=mar_channel_id,
     )
 
+@SubCommand(
+    "repackage",
+    "snap",
+    description="Repackage into Snap format",
+)
+@CommandArgument("--snapcraft",
+                 type=str,
+                 metavar="FILENAME",
+                 default="/snap/bin/snapcraft",
+                 help="Path to the snapcraft command")
+def repackage_snap(command_context, snapcraft):
+    from mozbuild.repackaging.snap import repackage_snap
+
+    if not conditions.is_firefox(command_context):
+        command_context.log(
+            logging.ERROR,
+            "repackage-snap-unsupported-product",
+            {},
+            "Snap repackaging is currently supported only for Firefox",
+        )
+        return 1
+
+    if not os.path.exists(command_context.bindir):
+        command_context.log(
+            logging.ERROR,
+            "repackage-snap-no-input",
+            {},
+            "No build found in objdir, please run ./mach build",
+            # FIXME: later: or pass --input
+        )
+        return 1
+
+    command_context._run_make(
+        directory = ".",
+        target = "stage-package",
+        append_env = {"MOZ_PKG_DIR": "snap/source"},
+    )
+
+    repackage_snap(
+        srcdir = command_context.topsrcdir,
+        snapdir = os.path.join(command_context.distdir, "snap"),
+        snapcraft = snapcraft,
+    )
+
+    return 0
 
 @Command(
     "package-multi-locale",
