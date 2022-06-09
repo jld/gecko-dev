@@ -10,7 +10,7 @@ from mozbuild.repackaging.application_ini import get_application_ini_values
 SNAP_MISC_DIR = "taskcluster/docker/firefox-snap"
 SNAP_YAML_IN = os.path.join(SNAP_MISC_DIR, "firefox.snapcraft.yaml.in")
 
-def repackage_snap(srcdir, snapdir, snapcraft):
+def repackage_snap(srcdir, snapdir, snapcraft, arch='amd64'):
     pkgsrc = os.path.join(snapdir, "source")
     distrib = os.path.join(pkgsrc, "distribution")
 
@@ -43,7 +43,21 @@ def repackage_snap(srcdir, snapdir, snapcraft):
             ["cp", os.path.join(srcdir, SNAP_MISC_DIR, src), dst + "/"],
         )
 
+    # At last, build the snap.
     subprocess.check_call(
-        [snapcraft],
+        ["env", "SNAP_ARCH=" + arch, snapcraft],
         cwd = snapdir,
+    )
+
+    # Create a symlink to the file for other commands' use.
+    snapfile = "%s_%s-%s_%s.snap" % (snap_appname,
+                                    snap_version,
+                                    snap_buildno,
+                                    arch)
+
+    if not os.path.exists(os.path.join(snapdir, snapfile)):
+        raise AssertionError("Snap file %s doesn't exist?" % snapfile)
+
+    subprocess.check_call(
+        ["ln", "-nfs", snapfile, os.path.join(snapdir, "latest.snap")]
     )
