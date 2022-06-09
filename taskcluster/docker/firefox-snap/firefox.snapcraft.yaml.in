@@ -1,4 +1,4 @@
-name: firefox
+name: @APP_NAME@
 version: @VERSION@-@BUILD_NUMBER@
 summary: Mozilla Firefox web browser
 description:  Firefox is a powerful, extensible web browser with support for modern web application technologies.
@@ -8,7 +8,7 @@ base: core20
 compression: lzo
 
 apps:
-  firefox:
+  @APP_NAME@:
     command: firefox
     command-chain: [tmpdir]
     desktop: distribution/firefox.desktop
