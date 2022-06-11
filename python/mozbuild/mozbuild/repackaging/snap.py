@@ -11,7 +11,8 @@ from mozbuild.repackaging.application_ini import get_application_ini_values
 SNAP_MISC_DIR = "taskcluster/docker/firefox-snap"
 SNAP_YAML_IN = os.path.join(SNAP_MISC_DIR, "firefox.snapcraft.yaml.in")
 
-def repackage_snap(srcdir, snapdir, snapcraft, arch='amd64'):
+
+def repackage_snap(srcdir, snapdir, snapcraft, arch="amd64"):
     pkgsrc = os.path.join(snapdir, "source")
     distrib = os.path.join(pkgsrc, "distribution")
 
@@ -26,33 +27,40 @@ def repackage_snap(srcdir, snapdir, snapcraft, arch='amd64'):
     # Generate the snapcraft.yaml
     with open(os.path.join(snapdir, "snapcraft.yaml"), "w") as snap_yaml:
         subprocess.check_call(
-            ["sed",
-             "-e", "s/@VERSION@/%s/" % version,
-             "-e", "s/@BUILD_NUMBER@/%s/" % buildno,
-             "-e", "s/@APP_NAME@/%s/" % appname,
-             "-e", "/^summary: /s/$/ (development build)/",
-             os.path.join(srcdir, SNAP_YAML_IN)],
-            stdout = snap_yaml,
+            [
+                "sed",
+                "-e",
+                "s/@VERSION@/%s/" % version,
+                "-e",
+                "s/@BUILD_NUMBER@/%s/" % buildno,
+                "-e",
+                "s/@APP_NAME@/%s/" % appname,
+                "-e",
+                "/^summary: /s/$/ (development build)/",
+                os.path.join(srcdir, SNAP_YAML_IN),
+            ],
+            stdout=snap_yaml,
         )
 
     # Copy in some miscellaneous extra files
-    os.makedirs(distrib, exist_ok = True)
+    os.makedirs(distrib, exist_ok=True)
 
     for (srcfile, dstdir) in [
-            ("tmpdir", pkgsrc),
-            ("firefox.desktop", distrib),
-            ("policies.json", distrib),
+        ("tmpdir", pkgsrc),
+        ("firefox.desktop", distrib),
+        ("policies.json", distrib),
     ]:
-        shutil.copy(os.path.join(srcdir, SNAP_MISC_DIR, srcfile),
-                    os.path.join(dstdir, srcfile))
+        shutil.copy(
+            os.path.join(srcdir, SNAP_MISC_DIR, srcfile), os.path.join(dstdir, srcfile)
+        )
 
     # At last, build the snap.
     env = dict(os.environ)
     env["SNAP_ARCH"] = arch
     subprocess.check_call(
         [snapcraft],
-        env = env,
-        cwd = snapdir,
+        env=env,
+        cwd=snapdir,
     )
 
     snapfile = f"{appname}_{version}-{buildno}_{arch}.snap"
@@ -71,23 +79,27 @@ def repackage_snap(srcdir, snapdir, snapcraft, arch='amd64'):
 
     return snappath
 
+
 def unpack_tarball(package, destdir):
-    os.makedirs(destdir, exist_ok = True)
-    subprocess.check_call([
-        "tar",
-        "-C",
-        destdir,
-        "-xvf",
-        package,
-        "--strip-components=1",
-    ])
+    os.makedirs(destdir, exist_ok=True)
+    subprocess.check_call(
+        [
+            "tar",
+            "-C",
+            destdir,
+            "-xvf",
+            package,
+            "--strip-components=1",
+        ]
+    )
+
 
 def missing_connections(app_name):
     rv = []
     with subprocess.Popen(
-            ["snap", "connections", app_name],
-            stdout = subprocess.PIPE,
-            encoding = "utf-8",
+        ["snap", "connections", app_name],
+        stdout=subprocess.PIPE,
+        encoding="utf-8",
     ) as proc:
         header = next(proc.stdout)
         for line in proc.stdout:

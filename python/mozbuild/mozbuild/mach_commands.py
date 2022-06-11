@@ -2779,44 +2779,54 @@ def repackage_mar(command_context, input, mar, output, arch, mar_channel_id):
         mar_channel_id=mar_channel_id,
     )
 
+
 @SubCommand(
     "repackage",
     "snap",
     description="Repackage into Snap format for developer testing",
 )
-@CommandArgument("--snapcraft",
-                 metavar="FILENAME",
-                 help="Path to the snapcraft command (default: search"
-                 " $PATH and /snap/bin)")
-@CommandArgument("--output",
-                 metavar="FILE|DIR",
-                 help="File or directory where the snap file will be written;"
-                 " by default, it's left in the staging directory")
-@CommandArgument("--input",
-                 metavar="FILENAME",
-                 dest="input_pkg",
-                 help="Repack an existing package instead of a local build;"
-                 " implies --clean and requires --output")
-@CommandArgument("--tmp-dir",
-                 metavar="FILENAME",
-                 default="/var/tmp",
-                 help="Temp dir for --input (default: /var/tmp;"
-                 " note that /tmp may not work)")
-@CommandArgument("--clean",
-                 action="store_true",
-                 help="Delete staging directory afterwards; requires --output")
-@CommandArgument("--install",
-                 action="store_true",
-                 help="Install the snap afterwards (as with `mach repackage"
-                 " snap-install`)")
+@CommandArgument(
+    "--snapcraft",
+    metavar="FILENAME",
+    help="Path to the snapcraft command (default: search $PATH and /snap/bin)",
+)
+@CommandArgument(
+    "--output",
+    metavar="FILE|DIR",
+    help="File or directory where the snap file will be written;"
+    " by default, it's left in the staging directory",
+)
+@CommandArgument(
+    "--input",
+    metavar="FILENAME",
+    dest="input_pkg",
+    help="Repack an existing package instead of a local build;"
+    " implies --clean and requires --output",
+)
+@CommandArgument(
+    "--tmp-dir",
+    metavar="FILENAME",
+    default="/var/tmp",
+    help="Temp dir for --input (default: /var/tmp; note that /tmp may not work)",
+)
+@CommandArgument(
+    "--clean",
+    action="store_true",
+    help="Delete staging directory afterwards; requires --output",
+)
+@CommandArgument(
+    "--install",
+    action="store_true",
+    help="Install the snap afterwards (as with `mach repackage snap-install`)",
+)
 def repackage_snap(
-        command_context,
-        snapcraft=None,
-        output=None,
-        input_pkg=None,
-        tmp_dir=None,
-        clean=False,
-        install=False,
+    command_context,
+    snapcraft=None,
+    output=None,
+    input_pkg=None,
+    tmp_dir=None,
+    clean=False,
+    install=False,
 ):
     from mozfile import which
     from mozbuild.repackaging.snap import (
@@ -2826,7 +2836,7 @@ def repackage_snap(
 
     # Validate arguments / environment
     if not snapcraft:
-        snapcraft = which("snapcraft", extra_search_dirs = ["/snap/bin"])
+        snapcraft = which("snapcraft", extra_search_dirs=["/snap/bin"])
 
     if not snapcraft:
         command_context.log(
@@ -2834,7 +2844,7 @@ def repackage_snap(
             "repackage-snap-no-snapcraft",
             {},
             "Couldn't find the `snapcraft` command; if it's installed, try"
-            " adjusting your $PATH or using the --snapcraft option"
+            " adjusting your $PATH or using the --snapcraft option",
         )
         return 1
 
@@ -2864,8 +2874,7 @@ def repackage_snap(
             logging.ERROR,
             "repackage-snap-no-input",
             {},
-            "No build found in objdir; please run ./mach build"
-            " or pass --input",
+            "No build found in objdir; please run ./mach build or pass --input",
         )
         return 1
 
@@ -2875,7 +2884,7 @@ def repackage_snap(
         # rebuilt whenever the staging dir changes, and this means it
         # will change every time.  But --input mode is independent of
         # the local build, so it shouldn't be touching the objdir?
-        snapdir = tempfile.mkdtemp(dir = tmp_dir, prefix = "snap-repackage-")
+        snapdir = tempfile.mkdtemp(dir=tmp_dir, prefix="snap-repackage-")
         command_context.log(
             logging.INFO,
             "repackage-tmp-dir",
@@ -2885,17 +2894,17 @@ def repackage_snap(
         unpack_tarball(input_pkg, os.path.join(snapdir, "source"))
     else:
         command_context._run_make(
-            directory = ".",
-            target = "stage-package",
-            append_env = {"MOZ_PKG_DIR": "snap/source"},
+            directory=".",
+            target="stage-package",
+            append_env={"MOZ_PKG_DIR": "snap/source"},
         )
         snapdir = os.path.join(command_context.distdir, "snap")
 
     # Create the package
     snappath = repackage_snap(
-        srcdir = command_context.topsrcdir,
-        snapdir = snapdir,
-        snapcraft = snapcraft,
+        srcdir=command_context.topsrcdir,
+        snapdir=snapdir,
+        snapcraft=snapcraft,
     )
 
     # Cleanup: move the output, delete temp files, inform the user
@@ -2924,24 +2933,30 @@ def repackage_snap(
     if install:
         return repackage_snap_install(
             command_context,
-            snap_file = snappath,
+            snap_file=snappath,
         )
 
     return 0
 
+
 @SubCommand(
     "repackage",
     "snap-install",
-    description="Install an unofficial Snap package and, if needed, enable its connections",
+    description="Install an unofficial Snap package and, if needed, enable"
+    " its connections",
 )
-@CommandArgument("--snap-file",
-                 metavar="FILENAME",
-                 help="Snap file to install; defaults to the last one built"
-                 " by `mach repackage snap` (without `--output`)")
-@CommandArgument("--sudo",
-                 metavar="COMMAND",
-                 default=None,
-                 help="Wrapper to run commands as root (default: sudo or doas)")
+@CommandArgument(
+    "--snap-file",
+    metavar="FILENAME",
+    help="Snap file to install; defaults to the last one built by"
+    " `mach repackage snap` (without `--output`)",
+)
+@CommandArgument(
+    "--sudo",
+    metavar="COMMAND",
+    default=None,
+    help="Wrapper to run commands as root (default: sudo or doas)",
+)
 def repackage_snap_install(command_context, snap_file, sudo=None):
     from mozbuild.repackaging.snap import missing_connections
     from mozfile import which
@@ -2958,7 +2973,8 @@ def repackage_snap_install(command_context, snap_file, sudo=None):
             "repackage-snap-install-no-sudo",
             {},
             "Couldn't find a command to run snap as root; please use the"
-            " --sudo option")
+            " --sudo option",
+        )
 
     if not snap_file:
         snap_file = os.path.join(command_context.distdir, "snap/latest.snap")
@@ -2968,7 +2984,7 @@ def repackage_snap_install(command_context, snap_file, sudo=None):
                 "repackage-snap-install-no-dfl-snap",
                 {},
                 "No snap file found; please run `./mach repackage snap` first"
-                " or use --snap-file"
+                " or use --snap-file",
             )
             return 1
 
@@ -2979,7 +2995,7 @@ def repackage_snap_install(command_context, snap_file, sudo=None):
         # need to test under Snap instead of normally, it may be
         # because their sandbox broke something.
         [sudo, "snap", "install", "--dangerous", snap_file],
-        pass_thru = True,
+        pass_thru=True,
     )
 
     # Fix up connections if needed
@@ -2987,7 +3003,7 @@ def repackage_snap_install(command_context, snap_file, sudo=None):
     for conn in missing_connections("firefox-devel"):
         command_context.run_process(
             [sudo, "snap", "connect", conn],
-            pass_thru = True,
+            pass_thru=True,
         )
 
     # A little help
@@ -2995,7 +3011,7 @@ def repackage_snap_install(command_context, snap_file, sudo=None):
         logging.INFO,
         "repackage-snap-install-howto-run",
         {},
-        "Example usage: snap run firefox-devel --no-remote"
+        "Example usage: snap run firefox-devel --no-remote",
     )
 
     return 0
