@@ -2782,7 +2782,7 @@ def repackage_mar(command_context, input, mar, output, arch, mar_channel_id):
 @SubCommand(
     "repackage",
     "snap",
-    description="Repackage into Snap format",
+    description="Repackage into Snap format for developer testing",
 )
 @CommandArgument("--snapcraft",
                  metavar="FILENAME",
@@ -2932,13 +2932,14 @@ def repackage_snap(
 @SubCommand(
     "repackage",
     "snap-install",
-    description="Install an unofficial Snap package (and, if needed, enable its connections)",
+    description="Install an unofficial Snap package and, if needed, enable its connections",
 )
 @CommandArgument("--snap-file",
                  metavar="FILENAME",
                  help="Snap file to install; defaults to the last one built"
                  " by `mach repackage snap` (without `--output`)")
 @CommandArgument("--sudo",
+                 metavar="COMMAND",
                  default=None,
                  help="Wrapper to run commands as root (default: sudo or doas)")
 def repackage_snap_install(command_context, snap_file, sudo=None):
@@ -2982,11 +2983,20 @@ def repackage_snap_install(command_context, snap_file, sudo=None):
     )
 
     # Fix up connections if needed
+    # (Ideally this wouldn't hard-code the app name....)
     for conn in missing_connections("firefox-devel"):
         command_context.run_process(
             [sudo, "snap", "connect", conn],
             pass_thru = True,
         )
+
+    # A little help
+    command_context.log(
+        logging.INFO,
+        "repackage-snap-install-howto-run",
+        {},
+        "Example usage: snap run firefox-devel --no-remote"
+    )
 
     return 0
 
