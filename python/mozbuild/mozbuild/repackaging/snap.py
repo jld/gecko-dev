@@ -101,7 +101,7 @@ def missing_connections(app_name):
         stdout=subprocess.PIPE,
         encoding="utf-8",
     ) as proc:
-        header = next(proc.stdout)
+        next(proc.stdout)  # skip header
         for line in proc.stdout:
             iface, plug, slot, notes = line.split(maxsplit=3)
             if plug != "-" and slot == "-":
