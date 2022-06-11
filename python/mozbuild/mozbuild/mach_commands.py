@@ -2786,9 +2786,8 @@ def repackage_mar(command_context, input, mar, output, arch, mar_channel_id):
 )
 @CommandArgument("--snapcraft",
                  metavar="FILENAME",
-                 # FIXME this should probably default to path search
-                 default="/snap/bin/snapcraft",
-                 help="Path to the snapcraft command")
+                 help="Path to the snapcraft command (default: search"
+                 " $PATH and /snap/bin)")
 @CommandArgument("--output",
                  metavar="FILE|DIR",
                  help="File or directory where the snap file will be written;"
@@ -2812,19 +2811,33 @@ def repackage_mar(command_context, input, mar, output, arch, mar_channel_id):
                  " snap-install`)")
 def repackage_snap(
         command_context,
-        snapcraft,
-        output,
-        input_pkg,
-        tmp_dir,
-        clean,
-        install,
+        snapcraft=None,
+        output=None,
+        input_pkg=None,
+        tmp_dir=None,
+        clean=False,
+        install=False,
 ):
+    from mozfile import which
     from mozbuild.repackaging.snap import (
         repackage_snap,
         unpack_tarball,
     )
 
     # Validate arguments / environment
+    if not snapcraft:
+        snapcraft = which("snapcraft", extra_search_dirs = ["/snap/bin"])
+
+    if not snapcraft:
+        command_context.log(
+            logging.ERROR,
+            "repackage-snap-no-snapcraft",
+            {},
+            "Couldn't find the `snapcraft` command; if it's installed, try"
+            " adjusting your $PATH or using the --snapcraft option"
+        )
+        return 1
+
     if not conditions.is_firefox(command_context):
         command_context.log(
             logging.ERROR,
