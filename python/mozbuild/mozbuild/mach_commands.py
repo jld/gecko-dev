@@ -2912,7 +2912,6 @@ def repackage_snap(
         return repackage_snap_install(
             command_context,
             snap_file = snappath,
-            sudo = "sudo", #FIXME
         )
 
     return 0
@@ -2927,12 +2926,25 @@ def repackage_snap(
                  help="Snap file to install; defaults to the last one built"
                  " by `mach repackage snap` (without `--output`)")
 @CommandArgument("--sudo",
-                 default="sudo",
-                 help="Wrapper to run commands as root (default: sudo)")
-def repackage_snap_install(command_context, snap_file, sudo):
-    from mozbuild.repackaging.snap import (
-        missing_connections,
-    )
+                 default=None,
+                 help="Wrapper to run commands as root (default: sudo or doas)")
+def repackage_snap_install(command_context, snap_file, sudo=None):
+    from mozbuild.repackaging.snap import missing_connections
+    from mozfile import which
+
+    if not sudo:
+        for candidate in ["sudo", "doas"]:
+            if which(candidate):
+                sudo = candidate
+                break
+
+    if not sudo:
+        command_context.log(
+            logging.ERROR,
+            "repackage-snap-install-no-sudo",
+            {},
+            "Couldn't find a command to run snap as root; please use the"
+            " --sudo option")
 
     if not snap_file:
         snap_file = os.path.join(command_context.distdir, "snap/latest.snap")
