@@ -2786,6 +2786,7 @@ def repackage_mar(command_context, input, mar, output, arch, mar_channel_id):
 )
 @CommandArgument("--snapcraft",
                  metavar="FILENAME",
+                 # FIXME this should probably default to path search
                  default="/snap/bin/snapcraft",
                  help="Path to the snapcraft command")
 @CommandArgument("--output",
@@ -2805,13 +2806,18 @@ def repackage_mar(command_context, input, mar, output, arch, mar_channel_id):
 @CommandArgument("--clean",
                  action="store_true",
                  help="Delete staging directory afterwards; requires --output")
+@CommandArgument("--install",
+                 action="store_true",
+                 help="Install the snap afterwards (as with `mach repackage"
+                 " snap-install`)")
 def repackage_snap(
         command_context,
         snapcraft,
         output,
         input_pkg,
         tmp_dir,
-        clean
+        clean,
+        install,
 ):
     from mozbuild.repackaging.snap import (
         repackage_snap,
@@ -2902,7 +2908,63 @@ def repackage_snap(
         "Snap package created: {path}",
     )
 
+    if install:
+        return repackage_snap_install(
+            command_context,
+            snap_file = snappath,
+            sudo = "sudo", #FIXME
+        )
+
     return 0
+
+@SubCommand(
+    "repackage",
+    "snap-install",
+    description="Install an unofficial Snap package (and, if needed, enable its connections)",
+)
+@CommandArgument("--snap-file",
+                 metavar="FILENAME",
+                 help="Snap file to install; defaults to the last one built"
+                 " by `mach repackage snap` (without `--output`)")
+@CommandArgument("--sudo",
+                 default="sudo",
+                 help="Wrapper to run commands as root (default: sudo)")
+def repackage_snap_install(command_context, snap_file, sudo):
+    from mozbuild.repackaging.snap import (
+        missing_connections,
+    )
+
+    if not snap_file:
+        snap_file = os.path.join(command_context.distdir, "snap/latest.snap")
+        if not os.path.exists(snap_file):
+            command_context.log(
+                logging.ERROR,
+                "repackage-snap-install-no-dfl-snap",
+                {},
+                "No snap file found; please run `./mach repackage snap` first"
+                " or use --snap-file"
+            )
+            return 1
+
+    # Install
+    command_context.run_process(
+        # The `--dangerous` flag skips signature checks but doesn't
+        # turn off sandboxing (contrast `--devmode`), because if you
+        # need to test under Snap instead of normally, it may be
+        # because their sandbox broke something.
+        [sudo, "snap", "install", "--dangerous", snap_file],
+        pass_thru = True,
+    )
+
+    # Fix up connections if needed
+    for conn in missing_connections("firefox-devel"):
+        command_context.run_process(
+            [sudo, "snap", "connect", conn],
+            pass_thru = True,
+        )
+
+    return 0
+
 
 @Command(
     "package-multi-locale",

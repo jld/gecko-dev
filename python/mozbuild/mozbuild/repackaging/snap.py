@@ -81,3 +81,17 @@ def unpack_tarball(package, destdir):
         package,
         "--strip-components=1",
     ])
+
+def missing_connections(app_name):
+    rv = []
+    with subprocess.Popen(
+            ["snap", "connections", app_name],
+            stdout = subprocess.PIPE,
+            encoding = "utf-8",
+    ) as proc:
+        header = next(proc.stdout)
+        for line in proc.stdout:
+            iface, plug, slot, notes = line.split(maxsplit=3)
+            if plug != "-" and slot == "-":
+                rv.append(plug)
+    return rv
