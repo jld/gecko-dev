@@ -189,6 +189,13 @@ class IOUtils final {
                                                ErrorResult& aError);
 #endif
 
+#ifdef XP_UNIX
+  static uint32_t LaunchProcess(GlobalObject& aGlobal,
+                                const Sequence<nsCString>& aArgv,
+                                const LaunchOptions& aOptions,
+                                ErrorResult& aRv);
+#endif
+
   static void GetProfileBeforeChange(GlobalObject& aGlobal,
                                      JS::MutableHandle<JS::Value>,
                                      ErrorResult& aRv);

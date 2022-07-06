@@ -334,6 +334,16 @@ namespace IOUtils {
   [NewObject]
   Promise<void> delMacXAttr(DOMString path, UTF8String attr);
 #endif
+
+#ifdef XP_UNIX
+  // FIXME comment
+  //
+  // (Note this could be extended to Windows but the strings would
+  // need to be U16 there, so might make sense to have entirely
+  // separate WebIDL vs. transcoding them all on Unix.)
+  [Throws]
+  unsigned long launchProcess(sequence<UTF8String> argv, optional LaunchOptions options = {});
+#endif
 };
 
 [Exposed=Window]
@@ -612,5 +622,20 @@ dictionary WindowsFileAttributes {
    * Whether or not the file is classified as a system file.
    */
   boolean system;
+};
+#endif
+
+#ifdef XP_UNIX
+dictionary LaunchOptions {
+  // FIXME ByteString?
+  record<UTF8String, UTF8String> environment;
+  boolean resetEnv;
+  UTF8String workdir;
+  sequence<FdMapping> fdMap;
+};
+
+dictionary FdMapping {
+  unsigned long src;
+  unsigned long dst;
 };
 #endif

@@ -2588,6 +2588,18 @@ void SyncReadFile::ReadBytesInto(const Uint8Array& aDestArray,
 
 void SyncReadFile::Close() { mStream = nullptr; }
 
+#ifdef XP_UNIX
+// static
+uint32_t IOUtils::LaunchProcess(GlobalObject& aGlobal,
+                                const Sequence<nsCString>& aArgv,
+                                const LaunchOptions& aOptions,
+                                ErrorResult& aRv)
+{
+  aRv.Throw(NS_ERROR_NOT_IMPLEMENTED);
+  return 0;
+}
+#endif // XP_UNIX
+
 }  // namespace mozilla::dom
 
 #undef REJECT_IF_INIT_PATH_FAILED
