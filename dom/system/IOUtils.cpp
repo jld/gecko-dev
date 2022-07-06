@@ -70,6 +70,10 @@
 #  include "nsILocalFileMac.h"
 #endif
 
+#ifdef XP_UNIX
+#  include "base/process_util.h"
+#endif
+
 #define REJECT_IF_INIT_PATH_FAILED(_file, _path, _promise)            \
   do {                                                                \
     if (nsresult _rv = PathUtils::InitFileWithPath((_file), (_path)); \
@@ -2595,6 +2599,27 @@ uint32_t IOUtils::LaunchProcess(GlobalObject& aGlobal,
                                 const LaunchOptions& aOptions,
                                 ErrorResult& aRv)
 {
+  std::vector<std::string> argv;
+  base::LaunchOptions options;
+
+  for (const auto& arg : aArgv) {
+    argv.push_back(arg.get());
+  }
+
+  if (aOptions.mEnvironment.WasPassed()) {
+    for (const auto& envItem : aOptions.mEnvironment.Value().Entries()) {
+      options.env_map[envItem.mKey.get()] = envItem.mValue.get();
+    }
+  }
+
+  // TODO: resetEnv and workdir;
+
+  if (aOptions.mFdMap.WasPassed()) {
+    for (const auto& fdItem : aOptions.mFdMap.Value()) {
+      options.fds_to_remap.push_back({ fdItem.mSrc, fdItem.mDst });
+    }
+  }
+
   aRv.Throw(NS_ERROR_NOT_IMPLEMENTED);
   return 0;
 }

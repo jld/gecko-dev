@@ -635,7 +635,7 @@ dictionary LaunchOptions {
 };
 
 dictionary FdMapping {
-  unsigned long src;
-  unsigned long dst;
+  required unsigned long src;
+  required unsigned long dst;
 };
 #endif
