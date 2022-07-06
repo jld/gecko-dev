@@ -275,7 +275,7 @@ bool LaunchApp(const std::vector<std::string>& argv,
     if (!options.workdir.empty()) {
       if (chdir(options.workdir.c_str()) != 0) {
         // See under execve about logging unsafety.
-        DLOG(ERROR) << "chdir failed";
+        DLOG(ERROR) << "chdir failed " << options.workdir;
         _exit(127);
       }
     }

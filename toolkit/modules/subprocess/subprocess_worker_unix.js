@@ -380,6 +380,41 @@ class Process extends BaseProcess {
   }
 
   spawn(options) {
+    let fds = this.initPipes(options);
+
+    let launchOptions = {
+      environment: Object.create(null),
+      resetEnv: true,
+      fdMap: [],
+    };
+
+    if (options.workdir) {
+      launchOptions.workdir = options.workdir;
+    }
+
+    for (let [dst, src] of fds.entries()) {
+      launchOptions.fdMap.push({ src, dst });
+    }
+
+    for (let envstr of options.environment) {
+      let eq = envstr.indexOf("=");
+      let key = envstr.substring(0, eq);
+      let value = envstr.substring(eq + 1);
+      launchOptions.environment[key] = value; // FIXME: safety?
+    }
+
+    try {
+      this.pid = IOUtils.launchProcess(options.arguments,
+                                       launchOptions);
+    } finally {
+      // FIXME: generally, ???
+      // FIXME: also, should exns be annotated with a better error?
+      for (let fd of new Set(fds.values())) {
+        fd.dispose();
+      }
+    }
+
+/*
     let { command, arguments: args } = options;
 
     let argv = this.stringArray(args);
@@ -459,6 +494,7 @@ class Process extends BaseProcess {
         fd.dispose();
       }
     }
+*/
   }
 
   /**
