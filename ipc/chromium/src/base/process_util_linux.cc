@@ -235,7 +235,8 @@ bool LaunchApp(const std::vector<std::string>& argv,
 
   mozilla::UniquePtr<char*[]> argv_cstr(new char*[argv.size() + 1]);
 
-  EnvironmentArray envp = BuildEnvironmentArray(options.env_map);
+  EnvironmentArray envp = BuildEnvironmentArray(options.env_map,
+                                                options.env_reset);
   mozilla::ipc::FileDescriptorShuffle shuffle;
   if (!shuffle.Init(options.fds_to_remap)) {
     CHROMIUM_LOG(WARNING) << "FileDescriptorShuffle::Init failed";
@@ -271,6 +272,14 @@ bool LaunchApp(const std::vector<std::string>& argv,
 
   if (pid == 0) {
     // In the child:
+    if (!options.workdir.empty()) {
+      if (chdir(options.workdir.c_str()) != 0) {
+        // See under execve about logging unsafety.
+        DLOG(ERROR) << "chdir failed";
+        _exit(127);
+      }
+    }
+
     for (const auto& fds : shuffle.Dup2Sequence()) {
       if (HANDLE_EINTR(dup2(fds.first, fds.second)) != fds.second) {
         // This shouldn't happen, but check for it.  And see below

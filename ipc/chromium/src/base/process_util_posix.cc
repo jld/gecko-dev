@@ -194,20 +194,23 @@ void FreeEnvVarsArray::operator()(char** array) {
   delete[] array;
 }
 
-EnvironmentArray BuildEnvironmentArray(const environment_map& env_vars_to_set) {
+EnvironmentArray BuildEnvironmentArray(const environment_map& env_vars_to_set,
+                                       bool reset_env) {
   base::environment_map combined_env_vars = env_vars_to_set;
-  char** environ = PR_DuplicateEnvironment();
-  for (char** varPtr = environ; *varPtr != nullptr; ++varPtr) {
-    std::string varString = *varPtr;
-    size_t equalPos = varString.find_first_of('=');
-    std::string varName = varString.substr(0, equalPos);
-    std::string varValue = varString.substr(equalPos + 1);
-    if (combined_env_vars.find(varName) == combined_env_vars.end()) {
-      combined_env_vars[varName] = varValue;
+  if (!reset_env) {
+    char** environ = PR_DuplicateEnvironment();
+    for (char** varPtr = environ; *varPtr != nullptr; ++varPtr) {
+      std::string varString = *varPtr;
+      size_t equalPos = varString.find_first_of('=');
+      std::string varName = varString.substr(0, equalPos);
+      std::string varValue = varString.substr(equalPos + 1);
+      if (combined_env_vars.find(varName) == combined_env_vars.end()) {
+        combined_env_vars[varName] = varValue;
+      }
+      PR_Free(*varPtr);  // PR_DuplicateEnvironment() uses PR_Malloc().
     }
-    PR_Free(*varPtr);  // PR_DuplicateEnvironment() uses PR_Malloc().
+    PR_Free(environ);  // PR_DuplicateEnvironment() uses PR_Malloc().
   }
-  PR_Free(environ);  // PR_DuplicateEnvironment() uses PR_Malloc().
 
   EnvironmentArray array(new char*[combined_env_vars.size() + 1]);
   size_t i = 0;

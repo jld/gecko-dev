@@ -2612,7 +2612,13 @@ uint32_t IOUtils::LaunchProcess(GlobalObject& aGlobal,
     }
   }
 
-  // TODO: resetEnv and workdir;
+  if (aOptions.mResetEnv.WasPassed()) {
+    options.env_reset = aOptions.mResetEnv.Value();
+  }
+
+  if (aOptions.mWorkdir.WasPassed()) {
+    options.workdir = aOptions.mWorkdir.Value().get();
+  }
 
   if (aOptions.mFdMap.WasPassed()) {
     for (const auto& fdItem : aOptions.mFdMap.Value()) {
@@ -2620,8 +2626,16 @@ uint32_t IOUtils::LaunchProcess(GlobalObject& aGlobal,
     }
   }
 
-  aRv.Throw(NS_ERROR_NOT_IMPLEMENTED);
-  return 0;
+  base::ProcessHandle pid;
+  static_assert(sizeof(pid) <= sizeof(uint32_t), "WebIDL long is large enough for a pid");
+  bool ok = base::LaunchApp(argv, options, &pid);
+  if (!ok) {
+    aRv.Throw(NS_ERROR_FAILURE);
+    return 0;
+  }
+
+  MOZ_ASSERT(pid >= 0); // FIXME could also use that checked cast thing
+  return static_cast<uint32_t>(pid);
 }
 #endif // XP_UNIX
 

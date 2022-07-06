@@ -124,6 +124,9 @@ struct LaunchOptions {
 #endif
 #if defined(OS_POSIX)
   environment_map env_map;
+  bool env_reset = false;
+
+  std::string workdir;
 
   // A mapping of (src fd -> dest fd) to propagate into the child
   // process.  All other fds will be closed, except std{in,out,err}.
@@ -188,7 +191,8 @@ typedef mozilla::UniquePtr<char*[], FreeEnvVarsArray> EnvironmentArray;
 
 // Merge an environment map with the current environment.
 // Existing variables are overwritten by env_vars_to_set.
-EnvironmentArray BuildEnvironmentArray(const environment_map& env_vars_to_set);
+EnvironmentArray BuildEnvironmentArray(const environment_map& env_vars_to_set,
+                                       bool reset_env = false);
 #endif
 
 #if defined(MOZ_ENABLE_FORKSERVER)
