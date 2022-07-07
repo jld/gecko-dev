@@ -190,8 +190,9 @@ class IOUtils final {
 #endif
 
 #ifdef XP_UNIX
+  typedef OwningUTF8StringOrUint8Array UnixString;
   static uint32_t LaunchProcess(GlobalObject& aGlobal,
-                                const Sequence<nsCString>& aArgv,
+                                const Sequence<UnixString>& aArgv,
                                 const LaunchOptions& aOptions,
                                 ErrorResult& aRv);
 #endif

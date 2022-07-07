@@ -2593,9 +2593,26 @@ void SyncReadFile::ReadBytesInto(const Uint8Array& aDestArray,
 void SyncReadFile::Close() { mStream = nullptr; }
 
 #ifdef XP_UNIX
+namespace {
+static nsCString FromUnixString(const IOUtils::UnixString& aString) {
+  if (aString.IsUTF8String()) {
+    return aString.GetAsUTF8String();
+  }
+  if (aString.IsUint8Array()) {
+    const auto& u8a = aString.GetAsUint8Array();
+    u8a.ComputeState();
+    // Cast to deal with char signedness
+    nsDependentCSubstring subStr(reinterpret_cast<const char*>(u8a.Data()),
+                                 u8a.Length());
+    return PromiseFlatCString(subStr);
+  }
+  MOZ_CRASH("unreachable");
+}
+} // namespace
+
 // static
 uint32_t IOUtils::LaunchProcess(GlobalObject& aGlobal,
-                                const Sequence<nsCString>& aArgv,
+                                const Sequence<UnixString>& aArgv,
                                 const LaunchOptions& aOptions,
                                 ErrorResult& aRv)
 {
@@ -2603,19 +2620,19 @@ uint32_t IOUtils::LaunchProcess(GlobalObject& aGlobal,
   base::LaunchOptions options;
 
   for (const auto& arg : aArgv) {
-    argv.push_back(arg.get());
+    argv.push_back(FromUnixString(arg).get());
   }
 
   size_t envLen = aOptions.mEnvironment.Length();
   base::EnvironmentArray envp(new char*[envLen + 1]);
   for (size_t i = 0; i < envLen; ++i) {
-    envp[i] = strdup(aOptions.mEnvironment[i].get());
+    envp[i] = strdup(FromUnixString(aOptions.mEnvironment[i]).get());
   }
   envp[envLen] = nullptr;
   options.full_env = std::move(envp);
 
   if (aOptions.mWorkdir.WasPassed()) {
-    options.workdir = aOptions.mWorkdir.Value().get();
+    options.workdir = FromUnixString(aOptions.mWorkdir.Value()).get();
   }
 
   if (aOptions.mFdMap.WasPassed()) {

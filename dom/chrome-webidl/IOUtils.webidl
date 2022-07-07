@@ -342,7 +342,7 @@ namespace IOUtils {
   // need to be U16 there, so might make sense to have entirely
   // separate WebIDL vs. transcoding them all on Unix.)
   [Throws]
-  unsigned long launchProcess(sequence<UTF8String> argv, LaunchOptions options);
+  unsigned long launchProcess(sequence<UnixString> argv, LaunchOptions options);
 #endif
 };
 
@@ -626,11 +626,12 @@ dictionary WindowsFileAttributes {
 #endif
 
 #ifdef XP_UNIX
+typedef (UTF8String or Uint8Array) UnixString;
+
 dictionary LaunchOptions {
-  // FIXME need non-Unicode strings too
-  required sequence<UTF8String> environment;
+  required sequence<UnixString> environment;
   // FIXME explain we can have env_map if we need it
-  UTF8String workdir;
+  UnixString workdir;
   sequence<FdMapping> fdMap;
 };
 
