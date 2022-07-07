@@ -2606,15 +2606,13 @@ uint32_t IOUtils::LaunchProcess(GlobalObject& aGlobal,
     argv.push_back(arg.get());
   }
 
-  if (aOptions.mEnvironment.WasPassed()) {
-    for (const auto& envItem : aOptions.mEnvironment.Value().Entries()) {
-      options.env_map[envItem.mKey.get()] = envItem.mValue.get();
-    }
+  size_t envLen = aOptions.mEnvironment.Length();
+  base::EnvironmentArray envp(new char*[envLen + 1]);
+  for (size_t i = 0; i < envLen; ++i) {
+    envp[i] = strdup(aOptions.mEnvironment[i].get());
   }
-
-  if (aOptions.mResetEnv.WasPassed()) {
-    options.env_reset = aOptions.mResetEnv.Value();
-  }
+  envp[envLen] = nullptr;
+  options.full_env = std::move(envp);
 
   if (aOptions.mWorkdir.WasPassed()) {
     options.workdir = aOptions.mWorkdir.Value().get();
@@ -2627,14 +2625,15 @@ uint32_t IOUtils::LaunchProcess(GlobalObject& aGlobal,
   }
 
   base::ProcessHandle pid;
-  static_assert(sizeof(pid) <= sizeof(uint32_t), "WebIDL long is large enough for a pid");
+  static_assert(sizeof(pid) <= sizeof(uint32_t),
+                "WebIDL long is large enough for a pid");
   bool ok = base::LaunchApp(argv, options, &pid);
   if (!ok) {
     aRv.Throw(NS_ERROR_FAILURE);
     return 0;
   }
 
-  MOZ_ASSERT(pid >= 0); // FIXME could also use that checked cast thing
+  MOZ_ASSERT(pid >= 0);
   return static_cast<uint32_t>(pid);
 }
 #endif // XP_UNIX

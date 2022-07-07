@@ -106,6 +106,13 @@ void CloseSuperfluousFds(void* aCtx, bool (*aShouldPreserve)(void*, int));
 
 typedef std::vector<std::pair<int, int> > file_handle_mapping_vector;
 typedef std::map<std::string, std::string> environment_map;
+
+// Deleter for the array of strings allocated within BuildEnvironmentArray.
+struct FreeEnvVarsArray {
+  void operator()(char** array);
+};
+
+typedef mozilla::UniquePtr<char*[], FreeEnvVarsArray> EnvironmentArray;
 #endif
 
 struct LaunchOptions {
@@ -124,7 +131,8 @@ struct LaunchOptions {
 #endif
 #if defined(OS_POSIX)
   environment_map env_map;
-  bool env_reset = false;
+  // FIXME comment
+  EnvironmentArray full_env;
 
   std::string workdir;
 
@@ -182,17 +190,9 @@ bool LaunchApp(const std::wstring& cmdline, const LaunchOptions& options,
 bool LaunchApp(const std::vector<std::string>& argv,
                const LaunchOptions& options, ProcessHandle* process_handle);
 
-// Deleter for the array of strings allocated within BuildEnvironmentArray.
-struct FreeEnvVarsArray {
-  void operator()(char** array);
-};
-
-typedef mozilla::UniquePtr<char*[], FreeEnvVarsArray> EnvironmentArray;
-
 // Merge an environment map with the current environment.
 // Existing variables are overwritten by env_vars_to_set.
-EnvironmentArray BuildEnvironmentArray(const environment_map& env_vars_to_set,
-                                       bool reset_env = false);
+EnvironmentArray BuildEnvironmentArray(const environment_map& env_vars_to_set);
 #endif
 
 #if defined(MOZ_ENABLE_FORKSERVER)

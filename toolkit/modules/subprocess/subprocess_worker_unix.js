@@ -381,9 +381,10 @@ class Process extends BaseProcess {
 
   spawn(options) {
     let fds = this.initPipes(options);
+    let dec = new TextDecoder();
 
     let launchOptions = {
-      environment: Object.create(null),
+      environment: options.environment.map(str => (typeof str === "string" ? str : dec.decode(str))), // FIXME unicode
       resetEnv: true,
       fdMap: [],
     };
