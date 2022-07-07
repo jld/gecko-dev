@@ -397,6 +397,12 @@ class Process extends BaseProcess {
     }
 
     for (let envstr of options.environment) {
+      // FIXME this is probably bad; really all of this should be byte
+      // strings and not require UTF-8 but that's probably already broken.
+      if (typeof envstr !== "string") {
+        let dec = new TextDecoder();
+        envstr = dec.decode(envstr);
+      }
       let eq = envstr.indexOf("=");
       let key = envstr.substring(0, eq);
       let value = envstr.substring(eq + 1);
