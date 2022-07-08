@@ -5,7 +5,6 @@
  * file, You can obtain one at http://mozilla.org/MPL/2.0/. */
 "use strict";
 
-/* globals OS */
 /* exported Process */
 
 /* import-globals-from subprocess_shared.js */
@@ -397,8 +396,7 @@ class Process extends BaseProcess {
     }
 
     try {
-      this.pid = IOUtils.launchProcess(options.arguments,
-                                       launchOptions);
+      this.pid = IOUtils.launchProcess(options.arguments, launchOptions);
     } finally {
       for (let fd of new Set(fds.values())) {
         fd.dispose();
