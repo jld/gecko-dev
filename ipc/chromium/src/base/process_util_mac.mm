@@ -7,6 +7,7 @@
 #include "base/process_util.h"
 
 #include <fcntl.h>
+#include <os/availability.h>
 #include <spawn.h>
 #include <sys/wait.h>
 
@@ -17,6 +18,16 @@
 #include "base/logging.h"
 #include "mozilla/ipc/FileDescriptorShuffle.h"
 #include "mozilla/ScopeExit.h"
+
+extern "C" {
+  // N.B. the syscalls are available back to 10.5, but the C wrappers
+  // only in 10.12.  Fortunately, 10.12 is our current baseline.
+int pthread_chdir_np(const char* dir) API_AVAILABLE(macosx(10.12));
+int pthread_fchdir_np(int fd) API_AVAILABLE(macosx(10.12));
+
+int responsibility_spawnattrs_setdisclaim(posix_spawnattr_t attrs, int disclaim)
+    API_AVAILABLE(macosx(10.14));
+}
 
 namespace {
 
@@ -37,8 +48,8 @@ bool LaunchApp(const std::vector<std::string>& argv, const LaunchOptions& option
   argv_copy[argv.size()] = NULL;
 
   EnvironmentArray env_storage;
-  const EnvironmentArray& vars = options.full_env ? options.full_env
-      : (env_storage = BuildEnvironmentArray(options.env_map));
+  const EnvironmentArray& vars =
+      options.full_env ? options.full_env : (env_storage = BuildEnvironmentArray(options.env_map));
 
   posix_spawn_file_actions_t file_actions;
   if (posix_spawn_file_actions_init(&file_actions) != 0) {
@@ -64,13 +75,34 @@ bool LaunchApp(const std::vector<std::string>& argv, const LaunchOptions& option
     }
   }
 
+  // FIXME explain this mess
+  int old_cwd_fd = -1;
   if (!options.workdir.empty()) {
-    if (posix_spawn_file_actions_addchdir_np(&file_actions,
-                                             options.workdir.c_str()) != 0) {
-      DLOG(WARNING) << "posix_spawn_file_actions_addchdir_np failed";
-      return false;
+    if (@available(macOS 10.15, *)) {
+      if (posix_spawn_file_actions_addchdir_np(&file_actions, options.workdir.c_str()) != 0) {
+        DLOG(WARNING) << "posix_spawn_file_actions_addchdir_np failed";
+        return false;
+      }
+    } else {
+      old_cwd_fd = open(".", O_RDONLY | O_CLOEXEC | O_DIRECTORY);
+      if (old_cwd_fd < 0) {
+        DLOG(WARNING) << "open(\".\") failed";
+        return false;
+      }
+      if (pthread_chdir_np(options.workdir.c_str()) != 0) {
+        DLOG(WARNING) << "pthread_chdir_np failed";
+        return false;
+      }
     }
   }
+  auto thread_cwd_guard = mozilla::MakeScopeExit([old_cwd_fd] {
+    if (old_cwd_fd >= 0) {
+      if (pthread_fchdir_np(old_cwd_fd) != 0) {
+        DLOG(ERROR) << "pthread_fchdir_np failed; thread is in the wrong directory!";
+      }
+      close(old_cwd_fd);
+    }
+  });
 
   // Initialize spawn attributes.
   posix_spawnattr_t spawnattr;
@@ -96,9 +128,11 @@ bool LaunchApp(const std::vector<std::string>& argv, const LaunchOptions& option
 #endif
 
   if (options.disclaim) {
-    if (responsibility_spawnattrs_setdisclaim(&spawnattr, 1) != 0) {
-      DLOG(WARNING) << "responsibility_spawnattrs_setdisclaim failed";
-      return false;
+    if (@available(macOS 10.14, *)) {
+      if (responsibility_spawnattrs_setdisclaim(&spawnattr, 1) != 0) {
+        DLOG(WARNING) << "responsibility_spawnattrs_setdisclaim failed";
+        return false;
+      }
     }
   }
 
