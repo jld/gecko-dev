@@ -156,12 +156,16 @@ struct LaunchOptions {
   mozilla::UniquePtr<ForkDelegate> fork_delegate = nullptr;
 #endif
 
-#if defined(OS_MACOSX) && defined(__aarch64__)
+#ifdef OS_MACOSX
+  // FIXME comment
+  bool disclaim = false;
+#ifdef __aarch64__
   // The architecture to launch when launching a "universal" binary.
   // Note: the implementation only supports launching x64 child
   // processes from arm64 parent processes.
   uint32_t arch = PROCESS_ARCH_INVALID;
-#endif
+#endif  // __aarch64__
+#endif  // OS_MACOSX
 };
 
 #if defined(OS_WIN)

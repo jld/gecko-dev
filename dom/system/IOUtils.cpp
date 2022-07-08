@@ -2641,6 +2641,10 @@ uint32_t IOUtils::LaunchProcess(GlobalObject& aGlobal,
     }
   }
 
+#ifdef XP_MACOSX
+  options.disclaim = aOptions.mDisclaim;
+#endif
+
   base::ProcessHandle pid;
   static_assert(sizeof(pid) <= sizeof(uint32_t),
                 "WebIDL long is large enough for a pid");

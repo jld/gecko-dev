@@ -36,7 +36,9 @@ bool LaunchApp(const std::vector<std::string>& argv, const LaunchOptions& option
   }
   argv_copy[argv.size()] = NULL;
 
-  EnvironmentArray vars = BuildEnvironmentArray(options.env_map);
+  EnvironmentArray env_storage;
+  const EnvironmentArray& vars = options.full_env ? options.full_env
+      : (env_storage = BuildEnvironmentArray(options.env_map));
 
   posix_spawn_file_actions_t file_actions;
   if (posix_spawn_file_actions_init(&file_actions) != 0) {
@@ -58,6 +60,14 @@ bool LaunchApp(const std::vector<std::string>& argv, const LaunchOptions& option
 
     if (posix_spawn_file_actions_adddup2(&file_actions, src_fd, dest_fd) != 0) {
       DLOG(WARNING) << "posix_spawn_file_actions_adddup2 failed";
+      return false;
+    }
+  }
+
+  if (!options.workdir.empty()) {
+    if (posix_spawn_file_actions_addchdir_np(&file_actions,
+                                             options.workdir.c_str()) != 0) {
+      DLOG(WARNING) << "posix_spawn_file_actions_addchdir_np failed";
       return false;
     }
   }
@@ -84,6 +94,13 @@ bool LaunchApp(const std::vector<std::string>& argv, const LaunchOptions& option
     }
   }
 #endif
+
+  if (options.disclaim) {
+    if (responsibility_spawnattrs_setdisclaim(&spawnattr, 1) != 0) {
+      DLOG(WARNING) << "responsibility_spawnattrs_setdisclaim failed";
+      return false;
+    }
+  }
 
   // Prevent the child process from inheriting any file descriptors
   // that aren't named in `file_actions`.  (This is an Apple-specific

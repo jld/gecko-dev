@@ -633,6 +633,7 @@ dictionary LaunchOptions {
   // FIXME explain we can have env_map if we need it
   UnixString workdir;
   sequence<FdMapping> fdMap;
+  boolean disclaim = false;
 };
 
 dictionary FdMapping {
