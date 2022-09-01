@@ -8,6 +8,7 @@
 #include <signal.h>
 #include <sys/types.h>
 #include <sys/wait.h>
+#include <unistd.h>
 
 #include "base/eintr_wrapper.h"
 #include "base/message_loop.h"
@@ -46,8 +47,10 @@ class ChildReaper : public base::MessagePumpLibevent::SignalEvent,
 
  protected:
   void WaitForChildExit() {
-    DCHECK(process_);
-    HANDLE_EINTR(waitpid(process_, NULL, 0));
+    CHECK(process_);
+    while (!base::IsProcessDead(process_, true)) {
+      sleep(1);
+    }
   }
 
   pid_t process_;
