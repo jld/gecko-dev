@@ -88,6 +88,11 @@ static_assert(F_ADD_SEALS == (F_LINUX_SPECIFIC_BASE + 9));
 static_assert(F_GET_SEALS == (F_LINUX_SPECIFIC_BASE + 10));
 #endif
 
+// Defined in <linux/watch_queue.h> which was added in 5.8
+#ifndef O_NOTIFICATION_PIPE
+#  define O_NOTIFICATION_PIPE O_EXCL
+#endif
+
 // To avoid visual confusion between "ifdef ANDROID" and "ifndef ANDROID":
 #ifndef ANDROID
 #  define DESKTOP
@@ -1522,8 +1527,15 @@ class ContentSandboxPolicy : public SandboxPolicyCommon {
 #endif
 
 #ifdef DESKTOP
-      case __NR_pipe2:
-        return Allow();
+      case __NR_pipe2: {
+        // Restrict the flags; O_NOTIFICATION_PIPE in particular
+        // exposes enough attack surface to be a cause for concern
+        // (bug 1808320).
+        static constexpr int allowed_flags = O_CLOEXEC | O_NONBLOCK;
+        Arg<int> flags(1);
+        return If((flags & ~allowed_flags) == 0, Allow())
+            .Else(InvalidSyscall());
+      }
 
       CASES_FOR_getrlimit:
       CASES_FOR_getresuid:
