@@ -430,6 +430,7 @@ void SandboxBrokerPolicyFactory::InitContentPolicy() {
   // Various places where fonts reside
   policy->AddDir(rdonly, "/usr/X11R6/lib/X11/fonts");
   policy->AddDir(rdonly, "/nix/store");
+  policy->AddDir(rdonly, "/gnu/store");
   // https://gitlab.com/freedesktop-sdk/freedesktop-sdk/-/blob/e434e680d22260f277f4a30ec4660ed32b591d16/files/fontconfig-flatpak.conf
   policy->AddDir(rdonly, "/run/host/fonts");
   policy->AddDir(rdonly, "/run/host/user-fonts");
@@ -836,6 +837,7 @@ SandboxBrokerPolicyFactory::GetRDDPolicy(int aPid) {
   policy->AddDir(rdonly, "/usr/lib64");
   policy->AddDir(rdonly, "/run/opengl-driver/lib");
   policy->AddDir(rdonly, "/nix/store");
+  policy->AddDir(rdonly, "/gnu/store");
 
   // Bug 1647957: memory reporting.
   AddMemoryReporting(policy.get(), aPid);
