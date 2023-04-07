@@ -248,16 +248,6 @@ def _flatTypeName(ipdltype):
     return ipdltype.name()
 
 
-def _hasVisibleActor(ipdltype):
-    """Return true iff a C++ decl of |ipdltype| would have an Actor* type.
-    For example: |Actor[]| would turn into |Array<ActorParent*>|, so this
-    function would return true for |Actor[]|."""
-    return ipdltype.isIPDL() and (
-        ipdltype.isActor()
-        or (ipdltype.hasBaseType() and _hasVisibleActor(ipdltype.basetype))
-    )
-
-
 def _abortIfFalse(cond, msg):
     return StmtExpr(
         ExprCall(ExprVar("MOZ_RELEASE_ASSERT"), [cond, ExprLiteral.String(msg)])
@@ -540,7 +530,11 @@ class _ConvertToCxxType(TypeVisitor):
                     _cxxBareType(a, "child", self.fq),
                 ],
             )
-        return Type(_actorName(self.typename(a.protocol), self.side), ptr=True)
+        ty = Type(_actorName(self.typename(a.protocol), self.side))
+        if a.isRefcounted():
+            return _refptr(ty)
+        ty.ptr = True
+        return ty
 
     def visitStructType(self, s):
         return Type(self.typename(s))
@@ -600,7 +594,7 @@ def _cxxRefType(ipdltype, side):
 
 def _cxxConstRefType(ipdltype, side):
     t = _cxxBareType(ipdltype, side)
-    if ipdltype.isIPDL() and ipdltype.isActor():
+    if t.ptr:
         return t
     if ipdltype.isIPDL() and ipdltype.isShmem():
         t.ref = True
@@ -712,7 +706,7 @@ def _cxxTypeNeedsMoveForData(ipdltype, context="root", visited=None):
 
 
 def _cxxTypeCanMove(ipdltype):
-    return not (ipdltype.isIPDL() and ipdltype.isActor())
+    return not (ipdltype.isIPDL() and ipdltype.isActor() and not ipdltype.isRefcounted())
 
 
 def _cxxForceMoveRefType(ipdltype, side):
@@ -724,7 +718,7 @@ def _cxxForceMoveRefType(ipdltype, side):
 
 def _cxxPtrToType(ipdltype, side):
     t = _cxxBareType(ipdltype, side)
-    if ipdltype.isIPDL() and ipdltype.isActor() and side is not None:
+    if t.ptr:
         t.ptr = False
         t.ptrptr = True
         return t
@@ -734,7 +728,7 @@ def _cxxPtrToType(ipdltype, side):
 
 def _cxxConstPtrToType(ipdltype, side):
     t = _cxxBareType(ipdltype, side)
-    if ipdltype.isIPDL() and ipdltype.isActor() and side is not None:
+    if t.ptr:
         t.ptr = False
         t.ptrconstptr = True
         return t
@@ -745,7 +739,12 @@ def _cxxConstPtrToType(ipdltype, side):
 
 def _cxxInType(ipdltype, side, direction):
     t = _cxxBareType(ipdltype, side)
-    if ipdltype.isIPDL() and ipdltype.isActor():
+    if t.ptr:
+        return t
+    if ipdltype.isIPDL() and ipdltype.isActor() and ipdltype.isRefcounted():
+        # Use T* instead of const RefPtr<T>&
+        t = t.T
+        t.ptr = True
         return t
     if ipdltype.isIPDL() and ipdltype.isNotNull():
         # If the inner type chooses to use a raw pointer, wrap that instead.
@@ -831,7 +830,7 @@ class _HybridDecl:
     def outType(self, side):
         """Return this decl's C++ Type with outparam semantics."""
         t = self.bareType(side)
-        if self.ipdltype.isIPDL() and self.ipdltype.isActor():
+        if t.ptr:
             t.ptr = False
             t.ptrptr = True
             return t
@@ -1768,8 +1767,8 @@ class _GenerateProtocolCode(ipdl.ast.Visitor):
     # Generate code for PFoo::CreateEndpoints.
     def genEndpointFuncs(self):
         p = self.protocol.decl.type
-        tparent = _cxxBareType(ActorType(p), "Parent", fq=True)
-        tchild = _cxxBareType(ActorType(p), "Child", fq=True)
+        nparent = _actorName(p.fullname(), "Parent")
+        nchild = _actorName(p.fullname(), "Child")
 
         def mkOverload(includepids):
             params = []
@@ -1780,11 +1779,11 @@ class _GenerateProtocolCode(ipdl.ast.Visitor):
                 ]
             params += [
                 Decl(
-                    Type("mozilla::ipc::Endpoint<" + tparent.name + ">", ptr=True),
+                    Type("mozilla::ipc::Endpoint<" + nparent + ">", ptr=True),
                     "aParent",
                 ),
                 Decl(
-                    Type("mozilla::ipc::Endpoint<" + tchild.name + ">", ptr=True),
+                    Type("mozilla::ipc::Endpoint<" + nchild + ">", ptr=True),
                     "aChild",
                 ),
             ]
@@ -2112,24 +2111,27 @@ class _ParamTraits:
         )
 
     @classmethod
-    def generateDecl(cls, fortype, write, read, needsmove=False):
+    def generateDecl(cls, fortype, write, read, needsmove=False, weaktype=None):
+        if not weaktype:
+            weaktype = fortype
         # ParamTraits impls are selected ignoring constness, and references.
         pt = Class(
             "ParamTraits",
             specializes=Type(
-                fortype.name, T=fortype.T, inner=fortype.inner, ptr=fortype.ptr
+                weaktype.name, T=weaktype.T, inner=weaktype.inner, ptr=weaktype.ptr
             ),
             struct=True,
         )
 
-        # typedef T paramType;
-        pt.addstmt(Typedef(fortype, "paramType"))
+        # typedefs for param types:
+        pt.addstmt(Typedef(fortype, "StrongParam"))
+        pt.addstmt(Typedef(weaktype, "WeakParam"))
 
         # static void Write(Message*, const T&);
         if needsmove:
-            intype = Type("paramType", rvalref=True)
+            intype = Type("WeakParam", rvalref=True)
         else:
-            intype = Type("paramType", ref=True, const=True)
+            intype = Type("WeakParam", ref=True, const=True)
         writemthd = MethodDefn(
             MethodDecl(
                 "Write",
@@ -2150,7 +2152,7 @@ class _ParamTraits:
                 params=[
                     Decl(Type("IPC::MessageReader", ptr=True), cls.readervar.name),
                 ],
-                ret=Type("IPC::ReadResult<paramType>"),
+                ret=Type("IPC::ReadResult<StrongParam>"),
                 methodspec=MethodSpec.STATIC,
             )
         )
@@ -2171,6 +2173,7 @@ class _ParamTraits:
         Write and read callers will perform nullability validation."""
 
         cxxtype = _cxxBareType(actortype, side, fq=True)
+        weaktype = Type(_actorName(actortype.protocol.fullname(), side), ptr = True)
 
         write = StmtCode(
             """
@@ -2211,17 +2214,17 @@ class _ParamTraits:
             mozilla::Maybe<mozilla::ipc::IProtocol*> actor = ${readervar}->GetActor()
               ->ReadActor(${readervar}, true, ${actortype}, ${protocolid});
             if (actor.isSome()) {
-                return static_cast<${cxxtype}>(actor.ref());
+                return static_cast<${weaktype}>(actor.ref());
             }
             return {};
             """,
             readervar=cls.readervar,
             actortype=ExprLiteral.String(actortype.name()),
             protocolid=_protocolId(actortype),
-            cxxtype=cxxtype,
+            weaktype=weaktype,
         )
 
-        return cls.generateDecl(cxxtype, [write], [read])
+        return cls.generateDecl(cxxtype, [write], [read], weaktype=weaktype)
 
     @classmethod
     def structPickling(cls, structtype):
@@ -2275,7 +2278,7 @@ class _ParamTraits:
         resultvar = ExprVar("result__")
         read.append(
             StmtDecl(
-                Decl(_cxxReadResultType(Type("paramType")), resultvar.name),
+                Decl(_cxxReadResultType(Type("StrongParam")), resultvar.name),
                 initargs=[ExprVar("std::in_place")] + ctorargs,
             )
         )
@@ -4368,10 +4371,11 @@ class _GenerateProtocolActorCode(ipdl.ast.Visitor):
                 manageecxxtype = _cxxBareType(
                     ipdl.type.ActorType(manageeipdltype), self.side
                 )
+                manageename = _actorName(manageeipdltype.name(), self.side)
                 case = ExprCode(
                     """
                     {
-                        ${manageecxxtype} actor = static_cast<${manageecxxtype}>(aListener);
+                        ${manageecxxtype} actor = static_cast<${manageeptrtype}>(aListener);
 
                         const bool removed = ${container}.EnsureRemoved(actor);
                         MOZ_RELEASE_ASSERT(removed, "actor not managed by this!");
@@ -4382,6 +4386,7 @@ class _GenerateProtocolActorCode(ipdl.ast.Visitor):
                     }
                     """,
                     manageecxxtype=manageecxxtype,
+                    manageeptrtype=Type(manageename, ptr=True),
                     container=p.managedVar(manageeipdltype, self.side),
                 )
                 switchontype.addcase(CaseLabel(_protocolId(manageeipdltype).name), case)
@@ -5497,9 +5502,6 @@ class _GenerateProtocolActorCode(ipdl.ast.Visitor):
 
     def callAllocActor(self, md, retsems, side):
         actortype = md.actorDecl().bareType(self.side)
-        if md.decl.type.constructedType().isRefcounted():
-            actortype.ptr = False
-            actortype = _refptr(actortype)
 
         callalloc = self.thisCall(
             _allocMethod(md.decl.type.constructedType(), side),

@@ -444,42 +444,42 @@ inline void WriteParam(MessageWriter* writer, P&& p) {
 
 namespace detail {
 
-template <typename P>
+template <typename P, typename T = P>
 inline constexpr auto ParamTraitsReadUsesOutParam()
-    -> decltype(ParamTraits<P>::Read(std::declval<MessageReader*>(),
+    -> decltype(ParamTraits<T>::Read(std::declval<MessageReader*>(),
                                      std::declval<P*>())) {
   return true;
 }
 
-template <typename P>
+template <typename P, typename T = P>
 inline constexpr auto ParamTraitsReadUsesOutParam()
-    -> decltype(ParamTraits<P>::Read(std::declval<MessageReader*>()), bool{}) {
+    -> decltype(ParamTraits<T>::Read(std::declval<MessageReader*>()), bool{}) {
   return false;
 }
 
 }  // namespace detail
 
-template <typename P>
+template <typename P, typename T = P>
 inline bool WARN_UNUSED_RESULT ReadParam(MessageReader* reader, P* p) {
-  if constexpr (!detail::ParamTraitsReadUsesOutParam<P>()) {
-    auto maybe = ParamTraits<P>::Read(reader);
+  if constexpr (!detail::ParamTraitsReadUsesOutParam<P, T>()) {
+    auto maybe = ParamTraits<T>::Read(reader);
     if (maybe) {
       *p = std::move(*maybe);
       return true;
     }
     return false;
   } else {
-    return ParamTraits<P>::Read(reader, p);
+    return ParamTraits<T>::Read(reader, p);
   }
 }
 
-template <typename P>
+template <typename P, typename T = P>
 inline ReadResult<P> WARN_UNUSED_RESULT ReadParam(MessageReader* reader) {
-  if constexpr (!detail::ParamTraitsReadUsesOutParam<P>()) {
-    return ParamTraits<P>::Read(reader);
+  if constexpr (!detail::ParamTraitsReadUsesOutParam<P, T>()) {
+    return ParamTraits<T>::Read(reader);
   } else {
     ReadResult<P> p;
-    p.SetOk(ParamTraits<P>::Read(reader, &p.GetStorage()));
+    p.SetOk(ParamTraits<T>::Read(reader, &p.GetStorage()));
     return p;
   }
 }
@@ -1044,7 +1044,7 @@ struct ParamTraitsMozilla<RefPtr<T>> {
   }
 
   static bool Read(MessageReader* reader, RefPtr<T>* r) {
-    return ParamTraits<T*>::Read(reader, r);
+    return ReadParam<RefPtr<T>, T*>(reader, r);
   }
 };
 
