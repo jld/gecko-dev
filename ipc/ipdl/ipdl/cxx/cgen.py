@@ -274,6 +274,9 @@ class CxxCodeGen(CodePrinter, Visitor):
 
         self.printdent()
         md.decl.accept(self)
+        if md.defaulted:
+            self.println(" = default;")
+            return
         self.println()
 
         self.printdentln("{")
@@ -292,6 +295,9 @@ class CxxCodeGen(CodePrinter, Visitor):
     def visitConstructorDefn(self, cd):
         self.printdent()
         cd.decl.accept(self)
+        if cd.defaulted:
+            self.println(" = default;")
+            return
         if len(cd.memberinits):
             self.println(" :")
             self.indent()
@@ -318,6 +324,9 @@ class CxxCodeGen(CodePrinter, Visitor):
     def visitDestructorDefn(self, dd):
         self.printdent()
         dd.decl.accept(self)
+        if dd.defaulted:
+            self.println(" = default;")
+            return
         self.println()
 
         self.printdentln("{")

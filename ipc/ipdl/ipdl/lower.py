@@ -2570,30 +2570,42 @@ def _generateCxxStruct(sd):
     struct.addstmts([Label.PRIVATE] + usingTypedefs + [Whitespace.NL, Label.PUBLIC])
 
     constreftype = Type(sd.name, const=True, ref=True)
+    mutreftype = Type(sd.name, ref=True)
+    movereftype = Type(sd.name, rvalref=True)
 
-    # Struct()
-    # We want the default constructor to be declared if it is available, but
-    # some of our members may not be default-constructible. Silence the
-    # warning which clang generates in that case.
-    #
-    # Members which need value initialization will be handled by wrapping
-    # the member in a template type when declaring them.
-    struct.addcode(
-        """
-        #ifdef __clang__
-        #  pragma clang diagnostic push
-        #  if __has_warning("-Wdefaulted-function-deleted")
-        #    pragma clang diagnostic ignored "-Wdefaulted-function-deleted"
-        #  endif
-        #endif
-        ${name}() = default;
-        #ifdef __clang__
-        #  pragma clang diagnostic pop
-        #endif
+    # # Struct()
+    # # We want the default constructor to be declared if it is available, but
+    # # some of our members may not be default-constructible. Silence the
+    # # warning which clang generates in that case.
+    # #
+    # # Members which need value initialization will be handled by wrapping
+    # # the member in a template type when declaring them.
+    # struct.addcode(
+    #     """
+    #     #ifdef __clang__
+    #     #  pragma clang diagnostic push
+    #     #  if __has_warning("-Wdefaulted-function-deleted")
+    #     #    pragma clang diagnostic ignored "-Wdefaulted-function-deleted"
+    #     #  endif
+    #     #endif
+    #     ${name}() = default;
+    #     #ifdef __clang__
+    #     #  pragma clang diagnostic pop
+    #     #endif
 
-        """,
-        name=sd.name,
-    )
+    #     """,
+    #     name=sd.name,
+    # )
+
+    struct.addstmts([
+        ConstructorDefn(ConstructorDecl(sd.name, params=[]), defaulted=True),
+        ConstructorDefn(ConstructorDecl(sd.name, params=[constreftype]), defaulted=True),
+        ConstructorDefn(ConstructorDecl(sd.name, params=[movereftype]), defaulted=True),
+        MethodDefn(MethodDecl("operator=", params=[constreftype], ret=mutreftype), defaulted=True),
+        MethodDefn(MethodDecl("operator=", params=[movereftype], ret=mutreftype), defaulted=True),
+        DestructorDefn(DestructorDecl(sd.name), defaulted=True),
+        Whitespace.NL,
+    ])
 
     # If this is an empty struct (no fields), then the default ctor
     # and "create-with-fields" ctors are equivalent.

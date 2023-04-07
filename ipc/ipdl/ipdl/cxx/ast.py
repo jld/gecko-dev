@@ -653,10 +653,10 @@ class MethodDecl(Node):
 
 
 class MethodDefn(Block):
-    def __init__(self, decl):
+    def __init__(self, decl, defaulted=False):
         Block.__init__(self)
         self.decl = decl
-
+        self.defaulted = defaulted
 
 class FunctionDecl(MethodDecl):
     def __init__(
@@ -701,8 +701,9 @@ class ConstructorDecl(MethodDecl):
 
 
 class ConstructorDefn(MethodDefn):
-    def __init__(self, decl, memberinits=[]):
-        MethodDefn.__init__(self, decl)
+    def __init__(self, decl, memberinits=[], defaulted=False):
+        assert not defaulted or not memberinits
+        MethodDefn.__init__(self, decl, defaulted=defaulted)
         self.memberinits = memberinits
 
 
@@ -726,8 +727,8 @@ class DestructorDecl(MethodDecl):
 
 
 class DestructorDefn(MethodDefn):
-    def __init__(self, decl):
-        MethodDefn.__init__(self, decl)
+    def __init__(self, decl, defaulted=False):
+        MethodDefn.__init__(self, decl, defaulted=defaulted)
 
 
 # ------------------------------
