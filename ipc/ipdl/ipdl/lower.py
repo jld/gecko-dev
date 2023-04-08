@@ -1513,6 +1513,7 @@ class _GenerateProtocolCode(ipdl.ast.Visitor):
         self.cppIncludeHeaders = []
         self.structUnionDefns = []
         self.funcDefns = []
+        self.actorIncludes = {} # actor name -> list of include file names
 
     def lower(self, tu, cxxHeaderFile, cxxFile, segmentcapacitydict):
         self.protocol = tu.protocol
@@ -1523,6 +1524,9 @@ class _GenerateProtocolCode(ipdl.ast.Visitor):
 
     def visitTranslationUnit(self, tu):
         hf = self.hdrfile
+
+        assert isinstance(tu.name, str)
+        self.actorIncludes[tu.name] = []
 
         hf.addthing(_DISCLAIMER)
         hf.addthings(_includeGuardStart(hf))
@@ -1622,10 +1626,14 @@ class _GenerateProtocolCode(ipdl.ast.Visitor):
             for cxxinc in inc.tu.cxxIncludes:
                 cxxinc.accept(self)
         else:
-            self.cppIncludeHeaders += [
+            cppIncludes = [
                 _protocolHeaderName(inc.tu.protocol, "parent") + ".h",
                 _protocolHeaderName(inc.tu.protocol, "child") + ".h",
             ]
+            actorName = inc.tu.protocol.name
+            assert actorName not in self.actorIncludes
+            self.actorIncludes[inc.tu.protocol.name] = cppIncludes
+            self.cppIncludeHeaders += cppIncludes
 
     def generateStructsAndUnions(self, tu):
         """Generate the definitions for all structs and unions. This will
@@ -1688,6 +1696,9 @@ class _GenerateProtocolCode(ipdl.ast.Visitor):
                     d, t = decls[dep]
                     del decls[dep]
                     gen_struct(d, t)
+                elif dep.isActor():
+                    for include in self.actorIncludes[dep.name()]:
+                        self.hdrfile.addthing(CppDirective("include", '"' + include + '"'))
             self.hdrfile.addthings(defn)
 
         while len(decls) > 0:
@@ -2438,6 +2449,10 @@ class _ComputeTypeDeps(TypeVisitor):
         self.includeHeaders.add("mozilla/ipc/SideVariant.h")
         self.maybeTypedef(_actorName(fqname, "Parent"), _actorName(name, "Parent"))
         self.maybeTypedef(_actorName(fqname, "Child"), _actorName(name, "Child"))
+
+        if t.isRefcounted():
+            self.fullDeclTypes.append(t)
+            return
 
         self.forwardDeclStmts.extend(
             [
