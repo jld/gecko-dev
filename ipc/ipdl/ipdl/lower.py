@@ -2573,39 +2573,46 @@ def _generateCxxStruct(sd):
     mutreftype = Type(sd.name, ref=True)
     movereftype = Type(sd.name, rvalref=True)
 
-    # # Struct()
-    # # We want the default constructor to be declared if it is available, but
-    # # some of our members may not be default-constructible. Silence the
-    # # warning which clang generates in that case.
-    # #
-    # # Members which need value initialization will be handled by wrapping
-    # # the member in a template type when declaring them.
-    # struct.addcode(
-    #     """
-    #     #ifdef __clang__
-    #     #  pragma clang diagnostic push
-    #     #  if __has_warning("-Wdefaulted-function-deleted")
-    #     #    pragma clang diagnostic ignored "-Wdefaulted-function-deleted"
-    #     #  endif
-    #     #endif
-    #     ${name}() = default;
-    #     #ifdef __clang__
-    #     #  pragma clang diagnostic pop
-    #     #endif
+    # Struct()
+    # We want the default constructor to be declared if it is available, but
+    # some of our members may not be default-constructible. Silence the
+    # warning which clang generates in that case.
+    #
+    # Members which need value initialization will be handled by wrapping
+    # the member in a template type when declaring them.
+    struct.addcode(
+        """
+        #ifdef __clang__
+        #  pragma clang diagnostic push
+        #  if __has_warning("-Wdefaulted-function-deleted")
+        #    pragma clang diagnostic ignored "-Wdefaulted-function-deleted"
+        #  endif
+        #endif
+        ${name}() = default;
+        #ifdef __clang__
+        #  pragma clang diagnostic pop
+        #endif
 
-    #     """,
-    #     name=sd.name,
-    # )
+        """,
+        name=sd.name,
+    )
 
     struct.addstmts([
-        ConstructorDefn(ConstructorDecl(sd.name, params=[]), defaulted=True),
-        ConstructorDefn(ConstructorDecl(sd.name, params=[constreftype]), defaulted=True),
-        ConstructorDefn(ConstructorDecl(sd.name, params=[movereftype]), defaulted=True),
-        MethodDefn(MethodDecl("operator=", params=[constreftype], ret=mutreftype), defaulted=True),
-        MethodDefn(MethodDecl("operator=", params=[movereftype], ret=mutreftype), defaulted=True),
         DestructorDefn(DestructorDecl(sd.name), defaulted=True),
         Whitespace.NL,
     ])
+
+    if any(_cxxTypeNeedsMoveForData(f.ipdltype) for f in sd.fields_ipdl_order()):
+        ctorRefs = [movereftype]
+    else:
+        ctorRefs = [constreftype, movereftype]
+
+    for ctorRef in ctorRefs:
+        struct.addstmts([
+            ConstructorDefn(ConstructorDecl(sd.name, params=[ctorRef]), defaulted=True),
+            MethodDefn(MethodDecl("operator=", params=[ctorRef], ret=mutreftype), defaulted=True),
+            Whitespace.NL,
+        ])
 
     # If this is an empty struct (no fields), then the default ctor
     # and "create-with-fields" ctors are equivalent.
@@ -2625,7 +2632,6 @@ def _generateCxxStruct(sd):
                     )
                     for f in sd.fields_ipdl_order()
                 ],
-                force_inline=True,
             )
         )
         valctor.memberinits = []
@@ -2656,7 +2662,6 @@ def _generateCxxStruct(sd):
                         )
                         for f in sd.fields_ipdl_order()
                     ],
-                    force_inline=True,
                 )
             )
 

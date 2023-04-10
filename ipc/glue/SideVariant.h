@@ -70,8 +70,8 @@ struct SideVariant {
   // As the values are both pointers, this is the same size as a variant would
   // be, but has less risk of type confusion, and supports an overall `nullptr`
   // value which is neither parent nor child.
-  ParentSide mParent = nullptr;
-  ChildSide mChild = nullptr;
+  ParentSide mParent{nullptr};
+  ChildSide mChild{nullptr};
 };
 
 }  // namespace ipc
