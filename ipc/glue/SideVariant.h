@@ -26,7 +26,8 @@ namespace ipc {
 template <typename ParentSide, typename ChildSide>
 struct SideVariant {
  public:
-  SideVariant() = default;
+  SideVariant();
+  ~SideVariant();
   template <typename U,
             std::enable_if_t<std::is_convertible_v<U&&, ParentSide>, int> = 0>
   MOZ_IMPLICIT SideVariant(U&& aParent) : mParent(std::forward<U>(aParent)) {}
@@ -35,21 +36,9 @@ struct SideVariant {
   MOZ_IMPLICIT SideVariant(U&& aChild) : mChild(std::forward<U>(aChild)) {}
   MOZ_IMPLICIT SideVariant(std::nullptr_t) {}
 
-  MOZ_IMPLICIT SideVariant& operator=(ParentSide aParent) {
-    mParent = aParent;
-    mChild = nullptr;
-    return *this;
-  }
-  MOZ_IMPLICIT SideVariant& operator=(ChildSide aChild) {
-    mChild = aChild;
-    mParent = nullptr;
-    return *this;
-  }
-  MOZ_IMPLICIT SideVariant& operator=(std::nullptr_t) {
-    mChild = nullptr;
-    mParent = nullptr;
-    return *this;
-  }
+  MOZ_IMPLICIT SideVariant& operator=(ParentSide aParent); 
+  MOZ_IMPLICIT SideVariant& operator=(ChildSide aChild);
+  MOZ_IMPLICIT SideVariant& operator=(std::nullptr_t);
 
   MOZ_IMPLICIT operator bool() const { return mParent || mChild; }
 
@@ -57,11 +46,11 @@ struct SideVariant {
   bool IsParent() const { return mParent; }
   bool IsChild() const { return mChild; }
 
-  ParentSide AsParent() const {
+  const ParentSide& AsParent() const {
     MOZ_ASSERT(IsNull() || IsParent());
     return mParent;
   }
-  ChildSide AsChild() const {
+  const ChildSide& AsChild() const {
     MOZ_ASSERT(IsNull() || IsChild());
     return mChild;
   }
@@ -73,6 +62,33 @@ struct SideVariant {
   ParentSide mParent{nullptr};
   ChildSide mChild{nullptr};
 };
+
+template <typename ParentSide, typename ChildSide>
+SideVariant<ParentSide, ChildSide>::SideVariant() = default;
+
+template <typename ParentSide, typename ChildSide>
+SideVariant<ParentSide, ChildSide>::~SideVariant() = default;
+
+template <typename ParentSide, typename ChildSide>
+auto SideVariant<ParentSide, ChildSide>::operator=(ParentSide aParent) -> SideVariant& {
+  mParent = aParent;
+  mChild = nullptr;
+  return *this;
+}
+
+template <typename ParentSide, typename ChildSide>
+auto SideVariant<ParentSide, ChildSide>::operator=(ChildSide aChild) -> SideVariant& {
+  mChild = aChild;
+  mParent = nullptr;
+  return *this;
+}
+
+template <typename ParentSide, typename ChildSide>
+auto SideVariant<ParentSide, ChildSide>::operator=(std::nullptr_t) -> SideVariant& {
+  mChild = nullptr;
+  mParent = nullptr;
+  return *this;
+}
 
 }  // namespace ipc
 
@@ -98,17 +114,12 @@ class NotNull<mozilla::ipc::SideVariant<ParentSide, ChildSide>> {
  public:
   // Disallow default construction.
   NotNull() = delete;
+  ~NotNull();
 
   // Construct/assign from another NotNull with a compatible base pointer type.
   template <typename U, typename = std::enable_if_t<
                             std::is_convertible_v<const U&, BasePtr>>>
-  constexpr MOZ_IMPLICIT NotNull(const NotNull<U>& aOther)
-      : mBasePtr(aOther.get()) {
-    static_assert(sizeof(BasePtr) == sizeof(NotNull<BasePtr>),
-                  "NotNull must have zero space overhead.");
-    static_assert(offsetof(NotNull<BasePtr>, mBasePtr) == 0,
-                  "mBasePtr must have zero offset.");
-  }
+  constexpr MOZ_IMPLICIT NotNull(const NotNull<U>& aOther);
 
   template <typename U,
             typename = std::enable_if_t<std::is_convertible_v<U&&, BasePtr>>>
@@ -131,6 +142,18 @@ class NotNull<mozilla::ipc::SideVariant<ParentSide, ChildSide>> {
   NotNull<ParentSide> AsParent() const { return WrapNotNull(get().AsParent()); }
   NotNull<ChildSide> AsChild() const { return WrapNotNull(get().AsChild()); }
 };
+
+template <typename ParentSide, typename ChildSide>
+NotNull<mozilla::ipc::SideVariant<ParentSide, ChildSide>>::~NotNull() = default;
+
+template <typename ParentSide, typename ChildSide> template<typename U, typename>
+constexpr MOZ_IMPLICIT NotNull<mozilla::ipc::SideVariant<ParentSide, ChildSide>>::NotNull(const NotNull<U>& aOther)
+    : mBasePtr(aOther.get()) {
+  static_assert(sizeof(BasePtr) == sizeof(NotNull<BasePtr>),
+                "NotNull must have zero space overhead.");
+  static_assert(offsetof(NotNull<BasePtr>, mBasePtr) == 0,
+                "mBasePtr must have zero offset.");
+}
 
 }  // namespace mozilla
 
