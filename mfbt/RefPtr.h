@@ -50,9 +50,15 @@ class AgileReference;
 // qualified type.
 template <class U>
 struct RefPtrTraits {
-  static void AddRef(U* aPtr) { aPtr->AddRef(); }
-  static void Release(U* aPtr) { aPtr->Release(); }
+  static void AddRef(U* aPtr);
+  static void Release(U* aPtr);
 };
+
+template<class U>
+void RefPtrTraits<U>::AddRef(U* aPtr) { aPtr->AddRef(); }
+
+template<class U>
+void RefPtrTraits<U>::Release(U* aPtr) { aPtr->Release(); }
 
 }  // namespace mozilla
 

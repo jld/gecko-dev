@@ -175,7 +175,10 @@ def _lookupListener(idexpr):
     return ExprCall(ExprVar("Lookup"), args=[idexpr])
 
 
-def _makeForwardDeclForQClass(clsname, quals, cls=True, struct=False):
+def _makeForwardDeclForQClass(clsname, quals, cls=True, struct=False, refcounted=False):
+    if refcounted and quals[:1] != ["mozilla"]:
+        raise AssertionError("refcounted types outside mozilla:: not yet implemented")
+
     fd = ForwardDecl(clsname, cls=cls, struct=struct)
     if 0 == len(quals):
         return fd
@@ -188,12 +191,16 @@ def _makeForwardDeclForQClass(clsname, quals, cls=True, struct=False):
         innerns = tmpns
 
     innerns.addstmt(fd)
+    if refcounted:
+        outerns.addcode("extern template struct RefPtrTraits<${xqname}>;",
+                        xqname="::".join([""] + quals + [clsname]))
     return outerns
 
 
 def _makeForwardDeclForActor(ptype, side):
     return _makeForwardDeclForQClass(
-        _actorName(ptype.qname.baseid, side), ptype.qname.quals
+        _actorName(ptype.qname.baseid, side), ptype.qname.quals,
+        refcounted = ptype.isRefcounted()
     )
 
 
