@@ -1254,18 +1254,36 @@ Result<Ok, LaunchError> PosixProcessLauncher::DoSetup() {
   mChildArgv.insert(mChildArgv.end(), mExtraOpts.begin(), mExtraOpts.end());
 
   if (mProcessType != GeckoProcessType_GMPlugin) {
+    bool greOmni = false;
+    bool appOmni = false;
 #  if defined(MOZ_WIDGET_ANDROID)
+    greOmni = true;
+#  endif
+#  if defined(MOZ_ENABLE_FORKSERVER)
+    if (mProcessType == GeckoProcessType_ForkServer) {
+      greOmni = appOmni = true;
+    }
+#  endif
+
     if (Omnijar::IsInitialized()) {
       // Make sure that child processes can find the omnijar
       // See XRE_InitCommandLine in nsAppRunner.cpp
       nsAutoCString path;
-      nsCOMPtr<nsIFile> file = Omnijar::GetPath(Omnijar::GRE);
-      if (file && NS_SUCCEEDED(file->GetNativePath(path))) {
-        mChildArgv.push_back("-greomni");
-        mChildArgv.push_back(path.get());
+      if (greOmni) {
+        nsCOMPtr<nsIFile> file = Omnijar::GetPath(Omnijar::GRE);
+        if (file && NS_SUCCEEDED(file->GetNativePath(path))) {
+          mChildArgv.push_back("-greomni");
+          mChildArgv.push_back(path.get());
+        }
+      }
+      if (appOmni) {
+        nsCOMPtr<nsIFile> file = Omnijar::GetPath(Omnijar::APP);
+        if (file && NS_SUCCEEDED(file->GetNativePath(path))) {
+          mChildArgv.push_back("-appomni");
+          mChildArgv.push_back(path.get());
+        }
       }
     }
-#  endif
     // Add the application directory path (-appdir path)
 #  ifdef XP_MACOSX
     AddAppDirToCommandLine(mChildArgv, mAppDir, mProfileDir);
