@@ -3,14 +3,16 @@
 /* This Source Code Form is subject to the terms of the Mozilla Public
  * License, v. 2.0. If a copy of the MPL was not distributed with this
  * file, You can obtain one at http://mozilla.org/MPL/2.0/. */
-#include "mozilla/ipc/ForkServer.h"
-#include "mozilla/Logging.h"
 #include "chrome/common/chrome_switches.h"
-#include "mozilla/BlockingResourceBase.h"
-#include "mozilla/ipc/ProtocolMessageUtils.h"
-#include "mozilla/ipc/FileDescriptor.h"
-#include "mozilla/ipc/IPDLParamTraits.h"
 #include "ipc/IPCMessageUtilsSpecializations.h"
+#include "mozilla/BlockingResourceBase.h"
+#include "mozilla/Logging.h"
+#include "mozilla/Omnijar.h"
+#include "mozilla/ipc/FileDescriptor.h"
+#include "mozilla/ipc/ForkServer.h"
+#include "mozilla/ipc/IPDLParamTraits.h"
+#include "mozilla/ipc/ProtocolMessageUtils.h"
+#include "nsLocalFile.h"
 #include "nsTraceRefcnt.h"
 
 #include <string.h>
@@ -38,6 +40,31 @@ void ForkServer::InitProcess(int* aArgc, char*** aArgv) {
 
   mTcver = MakeUnique<MiniTransceiver>(kClientPipeFd,
                                        DataBufferClear::AfterReceiving);
+}
+
+static void ForkServerPreload(int aArgc, char** aArgv) {
+  RefPtr<nsLocalFile> greOmni, appOmni;
+
+  for (int i = 1; i < aArgc; ++i) {
+    if (strcmp(aArgv[i], "-contentproc") == 0) {
+      // ignore
+    } else if (strcmp(aArgv[i], "-greomni") == 0) {
+      greOmni = MakeRefPtr<nsLocalFile>(nsDependentCString(aArgv[++i]));
+      MOZ_LOG(gForkServiceLog, LogLevel::Verbose, ("greomni: %s", aArgv[i]));
+    } else if (strcmp(aArgv[i], "-appomni") == 0) {
+      appOmni = MakeRefPtr<nsLocalFile>(nsDependentCString(aArgv[++i]));
+      MOZ_LOG(gForkServiceLog, LogLevel::Verbose, ("appomni: %s", aArgv[i]));
+    } else {
+      break;
+    }
+  }
+
+  if (greOmni && appOmni) {
+    MOZ_LOG(gForkServiceLog, LogLevel::Verbose, ("preloading Omnijar"));
+    Omnijar::Init(greOmni, appOmni);
+  } else {
+    MOZ_LOG(gForkServiceLog, LogLevel::Verbose, ("not preloading Omnijar"));
+  }
 }
 
 /**
@@ -251,6 +278,7 @@ bool ForkServer::RunForkServer(int* aArgc, char*** aArgv) {
   XRE_SetProcessType("forkserver");
   NS_LogInit();
   mozilla::LogModule::Init(0, nullptr);
+  ForkServerPreload(*aArgc, *aArgv);
   MOZ_LOG(gForkServiceLog, LogLevel::Verbose, ("Start a fork server"));
   {
     DebugOnly<base::ProcessHandle> forkserver_pid = base::GetCurrentProcId();
