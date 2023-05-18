@@ -38,6 +38,45 @@ static constexpr int kShutdownWaitMs = 8000;
 
 namespace {
 
+using base::BlockingWait;
+
+// A convenient wrapper for `waitpid`; returns true if the child
+// process has exited.
+//
+// FIXME yet again, the comment
+static bool IsProcessDead(pid_t pid, bool blocking = false) {
+  int info;
+  auto blockFlag = blocking ? BlockingWait::YES : BlockingWait::NO;
+  switch (WaitForProcess(pid, blockFlag, &info)) {
+    case base::ProcessStatus::RUNNING:
+      // FIXME FIXME FIXME this can happen in the "blocking" case;
+      // whose fault is that?
+      return false;
+
+    case base::ProcessStatus::EXITED:
+      if (info != 0) {
+        CHROMIUM_LOG(WARNING)
+            << "process " << pid << " exited with status " << info;
+      }
+      return true;
+
+    case base::ProcessStatus::KILLED:
+      CHROMIUM_LOG(WARNING)
+          << "process " << pid << " exited on signal " << info;
+      return true;
+
+    case base::ProcessStatus::ERROR:
+      CHROMIUM_LOG(ERROR) << "waiting for process " << pid
+                          << " failed with error " << info;
+      // Don't keep trying.
+      return true;
+
+    default:
+      DCHECK(false) << "can't happen";
+      return true;
+  }
+}
+
 class ChildReaper : public base::MessagePumpLibevent::SignalEvent,
                     public base::MessagePumpLibevent::SignalWatcher {
  public:
@@ -55,7 +94,7 @@ class ChildReaper : public base::MessagePumpLibevent::SignalEvent,
     DCHECK(process_);
 
     // this may be the SIGCHLD for a process other than |process_|
-    if (base::IsProcessDead(process_)) {
+    if (IsProcessDead(process_)) {
       process_ = 0;
       StopCatching();
     }
@@ -64,7 +103,7 @@ class ChildReaper : public base::MessagePumpLibevent::SignalEvent,
  protected:
   void WaitForChildExit() {
     CHECK(process_);
-    while (!base::IsProcessDead(process_, true)) {
+    while (!IsProcessDead(process_, true)) {
       // It doesn't matter if this is interrupted; we just need to
       // wait for some amount of time while the other process status
       // event is (hopefully) handled.  This is used only during an
@@ -102,7 +141,7 @@ class ChildGrimReaper : public ChildReaper, public mozilla::Runnable {
   void KillProcess() {
     DCHECK(process_);
 
-    if (base::IsProcessDead(process_)) {
+    if (IsProcessDead(process_)) {
       process_ = 0;
       return;
     }
@@ -168,7 +207,7 @@ class ChildLaxReaper : public ChildReaper,
   ChildLaxReaper(const ChildLaxReaper&) = delete;
 
   void CrashProcessIfHanging() {
-    if (base::IsProcessDead(process_)) {
+    if (IsProcessDead(process_)) {
       process_ = 0;
       return;
     }
@@ -195,7 +234,7 @@ class ChildLaxReaper : public ChildReaper,
       HANDLE_EINTR(nanosleep(&ts, &ts));
       sWaitMs -= kWaitTickMs;
 
-      if (base::IsProcessDead(process_)) {
+      if (IsProcessDead(process_)) {
         process_ = 0;
         return;
       }
@@ -238,7 +277,7 @@ void ProcessWatcher::EnsureProcessTerminated(base::ProcessHandle process,
   DCHECK(process != base::GetCurrentProcId());
   DCHECK(process > 0);
 
-  if (base::IsProcessDead(process)) return;
+  if (IsProcessDead(process)) return;
 
   MessageLoopForIO* loop = MessageLoopForIO::current();
   if (force) {

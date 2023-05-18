@@ -281,7 +281,13 @@ bool KillProcess(ProcessHandle process, int exit_code);
 // This may not be possible (if the child is also being debugged by
 // the parent process, e.g. due to the crash reporter), in which case
 // it will return false and the caller will need to wait and retry.
-bool IsProcessDead(ProcessHandle handle, bool blocking = false);
+//
+// FIXME fix that ^.
+enum class BlockingWait { NO, YES };
+enum class ProcessStatus { RUNNING, EXITED, KILLED, ERROR };
+
+ProcessStatus WaitForProcess(ProcessHandle handle, BlockingWait blocking,
+                             int* info_out);
 #endif
 
 }  // namespace base
