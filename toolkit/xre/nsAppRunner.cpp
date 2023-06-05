@@ -6129,6 +6129,7 @@ mozilla::BinPathType XRE_GetChildProcBinPathType(
     return BinPathType::PluginContainer;
   }
 
+#ifdef XP_WIN
   switch (aProcessType) {
 #define GECKO_PROCESS_TYPE(enum_value, enum_name, string_name, proc_typename, \
                            process_bin_type, procinfo_typename,               \
@@ -6140,6 +6141,10 @@ mozilla::BinPathType XRE_GetChildProcBinPathType(
     default:
       return BinPathType::PluginContainer;
   }
+#else
+  // FIXME probably wrong
+  return BinPathType::Self;
+#endif
 }
 
 // From mozglue/static/rust/lib.rs

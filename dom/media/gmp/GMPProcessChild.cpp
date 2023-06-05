@@ -25,7 +25,12 @@ bool GMPProcessChild::Init(int aArgc, char* aArgv[]) {
   // Keep in sync with dom/plugins/PluginModuleParent.
   std::vector<std::string> values = CommandLine::ForCurrentProcess()->argv();
   MOZ_ASSERT(values.size() >= 2, "not enough args");
-  CopyUTF8toUTF16(nsDependentCString(values[1].c_str()), pluginFilename);
+  size_t plugin_idx = 1;
+  if (values[1] == "-contentproc") {
+    MOZ_ASSERT(values.size() >= 3, "not enough args");
+    plugin_idx = 2;
+  }
+  CopyUTF8toUTF16(nsDependentCString(values[plugin_idx].c_str()), pluginFilename);
 #elif defined(XP_WIN)
   std::vector<std::wstring> values =
       CommandLine::ForCurrentProcess()->GetLooseValues();
