@@ -1273,20 +1273,31 @@ Channel::ChannelId Channel::ChannelIDForCurrentProcess() { return {}; }
 // static
 bool Channel::CreateRawPipe(ChannelHandle* server, ChannelHandle* client) {
   int fds[2];
-  if (socketpair(AF_UNIX, SOCK_STREAM, 0, fds) < 0) {
+  int type = SOCK_STREAM;
+
+#ifdef SOCK_NONBLOCK
+  type |= SOCK_NONBLOCK;
+#endif
+#ifdef SOCK_CLOEXEC
+  type |= SOCK_CLOEXEC;
+#endif
+  if (socketpair(AF_UNIX, type, 0, fds) < 0) {
     mozilla::ipc::AnnotateCrashReportWithErrno(
         CrashReporter::Annotation::IpcCreatePipeSocketPairErrno, errno);
     return false;
   }
 
   auto configureFd = [](int fd) -> bool {
+#ifndef SOCK_NONBLOCK
     // Mark the endpoints as non-blocking
     if (fcntl(fd, F_SETFL, O_NONBLOCK) == -1) {
       mozilla::ipc::AnnotateCrashReportWithErrno(
           CrashReporter::Annotation::IpcCreatePipeFcntlErrno, errno);
       return false;
     }
+#endif
 
+#ifndef SOCK_CLOEXEC
     // Mark the pipes as FD_CLOEXEC
     int flags = fcntl(fd, F_GETFD);
     if (flags == -1) {
@@ -1300,6 +1311,7 @@ bool Channel::CreateRawPipe(ChannelHandle* server, ChannelHandle* client) {
           CrashReporter::Annotation::IpcCreatePipeCloExecErrno, errno);
       return false;
     }
+#endif
     return true;
   };
 
