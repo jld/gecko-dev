@@ -15,9 +15,10 @@
 #include "nsLocalFile.h"
 #include "nsTraceRefcnt.h"
 
+#include <dlfcn.h>
+#include <fcntl.h>
 #include <string.h>
 #include <unistd.h>
-#include <fcntl.h>
 
 #if defined(XP_LINUX) && defined(MOZ_SANDBOX)
 #  include "mozilla/SandboxLaunch.h"
@@ -63,7 +64,17 @@ static void ForkServerPreload(int aArgc, char** aArgv) {
     MOZ_LOG(gForkServiceLog, LogLevel::Verbose, ("preloading Omnijar"));
     Omnijar::Init(greOmni, appOmni);
   } else {
-    MOZ_LOG(gForkServiceLog, LogLevel::Verbose, ("not preloading Omnijar"));
+    MOZ_LOG(gForkServiceLog, LogLevel::Verbose, ("there is no Omnijar"));
+  }
+
+  MOZ_LOG(gForkServiceLog, LogLevel::Verbose, ("preloading NSS deps"));
+  static constexpr const char* kPreloadLibs[] = {
+      // FIXME the freebls may not be right
+      "libsoftokn3.so", "libfreebl3.so", "libfreeblpriv3.so"};
+  for (const char* lib : kPreloadLibs) {
+    if (!dlopen(lib, RTLD_NOW | RTLD_GLOBAL)) {
+      MOZ_LOG(gForkServiceLog, LogLevel::Warning, ("failed to load %s", lib));
+    }
   }
 }
 
