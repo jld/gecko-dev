@@ -199,7 +199,7 @@ static int DupReadOnly(int fd) {
 // operations permitted on a file descriptor.
 
 static int DupReadOnly(int fd) {
-  int rofd = dup(fd);
+  int rofd = fcntl(fd, F_DUPFD_CLOEXEC, 0);
   if (rofd < 0) {
     return -1;
   }
@@ -535,7 +535,11 @@ void* SharedMemory::FindFreeAddressSpace(size_t size) {
 
 SharedMemoryHandle SharedMemory::CloneHandle() {
   freezeable_ = false;
+#ifdef F_DUPFD_CLOEXEC
+  const int new_fd = fcntl(mapped_file_.get(), F_DUPFD_CLOEXEC, 0);
+#else
   const int new_fd = dup(mapped_file_.get());
+#endif
   if (new_fd < 0) {
     CHROMIUM_LOG(WARNING) << "failed to duplicate file descriptor: "
                           << strerror(errno);

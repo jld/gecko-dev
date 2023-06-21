@@ -16,6 +16,7 @@
 #  include "ProtocolUtils.h"
 #else  // XP_WIN
 #  include <unistd.h>
+#  include <fcntl.h>
 #endif  // XP_WIN
 
 namespace mozilla {
@@ -83,7 +84,11 @@ FileDescriptor::UniquePlatformHandle FileDescriptor::Clone(
   if (aHandle < 0) {
     return UniqueFileHandle();
   }
+#  ifdef F_DUPFD_CLOEXEC
+  newHandle = fcntl(aHandle, F_DUPFD_CLOEXEC, 0);
+#  else
   newHandle = dup(aHandle);
+#  endif
   if (newHandle >= 0) {
     return UniqueFileHandle(newHandle);
   }

@@ -291,7 +291,11 @@ class PosixProcessLauncher : public BaseProcessLauncher {
 #  ifndef MOZ_WIDGET_ANDROID
     MOZ_ASSERT(mChannelDstFd >= 0);
 #  endif
+#  ifdef F_DUPFD_CLOEXEC
+    mChannelSrcFd.reset(fcntl(origSrcFd, F_DUPFD_CLOEXEC, 0));
+#  else
     mChannelSrcFd.reset(dup(origSrcFd));
+#  endif
     if (NS_WARN_IF(!mChannelSrcFd)) {
       return false;
     }
