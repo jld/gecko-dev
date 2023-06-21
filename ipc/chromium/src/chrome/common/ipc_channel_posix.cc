@@ -303,7 +303,13 @@ bool Channel::ChannelImpl::ProcessIncomingMessages() {
     // Read from pipe.
     // recvmsg() returns 0 if the connection has closed or EAGAIN if no data
     // is waiting on the pipe.
-    ssize_t bytes_read = HANDLE_EINTR(recvmsg(pipe_, &msg, MSG_DONTWAIT));
+    int recvflags = MSG_DONTWAIT;
+#if 1
+    recvflags |= MSG_CMSG_CLOEXEC;
+    // FIXME(jld) probably we should cloexec them non-atomically if
+    // the OS doesn't support atomic cloexec?
+#endif
+    ssize_t bytes_read = HANDLE_EINTR(recvmsg(pipe_, &msg, recvflags));
 
     if (bytes_read < 0) {
       if (errno == EAGAIN) {
