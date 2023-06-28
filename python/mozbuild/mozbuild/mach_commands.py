@@ -2875,7 +2875,7 @@ def repackage_snap(
         )
         return 1
 
-    if not output and not os.path.exists(command_context.bindir):
+    if not input_pkg and not os.path.exists(command_context.bindir):
         command_context.log(
             logging.ERROR,
             "repackage-snap-no-input",
@@ -2886,10 +2886,13 @@ def repackage_snap(
 
     # Set up the staging dir and unpack or copy the payload
     if input_pkg:
-        # FIXME(jld): This isn't ideal: with multipass, the VM will be
-        # rebuilt whenever the staging dir changes, and this means it
-        # will change every time.  But --input mode is independent of
-        # the local build, so it shouldn't be touching the objdir?
+        # This mode of operation isn't about the current build, so the
+        # package is staged in a secure temp dir from mkdtemp instead
+        # of something under the objdir.  But when snapcraft runs
+        # itself under multipass (the default), the VM will be rebuilt
+        # whenever the staging dir changes, and this means it will
+        # change every time.  So that's not ideal, but it's not clear
+        # how to improve the experience.
         snapdir = tempfile.mkdtemp(dir=tmp_dir, prefix="snap-repackage-")
         command_context.log(
             logging.INFO,
@@ -2899,6 +2902,8 @@ def repackage_snap(
         )
         unpack_tarball(input_pkg, os.path.join(snapdir, "source"))
     else:
+        # Deploy the current build for packaging, into the directory
+        # where snapcraft will expect it
         command_context._run_make(
             directory=".",
             target="stage-package",
