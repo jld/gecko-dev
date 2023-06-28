@@ -2819,6 +2819,11 @@ def repackage_mar(command_context, input, mar, output, arch, mar_channel_id):
     action="store_true",
     help="Install the snap afterwards (as with `mach repackage snap-install`)",
 )
+@CommandArgument(
+    "--arch",
+    metavar="ARCH",
+    help="The architecture being built (as from `dpkg --print-architecture`); should be autodetected but can be overridden if needed.  Cross-builds probably won't work.",
+)
 def repackage_snap(
     command_context,
     snapcraft=None,
@@ -2827,6 +2832,7 @@ def repackage_snap(
     tmp_dir=None,
     clean=False,
     install=False,
+    arch=None,
 ):
     from mozfile import which
     from mozbuild.repackaging.snap import (
@@ -2887,7 +2893,7 @@ def repackage_snap(
         snapdir = tempfile.mkdtemp(dir=tmp_dir, prefix="snap-repackage-")
         command_context.log(
             logging.INFO,
-            "repackage-tmp-dir",
+            "repackage-snap-tmp-dir",
             {"path": snapdir},
             "Using temp dir: {path}",
         )
@@ -2900,11 +2906,39 @@ def repackage_snap(
         )
         snapdir = os.path.join(command_context.distdir, "snap")
 
+    # Autodetect arch if needed; must use dpkg's names.
+    if not arch:
+        try:
+            # If this is a Debian-based system, then we can ask dpkg:
+            with subprocess.Popen(
+                    ["dpkg", "--print-architecture"],
+                    stdout=subprocess.PIPE,
+                    encoding="utf-8",
+            ) as proc:
+                arch = proc.stdout.read().strip()
+        except FileNotFoundError:
+            # Otherwise, try to handle the most common cases:
+            mozarch = command_context.substs["TARGET_CPU"]
+            if mozarch == "x86_64":
+                arch = "amd64"
+            elif mozarch == "aarch64":
+                arch = "arm64"
+            else:
+                command_context.log(
+                    logging.ERROR,
+                    "repackage-snap-arch-unknown",
+                    {},
+                    "Could not automatically detect architecture for Snap "
+                    "repackaging; please pass --arch",
+                )
+                return 1
+
     # Create the package
     snappath = repackage_snap(
         srcdir=command_context.topsrcdir,
         snapdir=snapdir,
         snapcraft=snapcraft,
+        arch=arch,
     )
 
     # Cleanup: move the output, delete temp files, inform the user
@@ -2917,7 +2951,7 @@ def repackage_snap(
     if clean:
         command_context.log(
             logging.INFO,
-            "repackage-clean",
+            "repackage-snap-clean",
             {"path": snapdir},
             "Deleting staging dir: {path}",
         )

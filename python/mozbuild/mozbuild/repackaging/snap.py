@@ -56,6 +56,10 @@ def repackage_snap(srcdir, snapdir, snapcraft, arch="amd64"):
 
     # At last, build the snap.
     env = dict(os.environ)
+    # Note that if snapcraft is run under snap then it will overwrite
+    # this env var, but we still need to know `arch` to predict the
+    # output file name below, and the env var might also be needed if
+    # running a non-snap install of snapcraft.
     env["SNAP_ARCH"] = arch
     subprocess.check_call(
         [snapcraft],
