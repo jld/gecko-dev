@@ -2835,6 +2835,7 @@ def repackage_snap(
     arch=None,
 ):
     from mozfile import which
+
     from mozbuild.repackaging.snap import (
         repackage_snap,
         unpack_tarball,
@@ -2916,9 +2917,9 @@ def repackage_snap(
         try:
             # If this is a Debian-based system, then we can ask dpkg:
             with subprocess.Popen(
-                    ["dpkg", "--print-architecture"],
-                    stdout=subprocess.PIPE,
-                    encoding="utf-8",
+                ["dpkg", "--print-architecture"],
+                stdout=subprocess.PIPE,
+                encoding="utf-8",
             ) as proc:
                 arch = proc.stdout.read().strip()
         except FileNotFoundError:
@@ -2997,8 +2998,9 @@ def repackage_snap(
     help="Wrapper to run commands as root (default: sudo or doas)",
 )
 def repackage_snap_install(command_context, snap_file, sudo=None):
-    from mozbuild.repackaging.snap import missing_connections
     from mozfile import which
+
+    from mozbuild.repackaging.snap import missing_connections
 
     if not sudo:
         for candidate in ["sudo", "doas"]:
