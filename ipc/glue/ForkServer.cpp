@@ -14,6 +14,7 @@
 #include "mozilla/ipc/FileDescriptor.h"
 #include "mozilla/ipc/IPDLParamTraits.h"
 #include "mozilla/ipc/ProtocolMessageUtils.h"
+#include "mozilla/ipc/SetProcessTitle.h"
 #include "nsTraceRefcnt.h"
 
 #include <fcntl.h>
@@ -214,6 +215,7 @@ void ForkServer::OnMessageReceived(UniquePtr<IPC::Message> message) {
   MOZ_ASSERT(child_pid >= 0);
 
   if (child_pid == 0) {
+    SetProcessTitle(argv);
     // Content process
     return;
   }
@@ -255,6 +257,8 @@ bool ForkServer::RunForkServer(int* aArgc, char*** aArgv) {
   }
   bool sleep_newproc = !!getenv("MOZ_FORKSERVER_WAIT_GDB_NEWPROC");
 #endif
+
+  SetProcessTitleInit(*aArgv);
 
   // Do this before NS_LogInit() to avoid log files taking lower
   // FDs.
