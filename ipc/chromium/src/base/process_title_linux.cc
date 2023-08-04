@@ -37,8 +37,9 @@
 // this position within the glibc project, leaving applications caught in the
 // middle. (Also, only a very few applications need or want this anyway.)
 
-#include "content/common/set_process_title_linux.h"
+#include "base/process_title_linux.h"
 
+#include <fcntl.h>
 #include <stdarg.h>
 #include <stddef.h>
 #include <stdint.h>
@@ -48,9 +49,6 @@
 
 #include <string>
 #include <vector>
-
-#include "base/files/file_util.h"
-#include "base/no_destructor.h"
 
 extern char** environ;
 
@@ -90,12 +88,15 @@ void setproctitle(const char* fmt, ...) {
     memset(g_argv_start, 0, avail_size + 1);
     g_argv_end[-1] = '.';
 
-    std::string cmdline;
-    if (!base::ReadFileToString(base::FilePath("/proc/self/cmdline"),
-                                &cmdline)) {
+    int fd = open("/proc/self/cmdline", O_RDONLY | O_CLOEXEC);
+    if (fd < 0) {
       return false;
     }
-    return cmdline.size() >= 2;
+    char buf[2];
+    ssize_t rd = read(fd, buf, 2);
+    close(fd);
+
+    return rd >= 2;
   }();
 
   memset(g_argv_start, 0, avail_size + 1);
@@ -129,7 +130,7 @@ void setproctitle(const char* fmt, ...) {
 
 // A version of this built into glibc would not need this function, since
 // it could stash the argv pointer in __libc_start_main(). But we need it.
-void setproctitle_init(const char** main_argv) {
+void setproctitle_init(char** main_argv) {
   static bool init_called = false;
   if (init_called)
     return;
@@ -139,7 +140,7 @@ void setproctitle_init(const char** main_argv) {
     return;
 
   // Verify that the memory layout matches expectation.
-  char** argv = const_cast<char**>(main_argv);
+  char** const argv = main_argv;
   char* argv_start = argv[0];
   char* p = argv_start;
   for (size_t i = 0; argv[i]; ++i) {
@@ -156,23 +157,21 @@ void setproctitle_init(const char** main_argv) {
   }
   char* envp_end = p;
 
-  // Move the environment out of the way. Note that we are moving the values,
-  // not the environment array itself. Also note that we preallocate the entire
-  // vector, because a string's underlying data pointer is not stable under
-  // move operations, which could otherwise occur if building up the vector
-  // incrementally.
-  static base::NoDestructor<std::vector<std::string>> environ_copy(
-      environ_size);
+  // FIXME comment
+
+  // TODO understand why(/if) I don't need to save copies of these in
+  // a global to avoid LSan warnings
+  for (size_t i = 0; argv[i]; ++i) {
+    argv[i] = strdup(argv[i]);
+  }
   for (size_t i = 0; environ[i]; ++i) {
-    (*environ_copy)[i] = environ[i];
-    environ[i] = &(*environ_copy)[i][0];
+    environ[i] = strdup(environ[i]);
   }
 
   if (!argv[0])
     return;
 
-  static base::NoDestructor<std::string> argv0_storage(argv[0]);
-  g_orig_argv0 = argv0_storage->data();
+  g_orig_argv0 = argv[0];
   g_argv_start = argv_start;
   g_argv_end = argv_end;
   g_envp_end = envp_end;
