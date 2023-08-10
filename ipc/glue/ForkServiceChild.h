@@ -93,6 +93,9 @@ class ForkServerLauncher : public nsIObserver {
   friend class ForkServiceChild;
   virtual ~ForkServerLauncher();
 
+  void StartForkServer();
+  void StopForkServer();
+  static void PrefCallback(const char*, void*);
   static void RestartForkServer();
 
   static bool mHaveStartedClient;

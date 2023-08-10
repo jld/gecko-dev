@@ -147,30 +147,52 @@ ForkServerLauncher::Observe(nsISupports* aSubject, const char* aTopic,
     MOZ_ASSERT(obsSvc != nullptr);
     // preferences are not available until final-ui-startup
     obsSvc->AddObserver(this, "final-ui-startup", false);
-  } else if (!mHaveStartedClient && strcmp(aTopic, "final-ui-startup") == 0) {
-    if (StaticPrefs::dom_ipc_forkserver_enable_AtStartup()) {
-      mHaveStartedClient = true;
-      ForkServiceChild::StartForkServer();
+  } else if (strcmp(aTopic, "final-ui-startup") == 0) {
+    Preferences::RegisterCallbackAndCall(PrefCallback,
+                                         "dom.ipc.forkserver.enable"_ns);
 
-      nsCOMPtr<nsIObserverService> obsSvc =
-          mozilla::services::GetObserverService();
-      MOZ_ASSERT(obsSvc != nullptr);
-      obsSvc->AddObserver(this, NS_XPCOM_SHUTDOWN_OBSERVER_ID, false);
-    } else {
-      mSingleton = nullptr;
-    }
-  }
-
-  if (strcmp(aTopic, NS_XPCOM_SHUTDOWN_OBSERVER_ID) == 0) {
-    if (mHaveStartedClient) {
-      mHaveStartedClient = false;
-      ForkServiceChild::StopForkServer();
-    }
+    nsCOMPtr<nsIObserverService> obsSvc =
+        mozilla::services::GetObserverService();
+    MOZ_ASSERT(obsSvc != nullptr);
+    obsSvc->AddObserver(this, NS_XPCOM_SHUTDOWN_OBSERVER_ID, false);
+  } else if (strcmp(aTopic, NS_XPCOM_SHUTDOWN_OBSERVER_ID) == 0) {
+    StopForkServer();
 
     // To make leak checker happy!
     mSingleton = nullptr;
   }
   return NS_OK;
+}
+
+void ForkServerLauncher::StartForkServer() {
+  MOZ_ASSERT(NS_IsMainThread());
+  if (!mHaveStartedClient) {
+    mHaveStartedClient = true;
+    ForkServiceChild::StartForkServer();
+  }
+}
+
+void ForkServerLauncher::StopForkServer() {
+  MOZ_ASSERT(NS_IsMainThread());
+  if (mHaveStartedClient) {
+    mHaveStartedClient = false;
+    ForkServiceChild::StopForkServer();
+  }
+}
+
+// static
+void ForkServerLauncher::PrefCallback(const char* aPrefName, void* aVoid) {
+  MOZ_ASSERT(aPrefName == "dom.ipc.forkserver.enable");
+  if (!mSingleton) {
+    return;
+  }
+  if (StaticPrefs::dom_ipc_forkserver_enable()) {
+    mSingleton->StartForkServer();
+  } else {
+    // FIXME: shouldn't terminate the server if it was on, just
+    // suspend sending it launch requests
+    mSingleton->StopForkServer();
+  }
 }
 
 void ForkServerLauncher::RestartForkServer() {
