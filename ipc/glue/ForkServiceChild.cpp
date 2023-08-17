@@ -148,6 +148,8 @@ ForkServerLauncher::Observe(nsISupports* aSubject, const char* aTopic,
     // preferences are not available until final-ui-startup
     obsSvc->AddObserver(this, "final-ui-startup", false);
   } else if (strcmp(aTopic, "final-ui-startup") == 0) {
+    // The pref is monitored dynamically because some sources of pref
+    // settings, like distribution.ini, can be processed after this.
     Preferences::RegisterCallbackAndCall(PrefCallback,
                                          "dom.ipc.forkserver.enable"_ns);
 
@@ -182,17 +184,23 @@ void ForkServerLauncher::StopForkServer() {
 
 // static
 void ForkServerLauncher::PrefCallback(const char* aPrefName, void* aVoid) {
-  MOZ_ASSERT(aPrefName == "dom.ipc.forkserver.enable");
+  MOZ_ASSERT(strcmp(aPrefName, "dom.ipc.forkserver.enable") == 0);
   if (!mSingleton) {
     return;
   }
   if (StaticPrefs::dom_ipc_forkserver_enable()) {
     mSingleton->StartForkServer();
-  } else {
-    // FIXME: shouldn't terminate the server if it was on, just
-    // suspend sending it launch requests
-    mSingleton->StopForkServer();
   }
+  // If the pref is turned off, *don't* terminate the fork server,
+  // because it may already have child processes.  Instead, require a
+  // restart for clearing the pref to take effect.
+  //
+  // This case generally won't happen anyway, because the pref isn't
+  // exposed to end users, so it's best not to complicate the code to
+  // try to handle it "correctly" until/unless it's necessary.  (For
+  // example, if/when we change the default to true, then trying to
+  // change it to false with distribution.ini would hit this case and
+  // we'd have to do something about it.)
 }
 
 void ForkServerLauncher::RestartForkServer() {

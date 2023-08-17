@@ -2850,6 +2850,11 @@
   mirror: always
 
 #ifdef MOZ_ENABLE_FORKSERVER
+#
+# Whether the fork server is used to launch content processes, rather
+# than directly using fork/exec.  Warning: currently, turning this
+# pref on will take effect immediately, but turning it off won't apply
+# until after restart; see comments in ForkServiceChild.cpp.
 - name: dom.ipc.forkserver.enable
   type: bool
   value: false
