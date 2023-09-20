@@ -16,6 +16,7 @@
 #include "mozilla/ipc/ProtocolMessageUtils.h"
 #include "nsTraceRefcnt.h"
 
+#include <dlfcn.h>
 #include <fcntl.h>
 #include <string.h>
 #include <unistd.h>
@@ -50,7 +51,35 @@ void ForkServer::InitProcess(int* aArgc, char*** aArgv) {
  * shared libraries.
  */
 static void ForkServerPreload(int& aArgc, char** aArgv) {
+  // Preload the omni.ja files if applicable.
   Omnijar::ChildProcessInit(aArgc, aArgv);
+
+  // NSS dynamically loads its cryptography implementation as a
+  // PKCS#11 module, libsoftokn3.  It may not be a serious problem if
+  // there's a version mismatch there, but we should try to reduce the
+  // possibility of breakage if we can.
+  //
+  // Within that module, there's another level of dynamic loading
+  // (intended for runtime detection of CPU features; x86 doesn't do
+  // that but there's still a dynamic load) to get the library with
+  // the actual code.  Again, maybe the ABI is stable enough in
+  // practice, but we should make a best-effort attempt to avoid
+  // version skew.
+  //
+  // That library could be either libfreebl3 or libfreeblpriv3, for
+  // complicated reasons involving FIPS-140, and we can't easily tell
+  // which.  (See `security/nss/lib/freebl/blname.c`, and note that
+  // there are also other possible names but those apply only to SPARC
+  // Solaris.)  So, this code attempts to load both.
+  MOZ_LOG(gForkServiceLog, LogLevel::Verbose, ("preloading NSS deps"));
+
+  static constexpr const char* kPreloadLibs[] = {
+    "libsoftokn3.so", "libfreebl3.so", "libfreeblpriv3.so"};
+  for (const char* lib : kPreloadLibs) {
+    if (!dlopen(lib, RTLD_NOW | RTLD_GLOBAL)) {
+      MOZ_LOG(gForkServiceLog, LogLevel::Warning, ("failed to load %s", lib));
+    }
+  }
 }
 
 /**
