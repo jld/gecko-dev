@@ -1021,6 +1021,13 @@ class SandboxPolicyCommon : public SandboxPolicyBase {
         // that might use brk.
       case __NR_brk:
         return Allow();
+
+        // Similarly, mremap (bugs: 1047620, 1286119, 1860267)
+      case __NR_mremap: {
+        Arg<int> flags(3);
+        return If((flags & ~MREMAP_MAYMOVE) == 0, Allow())
+            .Else(SandboxPolicyBase::EvaluateSyscall(sysno));
+      }
 #endif
 
         // madvise hints used by malloc; see bug 1303813 and bug 1364533
