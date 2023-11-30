@@ -14,8 +14,6 @@ struct msghdr;
 namespace mozilla {
 namespace ipc {
 
-enum class DataBufferClear { None, AfterReceiving };
-
 /**
  * This simple implementation handles the transmissions of IPC
  * messages.
@@ -31,11 +29,8 @@ class MiniTransceiver {
  public:
   /**
    * \param aFd should be a blocking, no O_NONBLOCK, fd.
-   * \param aClearDataBuf is true to clear data buffers after
-   *                      receiving a message.
    */
-  explicit MiniTransceiver(
-      int aFd, DataBufferClear aDataBufClear = DataBufferClear::None);
+  explicit MiniTransceiver(int aFd);
 
   bool Send(IPC::Message& aMsg);
   inline bool SendInfallible(IPC::Message& aMsg, const char* aCrashMessage) {
@@ -107,9 +102,6 @@ class MiniTransceiver {
   };
   State mState;
 #endif
-
-  // Clear all received data in temp buffers to avoid data leaking.
-  DataBufferClear mDataBufClear;
 };
 
 }  // namespace ipc

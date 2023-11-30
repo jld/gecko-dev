@@ -24,12 +24,12 @@ static const size_t kMaxIOVecSize = 64;
 static const size_t kMaxDataSize = 8 * 1024;
 static const size_t kMaxNumFds = 16;
 
-MiniTransceiver::MiniTransceiver(int aFd, DataBufferClear aDataBufClear)
+MiniTransceiver::MiniTransceiver(int aFd)
     : mFd(aFd),
 #ifdef DEBUG
-      mState(STATE_NONE),
+      mState(STATE_NONE)
 #endif
-      mDataBufClear(aDataBufClear) {
+{
 }
 
 namespace {
@@ -237,12 +237,6 @@ bool MiniTransceiver::Recv(UniquePtr<IPC::Message>& aMsg) {
     handles.AppendElement(UniqueFileHandle(all_fds[i]));
   }
   msg->SetAttachedFileHandles(std::move(handles));
-
-  if (mDataBufClear == DataBufferClear::AfterReceiving) {
-    // Avoid content processes from reading the content of
-    // messages.
-    memset(databuf.get(), 0, msgsz);
-  }
 
   MOZ_ASSERT(msg->header()->num_handles == msg->attached_handles_.Length(),
              "The number of file descriptors in the header is different from"
