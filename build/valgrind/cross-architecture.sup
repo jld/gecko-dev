@@ -65,6 +65,29 @@
    fun:_Z21XRE_CreateStatsObjectv
    ...
 }
+{
+   We purposely leak forkserver children's new argv strings. (See bug 1878213.)
+   Memcheck:Leak
+   match-leak-kinds: definite
+   fun:malloc
+   fun:strdup
+   fun:ReplaceArguments
+   fun:_ZN4base17AppProcessBuilder14InitAppProcessEPiPPPc
+   fun:_ZN7mozilla3ipc10ForkServer13RunForkServerEPiPPPc
+   fun:_Z14XRE_ForkServerPiPPPc
+   fun:main
+}
+{
+   We purposely leak copies of the initial argv/environ to implement setproctitle on Linux. (See bug 1878213.)
+   Memcheck:Leak
+   match-leak-kinds: definite
+   fun:malloc
+   fun:strdup
+   fun:_Z17setproctitle_initPPc
+   fun:_ZN7mozilla3ipc10ForkServer13RunForkServerEPiPPPc
+   fun:_Z14XRE_ForkServerPiPPPc
+   fun:main
+}
 
 ####################################
 #  Leaks in third party libraries  #
