@@ -10,6 +10,7 @@
 #include <signal.h>
 #include <stdio.h>
 #include <stdlib.h>
+#include <string.h>
 #include <sys/resource.h>
 #include <sys/time.h>
 #include <sys/types.h>
@@ -195,6 +196,38 @@ void CloseSuperfluousFds(void* aCtx, bool (*aShouldPreserve)(void*, int)) {
   }
 }
 
+static bool IsZombieProcess(pid_t pid) {
+  char buffer[4096];
+  int e;
+  snprintf(buffer, sizeof(buffer), "/proc/%d/stat", pid);
+  int fd = open(buffer, O_RDONLY | O_CLOEXEC);
+  if (fd < 0) {
+    e = errno;
+    CHROMIUM_LOG(ERROR) << "failed to open " << buffer << ": " << strerror(e);
+    return true;
+  }
+
+  ssize_t len = HANDLE_EINTR(read(fd, buffer, sizeof(buffer) - 1));
+  e = errno;
+  close(fd);
+  if (len < 1) {
+    CHROMIUM_LOG(ERROR) << "failed to read " << buffer << ": " << strerror(e);
+    return true;
+  }
+
+  buffer[len] = '\0';
+  char* rparen = strrchr(buffer, ')');
+  if (!rparen || rparen[1] != ' ' || rparen[2] == '\0') {
+    CHROMIUM_LOG(ERROR) << "bad data in /proc/" << pid << "/stat";
+    return true;
+  }
+  if (rparen[2] == 'Z') {
+    CHROMIUM_LOG(ERROR) << "process " << pid << " is a zombie";
+    return true;
+  }
+  return false;
+}
+
 bool IsProcessDead(ProcessHandle handle, bool blocking) {
   auto handleForkServer = [handle]() -> mozilla::Maybe<bool> {
 #ifdef MOZ_ENABLE_FORKSERVER
@@ -205,10 +238,14 @@ bool IsProcessDead(ProcessHandle handle, bool blocking) {
       // process any more, it is impossible to use |waitpid()| to wait for
       // them.
       const int r = kill(handle, 0);
-      // FIXME: for unexpected errors we should probably log a warning
-      // and return true, so that the caller doesn't loop / hang /
-      // try to kill the process.  (Bug 1658072 will rewrite this code.)
-      return mozilla::Some(r < 0 && errno == ESRCH);
+      if (r < 0) {
+        const int e = errno;
+        if (e != ESRCH) {
+          CHROMIUM_LOG(WARNING) << "unexpected error checking for process " << handle << ": " << strerror(e);
+        }
+        return mozilla::Some(true);
+      }
+      return mozilla::Some(IsZombieProcess(handle));
     }
 #else
     mozilla::Unused << handle;
