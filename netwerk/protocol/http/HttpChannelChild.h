@@ -399,6 +399,13 @@ class HttpChannelChild final : public PHttpChannelChild,
   // permission or cookie. That is, RecvOnStartRequestSent is received.
   uint8_t mSuspendedByWaitingForPermissionCookie : 1;
 
+#ifdef NS_FREE_PERMANENT_DATA
+  // Number of times we've passed through the case in `Release` that
+  // un-drops this object and dispatches a runnable to clean it up, to
+  // catch when it's not making progress.
+  uint8_t mReleaseLoopCount = 0;
+#endif
+
   void CleanupRedirectingChannel(nsresult rv);
 
   // Calls OnStartRequest and/or OnStopRequest on our listener in case we didn't

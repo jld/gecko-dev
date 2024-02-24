@@ -226,6 +226,14 @@ NS_IMETHODIMP_(MozExternalRefCountType) HttpChannelChild::Release() {
     // 3) Finally, we turn the reference into a regular smart pointer.
     RefPtr<HttpChannelChild> channel = dont_AddRef(this);
 
+#ifdef NS_FREE_PERMANENT_DATA
+    // Replace an annoying shutdown hang with a more obvious assertion
+    // failure if this is in an infinite loop.
+    static constexpr uint8_t kReleaseLoopMax = 10;
+    MOZ_RELEASE_ASSERT(mReleaseLoopCount < kReleaseLoopMax);
+    ++mReleaseLoopCount;
+#endif
+
     // This runnable will create a strong reference to |this|.
     NS_DispatchToMainThread(
         NewRunnableMethod("~HttpChannelChild>DoNotifyListener", channel,
