@@ -38,6 +38,7 @@
 
 #ifdef MOZ_ENABLE_FORKSERVER
 #  include "mozilla/ipc/ForkServiceChild.h"
+#  include "mozilla/Printf.h"
 #endif
 
 // We could configure-test for `waitid`, but it's been in POSIX for a
@@ -201,6 +202,15 @@ void CloseSuperfluousFds(void* aCtx, bool (*aShouldPreserve)(void*, int)) {
 // state.  Any failures (if the process doesn't exist, if /proc isn't
 // mounted, etc.) will return true, so that we don't try again.
 static bool IsZombieProcess(pid_t pid) {
+  auto path = mozilla::Smprintf("/proc/%d/stat", pid);
+  int fd = open(path.get(), O_RDONLY | O_CLOEXEC);
+  if (fd < 0) {
+    int e = errno;
+    CHROMIUM_LOG(ERROR) << "failed to open " << path.get() << ": "
+                        << strerror(e);
+    return true;
+  }
+
   // /proc/%d/stat format is approximately:
   //
   // %d (%s) %c %d %d %d %d %d ...
@@ -210,21 +220,13 @@ static bool IsZombieProcess(pid_t pid) {
   // So, we read the whole line, check for the last ')' because all of
   // the following fields are numeric, and move forward from there.
   //
-  // Because (unlike other uses of this info in the codebase) we don't
-  // need anything after that field, we could read a smaller amount of
-  // the file, but it probably doesn't matter.
-  char buffer[4096];
-  int e;
-  snprintf(buffer, sizeof(buffer), "/proc/%d/stat", pid);
-  int fd = open(buffer, O_RDONLY | O_CLOEXEC);
-  if (fd < 0) {
-    e = errno;
-    CHROMIUM_LOG(ERROR) << "failed to open " << buffer << ": " << strerror(e);
-    return true;
-  }
+  // And because (unlike other uses of this info the codebase) we
+  // don't care about those other fields, we can read a smaller amount
+  // of the file.
 
+  char buffer[64];
   ssize_t len = HANDLE_EINTR(read(fd, buffer, sizeof(buffer) - 1));
-  e = errno;
+  int e = errno;
   close(fd);
   if (len < 1) {
     CHROMIUM_LOG(ERROR) << "failed to read " << buffer << ": " << strerror(e);
@@ -234,6 +236,7 @@ static bool IsZombieProcess(pid_t pid) {
   buffer[len] = '\0';
   char* rparen = strrchr(buffer, ')');
   if (!rparen || rparen[1] != ' ' || rparen[2] == '\0') {
+    DCHECK(false) << "/proc/{pid}/stat parse error";
     CHROMIUM_LOG(ERROR) << "bad data in /proc/" << pid << "/stat";
     return true;
   }
