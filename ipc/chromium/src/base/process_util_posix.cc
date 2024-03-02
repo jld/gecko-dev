@@ -196,7 +196,23 @@ void CloseSuperfluousFds(void* aCtx, bool (*aShouldPreserve)(void*, int)) {
   }
 }
 
+#ifdef MOZ_ENABLE_FORKSERVER
+// Returns whether a process (assumed to still exist) is in the zombie
+// state.  Any failures (if the process doesn't exist, if /proc isn't
+// mounted, etc.) will return true, so that we don't try again.
 static bool IsZombieProcess(pid_t pid) {
+  // /proc/%d/stat format is approximately:
+  //
+  // %d (%s) %c %d %d %d %d %d ...
+  //
+  // The state is the third field; the second field is the thread
+  // name, in parentheses, but it can contain arbitrary characters.
+  // So, we read the whole line, check for the last ')' because all of
+  // the following fields are numeric, and move forward from there.
+  //
+  // Because (unlike other uses of this info in the codebase) we don't
+  // need anything after that field, we could read a smaller amount of
+  // the file, but it probably doesn't matter.
   char buffer[4096];
   int e;
   snprintf(buffer, sizeof(buffer), "/proc/%d/stat", pid);
@@ -227,6 +243,7 @@ static bool IsZombieProcess(pid_t pid) {
   }
   return false;
 }
+#endif
 
 bool IsProcessDead(ProcessHandle handle, bool blocking) {
   auto handleForkServer = [handle]() -> mozilla::Maybe<bool> {
@@ -245,6 +262,10 @@ bool IsProcessDead(ProcessHandle handle, bool blocking) {
         }
         return mozilla::Some(true);
       }
+      // Annoying edge case (bug NNNNNNN): if pid 1 isn't a real
+      // `init`, like in some container environments, and if the child
+      // exited after the fork server, it could become a permanent
+      // zombie.  We treat it as dead in that case.
       return mozilla::Some(IsZombieProcess(handle));
     }
 #else
