@@ -279,6 +279,21 @@ MOZ_NoReturn(int aLine) {
     } while (false)
 #endif
 
+#ifdef XP_UNIX
+MFBT_API MOZ_COLD MOZ_NEVER_INLINE void MOZ_CrashLogStderr(const char* aMsg,
+                                                           const char* aFile,
+                                                           const char* aLine);
+
+#  define MOZ_CRASH_AND_LOG(...)                                 \
+    do {                                                         \
+      MOZ_CrashLogStderr("MOZ_CRASH(" __VA_ARGS__ ")", __FILE__, \
+                         ":" MOZ_STRINGIFY(__LINE__));           \
+      MOZ_CRASH_ANNOTATE("MOZ_CRASH(" __VA_ARGS__ ")");          \
+      MOZ_REALLY_CRASH(__LINE__);                                \
+    } while (false)
+
+#endif
+
 /*
  * MOZ_CRASH_UNSAFE(explanation-string) can be used if the explanation string
  * cannot be a string literal (but no other processing needs to be done on it).
