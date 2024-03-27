@@ -1,4 +1,4 @@
-/* -*- Mode: C++; tab-width: 8; indent-tabs-mode: nil; c-basic-offset: 4 -*- */
+/* -*- Mode: C++; tab-width: 8; indent-tabs-mode: nil; c-basic-offset: 2 -*- */
 /* vim: set ts=8 sts=4 et sw=4 tw=80: */
 /* This Source Code Form is subject to the terms of the Mozilla Public
  * License, v. 2.0. If a copy of the MPL was not distributed with this
@@ -14,7 +14,6 @@
 #include "nsDebug.h"
 
 #include <sys/types.h>
-#include <sys/socket.h>
 #include <string.h>
 #include <errno.h>
 
@@ -24,12 +23,15 @@ static const size_t kMaxIOVecSize = 64;
 static const size_t kMaxDataSize = 8 * 1024;
 static const size_t kMaxNumFds = 16;
 
-MiniTransceiver::MiniTransceiver(int aFd)
-    : mFd(aFd),
+MiniTransceiver::MiniTransceiver(int aFd, int aSockType)
+    : mFd(aFd), mIsStream(aSockType == SOCK_STREAM) {
 #ifdef DEBUG
-      mState(STATE_NONE)
+  int optval;
+  socklen_t optlen = sizeof(optval);
+  MOZ_ALWAYS_TRUE(getsockopt(aFd, SOL_SOCKET, SO_TYPE, &optval, &optlen) == 0);
+  MOZ_ASSERT(optlen == sizeof(optval));
+  MOZ_ASSERT(optval == aSockType);
 #endif
-{
 }
 
 namespace {
@@ -64,6 +66,17 @@ static void InitMsgHdr(msghdr* aHdr, int aIOVSize, size_t aMaxNumFds) {
 static void DeinitMsgHdr(msghdr* aHdr) {
   delete aHdr->msg_iov;
   delete static_cast<char*>(aHdr->msg_control);
+}
+
+static void IOVecDrop(struct iovec* iov, int iovcnt, size_t toDrop) {
+  while (toDrop > 0 && iovcnt > 0) {
+    size_t toDropHere = std::min(toDrop, iov->iov_len);
+    iov->iov_base = static_cast<char*>(iov->iov_base) + toDropHere;
+    iov->iov_len -= toDropHere;
+    toDrop -= toDropHere;
+    ++iov;
+    --iovcnt;
+  }
 }
 
 }  // namespace
@@ -108,36 +121,40 @@ size_t MiniTransceiver::PrepareBuffers(msghdr* aHdr, IPC::Message& aMsg) {
 }
 
 bool MiniTransceiver::Send(IPC::Message& aMsg) {
-#ifdef DEBUG
-  if (mState == STATE_SENDING) {
-    MOZ_CRASH(
-        "STATE_SENDING: It violates of request-response and no concurrent "
-        "rules");
-  }
-  mState = STATE_SENDING;
-#endif
-
   auto clean_fdset = MakeScopeExit([&] { aMsg.attached_handles_.Clear(); });
 
   size_t num_fds = aMsg.attached_handles_.Length();
   msghdr hdr{};
   InitMsgHdr(&hdr, kMaxIOVecSize, num_fds);
 
+  // FIXME why this instead of another ScopeExit
   UniquePtr<msghdr, decltype(&DeinitMsgHdr)> uniq(&hdr, &DeinitMsgHdr);
 
   PrepareFDs(&hdr, aMsg);
-  DebugOnly<size_t> bytes_to_send = PrepareBuffers(&hdr, aMsg);
+  size_t bytes_to_send = PrepareBuffers(&hdr, aMsg);
 
-  ssize_t bytes_written = HANDLE_EINTR(sendmsg(mFd, &hdr, 0));
+  MOZ_ASSERT(bytes_to_send > 0);
+  while (bytes_to_send > 0) {
+    ssize_t bytes_written = HANDLE_EINTR(sendmsg(mFd, &hdr, 0));
 
-  if (bytes_written < 0) {
-    char error[128];
-    SprintfLiteral(error, "sendmsg: %s", strerror(errno));
-    NS_WARNING(error);
-    return false;
+    if (bytes_written < 0) {
+      char error[128];
+      SprintfLiteral(error, "sendmsg: %s", strerror(errno));
+      NS_WARNING(error);
+      return false;
+    }
+
+    bytes_to_send -= bytes_written;
+    if (bytes_to_send > 0 && !mIsStream) {
+      MOZ_ASSERT(false, "message too long for non-stream socket");
+      return false;
+    }
+
+    IOVecDrop(hdr.msg_iov, hdr.msg_iovlen, bytes_written);
+    // FIXME also drop leading zero elements, to avoid quadraticness
+    // Maybe have Prepare* take UniquePtr<>* for storage,
+    // so that msg_iov can be bumped.
   }
-  MOZ_ASSERT(bytes_written == (ssize_t)bytes_to_send,
-             "The message is too big?!");
 
   return true;
 }
@@ -147,7 +164,12 @@ unsigned MiniTransceiver::RecvFDs(msghdr* aHdr, int* aAllFds,
   if (aHdr->msg_controllen == 0) {
     return 0;
   }
+  MOZ_ASSERT(aAllFds, "Got unexpected fds!");
+  if (!aAllFds) {
+    return 0;
+  }
 
+  // FIXME these debug asserts should be stronger.
   unsigned num_all_fds = 0;
   for (cmsghdr* cmsg = CMSG_FIRSTHDR(aHdr); cmsg;
        cmsg = CMSG_NXTHDR(aHdr, cmsg)) {
@@ -168,70 +190,90 @@ unsigned MiniTransceiver::RecvFDs(msghdr* aHdr, int* aAllFds,
   return num_all_fds;
 }
 
-bool MiniTransceiver::RecvData(char* aDataBuf, size_t aBufSize,
-                               uint32_t* aMsgSize, int* aFdsBuf,
-                               unsigned aMaxFds, unsigned* aNumFds) {
+bool MiniTransceiver::RecvData(RecvReq* aReq) {
   msghdr hdr;
-  InitMsgHdr(&hdr, 1, aMaxFds);
+  InitMsgHdr(&hdr, 1, aReq->mMaxFds);
+  auto guardHdr = MakeScopeExit([&] { DeinitMsgHdr(&hdr); });
 
-  UniquePtr<msghdr, decltype(&DeinitMsgHdr)> uniq(&hdr, &DeinitMsgHdr);
+  // TODO gtests: large messages, multiple messages sent before recv, etc.
 
-  // The buffer to collect all fds received from the socket.
-  int* all_fds = aFdsBuf;
-  unsigned num_all_fds = 0;
+  aReq->mMsgSizeOut = 0;
+  aReq->mNumFdsOut = 0;
 
-  size_t total_readed = 0;
-  uint32_t msgsz = 0;
-  while (msgsz == 0 || total_readed < msgsz) {
-    // Set IO vector with the begin of the unused buffer.
-    hdr.msg_iov->iov_base = aDataBuf + total_readed;
-    hdr.msg_iov->iov_len = (msgsz == 0 ? aBufSize : msgsz) - total_readed;
+  size_t readUntil = mIsStream ? aReq->mBufSize : 0;
 
-    // Read the socket
-    ssize_t bytes_readed = HANDLE_EINTR(recvmsg(mFd, &hdr, 0));
-    if (bytes_readed <= 0) {
-      // Closed or error!
+  do {
+    hdr.msg_iov[0].iov_base = aReq->mDataBuf + aReq->mMsgSizeOut;
+    hdr.msg_iov[0].iov_len = aReq->mBufSize - aReq->mMsgSizeOut;
+
+    ssize_t bytes_read = HANDLE_EINTR(recvmsg(mFd, &hdr, 0));
+    // FIXME also check for TRUNC/CTRUNC.
+    if (bytes_read < 0) {
       return false;
     }
-    total_readed += bytes_readed;
-    MOZ_ASSERT(total_readed <= aBufSize);
-
-    if (msgsz == 0) {
-      // Parse the size of the message.
-      // Get 0 if data in the buffer is no enough to get message size.
-      msgsz = IPC::Message::MessageSize(aDataBuf, aDataBuf + total_readed);
+    if (bytes_read == 0) {
+      break;
     }
 
-    num_all_fds += RecvFDs(&hdr, all_fds + num_all_fds, aMaxFds - num_all_fds);
-  }
+    aReq->mMsgSizeOut += static_cast<size_t>(bytes_read);
+    MOZ_ASSERT(aReq->mMsgSizeOut <= aReq->mBufSize);
 
-  *aMsgSize = msgsz;
-  *aNumFds = num_all_fds;
+    aReq->mNumFdsOut += RecvFDs(&hdr, aReq->mFdsBuf + aReq->mNumFdsOut,
+                                aReq->mMaxFds - aReq->mNumFdsOut);
+  } while (aReq->mMsgSizeOut < readUntil);
+
+  MOZ_ASSERT(aReq->mMsgSizeOut <= aReq->mBufSize);
+  if (aReq->mMsgSizeOut < aReq->mExpectSize) {
+    errno = EPROTO;
+    return false;
+  }
   return true;
 }
 
 bool MiniTransceiver::Recv(UniquePtr<IPC::Message>& aMsg) {
-#ifdef DEBUG
-  if (mState == STATE_RECEIVING) {
-    MOZ_CRASH(
-        "STATE_RECEIVING: It violates of request-response and no concurrent "
-        "rules");
-  }
-  mState = STATE_RECEIVING;
-#endif
-
+  static constexpr size_t kHeaderSize =
+      static_cast<size_t>(IPC::Message::HeaderSize());
   UniquePtr<char[]> databuf = MakeUnique<char[]>(kMaxDataSize);
-  uint32_t msgsz = 0;
   int all_fds[kMaxNumFds];
-  unsigned num_all_fds = 0;
 
-  if (!RecvData(databuf.get(), kMaxDataSize, &msgsz, all_fds, kMaxDataSize,
-                &num_all_fds)) {
+  RecvReq req;
+  req.mDataBuf = databuf.get();
+  // In stream mode, we can only safely read the header; if we read
+  // more, we could read part of another message.  In non-stream mode,
+  // we can't get more than one message but we *must* read the whole
+  // thing in one call; if it's truncated, the remainder will be lost.
+  req.mBufSize = mIsStream ? kHeaderSize : kMaxDataSize;
+  req.mExpectSize = kHeaderSize;
+  req.mFdsBuf = all_fds;
+  req.mMaxFds = kMaxNumFds;
+
+  if (!RecvData(&req)) {
     return false;
+  }
+  uint32_t expMsgSize =
+      IPC::Message::MessageSize(databuf.get(), databuf.get() + kHeaderSize);
+
+  if (mIsStream) {
+    MOZ_ASSERT(req.mMsgSizeOut == kHeaderSize);
+    // FIXME expand the buffer instead
+    MOZ_RELEASE_ASSERT(expMsgSize <= kMaxDataSize);
+
+    RecvReq req2;
+    req2.mDataBuf = databuf.get() + kHeaderSize;
+    req2.mBufSize = expMsgSize - kHeaderSize;
+    req2.mExpectSize = req2.mBufSize;
+    if (!RecvData(&req2)) {
+      return false;
+    }
+  } else {
+    // Make sure the header matches the data.
+    MOZ_RELEASE_ASSERT(expMsgSize == req.mMsgSizeOut);
   }
 
   // Create Message from databuf & all_fds.
-  UniquePtr<IPC::Message> msg = MakeUnique<IPC::Message>(databuf.get(), msgsz);
+  UniquePtr<IPC::Message> msg =
+      MakeUnique<IPC::Message>(databuf.get(), expMsgSize);
+  unsigned num_all_fds = req.mNumFdsOut;
   nsTArray<UniqueFileHandle> handles(num_all_fds);
   for (unsigned i = 0; i < num_all_fds; ++i) {
     handles.AppendElement(UniqueFileHandle(all_fds[i]));

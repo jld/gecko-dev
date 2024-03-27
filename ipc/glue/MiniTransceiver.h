@@ -1,4 +1,4 @@
-/* -*- Mode: C++; tab-width: 8; indent-tabs-mode: nil; c-basic-offset: 4 -*- */
+/* -*- Mode: C++; tab-width: 8; indent-tabs-mode: nil; c-basic-offset: 2 -*- */
 /* vim: set ts=8 sts=4 et sw=4 tw=80: */
 /* This Source Code Form is subject to the terms of the Mozilla Public
  * License, v. 2.0. If a copy of the MPL was not distributed with this
@@ -9,7 +9,7 @@
 #include "chrome/common/ipc_message.h"
 #include "mozilla/Assertions.h"
 
-struct msghdr;
+#include <sys/socket.h>
 
 namespace mozilla {
 namespace ipc {
@@ -30,7 +30,7 @@ class MiniTransceiver {
   /**
    * \param aFd should be a blocking, no O_NONBLOCK, fd.
    */
-  explicit MiniTransceiver(int aFd);
+  explicit MiniTransceiver(int aFd, int aSockType = SOCK_STREAM);
 
   bool Send(IPC::Message& aMsg);
   inline bool SendInfallible(IPC::Message& aMsg, const char* aCrashMessage) {
@@ -78,30 +78,38 @@ class MiniTransceiver {
    * \return the number of received file descriptors.
    */
   unsigned RecvFDs(msghdr* aHdr, int* aAllFds, unsigned aMaxFds);
+
+  struct RecvReq {
+    /** Where to store the data from the socket. */
+    char* mDataBuf = nullptr;
+    /**
+     * The size of the buffer.
+     *
+     * In stream mode, RecvData will loop until this much has been
+     * read or an error occurs.  In non-stream mode, it will attempt
+     * to read up to this amount, but recvmsg will be called only once.
+     */
+    size_t mBufSize = 0;
+    /** Return an error unless at least this many bytes are read. */
+    size_t mExpectSize = 0;
+    /** The number of bytes read from the socket. */
+    uint32_t mMsgSizeOut = 0;
+
+    /** The buffer to return file descriptors received. */
+    int* mFdsBuf = nullptr;
+    /** The size of the file descriptor buffer. */
+    unsigned mMaxFds = 0;
+    /** The number of file descriptors that were received. */
+    unsigned mNumFdsOut = 0;
+  };
+
   /**
-   * Received data from the socket.
-   *
-   * \param aDataBuf is where to store the data from the socket.
-   * \param aBufSize is the size of the buffer.
-   * \param aMsgSize returns how many bytes were readed from the socket.
-   * \param aFdsBuf is the buffer to return file desriptors received.
-   * \param aMaxFds is the number of file descriptors that can be held.
-   * \param aNumFds returns the number of file descriptors received.
-   * \return true if sucess, or false for error.
+   * Receive data from the socket.
    */
-  bool RecvData(char* aDataBuf, size_t aBufSize, uint32_t* aMsgSize,
-                int* aFdsBuf, unsigned aMaxFds, unsigned* aNumFds);
+  bool RecvData(RecvReq* aReq);
 
   int mFd;  // The file descriptor of the socket for IPC.
-
-#ifdef DEBUG
-  enum State {
-    STATE_NONE,
-    STATE_SENDING,
-    STATE_RECEIVING,
-  };
-  State mState;
-#endif
+  bool mIsStream;
 };
 
 }  // namespace ipc

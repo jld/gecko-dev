@@ -286,7 +286,7 @@ class Message : public mojo::core::ports::UserMessage, public Pickle {
     header()->event_footer_size = size;
   }
 
-  static int HeaderSize() { return sizeof(Header); }
+  static constexpr int HeaderSize() { return sizeof(Header); }
 
   // Figure out how big the message starting at range_start is. Returns 0 if
   // there's no enough data to determine (i.e., if [range_start, range_end) does

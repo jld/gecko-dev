@@ -36,12 +36,13 @@ static bool ConfigurePipeFd(int aFd) {
 
 // Create a socketpair with both ends marked as close-on-exec
 static Result<Ok, LaunchError> CreateSocketPair(UniqueFileHandle& aFD0,
-                                                UniqueFileHandle& aFD1) {
+                                                UniqueFileHandle& aFD1,
+                                                int aType = SOCK_STREAM) {
   int fds[2];
 #ifdef SOCK_CLOEXEC
-  constexpr int type = SOCK_STREAM | SOCK_CLOEXEC;
+  const int type = aType | SOCK_CLOEXEC;
 #else
-  constexpr int type = SOCK_STREAM;
+  const int type = aType;
 #endif
 
   if (socketpair(AF_UNIX, type, 0, fds) < 0) {
@@ -63,7 +64,7 @@ static Result<Ok, LaunchError> CreateSocketPair(UniqueFileHandle& aFD0,
 void ForkServiceChild::StartForkServer() {
   UniqueFileHandle server;
   UniqueFileHandle client;
-  if (CreateSocketPair(server, client).isErr()) {
+  if (CreateSocketPair(server, client, SOCK_SEQPACKET).isErr()) {
     MOZ_LOG(gForkServiceLog, LogLevel::Error,
             ("failed to create fork server socket"));
     return;
@@ -86,7 +87,7 @@ void ForkServiceChild::StopForkServer() { sForkServiceChild = nullptr; }
 
 ForkServiceChild::ForkServiceChild(int aFd, GeckoChildProcessHost* aProcess)
     : mFailed(false), mProcess(aProcess) {
-  mTcver = MakeUnique<MiniTransceiver>(aFd);
+  mTcver = MakeUnique<MiniTransceiver>(aFd, SOCK_SEQPACKET);
 }
 
 ForkServiceChild::~ForkServiceChild() {
@@ -113,37 +114,43 @@ Result<Ok, LaunchError> ForkServiceChild::SendForkNewSubprocess(
     WriteIPDLParam(&writer, nullptr, std::move(execChild));
     WriteIPDLParam(&writer, nullptr, aArgs.mFdsRemap);
     if (!mTcver->Send(msg)) {
-      MOZ_LOG(gForkServiceLog, LogLevel::Verbose,
-              ("the pipe to the fork server is closed or having errors"));
+      MOZ_LOG(gForkServiceLog, LogLevel::Error,
+              ("SendForkNewSubprocess: Send error"));
       OnError();
       return Err(LaunchError("FSC::SFNS::Send"));
     }
   }
 
+  MiniTransceiver execTcver(execParent.get());
   {
-    MiniTransceiver execTcver(execParent.get());
     IPC::Message execMsg(MSG_ROUTING_CONTROL, Msg_SubprocessExecInfo__ID);
     IPC::MessageWriter execWriter(execMsg);
     WriteIPDLParam(&execWriter, nullptr, aArgs.mArgv);
     WriteIPDLParam(&execWriter, nullptr, aArgs.mEnv);
     if (!execTcver.Send(execMsg)) {
-      MOZ_LOG(gForkServiceLog, LogLevel::Verbose,
-              ("failed to send exec info to the fork server"));
+      // FIXME why are all of these verbose; they're actual errors.
+      // (And maybe they should MOZ_ASSERT too.)
+      MOZ_LOG(gForkServiceLog, LogLevel::Error,
+              ("SendForkNewSubprocess: ExecInfo send error"));
       OnError();
       return Err(LaunchError("FSC::SFNS::Send2"));
     }
   }
-  execParent = nullptr;
 
   UniquePtr<IPC::Message> reply;
-  if (!mTcver->Recv(reply)) {
-    MOZ_LOG(gForkServiceLog, LogLevel::Verbose,
-            ("the pipe to the fork server is closed or having errors"));
+  if (!execTcver.Recv(reply)) {
+    MOZ_LOG(gForkServiceLog, LogLevel::Error,
+            ("SendForkNewSubprocess: Recv error"));
     OnError();
     return Err(LaunchError("FSC::SFNS::Recv"));
   }
   OnMessageReceived(std::move(reply));
 
+  // FIXME mRecvPid can be a local variable and
+  // `OnMessageReceived` should be inlined
+  if (mRecvPid < 0) {
+    return Err(LaunchError("FS::clone"));
+  }
   MOZ_ASSERT(mRecvPid != -1);
   *aPid = mRecvPid;
   return Ok();

@@ -40,7 +40,7 @@ ForkServer::ForkServer() {}
 void ForkServer::InitProcess(int* aArgc, char*** aArgv) {
   base::InitForkServerProcess();
 
-  mTcver = MakeUnique<MiniTransceiver>(kClientPipeFd);
+  mTcver = MakeUnique<MiniTransceiver>(kClientPipeFd, SOCK_SEQPACKET);
 }
 
 /**
@@ -193,16 +193,25 @@ void ForkServer::OnMessageReceived(UniquePtr<IPC::Message> message) {
     return;
   }
 
+  MiniTransceiver execTcver(execFd.get());
+  IPC::Message reply(MSG_ROUTING_CONTROL, Reply_ForkNewSubprocess__ID);
+  IPC::MessageWriter writer(reply);
+  auto send_reply = [&](pid_t aPid) {
+    mAppProcBuilder = nullptr;
+    WriteIPDLParam(&writer, nullptr, pid_t(aPid));
+    execTcver.SendInfallible(reply, "failed to send a reply message");
+  };
+
   base::ProcessHandle child_pid = -1;
   mAppProcBuilder = MakeUnique<base::AppProcessBuilder>();
   if (!mAppProcBuilder->ForkProcess(std::move(options), &child_pid)) {
-    MOZ_CRASH("fail to fork");
+    send_reply(-1);
+    return;
   }
   MOZ_ASSERT(child_pid >= 0);
 
   if (child_pid == 0) {
     // Content process
-    MiniTransceiver execTcver(execFd.get());
     UniquePtr<IPC::Message> execMsg;
     if (!execTcver.Recv(execMsg)) {
       // Crashing here isn't great, because the crash reporter isn't
@@ -223,13 +232,7 @@ void ForkServer::OnMessageReceived(UniquePtr<IPC::Message> message) {
   }
 
   // Fork server process
-
-  mAppProcBuilder = nullptr;
-
-  IPC::Message reply(MSG_ROUTING_CONTROL, Reply_ForkNewSubprocess__ID);
-  IPC::MessageWriter writer(reply);
-  WriteIPDLParam(&writer, nullptr, child_pid);
-  mTcver->SendInfallible(reply, "failed to send a reply message");
+  send_reply(child_pid);
 }
 
 /**
