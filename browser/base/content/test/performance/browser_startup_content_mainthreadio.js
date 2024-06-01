@@ -393,7 +393,7 @@ add_task(async function () {
       }
     }
 
-    if (!knownIOList.length) {
+    if (knownIOList.every(io => io.ignoreIfUnused)) {
       continue;
     }
     // The I/O interposer is disabled if !RELEASE_OR_BETA, so we expect to have
