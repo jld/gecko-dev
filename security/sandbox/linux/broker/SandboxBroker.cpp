@@ -70,12 +70,12 @@ SandboxBroker::SandboxBroker(UniquePtr<const Policy> aPolicy, int aChildPid,
   }
 }
 
-UniquePtr<SandboxBroker> SandboxBroker::Create(
+already_AddRefed<SandboxBroker> SandboxBroker::Create(
     UniquePtr<const Policy> aPolicy, int aChildPid,
     ipc::FileDescriptor& aClientFdOut) {
   int clientFd;
-  // Can't use MakeUnique here because the constructor is private.
-  UniquePtr<SandboxBroker> rv(
+  // Can't use MakeRefPtr here because the constructor is private.
+  RefPtr<SandboxBroker> rv(
       new SandboxBroker(std::move(aPolicy), aChildPid, clientFd));
   if (clientFd < 0) {
     rv = nullptr;
@@ -84,7 +84,7 @@ UniquePtr<SandboxBroker> SandboxBroker::Create(
     // the fd; instead, transfer ownership:
     aClientFdOut = ipc::FileDescriptor(UniqueFileHandle(clientFd));
   }
-  return rv;
+  return rv.forget();
 }
 
 SandboxBroker::~SandboxBroker() {
@@ -93,9 +93,11 @@ SandboxBroker::~SandboxBroker() {
     return;
   }
 
-  shutdown(mFileDesc, SHUT_RD);
-  // The thread will now get EOF even if the client hasn't exited.
-  PlatformThread::Join(mThread);
+  if (mThread != pthread_self()) { // HACK
+    shutdown(mFileDesc, SHUT_RD);
+    // The thread will now get EOF even if the client hasn't exited.
+    PlatformThread::Join(mThread);
+  }
   // Now that the thread has exited, the fd will no longer be accessed.
   close(mFileDesc);
   // Having ensured that this object outlives the thread, this
@@ -601,6 +603,9 @@ void SandboxBroker::ThreadMain(void) {
   PlatformThread::SetName(threadName);
 
   AUTO_PROFILER_REGISTER_THREAD(threadName);
+
+  // FIXME explain what I'm doing here once I understand what I'm doing here.
+  RefPtr<SandboxBroker> deathGrip(this);
 
   // Permissive mode can only be enabled through an environment variable,
   // therefore it is sufficient to fetch the value once

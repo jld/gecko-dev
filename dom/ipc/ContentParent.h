@@ -1554,7 +1554,7 @@ class ContentParent final : public PContentParent,
   UniquePtr<MemoryReportRequestHost> mMemoryReportRequest;
 
 #if defined(XP_LINUX) && defined(MOZ_SANDBOX)
-  mozilla::UniquePtr<SandboxBroker> mSandboxBroker;
+  RefPtr<SandboxBroker> mSandboxBroker;
   static mozilla::StaticAutoPtr<SandboxBrokerPolicyFactory>
       sSandboxBrokerPolicyFactory;
 #endif

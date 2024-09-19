@@ -36,7 +36,7 @@ class SandboxBrokerTest : public ::testing::Test {
   static const int MAY_CREATE = SandboxBroker::MAY_CREATE;
   static const auto AddAlways = SandboxBroker::Policy::AddAlways;
 
-  UniquePtr<SandboxBroker> mServer;
+  RefPtr<SandboxBroker> mServer;
   UniquePtr<SandboxBrokerClient> mClient;
 
   UniquePtr<const SandboxBroker::Policy> GetPolicy() const;
