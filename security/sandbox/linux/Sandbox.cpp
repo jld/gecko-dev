@@ -783,6 +783,20 @@ void SetMediaPluginSandbox(const char* aFilePath) {
   files->Add("/proc/stat", SandboxOpenedFile::Error{});
   files->Add("/proc/net/unix", SandboxOpenedFile::Error{});
   files->Add("/proc/self/maps", SandboxOpenedFile::Error{});
+  // Bug 1NNNNNN: More.  (It'd be annoying to have a special facility for
+  // prefixes but we could?)  (Also, number of cpus might be allowable?)
+  files->Add("/sys/devices/system/cpu/present", SandboxOpenedFile::Error{});
+  files->Add("/sys/devices/system/cpu/possible", SandboxOpenedFile::Error{});
+  files->Add("/sys/devices/system/cpu/cpu0/cache/index2/size",
+             SandboxOpenedFile::Error{});
+  files->Add("/sys/devices/system/cpu/cpu0/cache/index3/size",
+             SandboxOpenedFile::Error{});
+  files->Add("/sys/devices/system/cpu/cpu0/topology/core_cpus",
+             SandboxOpenedFile::Error{});
+  files->Add("/sys/devices/system/cpu/cpu0/topology/thread_siblings",
+             SandboxOpenedFile::Error{});
+  files->Add("/sys/fs/cgroup/cpuset/chrome", SandboxOpenedFile::Error{});
+  files->Add("/sys/fs/cgroup/schedtune/chrome", SandboxOpenedFile::Error{});
 
   // Finally, start the sandbox.
   SetCurrentProcessSandbox(GetMediaSandboxPolicy(files));
