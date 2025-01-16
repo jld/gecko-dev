@@ -467,8 +467,9 @@ namespace {
  * sandbox/linux/services/namespace_sandbox.cc
  */
 
-#  if !defined(CHECK_EQ)
-#    define CHECK_EQ(a, b) MOZ_RELEASE_ASSERT((a) == (b))
+#  ifndef CHECK
+#    define CHECK(e) MOZ_RELEASE_ASSERT(e)
+#    define CHECK_EQ(a, b) CHECK((a) == (b))
 #  endif
 
 // for sys_gettid()

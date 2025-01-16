@@ -3,7 +3,7 @@
 # License, v. 2.0. If a copy of the MPL was not distributed with this
 # file, You can obtain one at https://mozilla.org/MPL/2.0/.
 
-import re
+import re, subprocess
 
 with open("sandbox/linux/services/namespace_sandbox.cc") as fd:
     content = fd.read()
@@ -18,3 +18,6 @@ patch = match.group()
 
 with open("namespace_sandbox.inc", "w") as fd:
     fd.write(patch)
+
+with open("tid-clock.patch", "r") as fd:
+    subprocess.check_call(["patch", "namespace_sandbox.inc"], stdin=fd)

@@ -17,13 +17,17 @@ struct glibc_pthread {
   pid_t tid;
 };
 
+#ifndef CPUCLOCK_PID
+#define CPUCLOCK_PID(clock)             ((pid_t) ~((clock) >> 3))
+#endif
+
 pid_t GetGlibcCachedTid() {
-  pthread_mutex_t lock = PTHREAD_RECURSIVE_MUTEX_INITIALIZER_NP;
-  CHECK_EQ(0, pthread_mutex_lock(&lock));
-  pid_t tid = lock.__data.__owner;
-  CHECK_EQ(0, pthread_mutex_unlock(&lock));
-  CHECK_EQ(0, pthread_mutex_destroy(&lock));
-  return tid;
+  clockid_t clock;
+  int err = pthread_getcpuclockid(pthread_self(), &clock);
+  CHECK_EQ(0, err);
+  pid_t rv = CPUCLOCK_PID(clock);
+  CHECK(rv > 0);
+  return rv;
 }
 
 void MaybeUpdateGlibcTidCache() {

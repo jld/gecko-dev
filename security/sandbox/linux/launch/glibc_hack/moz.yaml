@@ -30,6 +30,7 @@ vendoring:
   keep:
     - extract-sandbox.py
     - LICENSE
+    - tid-clock.patch
 
   update-actions:
     - action: run-script
