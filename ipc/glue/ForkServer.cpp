@@ -283,8 +283,8 @@ void ForkServer::HandleWaitPid(UniquePtr<IPC::Message> message) {
 
   int status;
   pid_t rv = HANDLE_EINTR(waitpid(pid, &status, block ? 0 : WNOHANG));
-  bool isErr = rv < 0;
-  int err = errno;
+  bool isErr = rv <= 0;
+  int err = rv < 0 ? errno : 0; // FIXME explain somewhere
 
   IPC::Message reply(MSG_ROUTING_CONTROL, Reply_WaitPid__ID);
   IPC::MessageWriter writer(reply);
