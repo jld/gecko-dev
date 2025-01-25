@@ -22,6 +22,7 @@
 
 #include <fcntl.h>
 #include <string.h>
+#include <sys/wait.h>
 #include <unistd.h>
 
 #if defined(XP_LINUX) && defined(MOZ_SANDBOX)
@@ -35,11 +36,14 @@ namespace ipc {
 
 LazyLogModule gForkServiceLog("ForkService");
 
-ForkServer::ForkServer(int* aArgc, char*** aArgv) : mArgc(aArgc), mArgv(aArgv) {
-  // Eventually (bug 1752638) we'll want a real SIGCHLD handler, but
-  // for now, cause child processes to be automatically collected.
-  signal(SIGCHLD, SIG_IGN);
+static int gSignalPipe = -1;
+static void HandleSigChld(int aSignal) {
+  MOZ_ASSERT(aSignal == SIGCHLD);
+  const char msg = 0;
+  HANDLE_EINTR(write(gSignalPipe, &msg, 1));
+}
 
+ForkServer::ForkServer(int* aArgc, char*** aArgv) : mArgc(aArgc), mArgv(aArgv) {
   SetThisProcessName("forkserver");
 
   Maybe<UniqueFileHandle> ipcHandle = geckoargs::sIPCHandle.Get(*aArgc, *aArgv);
@@ -49,6 +53,14 @@ ForkServer::ForkServer(int* aArgc, char*** aArgv) : mArgc(aArgc), mArgv(aArgv) {
 
   mTcver = MakeUnique<MiniTransceiver>(ipcHandle->release(),
                                        DataBufferClear::AfterReceiving);
+
+  auto signalPipe = geckoargs::sSignalPipe.Get(*aArgc, *aArgv);
+  if (signalPipe) {
+    gSignalPipe = signalPipe->release();
+    signal(SIGCHLD, HandleSigChld);
+  } else {
+    signal(SIGCHLD, SIG_IGN);
+  }
 }
 
 /**
@@ -71,9 +83,19 @@ bool ForkServer::HandleMessages() {
       break;
     }
 
-    if (OnMessageReceived(std::move(msg))) {
-      // New process - child
-      return false;
+    switch (msg->type()) {
+      case Msg_ForkNewSubprocess__ID:
+        if (HandleForkNewSubprocess(std::move(msg))) {
+          // New process - child
+          return false;
+        }
+        break;
+      case Msg_WaitPid__ID:
+        HandleWaitPid(std::move(msg));
+        break;
+      default:
+        MOZ_LOG(gForkServiceLog, LogLevel::Verbose,
+                ("unknown message type %d\n", msg->type()));
     }
   }
   // Stop the server
@@ -95,17 +117,10 @@ static void ReadParamInfallible(IPC::MessageReader* aReader, P* aResult,
 static bool ParseForkNewSubprocess(IPC::Message& aMsg,
                                    UniqueFileHandle* aExecFd,
                                    base::LaunchOptions* aOptions) {
-  if (aMsg.type() != Msg_ForkNewSubprocess__ID) {
-    MOZ_LOG(gForkServiceLog, LogLevel::Verbose,
-            ("unknown message type %d (!= %d)\n", aMsg.type(),
-             Msg_ForkNewSubprocess__ID));
-    return false;
-  }
-
+  // The type was already checked in HandleMessages
+  MOZ_ASSERT(aMsg.type() == Msg_ForkNewSubprocess__ID);
   IPC::MessageReader reader(aMsg);
 
-  // FIXME(jld): This should all be fallible, but that will have to
-  // wait until bug 1752638 before it makes sense.
 #if defined(XP_LINUX) && defined(MOZ_SANDBOX)
   ReadParamInfallible(&reader, &aOptions->fork_flags,
                       "Error deserializing 'int'");
@@ -198,7 +213,7 @@ static void ForkedChildProcessInit(int aExecFd, int* aArgc, char*** aArgv) {
  * It will return in both the fork server process and the new content
  * process.  |mAppProcBuilder| is null for the fork server.
  */
-bool ForkServer::OnMessageReceived(UniquePtr<IPC::Message> message) {
+bool ForkServer::HandleForkNewSubprocess(UniquePtr<IPC::Message> message) {
   UniqueFileHandle execFd;
   base::LaunchOptions options;
   if (!ParseForkNewSubprocess(*message, &execFd, &options)) {
@@ -250,6 +265,32 @@ bool ForkServer::OnMessageReceived(UniquePtr<IPC::Message> message) {
   mTcver->SendInfallible(reply, "failed to send a reply message");
 
   return false;
+}
+
+void ForkServer::HandleWaitPid(UniquePtr<IPC::Message> message) {
+  MOZ_ASSERT(message->type() == Msg_WaitPid__ID);
+  IPC::MessageReader reader(*message);
+
+  pid_t pid;
+  bool block;
+  ReadParamInfallible(&reader, &pid, "Error deserializing 'pid_t'");
+  ReadParamInfallible(&reader, &block, "Error deserializing 'bool'");
+
+  int status;
+  pid_t rv = HANDLE_EINTR(waitpid(pid, &status, block ? 0 : WNOHANG));
+  // Three possibilities here:
+  //  Terminated: rv > 0; return {false, status}
+  //     Running: rv = 0; return {true, 0}
+  //       Error: rv < 0; return {true, errno}
+  bool isErr = rv <= 0;
+  int err = rv < 0 ? errno : 0;
+  MOZ_ASSERT(isErr || rv == pid);
+
+  IPC::Message reply(MSG_ROUTING_CONTROL, Reply_WaitPid__ID);
+  IPC::MessageWriter writer(reply);
+  WriteParam(&writer, isErr);
+  WriteParam(&writer, isErr ? err : status);
+  mTcver->SendInfallible(reply, "failed to send a reply message");
 }
 
 /**
