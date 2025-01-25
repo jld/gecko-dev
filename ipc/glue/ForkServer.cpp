@@ -22,6 +22,7 @@
 
 #include <fcntl.h>
 #include <string.h>
+#include <sys/wait.h>
 #include <unistd.h>
 
 #if defined(XP_LINUX) && defined(MOZ_SANDBOX)
@@ -71,9 +72,19 @@ bool ForkServer::HandleMessages() {
       break;
     }
 
-    if (OnMessageReceived(std::move(msg))) {
-      // New process - child
-      return false;
+    switch(msg->type()) {
+      case Msg_ForkNewSubprocess__ID:
+        if (HandleForkNewSubprocess(std::move(msg))) {
+          // New process - child
+          return false;
+        }
+        break;
+      case Msg_WaitPid__ID:
+        HandleWaitPid(std::move(msg));
+        break;
+      default:
+        MOZ_LOG(gForkServiceLog, LogLevel::Verbose,
+                ("unknown message type %d\n", msg->type()));
     }
   }
   // Stop the server
@@ -95,17 +106,13 @@ static void ReadParamInfallible(IPC::MessageReader* aReader, P* aResult,
 static bool ParseForkNewSubprocess(IPC::Message& aMsg,
                                    UniqueFileHandle* aExecFd,
                                    base::LaunchOptions* aOptions) {
-  if (aMsg.type() != Msg_ForkNewSubprocess__ID) {
-    MOZ_LOG(gForkServiceLog, LogLevel::Verbose,
-            ("unknown message type %d (!= %d)\n", aMsg.type(),
-             Msg_ForkNewSubprocess__ID));
-    return false;
-  }
-
+  // The type was already checked in HandleMessages
+  MOZ_ASSERT(aMsg.type() == Msg_ForkNewSubprocess__ID);
   IPC::MessageReader reader(aMsg);
 
   // FIXME(jld): This should all be fallible, but that will have to
   // wait until bug 1752638 before it makes sense.
+  // Update: It might not make sense even after 1752638, alas.
 #if defined(XP_LINUX) && defined(MOZ_SANDBOX)
   ReadParamInfallible(&reader, &aOptions->fork_flags,
                       "Error deserializing 'int'");
@@ -198,7 +205,7 @@ static void ForkedChildProcessInit(int aExecFd, int* aArgc, char*** aArgv) {
  * It will return in both the fork server process and the new content
  * process.  |mAppProcBuilder| is null for the fork server.
  */
-bool ForkServer::OnMessageReceived(UniquePtr<IPC::Message> message) {
+bool ForkServer::HandleForkNewSubprocess(UniquePtr<IPC::Message> message) {
   UniqueFileHandle execFd;
   base::LaunchOptions options;
   if (!ParseForkNewSubprocess(*message, &execFd, &options)) {
@@ -250,6 +257,27 @@ bool ForkServer::OnMessageReceived(UniquePtr<IPC::Message> message) {
   mTcver->SendInfallible(reply, "failed to send a reply message");
 
   return false;
+}
+
+void ForkServer::HandleWaitPid(UniquePtr<IPC::Message> message) {
+  MOZ_ASSERT(message->type() == Msg_WaitPid__ID);
+  IPC::MessageReader reader(*message);
+
+  pid_t pid;
+  bool block;
+  ReadParamInfallible(&reader, &pid, "Error deserializing 'pid_t'");
+  ReadParamInfallible(&reader, &block, "Error deserializing 'bool'");
+  
+  int status;
+  pid_t rv = HANDLE_EINTR(waitpid(pid, &status, block ? 0 : WNOHANG));
+  bool isErr = rv < 0;
+  int err = errno;
+
+  IPC::Message reply(MSG_ROUTING_CONTROL, Reply_WaitPid__ID);
+  IPC::MessageWriter writer(reply);
+  WriteParam(&writer, isErr);
+  WriteParam(&writer, isErr ? err : status);
+  mTcver->SendInfallible(reply, "failed to send a reply message");
 }
 
 /**

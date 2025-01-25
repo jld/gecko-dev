@@ -191,6 +191,50 @@ Result<Ok, LaunchError> ForkServiceChild::SendForkNewSubprocess(
   return Ok();
 }
 
+auto ForkServiceChild::SendWaitPid(pid_t aPid, bool aBlock)
+    -> Result<ProcStatus, int>
+{
+  MutexAutoLock lock(mMutex);
+  if (mFailed) {
+    return Err(LaunchError("FSC::SFNS::Failed"));
+  }
+
+  IPC::Message msg(MSG_ROUTING_CONTROL, Msg_WaitPid__ID);
+  IPC::MessageWriter writer(msg);
+  WriteParam(&writer, aPid);
+  WriteParam(&writer, aBlock);
+
+  if (!mTcver->Send(msg)) {
+    MOZ_LOG(gForkServiceLog, LogLevel::Verbose,
+            ("the pipe to the fork server is closed or having errors"));
+    return Err(ECONNRESET);
+  }
+
+  UniquePtr<IPC::Message> reply;
+  if (!mTcver->Recv(reply)) {
+    MOZ_LOG(gForkServiceLog, LogLevel::Verbose,
+            ("the pipe to the fork server is closed or having errors"));
+    return Err(ECONNRESET);
+  }
+
+  if (reply->type() != Reply_WaitPid__ID) {
+    MOZ_LOG(gForkServiceLog, LogLevel::Verbose,
+            ("unknown reply type %d", reply->type()));
+    return Err(EPROTO);
+  }
+  IPC::MessageReader reader(*reply);
+
+  bool isErr;
+  int value;
+  ReadParamInfallible(&reader, &isErr, "Error deserializing 'bool'");
+  ReadParamInfallible(&reader, &value, "Error deserializing 'int'");
+  // No, this can't use ?:
+  if (isErr) {
+    return Err(value);
+  }
+  return ProcStatus{value};
+}
+
 void ForkServiceChild::OnError() {
   mFailed = true;
   ForkServerLauncher::RestartForkServer();
