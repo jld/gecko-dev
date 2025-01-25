@@ -6,6 +6,7 @@
 
 #include "ForkServiceChild.h"
 #include "ForkServer.h"
+#include "chrome/common/process_watcher.h"
 #include "mozilla/Atomics.h"
 #include "mozilla/Logging.h"
 #include "mozilla/ipc/GeckoChildProcessHost.h"
@@ -76,6 +77,7 @@ void ForkServiceChild::StartForkServer() {
 
   geckoargs::ChildProcessArgs extraOpts;
   geckoargs::sIPCHandle.Put(std::move(client), extraOpts);
+  geckoargs::sSignalPipe.Put(ProcessWatcher::GetSignalPipe(), extraOpts);
 
   if (!subprocess->LaunchAndWaitForProcessHandle(std::move(extraOpts))) {
     MOZ_LOG(gForkServiceLog, LogLevel::Error, ("failed to launch fork server"));
