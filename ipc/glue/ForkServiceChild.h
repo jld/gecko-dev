@@ -50,7 +50,9 @@ class ForkServiceChild final {
       geckoargs::ChildProcessArgs&& aArgs, base::LaunchOptions&& aOptions,
       pid_t* aPid) MOZ_EXCLUDES(mMutex);
 
-  struct ProcStatus { int status; };
+  struct ProcStatus {
+    int status;
+  };
   Result<ProcStatus, int> SendWaitPid(pid_t aPid, bool aBlock);
 
   /**

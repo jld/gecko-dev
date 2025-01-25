@@ -192,8 +192,7 @@ Result<Ok, LaunchError> ForkServiceChild::SendForkNewSubprocess(
 }
 
 auto ForkServiceChild::SendWaitPid(pid_t aPid, bool aBlock)
-    -> Result<ProcStatus, int>
-{
+    -> Result<ProcStatus, int> {
   MutexAutoLock lock(mMutex);
   if (mFailed) {
     return Err(LaunchError("FSC::SFNS::Failed"));

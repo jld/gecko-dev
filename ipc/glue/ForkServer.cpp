@@ -72,7 +72,7 @@ bool ForkServer::HandleMessages() {
       break;
     }
 
-    switch(msg->type()) {
+    switch (msg->type()) {
       case Msg_ForkNewSubprocess__ID:
         if (HandleForkNewSubprocess(std::move(msg))) {
           // New process - child
@@ -267,7 +267,7 @@ void ForkServer::HandleWaitPid(UniquePtr<IPC::Message> message) {
   bool block;
   ReadParamInfallible(&reader, &pid, "Error deserializing 'pid_t'");
   ReadParamInfallible(&reader, &block, "Error deserializing 'bool'");
-  
+
   int status;
   pid_t rv = HANDLE_EINTR(waitpid(pid, &status, block ? 0 : WNOHANG));
   bool isErr = rv < 0;
