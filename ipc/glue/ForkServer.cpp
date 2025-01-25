@@ -36,10 +36,15 @@ namespace ipc {
 
 LazyLogModule gForkServiceLog("ForkService");
 
+static int gSignalPipe = -1;
+static void HandleSigChld(int aSignal)
+{
+  MOZ_ASSERT(aSignal == SIGCHLD);
+  const char msg = 0;
+  HANDLE_EINTR(write(gSignalPipe, &msg, 1));
+}
+
 ForkServer::ForkServer(int* aArgc, char*** aArgv) : mArgc(aArgc), mArgv(aArgv) {
-  // Eventually (bug 1752638) we'll want a real SIGCHLD handler, but
-  // for now, cause child processes to be automatically collected.
-  signal(SIGCHLD, SIG_IGN);
 
   SetThisProcessName("forkserver");
 
@@ -50,6 +55,14 @@ ForkServer::ForkServer(int* aArgc, char*** aArgv) : mArgc(aArgc), mArgv(aArgv) {
 
   mTcver = MakeUnique<MiniTransceiver>(ipcHandle->release(),
                                        DataBufferClear::AfterReceiving);
+
+  auto signalPipe = geckoargs::sSignalPipe.Get(*aArgc, *aArgv);
+  if (signalPipe) {
+    gSignalPipe = signalPipe->release();
+    signal(SIGCHLD, HandleSigChld);
+  } else {
+    signal(SIGCHLD, SIG_IGN);
+  }
 }
 
 /**
