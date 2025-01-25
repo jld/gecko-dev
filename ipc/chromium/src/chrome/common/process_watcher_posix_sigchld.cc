@@ -369,7 +369,21 @@ static void ProcessWatcherInit() {
       }));
 }
 
+static void EnsureProcessWatcher() {
+  static std::once_flag sInited;
+  std::call_once(sInited, ProcessWatcherInit);
+}
+
 }  // namespace
+
+mozilla::UniqueFileHandle ProcessWatcher::GetSignalPipe() {
+  EnsureProcessWatcher();
+  int fd = gSignalPipe[1];
+  MOZ_ASSERT(fd >= 0); // Should this be stronger?
+  fd = dup(fd);
+  MOZ_ASSERT(fd >= 0); // Should this be louder?
+  return mozilla::UniqueFileHandle(fd);
+}
 
 /**
  * Do everything possible to ensure that |process| has been reaped
@@ -393,8 +407,7 @@ void ProcessWatcher::EnsureProcessTerminated(base::ProcessHandle process,
   DCHECK(process != base::GetCurrentProcId());
   DCHECK(process > 0);
 
-  static std::once_flag sInited;
-  std::call_once(sInited, ProcessWatcherInit);
+  EnsureProcessWatcher();
 
   auto lock = gPendingChildren.Lock();
   auto& children = lock.ref();
