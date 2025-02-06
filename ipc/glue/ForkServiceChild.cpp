@@ -208,6 +208,7 @@ auto ForkServiceChild::SendWaitPid(pid_t aPid, bool aBlock)
   if (!mTcver->Send(msg)) {
     MOZ_LOG(gForkServiceLog, LogLevel::Verbose,
             ("the pipe to the fork server is closed or having errors"));
+    OnError();
     return Err(ECONNRESET);
   }
 
@@ -215,12 +216,14 @@ auto ForkServiceChild::SendWaitPid(pid_t aPid, bool aBlock)
   if (!mTcver->Recv(reply)) {
     MOZ_LOG(gForkServiceLog, LogLevel::Verbose,
             ("the pipe to the fork server is closed or having errors"));
+    OnError();
     return Err(ECONNRESET);
   }
 
   if (reply->type() != Reply_WaitPid__ID) {
     MOZ_LOG(gForkServiceLog, LogLevel::Verbose,
             ("unknown reply type %d", reply->type()));
+    OnError();
     return Err(EPROTO);
   }
   IPC::MessageReader reader(*reply);
