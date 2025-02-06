@@ -12,7 +12,12 @@
 #include "nsString.h"
 #include "mozilla/ipc/MiniTransceiver.h"
 #include "mozilla/ipc/LaunchError.h"
+#include "mozilla/DataMutex.h"
+#include "mozilla/Mutex.h"
+#include "mozilla/RefPtr.h"
 #include "mozilla/Result.h"
+#include "mozilla/StaticPtr.h"
+#include "mozilla/ThreadSafety.h"
 
 #include <sys/types.h>
 #include <poll.h>
@@ -29,11 +34,9 @@ class GeckoChildProcessHost;
  * process, this class send a message to the fork server through a
  * pipe and get the PID of the new process from the reply.
  */
-class ForkServiceChild {
+class ForkServiceChild final {
  public:
-  ForkServiceChild(int aFd, GeckoChildProcessHost* aProcess);
-  virtual ~ForkServiceChild();
-
+  NS_INLINE_DECL_THREADSAFE_REFCOUNTING(ForkServiceChild)
   /**
    * Ask the fork server to create a new process with given parameters.
    *
@@ -45,7 +48,7 @@ class ForkServiceChild {
    */
   Result<Ok, LaunchError> SendForkNewSubprocess(
       geckoargs::ChildProcessArgs&& aArgs, base::LaunchOptions&& aOptions,
-      pid_t* aPid);
+      pid_t* aPid) MOZ_EXCLUDES(mMutex);
 
   /**
    * Create a fork server process and the singleton of this class.
@@ -60,10 +63,7 @@ class ForkServiceChild {
   /**
    * Return the singleton.
    */
-  static ForkServiceChild* Get() {
-    auto child = sForkServiceChild.get();
-    return child == nullptr || child->mFailed ? nullptr : child;
-  }
+  static RefPtr<ForkServiceChild> Get();
 
   /**
    * Returns whether the fork server was ever active.  Thread-safe.
@@ -71,19 +71,23 @@ class ForkServiceChild {
   static bool WasUsed() { return sForkServiceUsed; }
 
  private:
-  UniquePtr<MiniTransceiver> mTcver;
-  static UniquePtr<ForkServiceChild> sForkServiceChild;
+  Mutex mMutex;
+  UniquePtr<MiniTransceiver> mTcver MOZ_GUARDED_BY(mMutex);
+  static StaticDataMutex<StaticRefPtr<ForkServiceChild>> sSingleton;
   static Atomic<bool> sForkServiceUsed;
-  bool mFailed;  // The forkserver has crashed or disconnected.
+  Atomic<bool> mFailed;  // The forkserver has crashed or disconnected.
   GeckoChildProcessHost* mProcess;
 
-  void OnError();
+  ForkServiceChild(int aFd, GeckoChildProcessHost* aProcess);
+  ~ForkServiceChild();
+
+  void OnError() MOZ_REQUIRES(mMutex);
 };
 
 /**
  * Start a fork server at |xpcom-startup| from the chrome process.
  */
-class ForkServerLauncher : public nsIObserver {
+class ForkServerLauncher final : public nsIObserver {
  public:
   NS_DECL_ISUPPORTS
   NS_DECL_NSIOBSERVER
@@ -93,7 +97,7 @@ class ForkServerLauncher : public nsIObserver {
 
  private:
   friend class ForkServiceChild;
-  virtual ~ForkServerLauncher();
+  ~ForkServerLauncher();
 
   static void RestartForkServer();
 
