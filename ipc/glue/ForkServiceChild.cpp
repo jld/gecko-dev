@@ -197,7 +197,7 @@ auto ForkServiceChild::SendWaitPid(pid_t aPid, bool aBlock)
     -> Result<ProcStatus, int> {
   MutexAutoLock lock(mMutex);
   if (mFailed) {
-    return Err(LaunchError("FSC::SFNS::Failed"));
+    return Err(ECONNRESET);
   }
 
   IPC::Message msg(MSG_ROUTING_CONTROL, Msg_WaitPid__ID);
