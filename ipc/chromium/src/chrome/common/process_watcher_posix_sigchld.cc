@@ -96,6 +96,7 @@ struct PendingChild {
 static mozilla::StaticDataMutex<mozilla::StaticAutoPtr<nsTArray<PendingChild>>>
     gPendingChildren("ProcessWatcher::gPendingChildren");
 static int gSignalPipe[2] = {-1, -1};
+static mozilla::Atomic<bool> gProcessWatcherShutdown;
 
 // A wrapper around WaitForProcess to simplify the result (true if the
 // process exited and the pid is now freed for reuse, false if it's
@@ -284,6 +285,7 @@ class ProcessCleaner final : public MessageLoopForIO::Watcher,
   }
 
   void WillDestroyCurrentMessageLoop() override {
+    gProcessWatcherShutdown = true;
     mWatcher.StopWatchingFileDescriptor();
     auto lock = gPendingChildren.Lock();
     auto& children = lock.ref();
@@ -315,6 +317,7 @@ class ProcessCleaner final : public MessageLoopForIO::Watcher,
       }
       children = nullptr;
     }
+    ForkServiceChild::StopForkServer();
     delete this;
   }
 
@@ -433,6 +436,16 @@ void ProcessWatcher::EnsureProcessTerminated(base::ProcessHandle process,
                                              bool force) {
   DCHECK(process != base::GetCurrentProcId());
   DCHECK(process > 0);
+
+  if (gProcessWatcherShutdown) {
+    // This is mainly for the fork server itself, being torn down late
+    // in shutdown.  Generally won't be reached with force=true,
+    // because build types that default to it will QuickExit first.
+    // It's not necessary to wait for child processes when the parent
+    // process is about to exit (pid 1 should clean them up), so skip
+    // that to avoid the possibility of more weird shutdown hangs.
+    return;
+  }
 
   EnsureProcessWatcher();
 

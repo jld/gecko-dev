@@ -38,7 +38,7 @@
 #  include "nsAppDirectoryServiceDefs.h"
 #endif
 
-#include <sys/stat.h>
+#include <utility>
 
 #include "ProtocolUtils.h"
 #include "mozilla/LinkedList.h"
@@ -442,14 +442,7 @@ GeckoChildProcessHost::~GeckoChildProcessHost() {
 #endif
 
     if (mChildProcessHandle != 0) {
-      ProcessWatcher::EnsureProcessTerminated(
-          mChildProcessHandle
-#ifdef NS_FREE_PERMANENT_DATA
-          // If we're doing leak logging, shutdown can be slow.
-          ,
-          false  // don't "force"
-#endif
-      );
+      ProcessWatcher::EnsureProcessTerminated(mChildProcessHandle);
       mChildProcessHandle = 0;
     }
   }
@@ -458,6 +451,12 @@ GeckoChildProcessHost::~GeckoChildProcessHost() {
 base::ProcessHandle GeckoChildProcessHost::GetChildProcessHandle() {
   mozilla::AutoReadLock handleLock(mHandleLock);
   return mChildProcessHandle;
+}
+
+base::ProcessHandle GeckoChildProcessHost::TakeChildProcessHandle() {
+  // See also: GetChildProcessHandle, SetAlreadyDead
+  mozilla::AutoWriteLock handleLock(mHandleLock);
+  return std::exchange(mChildProcessHandle, 0);
 }
 
 base::ProcessId GeckoChildProcessHost::GetChildProcessId() {

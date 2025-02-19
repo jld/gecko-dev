@@ -176,6 +176,17 @@ class GeckoChildProcessHost : public SupportsWeakPtr,
   // For bug 943174: Skip the EnsureProcessTerminated call in the destructor.
   void SetAlreadyDead();
 
+  // "Unwrap" this object into the underlying handle; the caller is
+  // responsible for calling EnsureProcessTerminated or equivalent.
+  //
+  // Note that anything which uses the `GetAll` method to iterate
+  // child processes (e.g., the `about:processes` page) will no longer
+  // see the child process even if it's still running.
+  //
+  // After this method returns, this object can be destroyed with
+  // `Destroy()` and that will not affect the process.
+  ProcessHandle TakeChildProcessHandle();
+
 #if defined(MOZ_SANDBOX) && defined(XP_MACOSX)
   // Start the sandbox from the child process.
   static bool StartMacSandbox(int aArgc, char** aArgv,

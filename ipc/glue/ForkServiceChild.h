@@ -79,6 +79,7 @@ class ForkServiceChild final {
    */
   static void StartForkServer();
   static void StopForkServer();
+  static void EnterShutdown();
 
   /**
    * Return the singleton.
@@ -96,7 +97,10 @@ class ForkServiceChild final {
   static StaticDataMutex<StaticRefPtr<ForkServiceChild>> sSingleton;
   static Atomic<bool> sForkServiceUsed;
   Atomic<bool> mFailed;  // The forkserver has crashed or disconnected.
+  // mProcess is accessed only by the dtor and `EnterShutdown` so
+  // should be inherently thread-safe
   GeckoChildProcessHost* mProcess;
+  base::ProcessHandle mTakenHandle = 0;
 
   ForkServiceChild(int aFd, GeckoChildProcessHost* aProcess);
   ~ForkServiceChild();
@@ -121,8 +125,8 @@ class ForkServerLauncher final : public nsIObserver {
 
   static void RestartForkServer();
 
-  static bool mHaveStartedClient;
-  static StaticRefPtr<ForkServerLauncher> mSingleton;
+  static bool sHaveStartedClient;
+  static StaticRefPtr<ForkServerLauncher> sSingleton;
 };
 
 }  // namespace ipc
